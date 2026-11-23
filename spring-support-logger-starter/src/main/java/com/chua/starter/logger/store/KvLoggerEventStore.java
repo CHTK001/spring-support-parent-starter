@@ -55,6 +55,12 @@ public class KvLoggerEventStore implements LoggerEventStore {
      */
     private static final long EPS_PURGE_INTERVAL_MILLIS = 3600_000L;
 
+    /**
+     * 流式扫描批大小：前缀查询按批拉取、逐批消费，
+     * 避免一次性物化全量 KV（大库可达成十万条）把堆打爆
+     */
+    private static final int SCAN_BATCH = 500;
+
     private final KvEngine kv;
     private final SeriesEngine series;
     private final long retentionHours;
@@ -141,47 +147,57 @@ public class KvLoggerEventStore implements LoggerEventStore {
                             Long start, Long end, String cursor, int limit) {
         Set<String> levels = MemoryLoggerEventStore.levels(level);
         String kw = keyword == null ? "" : keyword.trim().toLowerCase();
+        long cTs = 0L;
+        long cSeq = 0L;
         String cursorKey = cursor == null ? "" : cursor.trim();
-
-        List<Object[]> matched = new ArrayList<>();
-        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
-        Map<String, String> all = kv.findAllByPrefix(prefix);
-        List<String> keys = new ArrayList<>(all.keySet());
-        keys.sort(String::compareTo);
-        for (String key : keys) {
-            long[] order = keyOrder(key);
-            if (order == null) {
-                continue;
+        if (!cursorKey.isEmpty()) {
+            String[] parts = cursorKey.split(":");
+            if (parts.length >= 2) {
+                cTs = parse(parts[0]);
+                cSeq = parse(parts[1]);
             }
-            if (!cursorKey.isEmpty()) {
-                String[] parts = cursorKey.split(":");
-                if (parts.length >= 2) {
-                    long cTs = parse(parts[0]);
-                    long cSeq = parse(parts[1]);
-                    if (order[0] < cTs || (order[0] == cTs && order[1] <= cSeq)) {
-                        continue;
+        }
+
+        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        // 流式分批扫描：凑满 limit+1 条匹配即可判定还有下一页并收口，
+        // 避免全量物化大前缀数据把堆打爆
+        List<Object[]> matched = new ArrayList<>();
+        String afterKey = "";
+        while (matched.size() < limit + 1) {
+            Map<String, String> batch = kv.findAllByPrefix(prefix, afterKey, SCAN_BATCH);
+            if (batch.isEmpty()) {
+                break;
+            }
+            for (Map.Entry<String, String> en : batch.entrySet()) {
+                afterKey = en.getKey();
+                long[] order = keyOrder(en.getKey());
+                if (order == null) {
+                    continue;
+                }
+                if (order[0] < cTs || (order[0] == cTs && order[1] <= cSeq)) {
+                    continue;
+                }
+                LoggerEvent event = parseEvent(en.getValue());
+                if (event == null) {
+                    continue;
+                }
+                if (MemoryLoggerEventStore.match(event, app, instance, levels, kw, traceId, start, end)) {
+                    matched.add(new Object[]{order[0], order[1], event});
+                    if (matched.size() > limit) {
+                        break;
                     }
                 }
             }
-            LoggerEvent event = parseEvent(all.get(key));
-            if (event == null) {
-                continue;
-            }
-            if (MemoryLoggerEventStore.match(event, app, instance, levels, kw, traceId, start, end)) {
-                if (matched.size() >= limit) {
-                    break;
-                }
-                matched.add(new Object[]{order[0], order[1], event});
-            }
         }
+        boolean hasMore = matched.size() > limit;
         List<LoggerEvent> items = new ArrayList<>();
         String nextCursor = "";
-        for (Object[] row : matched) {
+        int bound = Math.min(limit, matched.size());
+        for (int i = 0; i < bound; i++) {
+            Object[] row = matched.get(i);
             items.add((LoggerEvent) row[2]);
             nextCursor = row[0] + ":" + row[1];
         }
-        boolean hasMore = matched.size() >= limit
-                && anyAfter(keys, all, nextCursor, app, instance, levels, kw, traceId, start, end);
         return new LoggerPage(items, hasMore ? nextCursor : "");
     }
 
@@ -251,18 +267,28 @@ public class KvLoggerEventStore implements LoggerEventStore {
         Set<String> levelSet = MemoryLoggerEventStore.levels(level);
         // 被删事件按应用聚合 (total, error) 扣减量：删除是低频管理操作，按批合并扣减避免逐条读改写
         Map<String, long[]> removedByApp = new HashMap<>();
-        for (Map.Entry<String, String> en : kv.findAllByPrefix(prefix).entrySet()) {
-            LoggerEvent event = parseEvent(en.getValue());
-            if (event == null) {
-                continue;
+        // 流式分批扫描删除：已删键位于游标之后不会被重访，游标单调推进保证收敛
+        String afterKey = "";
+        while (true) {
+            Map<String, String> batch = kv.findAllByPrefix(prefix, afterKey, SCAN_BATCH);
+            if (batch.isEmpty()) {
+                break;
             }
-            if (MemoryLoggerEventStore.match(event, app, instance, levelSet, "", null, null, before)
-                    && kv.delete(en.getKey())) {
-                removed++;
-                long[] counters = removedByApp.computeIfAbsent(String.valueOf(event.getApp()), k -> new long[2]);
-                counters[0]++;
-                if ("ERROR".equalsIgnoreCase(event.getLevel())) {
-                    counters[1]++;
+            for (Map.Entry<String, String> en : batch.entrySet()) {
+                afterKey = en.getKey();
+                LoggerEvent event = parseEvent(en.getValue());
+                if (event == null) {
+                    continue;
+                }
+                if (MemoryLoggerEventStore.match(event, app, instance, levelSet, "", null, null, before)
+                        && kv.delete(en.getKey())) {
+                    removed++;
+                    long[] counters = removedByApp.computeIfAbsent(String.valueOf(event.getApp()),
+                            k -> new long[2]);
+                    counters[0]++;
+                    if ("ERROR".equalsIgnoreCase(event.getLevel())) {
+                        counters[1]++;
+                    }
                 }
             }
         }
@@ -390,42 +416,26 @@ public class KvLoggerEventStore implements LoggerEventStore {
     private List<LoggerEvent> scanEvents(String app, int max) {
         List<LoggerEvent> events = new ArrayList<>();
         String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
-        for (String value : kv.findAllByPrefix(prefix).values()) {
-            LoggerEvent event = parseEvent(value);
-            if (event != null) {
-                events.add(event);
-                if (events.size() >= max) {
-                    break;
+        // 流式分批扫描：取满 max 条即收口，避免全量物化大前缀数据把堆打爆
+        String afterKey = "";
+        while (events.size() < max) {
+            Map<String, String> batch = kv.findAllByPrefix(prefix, afterKey, SCAN_BATCH);
+            if (batch.isEmpty()) {
+                break;
+            }
+            for (Map.Entry<String, String> en : batch.entrySet()) {
+                afterKey = en.getKey();
+                LoggerEvent event = parseEvent(en.getValue());
+                if (event != null) {
+                    events.add(event);
+                    if (events.size() >= max) {
+                        break;
+                    }
                 }
             }
         }
         events.sort(MemoryLoggerEventStore.TS_ORDER);
         return events;
-    }
-
-    private boolean anyAfter(List<String> keys, Map<String, String> all, String cursor,
-                             String app, String instance, Set<String> levels,
-                             String kw, String traceId, Long start, Long end) {
-        if (cursor == null || cursor.isEmpty()) {
-            return false;
-        }
-        String[] parts = cursor.split(":");
-        if (parts.length < 2) {
-            return false;
-        }
-        long cTs = parse(parts[0]);
-        long cSeq = parse(parts[1]);
-        for (String key : keys) {
-            long[] order = keyOrder(key);
-            if (order == null || order[0] < cTs || (order[0] == cTs && order[1] <= cSeq)) {
-                continue;
-            }
-            LoggerEvent event = parseEvent(all.get(key));
-            if (event != null && MemoryLoggerEventStore.match(event, app, instance, levels, kw, traceId, start, end)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private long counter(String app, String type) {
