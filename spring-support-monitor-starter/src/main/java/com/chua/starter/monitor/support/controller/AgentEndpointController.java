@@ -17,6 +17,8 @@ import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -83,6 +85,11 @@ public class AgentEndpointController {
     private final MonitorConfigService configService;
 
     /**
+     * 主机台账门面（心跳联动回写主机在线状态）
+     */
+    private final ServerHostService serverHostService;
+
+    /**
      * 采集间隔配置键
     */
     private static final String CONFIG_KEY_INTERVAL = "monitor.collect.interval.ms";
@@ -112,6 +119,7 @@ public class AgentEndpointController {
             return ReturnResult.error("无效的探针标识");
         }
         agentContext.markActive(monitor.getId());
+        markHostOnline(monitor, agentKey);
         return ReturnResult.ok(AgentHeartbeatVO.of(monitor.getId()));
     }
 
@@ -231,6 +239,36 @@ public class AgentEndpointController {
      * @param agentKey 探针标识
      * @return 目标实体，未命中返回 空
      */
+    /**
+     * 心跳联动主机台账：探针活跃即回写主机在线（推送模式主机的在线来源）。
+     * <p>归属优先取监控资产已绑定的主机标识，未绑定时按探针标识回查主机台账；
+     * 查不到主机时静默跳过（监控资产允许不挂主机）。</p>
+     *
+     * @param monitor  监控目标
+     * @param agentKey 探针标识
+     */
+    private void markHostOnline(MsMonitor monitor, String agentKey) {
+        try {
+            MsServerHost host = null;
+            if (monitor.getMsServerHostId() != null) {
+                host = serverHostService.findById(monitor.getMsServerHostId());
+            }
+            if (host == null) {
+                host = serverHostService.findByAgentKey(agentKey.trim());
+            }
+            if (host == null) {
+                return;
+            }
+            MsServerHost state = new MsServerHost();
+            state.setId(host.getId());
+            state.setServerHostOnline(1);
+            state.setServerHostOnlineTime(java.time.LocalDateTime.now());
+            serverHostService.saveCollectState(state);
+        } catch (Exception e) {
+            log.warn("[agent] 心跳回写主机在线状态失败 monitorId={}: {}", monitor.getId(), e.getMessage());
+        }
+    }
+
     private MsMonitor requireByAgentKey(String agentKey) {
         if (agentKey == null || agentKey.isBlank()) {
             return null;
