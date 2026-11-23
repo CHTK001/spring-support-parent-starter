@@ -93,6 +93,8 @@ flowchart TD
 | POST | `/osgi/jars/{fileName}/delete` | 删除部署目录 jar（须先卸载） | `manage-enabled=true` |
 | POST | `/osgi/framework/refresh` | 刷新框架装配（bundle 升级/卸载后重新解析），参数 `wait`（默认 true，最多等 30 秒完成事件） | `manage-enabled=true` |
 
+> 插件操作的**进度与日志不经 REST 轮询**：变更接口同步返回，过程日志（`start`/`success`/`failure`，含耗时）经 socket 通道 `osgi/operation-log` 实时推送，见 §6.8。
+
 ## 4. Bean 能力矩阵
 
 | Bean 名 | 类型 | 装配条件（含默认值） | 可否覆盖 | 典型用途 |
@@ -199,7 +201,60 @@ g! bundle:headers <符号名>    # Manifest 头
 g! help                       # 全部命令
 ```
 
-### 6.3 业务代码：注入 OsgiLauncher 管理插件
+### 6.3 获取插件的 SPI 实现（核心用法）
+
+引入本 starter 的核心目的：**插件 jar 运行期接入，业务代码按接口拿到它的实现**。两条等价取用路径，按需选择。
+
+**路径一：经 `ObjectContext` 统一取（推荐）** —— `OsgiBeanDefinitionRegister` 把 OSGi 服务注册表只读投影成容器扩展对象，与 Spring Bean、`ServiceProvider` 装载的 SPI 实现汇聚在同一个 `ObjectContext`；业务代码不区分实现来自插件 jar、Spring 容器还是 SPI 扩展点，按类型一次查到：
+
+```java
+@Component
+public class ReportFacade {
+
+    private final ObjectContext objectContext;   // com.chua.common.support.objects.ObjectContext
+
+    public ReportFacade(ObjectContext objectContext) {
+        this.objectContext = objectContext;
+    }
+
+    public String render(ReportRequest req) {
+        // 插件实现、Spring Bean、ServiceProvider SPI 在这里汇聚，按 priority/ranking 取最优
+        Exporter exporter = objectContext.getBeanOfType(Exporter.class);
+        if (exporter == null) {
+            throw new IllegalStateException("容器中没有任何 Exporter 实现");
+        }
+        return exporter.export(req);
+    }
+}
+```
+
+**路径二：直接向 OSGi 服务注册表取（`OsgiLauncher`）** —— 语义最直白，适合明确「只要插件服务」的场景：
+
+```java
+@Service
+public class ReportService {
+
+    private final OsgiLauncher osgi;
+
+    public ReportService(OsgiLauncher osgi) {
+        this.osgi = osgi;
+    }
+
+    public String render(ReportRequest req) {
+        // 取 service.ranking 最高的一个实现；没有实现或框架未激活时返回 null
+        Exporter exporter = osgi.getService(Exporter.class);
+        if (exporter == null) {
+            throw new IllegalStateException("没有任何插件提供 Exporter 服务");
+        }
+        return exporter.export(req);
+        // 需要全部实现时：List<Exporter> all = osgi.getServices(Exporter.class);
+    }
+}
+```
+
+> 桥接细节：投影出的扩展对象 Bean 名 = `服务接口全限定名:服务标识`，OSGi 的 `service.ranking` 贯通为容器 priority（值越大越优先）；插件升级/卸载后快照随 bundle 生命周期事件自动失效，下次查询即反映最新状态。服务引用由框架持有，`releaseServices(Class)` / `releaseAllServices()` 主动释放前保持有效。投影是否准入由 `BeanAcceptance` 验收器链裁决，被拒记录可经 `GET /osgi/snapshot` 排查。
+
+### 6.4 管理插件生命周期：注入 OsgiLauncher
 
 业务 Service 直接注入 `OsgiLauncher`（接口位于 `com.chua.common.support.osgi`），不接触任何 Felix/OSGi 原生类型：
 
@@ -253,36 +308,6 @@ public class PluginManager {
     }
 }
 ```
-
-### 6.4 业务代码：消费插件注册的服务
-
-插件 bundle 启动后向 OSGi 服务注册表注册接口实现；宿主按接口类型取用，不关心实现来自哪个 jar：
-
-```java
-@Service
-public class ReportService {
-
-    private final OsgiLauncher osgi;
-
-    public ReportService(OsgiLauncher osgi) {
-        this.osgi = osgi;
-    }
-
-    public String render(ReportRequest req) {
-        // 取 service.ranking 最高的一个实现；没有实现或框架未激活时返回 null
-        Exporter exporter = osgi.getService(Exporter.class);
-        if (exporter == null) {
-            throw new IllegalStateException("没有任何插件提供 Exporter 服务");
-        }
-        return exporter.export(req);
-        // 需要全部实现时：List<Exporter> all = osgi.getServices(Exporter.class);
-    }
-}
-```
-
-> 服务引用由框架持有，`releaseServices(Class)` / `releaseAllServices()` 主动释放前保持有效，释放后需重新获取。插件升级/卸载后，桥接快照随 bundle 生命周期事件自动失效，下次查询即反映最新状态。
->
-> 这些服务同时被 `OsgiBeanDefinitionRegister` 只读投影进 `ObjectContext`（Bean 名 = `接口全限定名:pid`，`service.ranking` 贯通为容器 priority），因此也能通过 `ObjectContext#getBeanOfType(Exporter.class)` 取到。
 
 ### 6.5 业务代码：监听插件生命周期事件
 
@@ -404,6 +429,12 @@ curl -X POST -H "Content-Type: application/json" \
   {"symbolicName":"probe.echo","success":true}]}
 ```
 
+下载已安装插件的 jar（把部署文件取回本地，`-OJ` 按响应文件名保存）：
+
+```bash
+curl -OJ http://127.0.0.1:8080/osgi/bundles/probe.echo/download
+```
+
 其余变更端点：`POST /bundles/{name}/start|stop|uninstall`、`POST /bundles/{name}/update`（multipart 上传新版本）、`POST /jars/{fileName}/delete`（须先卸载）、`POST /framework/refresh?wait=true` → `{"initiated":true,"completed":true}`。
 
 错误原因直接进响应体（不再落入「系统繁忙」兜底）：
@@ -417,6 +448,16 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 400 = 调用方请求有误（参数、上限、目标不存在）；504 = 插件 start/stop 在 `lifecycle-timeout-seconds` 内未完成（插件过慢或挂死），此时 bundle 真实状态可能不确定，以查询接口返回为准。
+
+**操作日志与进度**：安装 / 升级 / 启停 / 卸载是同步 REST 调用（受 `lifecycle-timeout-seconds` 约束），进度不靠轮询——每次操作产生 `start` → `success` / `failure` 日志事件，经 socket 全局通道实时推送（引入 `spring-support-socket-starter` 时自动启用，未引入时降级为本地日志）。前端订阅：
+
+```js
+socket.subscribe("osgi", "operation-log", (msg) => {
+    // msg.data: {level, status, action, symbolicName, message, startedAt, duration, timestamp}
+    // status: start / success / failure；action: install / update / start / stop / uninstall / delete-jar
+    // duration: 该步耗时（毫秒），可直接做「装了多久」的进度展示
+});
+```
 
 ### 6.9 可选依赖说明
 
@@ -470,3 +511,4 @@ public class MyExtensions {
 6. **SSH 里敲 `exit` / `shutdown` 会发生什么？** `exit` 只结束当前 SSH 会话（回显 bye 后关闭通道），宿主 JVM 与 OSGi 框架保持运行，可立即重连；`shutdown`、`felix:shutdown`、`system:exit`、`system:shutdown` 会被拒绝并提示走运维停机流程。原因：gosh_profile 把 `System` 注册为 `system:` 命令，裸 `exit` 会解析到 `System.exit(int)`，而 JDK 25 已移除 SecurityManager，无法在框架层拦截，只能在 shell 读取循环里就地处置。
 7. **安装插件返回「插件已安装…但启动失败」？** 安装（落框架）与启动（解析依赖）是两步：启动失败（如缺少 `Import-Package`）时接口返回业务错误并携带 Felix 的真实解析原因（不再是笼统的「系统繁忙」），bundle 仍处于 INSTALLED 状态，可卸载或修复依赖后重装；查询不存在的 bundle 返回 400 与「bundle 不存在: <名字>」，而不是 success=true 空数据。
 8. **批量接口部分失败算成功吗？** 算——批量启停/卸载是「逐项尽力执行」：HTTP 200 + `successCount`/`failureCount` + `items` 里逐项给出 `success` 与失败原因，某项失败不影响其余项；只有参数本身非法（目标列表为空、超过 100 个）才整体 400。批量 `batch-start` 对已 ACTIVE 的项直接记成功；`batch-uninstall` 只摘框架不删 jar，要删文件再调 `POST /osgi/jars/{fileName}/delete`。
+9. **操作进度和日志怎么拿？** REST 端点是同步的，不提供进度轮询接口；每次变更操作发出三条实时日志事件（`start`/`success`/`failure`，含耗时 `duration`），引入 socket-starter 后经全局 socket 推送，前端 `socket.subscribe("osgi", "operation-log", …)` 订阅即可；未引入 socket 时降级为服务端本地日志。
