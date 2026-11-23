@@ -28,6 +28,7 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.service.OnnxModelTaxonomy;
+import com.chua.starter.ai.support.manage.service.PlatformAccessKeyService;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.manage.service.ProviderCreditAlertLogService;
@@ -74,6 +75,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -141,6 +143,11 @@ public class ApiProviderController {
      * 渠道连接业务（账号模块）：归属隔离的连接查询
      */
     private final com.chua.starter.account.channel.service.AccountChannelConnectionService accountChannelConnectionService;
+
+    /**
+     * 平台访问密钥校验（ONNX / Web 模型目录与使用的逐请求门禁）
+     */
+    private final PlatformAccessKeyService platformAccessKeyService;
 
     /**
      * Magpie 网关路由源：免费渠道的模型清单要并入网关当前动态模型
@@ -782,13 +789,24 @@ public class ApiProviderController {
      */
     @GetMapping("/providers")
     public ApiResult<List<Map<String, Object>>> listProviders(
-            @RequestParam(value = "enabled_only", required = false, defaultValue = "true") boolean enabledOnly) {
-        boolean onnxVisible = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+            @RequestParam(value = "enabled_only", required = false, defaultValue = "true") boolean enabledOnly,
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey) {
+        boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+        boolean onnxVisible = admin;
+        // Web 平台密钥门禁：配置了 web_app_key 后，非管理员必须携带匹配密钥才能拿到 Web 模型目录
+        boolean webVisible = admin || platformAccessKeyService.verify(PlatformAccessKeyService.PLATFORM_WEB, webKey);
+        if (!webVisible) {
+            log.info("[Providers] 非管理员未携带有效 Web 平台密钥，隐藏 Web 模型目录");
+        }
         List<SysAccountChannel> providers = accountChannelService.listAll();
 
         List<Map<String, Object>> items = new ArrayList<>(8); // 提供者数量不可预估
         for (SysAccountChannel p : providers) {
             if (isOnnxRow(p) && !onnxVisible) {
+                continue;
+            }
+            if (isWebRow(p) && !webVisible) {
                 continue;
             }
             // 渠道管理页为每个已注册渠道镀铬的 OAuth provider 行（auth_scheme='oauth'，无模型 / 无凭证），
@@ -6160,15 +6178,22 @@ public class ApiProviderController {
      */
     @GetMapping("/provider-models")
     public ApiResult<List<Map<String, Object>>> listProviderModels(
-            @RequestParam(required = false) String provider_id) {
+            @RequestParam(required = false) String provider_id,
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey) {
         List<SysAccountChannelModel> models = accountChannelModelService.listAll(provider_id);
         // ONNX 供应商（用户自己添加、仅管理员可见）的模型同样不外泄
         boolean admin = com.chua.starter.ai.support.util.AiUserContext.isAdmin();
+        // Web 平台密钥门禁：配置了 web_app_key 后，非管理员必须携带匹配密钥才能拿到 Web 模型
+        boolean webVisible = admin || platformAccessKeyService.verify(PlatformAccessKeyService.PLATFORM_WEB, webKey);
         List<Map<String, Object>> items = new ArrayList<>(8); // 模型数量不可预估
         for (SysAccountChannelModel model : models) {
             SysAccountChannel provider = accountChannelService.find(model.getProviderId());
             if (provider != null) {
                 if (!admin && isOnnxRow(provider)) {
+                    continue;
+                }
+                if (!webVisible && isWebRow(provider)) {
                     continue;
                 }
                 items.add(toProviderModelResponse(provider, model));

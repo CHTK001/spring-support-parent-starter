@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.manage.service.PlatformAccessKeyService;
 import com.chua.starter.ai.support.stream.ChatFrameSink;
 import com.chua.starter.ai.support.stream.ChatStreamOrchestrator;
 import com.chua.starter.ai.support.stream.ChatStreamRegistry;
@@ -16,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,6 +45,11 @@ public class ChatStreamController {
     private final ChatStreamOrchestrator orchestrator;
     private final ChatStreamRegistry registry;
     private final ObjectMapper objectMapper;
+
+    /**
+     * 平台访问密钥校验（web:/onnx: 模型逐请求门禁）
+     */
+    private final PlatformAccessKeyService platformAccessKeyService;
 
     /**
      * 全局设置读取器（用户覆盖优先）：解析会话超时时间
@@ -127,7 +134,12 @@ public class ChatStreamController {
      * @return SseEmitter 对象
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@RequestBody Map<String, Object> body, HttpServletResponse response) {
+    public SseEmitter stream(@RequestBody Map<String, Object> body,
+                             @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+                             @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey,
+                             HttpServletResponse response) {
+        // 0. 平台密钥门禁：web:/onnx: 前缀模型必须携带匹配密钥（管理员豁免、未配置放行）
+        assertPlatformModelAllowed(body, onnxKey, webKey);
         // 1. 同步准备：归属/权限错误在此抛出，返回标准 JSON（尚未声明 event-stream）
         PreparedChat p = orchestrator.prepare(body);
 
@@ -173,8 +185,12 @@ public class ChatStreamController {
      */
     @PostMapping(value = "/resume", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter resume(@RequestBody(required = false) Map<String, Object> body,
+                             @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+                             @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey,
                              HttpServletResponse response) {
         Map<String, Object> safeBody = body != null ? body : new java.util.LinkedHashMap<>();
+        // 平台密钥门禁：恢复轮次同样按模型前缀校验
+        assertPlatformModelAllowed(safeBody, onnxKey, webKey);
         PreparedChat p = orchestrator.prepareResume(safeBody);
 
         SseEmitter emitter = new SseEmitter(0L);
@@ -215,6 +231,23 @@ public class ChatStreamController {
     public Map<String, Object> stop(@PathVariable String sessionId) {
         registry.requestStop(sessionId, AiUserContext.currentUserId());
         return Map.of("success", true);
+    }
+
+    /**
+     * 平台密钥门禁：请求体里的模型（modelId / model，复合 id 形态 {@code <providerId>:<model>}）
+     * 前缀为 web / onnx 时，非管理员必须携带匹配的平台密钥请求头。
+     *
+     * @param body    请求体，可为 null
+     * @param onnxKey ONNX 平台密钥请求头值，可为 null
+     * @param webKey  Web 平台密钥请求头值，可为 null
+     */
+    private void assertPlatformModelAllowed(Map<String, Object> body, String onnxKey, String webKey) {
+        Object modelId = body != null ? body.get("modelId") : null;
+        if (modelId == null || String.valueOf(modelId).isBlank()) {
+            modelId = body != null ? body.get("model") : null;
+        }
+        platformAccessKeyService.assertChatModelAllowed(
+                modelId == null ? null : String.valueOf(modelId), onnxKey, webKey);
     }
 
     /**

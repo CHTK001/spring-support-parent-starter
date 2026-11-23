@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
+import com.chua.starter.ai.support.manage.service.PlatformAccessKeyService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -46,6 +48,11 @@ public class ChatSendController {
     private final EffectiveChatModelResolver effectiveChatModelResolver;
 
     /**
+     * 平台访问密钥校验（web:/onnx: 模型逐请求门禁）
+     */
+    private final PlatformAccessKeyService platformAccessKeyService;
+
+    /**
      * 解析本次异步对话使用的模型，<b>不写死任何模型名</b>。
      *
      * @return 模型名；未配置可用模型时返回 空
@@ -73,7 +80,9 @@ public class ChatSendController {
      * @return 结果映射，无数据时为空映射
      */
     @PostMapping("/send")
-    public Map<String, Object> send(@RequestBody Map<String, Object> request) {
+    public Map<String, Object> send(@RequestBody Map<String, Object> request,
+                                    @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+                                    @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey) {
         log.info("[ChatSend] 收到消息: {}", request);
 
         String sessionId = str(request.get("sessionId"));
@@ -103,6 +112,11 @@ public class ChatSendController {
         final String sid = sessionId;
         // 身份必须在请求线程内解析：异步回调线程取不到，记忆会落成无主数据
         final String memoryUser = AiUserContext.currentUserId();
+
+        // 平台密钥门禁：默认模型若落在 web:/onnx: 平台，非管理员必须携带匹配密钥。
+        // 模型在请求线程内解析并校验，失败直接抛 403，不进入异步对话。
+        final String resolvedModelId = resolvedModel();
+        platformAccessKeyService.assertChatModelAllowed(resolvedModelId, onnxKey, webKey);
         CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
             try {
                 List<Map<String, Object>> msgList = new ArrayList<>();
@@ -117,8 +131,7 @@ public class ChatSendController {
                 }
                 chatMemorySupport.inject(memoryUser, sid, userContent, msgList);
                 AiChatRequest req = new AiChatRequest();
-                final String modelToUse = resolvedModel();
-                req.setModel(modelToUse);
+                req.setModel(resolvedModelId);
                 req.setStream(true);
                 req.setUseSkill(true);
                 req.setMessages(msgList);
@@ -130,7 +143,7 @@ public class ChatSendController {
                     } catch (Exception e) {
                         log.warn("[ChatSend] 保存助手消息失败: {}", e.getMessage());
                     }
-                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, modelToUse);
+                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, resolvedModelId);
                     log.info("[ChatSend] 异步对话完成 sessionId={}, 回复长度={}", sid, finalText.length());
                 }, error -> log.error("[ChatSend] 异步对话失败 sessionId={}", sid, error));
             } catch (Exception e) {

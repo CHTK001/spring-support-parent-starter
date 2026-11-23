@@ -23,3 +23,4 @@ com.chua.starter.ai.support.configuration.health.ChannelProbeGlobalSettingProvid
 com.chua.starter.ai.support.configuration.input.InputSuggestGlobalSettingProvider
 com.chua.starter.ai.support.configuration.detect.DetectGlobalSettingProvider
 com.chua.starter.ai.support.configuration.timewheel.TimeWheelGlobalSettingProvider
+com.chua.starter.ai.support.configuration.platform.PlatformAccessGlobalSettingProvider
