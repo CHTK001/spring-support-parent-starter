@@ -287,7 +287,7 @@ public class HikvisionCloudYaoSdk extends AbstractPlatformSdk {
             conditions.add(condition("pageNo", pageNo));
             conditions.add(condition("pageSize", PAGE_SIZE));
             if (projectId != null) {
-                conditions.add(condition("projectId", projectId));
+                conditions.add(condition("projectId", projectIdNumber()));
             }
             JsonNode root = send(PATH_DEVICE_PAGE, conditions, token());
             List<JsonNode> list = toList(root == null ? null : root.get("data"));
