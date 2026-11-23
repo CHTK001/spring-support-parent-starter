@@ -25,6 +25,9 @@ public class SipServerManager {
 
     private static final Logger log = LoggerFactory.getLogger(SipServerManager.class);
 
+    /** 应用启动后延迟拉起 SIP 中继的等待时长（毫秒）：等待配置加载完成，避免读到默认值 */
+    private static final long INIT_DELAY_MILLIS = 10_000L;
+
     /**
      * 控制端口监听对象（当前由 {@link SipTunnel} 内部持有，此字段保留用于后续接管）
      */
@@ -55,7 +58,7 @@ public class SipServerManager {
     // [P3C C1 豁免] I/O 阻塞循环（aio/nio/ssh/ftp/终端），不适合交给通用执行器
     new Thread(() -> {
             try {
-                Thread.sleep(10000);
+                Thread.sleep(INIT_DELAY_MILLIS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.debug("[SIP] 启动延时被中断，立即尝试启动: {}", e.getMessage());

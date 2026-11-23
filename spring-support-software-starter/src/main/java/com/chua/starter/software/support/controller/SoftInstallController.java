@@ -3,7 +3,7 @@ package com.chua.starter.software.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.base.validator.group.AddGroup;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.software.support.contants.AuthConstant;
+import com.chua.starter.software.support.constants.AuthConstant;
 import com.chua.starter.software.support.entity.SoftInstallRecord;
 import com.chua.starter.software.support.pojo.install.InstallDetailResponse;
 import com.chua.starter.software.support.pojo.install.InstallRequest;

@@ -2,8 +2,8 @@ package com.chua.starter.oauth.client.support.resilience;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
-import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.information.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import lombok.extern.slf4j.Slf4j;
 

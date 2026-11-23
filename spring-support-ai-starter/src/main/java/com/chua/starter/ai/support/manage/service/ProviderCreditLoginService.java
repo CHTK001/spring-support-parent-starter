@@ -22,7 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -887,10 +889,20 @@ public class ProviderCreditLoginService {
             liveSessions.put(sessionToken, session);
             // 画面/交互接管：同一 token 重复观看时旧流自动让位；会话空闲 30 分钟自动回收
             server.view(page, sessionToken);
-            Thread worker = new Thread(() -> awaitLiveToken(session),
-                    "credit-live-login-" + sessionToken.substring(0, 8));
-            worker.setDaemon(true);
-            worker.start();
+            ThreadPoolExecutor worker = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<>(), runnable -> {
+                Thread thread = new Thread(runnable,
+                        "credit-live-login-" + sessionToken.substring(0, 8));
+                thread.setDaemon(true);
+                return thread;
+            });
+            worker.execute(() -> {
+                try {
+                    awaitLiveToken(session);
+                } finally {
+                    worker.shutdown();
+                }
+            });
             log.info("[credit-live-login] 供应商 {} 实时登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
             return new LiveLoginHandle(true, "登录窗口已就绪，请在画面中完成上游门户登录",
                     sessionToken, "/live/s/" + sessionToken, server.port(), loginUrl);

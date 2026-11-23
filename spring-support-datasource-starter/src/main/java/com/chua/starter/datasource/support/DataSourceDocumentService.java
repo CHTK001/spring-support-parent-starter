@@ -255,7 +255,7 @@ public class DataSourceDocumentService {
                     try {
                         java.lang.reflect.Field f = findField(raw.getClass(), "password", "pass");
                         if (f != null) {
-                            f.setAccessible(true);
+                            ReflectUtils.setAccessibleAccessible(f);
                             Object val = f.get(raw);
                             return val == null ? null : val.toString();
                         }

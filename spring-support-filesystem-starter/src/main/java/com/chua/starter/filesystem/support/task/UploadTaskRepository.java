@@ -2,6 +2,8 @@
 package com.chua.starter.filesystem.support.task;
 
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -59,6 +61,9 @@ public class UploadTaskRepository {
               primary key (task_id, chunk_index)
             )""";
 
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(UploadTaskRepository.class);
+
     /** 可选的数据源句柄：没有配库时为 null，所有写入静默跳过 */
     private final JdbcTemplate jdbcTemplate;
 
@@ -86,6 +91,7 @@ public class UploadTaskRepository {
             jdbcTemplate.execute(DDL_CHUNK);
         } catch (Exception ignored) {
             // 没有建表权限 / 非关系型数据源：降级为纯内存
+            log.warn("[filesystem] 上传任务表建表失败，降级为纯内存: {}", ignored.getMessage(), ignored);
         }
     }
 
@@ -114,6 +120,7 @@ public class UploadTaskRepository {
                     task.getCreatedAt());
         } catch (Exception ignored) {
             // 持久化失败不影响上传主流程
+            log.warn("[filesystem] 保存上传任务记录失败 taskId={}: {}", task.getTaskId(), ignored.getMessage(), ignored);
         }
     }
 
@@ -139,6 +146,7 @@ public class UploadTaskRepository {
                     taskId, index, md5, size, received ? 1 : 0);
         } catch (Exception ignored) {
             // 同上
+            log.warn("[filesystem] 保存上传分片记录失败 taskId={} chunk={}: {}", taskId, index, ignored.getMessage(), ignored);
         }
     }
 
@@ -159,6 +167,7 @@ public class UploadTaskRepository {
                     from fs_upload_task order by created_at desc limit ?
                     """, limit);
         } catch (Exception e) {
+            log.warn("[filesystem] 查询上传任务列表失败，回退空列表: {}", e.getMessage(), e);
             return List.of();
         }
     }
@@ -179,6 +188,7 @@ public class UploadTaskRepository {
                     from fs_upload_chunk where task_id = ? order by chunk_index
                     """, taskId);
         } catch (Exception e) {
+            log.warn("[filesystem] 查询上传分片详情失败 taskId={}，回退空列表: {}", taskId, e.getMessage(), e);
             return new ArrayList<>();
         }
     }

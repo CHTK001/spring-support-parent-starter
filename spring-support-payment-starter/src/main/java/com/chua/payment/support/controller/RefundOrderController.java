@@ -12,7 +12,7 @@ import com.chua.payment.support.vo.RefundOrderVO;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.lang.ReturnPageResult;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

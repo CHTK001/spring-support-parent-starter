@@ -3,6 +3,8 @@ package com.chua.starter.server.support.util;
 import com.chua.starter.server.support.model.SshCredential;
 import com.chua.ssh.support.client.HostKeyPolicy;
 import com.chua.ssh.support.client.SshClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +28,9 @@ public final class SshClients {
      * 默认 SSH 端口
     */
     private static final int DEFAULT_PORT = 22;
+
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(SshClients.class);
 
     /**
      * 进程级默认：TCP 连接/握手超时（秒）
@@ -203,6 +208,7 @@ public final class SshClients {
                         Files.deleteIfExists(tempKeyPath);
                     } catch (IOException ignored) {
                         // 临时文件删除失败不影响主流程，交由操作系统临时目录清理机制兜底
+                        log.debug("[server-ssh] SSH 私钥临时文件删除失败 path={}", tempKeyPath, ignored);
                     }
                 }
             }

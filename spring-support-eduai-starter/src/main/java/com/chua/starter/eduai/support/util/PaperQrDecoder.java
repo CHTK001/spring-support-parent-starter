@@ -7,6 +7,9 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -30,6 +33,9 @@ public final class PaperQrDecoder {
     private static final Pattern QR_LINE_PATTERN = Pattern.compile(
             "^(PAPER|STUDENT|EXAM)\\s*[:：]\\s*(.*)$",
             Pattern.CASE_INSENSITIVE);
+
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(PaperQrDecoder.class);
 
     /**
      * 工具类，禁止实例化。
@@ -69,6 +75,7 @@ public final class PaperQrDecoder {
                 return parseQrInfo(decode(image, true));
             }
         } catch (Exception e) {
+            log.debug("[eduai] 整卷二维码解码失败: {}", e.getMessage(), e);
             return null;
         }
     }

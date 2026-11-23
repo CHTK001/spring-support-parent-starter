@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,7 +41,7 @@ public class DeviceLifecyclePublisher implements DisposableBean {
     private final ObjectProvider<DeviceLifecycleCallback> providers;
 
     /** 每次回调一个虚拟线程，避免下游操作别的服务器时阻塞业务线程 */
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService executor = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 0L, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), Thread.ofVirtual().name("device-lifecycle-", 0).factory());
 
     /**
      * 构造发布器。

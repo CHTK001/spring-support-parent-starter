@@ -19,8 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -84,7 +84,7 @@ public class SysAiWebSocketHandler extends TextWebSocketHandler implements SubPr
      */
     private void startHeartbeat() {
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        heartbeatScheduler = new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "nomifun-ws-heartbeat");
             t.setDaemon(true);

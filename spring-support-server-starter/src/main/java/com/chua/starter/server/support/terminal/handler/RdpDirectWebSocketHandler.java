@@ -477,6 +477,8 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
             Thread.sleep(200);  // 让泵线程自行静默收口
         // [P3C F1 豁免]
         } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+            log.debug("[terminal-rdp] 等待泵线程收口时被中断 sessionId={}", bridge.wsSession.getId(), ignored);
         }
         if (handle > 0L && nativeReady) {
             try {

@@ -184,6 +184,7 @@ public class WinrmShell {
                         client.close();
                     } catch (Exception ignore) {
                         // 关闭异常不处理
+                        log.debug("[winrm] 关闭 WinRM 客户端失败: {}", ignore.getMessage(), ignore);
                     }
                 }
             }

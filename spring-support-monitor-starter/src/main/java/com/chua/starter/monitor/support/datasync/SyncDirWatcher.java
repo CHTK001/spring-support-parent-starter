@@ -14,7 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -82,7 +83,7 @@ public class SyncDirWatcher implements AutoCloseable {
      * 工作线程池：单线程足够——同步本来就是串行的，也避免同名文件并发写同一张表
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
+    private final ExecutorService worker = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), runnable -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(runnable, "sync-dir-worker-" + WORKER_SEQ.incrementAndGet());
         thread.setDaemon(true);

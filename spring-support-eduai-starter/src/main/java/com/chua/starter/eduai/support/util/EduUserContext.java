@@ -2,7 +2,7 @@ package com.chua.starter.eduai.support.util;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.exception.BusinessException;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.HttpServletRequest;

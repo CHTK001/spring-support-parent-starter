@@ -15,7 +15,7 @@ import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
 import com.chua.starter.message.support.service.SysMessageService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

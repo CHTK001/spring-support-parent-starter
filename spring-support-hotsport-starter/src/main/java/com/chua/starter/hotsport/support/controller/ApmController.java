@@ -35,8 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -107,7 +107,7 @@ public class ApmController {
     */
     private final ScheduledExecutorService sseExecutor =
 // [P3C C1 豁免] 场景化创建线程，需文档化
-            Executors.newScheduledThreadPool(4, r -> {
+            new ScheduledThreadPoolExecutor(4, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "hotsport-sse");
                 t.setDaemon(true);

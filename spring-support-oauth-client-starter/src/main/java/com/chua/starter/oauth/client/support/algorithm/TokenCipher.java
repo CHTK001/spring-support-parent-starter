@@ -5,6 +5,8 @@ import com.chua.common.support.lang.algorithm.crypto.Hex;
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 
@@ -23,6 +25,9 @@ public final class TokenCipher {
      * SM4 加密密钥，与登录侧保持一致
      */
     private static final byte[] KEY = AuthClientExecute.DEFAULT_KEY.getBytes(StandardCharsets.UTF_8);
+
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(TokenCipher.class);
 
     /**
      * SM4 加密解密器（线程安全、单例初始化）
@@ -77,6 +82,7 @@ public final class TokenCipher {
         try {
             return Hex.encodeHexString(cipher().encrypt(KEY, plainText.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
+            log.error("[oauth] 令牌加密失败", e);
             return null;
         }
     }

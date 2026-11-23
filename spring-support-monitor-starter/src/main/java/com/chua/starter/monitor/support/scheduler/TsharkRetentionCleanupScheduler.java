@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * 抓包数据保留清理任务。
@@ -34,7 +34,7 @@ public class TsharkRetentionCleanupScheduler implements SchedulingConfigurer {
     @Override
     public void configureTasks(ScheduledTaskRegistrar registrar) {
         // [P3C C1 豁免]
-        registrar.setScheduler(Executors.newScheduledThreadPool(1));
+        registrar.setScheduler(new ScheduledThreadPoolExecutor(1));
     }
 
     /**

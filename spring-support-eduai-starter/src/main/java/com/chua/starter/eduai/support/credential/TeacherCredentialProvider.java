@@ -6,7 +6,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.eduai.dimension.entity.EduTeacher;
 import com.chua.starter.eduai.dimension.mapper.EduTeacherMapper;
 import com.chua.starter.eduai.support.util.StudentPasswordSupport;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.credential.CredentialIssuer;
 import com.chua.starter.oauth.client.support.credential.CredentialProvider;
 import com.chua.starter.oauth.client.support.credential.CredentialRequest;

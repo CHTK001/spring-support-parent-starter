@@ -12,9 +12,9 @@ import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
-import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
-import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.information.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
@@ -33,7 +33,7 @@ import java.util.Map;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
+import static com.chua.starter.oauth.client.support.constants.AuthConstant.SUPER_ADMIN;
 
 /**
  * 静态协议实现类，用于处理静态认证逻辑。

@@ -1,4 +1,4 @@
-package com.chua.starter.software.support.contants;
+package com.chua.starter.software.support.constants;
 
 /**
  * 认证常量

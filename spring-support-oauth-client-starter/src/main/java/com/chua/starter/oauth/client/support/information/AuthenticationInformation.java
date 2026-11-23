@@ -1,4 +1,4 @@
-package com.chua.starter.oauth.client.support.infomation;
+package com.chua.starter.oauth.client.support.information;
 
 import com.chua.starter.oauth.client.support.user.UserResume;
 import lombok.AllArgsConstructor;
@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
-import static com.chua.starter.oauth.client.support.infomation.Information.*;
+import static com.chua.starter.oauth.client.support.information.Information.*;
 
 /**
  * 鉴权信息

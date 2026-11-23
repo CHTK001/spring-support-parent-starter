@@ -4,6 +4,8 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.account.common.ApiErrorCode;
 import com.chua.starter.account.common.ApiException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -53,6 +55,9 @@ public final class AccountUserContext {
      * 超级管理员角色编码（与 oauth 侧 {@code AuthConstant.SUPER_ADMIN} 口径一致）。
      */
     private static final String ROLE_SUPER_ADMIN = "SUPER_ADMIN";
+
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(AccountUserContext.class);
 
     /**
      * 工具类，禁止实例化
@@ -129,6 +134,7 @@ public final class AccountUserContext {
             Object resume = getUserInfo.invoke(null, resumeType);
             return resume == null ? null : resumeType.getMethod("getRoles").invoke(resume);
         } catch (Throwable ignored) {
+            log.debug("[account] 读取 oauth 会话角色失败（宿主未装 oauth 或未登录）: {}", ignored.getMessage(), ignored);
             return null;
         }
     }
@@ -165,6 +171,7 @@ public final class AccountUserContext {
             Object userId = resumeType.getMethod("getUserId").invoke(resume);
             return userId == null ? null : StringUtils.trimToNull(userId.toString());
         } catch (Throwable ignored) {
+            log.debug("[account] 读取 oauth 会话用户标识失败（宿主未装 oauth 或未登录）: {}", ignored.getMessage(), ignored);
             return null;
         }
     }

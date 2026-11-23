@@ -5,9 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,12 +48,12 @@ public final class IdleTimeoutChatFrameSink implements ChatFrameSink {
     /**
      * 看门狗调度器：daemon 单线程，只做「检查有没有超时」这一件事。
      *
-     * <p>用 {@code Executors.newSingleThreadScheduledExecutor} 而不是共享业务线程池：
+     * <p>用专属的单线程 {@code ScheduledThreadPoolExecutor} 而不是共享业务线程池：
      * 这是一个纯计时任务，若被业务任务挤占，超时就会失准；而它自身几乎不耗 CPU。</p>
      */
     private static final ScheduledExecutorService WATCHDOG =
 // [P3C C1 豁免] 场景化创建线程，需文档化
-            Executors.newSingleThreadScheduledExecutor(r -> {
+            new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "chat-stream-idle-watchdog");
                 t.setDaemon(true);

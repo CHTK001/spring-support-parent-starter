@@ -8,7 +8,7 @@ import com.chua.starter.oauth.client.support.advice.Advice;
 import com.chua.starter.oauth.client.support.advice.AdviceResolver;
 import com.chua.starter.oauth.client.support.advice.HtmlAdviceResolver;
 import com.chua.starter.oauth.client.support.advice.JsonAdviceResolver;
-import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.information.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;

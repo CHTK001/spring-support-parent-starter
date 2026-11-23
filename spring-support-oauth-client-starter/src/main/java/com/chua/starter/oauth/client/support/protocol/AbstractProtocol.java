@@ -18,8 +18,8 @@ import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
-import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
-import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.information.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.session.StaticSessionRegistry;
@@ -38,7 +38,7 @@ import java.util.Objects;
 
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.RESULT_ACCESS_UNAUTHORIZED;
-import static com.chua.starter.oauth.client.support.infomation.Information.*;
+import static com.chua.starter.oauth.client.support.information.Information.*;
 
 /**
    * 协议
@@ -896,6 +896,7 @@ public abstract class AbstractProtocol implements Protocol {
                * clear认证信息。
                * @param cacheKey 缓存Key
                */
+            log.warn("[OAuth客户端]缓存认证信息类型转换失败，清除缓存 - key: {}", cacheKey, e);
             clearAuthenticationInformation(cacheKey);
             return null;
         }

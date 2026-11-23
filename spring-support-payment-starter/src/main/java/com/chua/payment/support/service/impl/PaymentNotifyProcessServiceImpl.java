@@ -519,6 +519,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
                 Map<String, Object> bodyMap = objectMapper.readValue(notifyLog.getRequestBody(), LinkedHashMap.class);
                 result.putAll(bodyMap);
             } catch (Exception ignored) {
+                log.warn("[payment] 通知请求体 JSON 解析失败，按原始文本回填: {}", ignored.getMessage(), ignored);
                 result.put("body", notifyLog.getRequestBody());
             }
         }

@@ -35,7 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -283,7 +285,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     @Bean("uniform")
     public ExecutorService executor() {
 // [P3C C1 豁免] 场景化创建线程，需文档化（MdcWrap.decorate 串联提交方 MDC，无需 javaagent）
-        return MdcWrap.decorate(Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("uniform-pool").factory()));
+        return MdcWrap.decorate(new ThreadPoolExecutor(0, Integer.MAX_VALUE, 0L, TimeUnit.MILLISECONDS, new SynchronousQueue<>(), Thread.ofVirtual().name("uniform-pool").factory()));
     }
 
     // ==================== 异常处理配置 ====================

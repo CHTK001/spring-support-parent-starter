@@ -8,12 +8,12 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.watch.Watch;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.credential.CredentialIssuer;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
-import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.impersonation.TemporaryToken;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.AbstractProtocol;
@@ -101,6 +101,9 @@ public class AuthClientExecute {
             .newBuilder()
             .expireAfterWrite(3, TimeUnit.MINUTES)
             .build();
+
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(AuthClientExecute.class);
 
     /**
      * 创建 认证客户端执行 实例
@@ -293,6 +296,7 @@ public class AuthClientExecute {
             }
         } catch (Exception ignored) {
             // 忽略清除缓存时的异常
+            log.debug("[oauth] 清除本地缓存失败: {}", ignored.getMessage(), ignored);
         }
     }
 
@@ -486,7 +490,7 @@ public class AuthClientExecute {
         RateLimitService rateLimitService = RateLimitService.getInstance();
         if (rateLimitService.isAccountLocked(username)) {
             LoginAuthResult locked = new LoginAuthResult();
-            locked.setCode(com.chua.starter.oauth.client.support.infomation.Information.AUTHENTICATION_FAILURE.getCode());
+            locked.setCode(com.chua.starter.oauth.client.support.information.Information.AUTHENTICATION_FAILURE.getCode());
             locked.setMessage("账号已锁定，请稍后再试");
             return locked;
         }
@@ -499,7 +503,7 @@ public class AuthClientExecute {
         LoginAuthResult result = protocolExecutor.getAccessToken(username, password, authType, ext);
         // 登录结果埋点：成功清除失败计数，失败累加（达到阈值触发账号锁定）
         if (result != null && result.getCode() != null
-                && result.getCode() == com.chua.starter.oauth.client.support.infomation.Information.OK.getCode()) {
+                && result.getCode() == com.chua.starter.oauth.client.support.information.Information.OK.getCode()) {
             rateLimitService.resetAccount(username);
         } else {
             rateLimitService.recordLoginFailure(username);

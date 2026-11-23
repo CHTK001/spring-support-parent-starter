@@ -109,6 +109,9 @@ public class MultiDataSource implements DataSource {
         }
 
         GenericObjectPool<Connection> pool1 = THREAD_LOCAL.get();
+        // [P3C 并发修复] 归还后立即回收 ThreadLocal，防止线程池复用线程时残留池引用；
+        // 调用方（DynamicDataSource）为「一借一还」模式，remove 不影响后续借还。
+        THREAD_LOCAL.remove();
         if (null == pool1) {
             return;
         }

@@ -310,7 +310,7 @@ public final class GenerateConfigSupport {
      * @return 整数；无法解析返回 null
      */
     private static Integer intOrNull(Object value) {
-        if (value == null || value == "") {
+        if (value == null || "".equals(value)) {
             return null;
         }
         if (value instanceof Number n) {

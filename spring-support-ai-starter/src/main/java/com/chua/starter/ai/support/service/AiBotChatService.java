@@ -65,6 +65,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -147,6 +151,18 @@ public class AiBotChatService {
      * 运行中的 机器人：机器人标识 -> 平台客户端（wechat=ILink，feishu/qq 等为对应 SPI 实现）。
     */
     private final Map<String, BotClient> runningBots = new ConcurrentHashMap<>();
+
+    /**
+     * Bot 长轮询线程池：iLink 的 {@code startPolling()} 阻塞，每个 Bot 需要各自一条
+     * 并发轮询线程，因此用可扩容的缓存型线程池（线程 60 秒空闲回收）而不是单线程池。
+     * 线程设为守护，避免 Bot 轮询阻止 JVM 退出。
+     */
+    private static final ExecutorService BOT_POLL_POOL = new ThreadPoolExecutor(0, Integer.MAX_VALUE,
+            60L, TimeUnit.SECONDS, new SynchronousQueue<>(), runnable -> {
+        Thread thread = new Thread(runnable, "bot-chat-poll");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     /**
      * 通用助手编码（系统内置，按 code 定位，不依赖主键）。
@@ -240,14 +256,15 @@ public class AiBotChatService {
         runningBots.put(bot.getBotId(), client);
         if (client instanceof ILinkBotClient ilink) {
             // iLink 长轮询阻塞，放独立线程
-// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
-            new Thread(() -> {
+            BOT_POLL_POOL.execute(() -> {
+                // 保留原「bot-chat-<botId>」线程名，便于日志定位是哪个 Bot 的轮询
+                Thread.currentThread().setName("bot-chat-" + bot.getBotId());
                 try {
                     ilink.startPolling();
                 } catch (Exception e) {
                     log.error("[BotChat] Bot {} 启动失败", bot.getBotId(), e);
                 }
-            }, "bot-chat-" + bot.getBotId()).start();
+            });
         } else {
             // 凭据型客户端 start() 自带网关线程，非阻塞
             client.start();

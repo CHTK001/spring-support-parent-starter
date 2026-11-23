@@ -32,8 +32,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * AI 服务实例管理器。
@@ -120,7 +122,8 @@ public class ServiceInstanceManager {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress(inst.getPort()), 0);
 // [P3C C1 豁免] 场景化创建线程，需文档化
-            ExecutorService pool = Executors.newFixedThreadPool(10);
+            ExecutorService pool = new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<>());
             server.setExecutor(pool);
             registerContexts(server, inst);
             server.start();

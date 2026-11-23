@@ -26,6 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerKeyServiceImpl implements ServerKeyService {
 
+    /** RSA 密钥长度（位） */
+    private static final int RSA_KEY_SIZE_BITS = 4096;
+
     /**
      * 密钥 映射器
     */
@@ -138,7 +141,7 @@ public class ServerKeyServiceImpl implements ServerKeyService {
                 default -> {
                     keyType = "RSA";
                     generator = java.security.KeyPairGenerator.getInstance("RSA");
-                    generator.initialize(4096);
+                    generator.initialize(RSA_KEY_SIZE_BITS);
                 }
             }
             java.security.KeyPair pair = generator.generateKeyPair();

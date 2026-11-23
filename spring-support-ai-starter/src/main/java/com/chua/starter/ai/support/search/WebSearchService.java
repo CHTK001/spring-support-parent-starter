@@ -20,7 +20,8 @@ import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.List;
@@ -98,7 +99,8 @@ public class WebSearchService {
     private static final long PAID_PREFERRED_MS = 2500L;
 
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ExecutorService SEARCH_POOL = MdcWrap.decorate(Executors.newFixedThreadPool(4, r -> {
+    private static final ExecutorService SEARCH_POOL = MdcWrap.decorate(new ThreadPoolExecutor(4, 4, 0L,
+            TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "web-search");
         t.setDaemon(true);

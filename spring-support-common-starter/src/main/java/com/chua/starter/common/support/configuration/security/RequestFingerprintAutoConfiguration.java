@@ -31,8 +31,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -64,7 +64,7 @@ public class RequestFingerprintAutoConfiguration {
     public Filter requestFingerprintFilter(FingerprintProps props) {
         final Map<String, Long> cache = new ConcurrentHashMap<>();
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor(r -> {
+        ScheduledExecutorService cleaner = new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread t = new Thread(r, "fingerprint-cache-cleaner");
             t.setDaemon(true);

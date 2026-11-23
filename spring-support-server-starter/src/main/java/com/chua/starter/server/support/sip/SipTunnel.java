@@ -28,6 +28,9 @@ public class SipTunnel {
 
     private static final Logger log = LoggerFactory.getLogger(SipTunnel.class);
 
+    /** Provider 断线重连间隔（毫秒） */
+    private static final long RECONNECT_INTERVAL_MILLIS = 5_000L;
+
 // [P3C C1 豁免] 场景化创建线程，需文档化
     private static final ExecutorService POOL = Executors.newCachedThreadPool(r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
@@ -209,7 +212,7 @@ public class SipTunnel {
                 log.warn("[SIP-Provider] 连接断开，5秒后重连: {}", e.getMessage());
             }
             try {
-                Thread.sleep(5000);
+                Thread.sleep(RECONNECT_INTERVAL_MILLIS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.debug("[sip] 等待被中断，已退出: {}", e.getMessage());

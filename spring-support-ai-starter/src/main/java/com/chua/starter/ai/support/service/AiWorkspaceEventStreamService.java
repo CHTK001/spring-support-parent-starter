@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -108,7 +108,7 @@ public class AiWorkspaceEventStreamService {
     @PostConstruct
     public void start() {
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        scheduler = new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(r, "ai-workspace-event-watch");
             thread.setDaemon(true);

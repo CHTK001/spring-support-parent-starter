@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -61,7 +61,7 @@ public class TunnelStatusStream implements AutoCloseable {
     public TunnelStatusStream(Supplier<List<TunnelView>> snapshotSupplier, long intervalMillis) {
         this.snapshotSupplier = snapshotSupplier;
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        this.scheduler = new ScheduledThreadPoolExecutor(1, runnable -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(runnable, "tunnel-status-sse");
             thread.setDaemon(true);

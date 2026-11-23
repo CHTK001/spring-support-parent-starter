@@ -30,10 +30,10 @@ public final class AnsiStyle {
      *     <li>其它情况 → 启用</li>
      * </ul>
      *
-     * <p>使用 {@link ThreadLocal} 缓存, 避免每次调用都访问环境变量;
+     * <p>结果为进程级常量, 使用 {@code volatile} 字段缓存（无 ThreadLocal 线程残留问题）;
      * 测试场景可调用 {@link #reset()} 清缓存。</p>
      */
-    private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
+    private static volatile Boolean enabledCache;
 
     /**
      * Reset
@@ -86,12 +86,12 @@ public final class AnsiStyle {
      * @return 是否已启用的结果
      */
     public static boolean isEnabled() {
-        Boolean cached = ENABLED_CACHE.get();
+        Boolean cached = enabledCache;
         if (cached != null) {
             return cached;
         }
         boolean enabled = computeEnabled();
-        ENABLED_CACHE.set(enabled);
+        enabledCache = enabled;
         return enabled;
     }
 
@@ -114,13 +114,13 @@ public final class AnsiStyle {
     }
 
     /**
-     * 清空当前线程的 已启用 缓存。
+     * 清空 已启用 缓存。
      *
      * <p>主要用于单元测试, 在修改 {@code NO_COLOR} 等环境变量后调用。
      * 生产代码不应调用此方法。</p>
      */
     public static void reset() {
-        ENABLED_CACHE.remove();
+        enabledCache = null;
     }
 
     /**

@@ -33,7 +33,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -192,6 +197,17 @@ public class GenerateService {
        */
     private final ExecutorService imageExecutor = createImageExecutor();
 
+    /**
+     * 进度心跳调度器：单线程守护。心跳是随任务存活的循环任务，若复用图像线程池，
+     * 并发任务会把 4 条图像线程占满，心跳永远排不上队；单独一条线程互不拖累。
+     */
+    private final ScheduledExecutorService heartbeatExecutor = new ScheduledThreadPoolExecutor(1,
+            runnable -> {
+                Thread thread = new Thread(runnable, "ai-generate-heartbeat");
+                thread.setDaemon(true);
+                return thread;
+            });
+
       /** 已标记取消的本地任务号：回写终态时据此跳过，避免把取消覆盖成成功 */
     private final Set<String> canceledTaskIds = ConcurrentHashMap.newKeySet();
 
@@ -202,7 +218,8 @@ public class GenerateService {
        */
     private static ExecutorService createImageExecutor() {
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        return Executors.newFixedThreadPool(4, runnable -> {
+        return new ThreadPoolExecutor(4, 4, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(),
+                runnable -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(runnable, "ai-generate-image");
             thread.setDaemon(true);
@@ -216,6 +233,7 @@ public class GenerateService {
     @PreDestroy
     public void shutdownImageExecutor() {
         imageExecutor.shutdown();
+        heartbeatExecutor.shutdown();
     }
 
       /**
@@ -885,7 +903,7 @@ public class GenerateService {
             }
             AtomicBoolean finished = new AtomicBoolean(false);
               // 心跳：provider 计算期间无法报进度，但要让前端看得出任务还活着
-            Thread heartbeat = startHeartbeat(task, finished);
+            Future<?> heartbeat = startHeartbeat(task, finished);
             try {
                 markProgress(task, generatingProgress(task, startedAt));
                 BufferedImage image = client.generate(prompt);
@@ -919,7 +937,7 @@ public class GenerateService {
             } finally {
                 finished.set(true);
                 if (heartbeat != null) {
-                    heartbeat.interrupt();
+                    heartbeat.cancel(true);
                 }
             }
             task.setUpdatedAt(System.currentTimeMillis());
@@ -951,57 +969,45 @@ public class GenerateService {
     }
 
       /**
-       * 启动进度心跳线程：每 2 秒续一次 updatedAt，并在上游不给中间进度时写估算进度。
+       * 启动进度心跳任务：每 2 秒续一次 updatedAt，并在上游不给中间进度时写估算进度。
        *
-       * <p>把两件事放在同一个线程里，是因为它们的节奏与生命周期完全一致
-       * （都是「任务还在跑」的体现，都随 finished 退出）；分成两个线程只是多一份调度开销，
+       * <p>把两件事放在同一个任务里，是因为它们的节奏与生命周期完全一致
+       * （都是「任务还在跑」的体现，都随 finished 退出）；分成两个任务只是多一份调度开销，
        * 还会让「谁先退出」变成一个新的竞态面。</p>
        *
        * <p>估算值由 {@link GenerateProgressEstimator} 给出，封顶 99；
-       * 真实进度（若能拿到）由调用方写入，本线程只在仍是进行中时推进。</p>
+       * 真实进度（若能拿到）由调用方写入，本任务只在仍是进行中时推进。</p>
        *
        * @param task     任务行
        * @param finished 完成标记，置位后心跳退出
-       * @return 心跳线程
+       * @return 心跳任务句柄，调用方结束时须 cancel
        */
-    private Thread startHeartbeat(SysAiGenerateTask task, AtomicBoolean finished) {
+    private Future<?> startHeartbeat(SysAiGenerateTask task, AtomicBoolean finished) {
         long startedAt = task.getCreatedAt() == null ? System.currentTimeMillis() : task.getCreatedAt();
-// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
-        Thread thread = new Thread(() -> {
-            while (!finished.get() && !Thread.currentThread().isInterrupted()) {
-                try {
-                    Thread.sleep(2000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-                if (finished.get() || canceledTaskIds.contains(task.getTaskId())) {
-                    return;
-                }
-                try {
-                    int estimated = generatingProgress(task, startedAt);
-                      // 单调保护：估算只许往前推。心跳每 2 秒一次，而指数曲线的后段增量很小，
-                      // 不设保护时同一档位会被反复写库；更要紧的是别让进度回退。
-                    Integer current = task.getProgress();
-                    if (current != null && estimated <= current) {
-                        estimated = current;
-                    }
-                    SysAiGenerateTask patch = new SysAiGenerateTask();
-                    patch.setTaskId(task.getTaskId());
-                    patch.setUpdatedAt(System.currentTimeMillis());
-                    if (estimated > PROGRESS_QUEUED) {
-                        patch.setProgress(estimated);
-                    }
-                    taskMapper.updateById(patch);
-                    task.setProgress(estimated);
-                } catch (Exception e) {
-                    log.debug("[Generate] 心跳续期失败 taskId={}: {}", task.getTaskId(), e.getMessage());
-                }
+        return heartbeatExecutor.scheduleWithFixedDelay(() -> {
+            if (finished.get() || canceledTaskIds.contains(task.getTaskId())) {
+                return;
             }
-        }, "ai-generate-heartbeat");
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
+            try {
+                int estimated = generatingProgress(task, startedAt);
+                  // 单调保护：估算只许往前推。心跳每 2 秒一次，而指数曲线的后段增量很小，
+                  // 不设保护时同一档位会被反复写库；更要紧的是别让进度回退。
+                Integer current = task.getProgress();
+                if (current != null && estimated <= current) {
+                    estimated = current;
+                }
+                SysAiGenerateTask patch = new SysAiGenerateTask();
+                patch.setTaskId(task.getTaskId());
+                patch.setUpdatedAt(System.currentTimeMillis());
+                if (estimated > PROGRESS_QUEUED) {
+                    patch.setProgress(estimated);
+                }
+                taskMapper.updateById(patch);
+                task.setProgress(estimated);
+            } catch (Exception e) {
+                log.debug("[Generate] 心跳续期失败 taskId={}: {}", task.getTaskId(), e.getMessage());
+            }
+        }, 2, 2, TimeUnit.SECONDS);
     }
 
       /**

@@ -3,6 +3,7 @@ package com.chua.starter.osgi.controller;
 import com.chua.common.support.osgi.OsgiBundle;
 import com.chua.common.support.osgi.OsgiLauncher;
 import com.chua.common.support.osgi.OsgiServiceDescriptor;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.logger.event.OsgiLogEvent;
 import com.chua.starter.osgi.properties.OsgiProperties;
 import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
@@ -767,7 +768,7 @@ class OsgiMonitorControllerTest {
     private Object invokePrivate(String name, Class<?>[] paramTypes, Object... args) {
         try {
             Method method = OsgiMonitorController.class.getDeclaredMethod(name, paramTypes);
-            method.setAccessible(true);
+            ReflectUtils.setAccessibleAccessible(method);
             return method.invoke(controller, args);
         } catch (InvocationTargetException ex) {
             Throwable cause = ex.getCause();

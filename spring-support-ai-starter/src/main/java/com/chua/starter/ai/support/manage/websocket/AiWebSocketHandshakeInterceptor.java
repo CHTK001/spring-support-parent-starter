@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.manage.websocket;
 
 import com.chua.starter.ai.support.util.AiUserContext;
-import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;

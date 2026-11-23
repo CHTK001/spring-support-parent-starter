@@ -185,6 +185,7 @@ public class EduPaperTemplateSyncer implements SourceSyncer {
                             "templatePageSize", template.getTemplatePageSize(),
                             "templateOrientation", template.getTemplateOrientation()));
         } catch (JsonProcessingException e) {
+            log.warn("[eduai] 组卷模板内容序列化失败，返回空内容: {}", e.getMessage(), e);
             return null;
         }
     }

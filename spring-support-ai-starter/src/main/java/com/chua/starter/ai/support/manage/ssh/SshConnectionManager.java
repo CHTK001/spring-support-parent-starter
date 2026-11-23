@@ -18,7 +18,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 远程主机（SSH）连接管理服务。
@@ -81,7 +83,8 @@ public class SshConnectionManager {
      * 异步拨号线程池（守护线程，避免阻塞请求线程）
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private final ExecutorService dialExecutor = Executors.newSingleThreadExecutor(runnable -> {
+    private final ExecutorService dialExecutor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(), runnable -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread thread = new Thread(runnable, "ssh-dial");
         thread.setDaemon(true);

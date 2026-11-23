@@ -5,7 +5,7 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.utils.RequestUtils;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.annotation.Nonnull;
@@ -27,7 +27,7 @@ import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Set;
 
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
+import static com.chua.starter.oauth.client.support.constants.AuthConstant.SUPER_ADMIN;
 
 /**
  * 权限拦截器
@@ -106,7 +106,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                         userInfo.setUsername("admin");
                         userInfo.setUid("1");
                         userInfo.setRoles(com.google.common.collect.Sets.newHashSet(
-                                com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN,
+                                com.chua.starter.oauth.client.support.constants.AuthConstant.SUPER_ADMIN,
                                 com.chua.starter.common.support.constant.Constant.ADMIN));
                         // 权限集合必须一并授予：@Permission 的 value（权限名）与 role（角色名）是两套独立判定，
                         // 只授角色时 isRoleMatch 通过但 isPermissionMatch 必然失败，@Permission("admin") 仍会被拒。

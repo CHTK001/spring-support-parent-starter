@@ -15,8 +15,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -121,7 +121,7 @@ public class RoleSchemaMigrator implements ApplicationRunner {
     private synchronized void scheduleRetry() {
         if (retryExecutor == null) {
 // [P3C C1 豁免] 场景化创建线程，需文档化
-            retryExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            retryExecutor = new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
                 Thread t = new Thread(r, "role-schema-migrator");
                 t.setDaemon(true);

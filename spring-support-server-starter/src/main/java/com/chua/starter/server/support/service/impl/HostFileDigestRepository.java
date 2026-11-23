@@ -2,6 +2,8 @@
 package com.chua.starter.server.support.service.impl;
 
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -41,6 +43,9 @@ public class HostFileDigestRepository {
               primary key (bucket, file_key)
             )""";
 
+    /** 日志 */
+    private static final Logger log = LoggerFactory.getLogger(HostFileDigestRepository.class);
+
     /**
      * 数据源句柄：未配库时为 null
      */
@@ -69,6 +74,7 @@ public class HostFileDigestRepository {
             jdbcTemplate.execute(DDL);
         } catch (Exception ignored) {
             // 没有建表权限 / 非关系型数据源：降级为不记账
+            log.warn("[server] 主机文件指纹台账建表失败，降级为不记账: {}", ignored.getMessage(), ignored);
         }
     }
 

@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.util;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.HttpServletRequest;

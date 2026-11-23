@@ -7,7 +7,7 @@ import com.chua.common.support.base.validator.group.UpdateGroup;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.chua.starter.software.support.contants.AuthConstant;
+import com.chua.starter.software.support.constants.AuthConstant;
 import com.chua.starter.software.support.entity.SoftSource;
 import com.chua.starter.software.support.pojo.source.SoftwareSourcePageRequest;
 import com.chua.starter.software.support.service.SoftSourceService;

@@ -352,6 +352,7 @@ public class WindowsSshShell {
                     "Remove-Item -LiteralPath '" + path + "' -Force -ErrorAction SilentlyContinue"));
         } catch (Exception ignored) {
             // 清理失败不影响本次执行结果，远端会残留一个临时脚本
+            log.debug("[server-ssh] 清理远端临时脚本失败 path={}: {}", path, ignored.getMessage(), ignored);
         }
     }
 

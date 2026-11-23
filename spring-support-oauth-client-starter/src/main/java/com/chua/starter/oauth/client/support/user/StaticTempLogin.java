@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
-import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
+import static com.chua.starter.oauth.client.support.constants.AuthConstant.SUPER_ADMIN;
 
 /**
  * 静态临时账号登录（{@code plugin.oauth.temp.user}）。

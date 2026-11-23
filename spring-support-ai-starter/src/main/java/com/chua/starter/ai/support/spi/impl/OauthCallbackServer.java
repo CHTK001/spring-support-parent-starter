@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * 本地 OAuth 回调监听器（进程内）。
@@ -146,12 +147,20 @@ final class OauthCallbackServer {
             return new Binding(channel, null, -1, preferredPort);
         }
         Binding binding = new Binding(channel, server, server.getLocalPort(), preferredPort);
-// [P3C C1 豁免] 守护/后台线程：有独立生命周期，不适合交给通用执行器
-        Thread acceptor = new Thread(() -> acceptLoop(channel, server, binding),
-                "channel-callback-" + channel.toLowerCase(java.util.Locale.ROOT));
-        // 守护线程：不阻止 JVM 退出（服务关闭时端口随进程释放）。
-        acceptor.setDaemon(true);
-        acceptor.start();
+        ScheduledThreadPoolExecutor acceptor = new ScheduledThreadPoolExecutor(1, runnable -> {
+            Thread thread = new Thread(runnable,
+                    "channel-callback-" + channel.toLowerCase(java.util.Locale.ROOT));
+            // 守护线程：不阻止 JVM 退出（服务关闭时端口随进程释放）。
+            thread.setDaemon(true);
+            return thread;
+        });
+        acceptor.execute(() -> {
+            try {
+                acceptLoop(channel, server, binding);
+            } finally {
+                acceptor.shutdown();
+            }
+        });
         log.info("[ChannelAuth] 回调监听已启动 channel={} port={}", channel, binding.port());
         return binding;
     }

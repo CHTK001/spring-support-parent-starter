@@ -4,7 +4,7 @@ package com.chua.starter.eduai.dimension.service;
 import com.chua.starter.common.support.constant.CacheConstant;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.common.support.log.MdcWrap;
-import com.chua.starter.oauth.client.support.contants.AuthConstant;
+import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;

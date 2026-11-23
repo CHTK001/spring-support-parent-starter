@@ -39,7 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -71,7 +72,8 @@ public class TavernChatController {
      * 不能让线程池线程阻止 JVM 退出。</p>
      */
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ExecutorService TAVERN_CHAT_POOL = MdcWrap.decorate(Executors.newCachedThreadPool(r -> {
+    private static final ExecutorService TAVERN_CHAT_POOL = MdcWrap.decorate(new ThreadPoolExecutor(0,
+            Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "tavern-chat-reply");
         t.setDaemon(true);
