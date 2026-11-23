@@ -3,7 +3,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.chua.common.support.lang.algorithm.cipher.AesCipher;
-import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.common.support.annotations.Crypto;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
@@ -135,7 +135,7 @@ public class CryptoInterceptor implements Interceptor {
             try {
                 Field field = fieldInfo.field();
                 Crypto crypto = fieldInfo.annotation();
-                ClassUtils.setAccessible(field);
+                ReflectUtils.setAccessible(field);
                 String value = (String) field.get(obj);
                 if (value == null) {
                     continue;
