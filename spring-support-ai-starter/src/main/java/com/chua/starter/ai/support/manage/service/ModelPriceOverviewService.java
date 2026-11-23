@@ -5,12 +5,17 @@ import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.manage.mapper.SysAiModelMetricsMapper;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
+import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
+import com.chua.starter.ai.support.service.SysAiUsageService;
+import com.chua.starter.datasearch.provider.model.ProviderDescriptor;
+import com.chua.starter.datasearch.provider.support.ProviderRegistries;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -75,7 +80,18 @@ public class ModelPriceOverviewService {
     private static final String SORT_PRICE = "price";
     private static final String SORT_VALUE = "value";
     private static final String SORT_INDEX = "index";
+    private static final String SORT_POPULARITY = "popularity";
     private static final String ORDER_ASC = "asc";
+
+    /**
+     * 热度统计窗口（近 N 天用量，含今天）
+     */
+    private static final int POPULARITY_DAYS = 30;
+
+    /**
+     * 热门模型徽标上限（热度排序下标记 TOP n）
+     */
+    private static final int POPULARITY_RANK_LIMIT = 8;
 
     /**
      * 指标价来源标记
@@ -116,6 +132,11 @@ public class ModelPriceOverviewService {
      * 定价表 Mapper
      */
     private final SysAiPricingMapper pricingMapper;
+
+    /**
+     * 用量服务（近 N 天模型热度统计的数据源；只读调用，不穿透持久层）
+     */
+    private final SysAiUsageService usageService;
 
     /**
      * 模型价格总览：按模型聚合各提供商报价并分页。

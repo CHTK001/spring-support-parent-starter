@@ -99,6 +99,8 @@
          <module>spring-support-datasync-starter</module>
          <module>spring-support-osgi-starter</module>
          <module>spring-support-bundle-starter</module>
+         <!-- 数据中台管理：/v2/datalake/** 管理端点 + 管线配置落库（宿主 datalake.enabled=true 时生效） -->
+         <module>spring-support-datalake-starter</module>
         <!-- 搜索和数据处理模块 -->
         <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
         <!--
@@ -733,6 +735,11 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-bundle-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datalake-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             

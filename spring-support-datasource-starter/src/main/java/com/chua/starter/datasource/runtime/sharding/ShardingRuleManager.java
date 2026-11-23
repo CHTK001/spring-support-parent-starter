@@ -16,10 +16,13 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
@@ -298,6 +301,106 @@ public class ShardingRuleManager {
         } catch (Exception e) {
             throw new IllegalStateException("分片 SQL 执行失败: " + e.getMessage(), e);
         }
+    }
+
+    // ==================== 路由预览 ====================
+
+    /**
+     * 分片路由预览：按规则算法推算分片值将落入的分库与物理表（只读推算，不执行 SQL）。
+     *
+     * <p>算法与 applyRule 的 ShardingSphere 配置一致：MOD 为值对分片数/分库数取模，
+     * INTERVAL 为按时间粒度分区格式化；分库名顺序与 refresh() 建池顺序一致。</p>
+     */
+    public Map<String, Object> routePreview(DsShardingRule rule, String value) {
+        if (rule.getLogicTable() == null || rule.getLogicTable().isBlank()) {
+            throw new IllegalArgumentException("逻辑表名不能为空");
+        }
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("分片值不能为空");
+        }
+        boolean interval = DsShardingRule.ALGO_INTERVAL.equalsIgnoreCase(rule.getAlgorithm())
+                || (rule.getTimeUnit() != null && !rule.getTimeUnit().isBlank());
+        List<String> members = memberNamesInRefreshOrder(rule);
+        int dbCount = members.size();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("logicTable", rule.getLogicTable());
+        result.put("algorithm", interval ? "INTERVAL" : "MOD");
+        result.put("shardingColumn", rule.getShardingColumn());
+        result.put("shardCount", interval ? resolveIntervalShardCount(rule) : rule.getShardCount());
+        result.put("dbMembers", members);
+        if (interval) {
+            String suffix = intervalSuffix(rule, value.trim());
+            result.put("physicalTable", rule.getLogicTable() + "_" + suffix);
+            result.put("tableIndex", suffix);
+        } else {
+            int shardCount = rule.getShardCount() == null || rule.getShardCount() <= 0 ? 16 : rule.getShardCount();
+            int tableIndex = modIndex(value, shardCount);
+            result.put("physicalTable", rule.getLogicTable() + "_" + tableIndex);
+            result.put("tableIndex", tableIndex);
+        }
+        if (dbCount >= 2) {
+            try {
+                int dbIndex = modIndex(value, dbCount);
+                result.put("dbIndex", dbIndex);
+                result.put("dbMember", members.get(dbIndex));
+            } catch (NumberFormatException e) {
+                result.put("dbIndex", null);
+                result.put("dbMember", null);
+                result.put("note", "分片值不是数字，无法推算分库路由（分库按值取模）");
+            }
+        } else {
+            result.put("dbIndex", 0);
+            result.put("dbMember", dbCount == 1 ? members.get(0) : null);
+        }
+        return result;
+    }
+
+    /**
+     * 分库成员名的生效顺序（与 refresh() 建池顺序一致：引用型在前，url 型按顺序去重在后）。
+     */
+    private List<String> memberNamesInRefreshOrder(DsShardingRule rule) {
+        List<ShardingDbMember> memberList = rule.getDbMemberList() == null ? List.of() : rule.getDbMemberList();
+        Set<String> seen = new LinkedHashSet<>();
+        List<String> names = new ArrayList<>();
+        for (ShardingDbMember member : memberList) {
+            if (member == null || member.getName() == null || member.getName().isBlank()) {
+                continue;
+            }
+            boolean referenced = member.getUrl() == null || member.getUrl().isBlank();
+            if (referenced && DataSourceContextSupport.getDatasource(member.getName()) == null) {
+                continue;
+            }
+            if (seen.add(member.getName())) {
+                names.add(member.getName());
+            }
+        }
+        return names;
+    }
+
+    /**
+     * MOD 路由下标（与 ShardingSphere MOD 算法一致：绝对值后取模）。
+     */
+    private int modIndex(String value, int count) {
+        BigDecimal number;
+        try {
+            number = new BigDecimal(value.trim()).abs();
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException("分片值不是数字: " + value);
+        }
+        return number.remainder(BigDecimal.valueOf(count)).intValueExact();
+    }
+
+    /**
+     * INTERVAL 路由的物理表后缀（分区格式与 applyRule 的 partition-pattern 一致）。
+     */
+    private String intervalSuffix(DsShardingRule rule, String value) {
+        LocalDate date;
+        try {
+            date = LocalDate.parse(value, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("时间分片值须为 yyyy-MM-dd 日期，实际: " + value);
+        }
+        return DateTimeFormatter.ofPattern(partitionPattern(rule.getTimeUnit())).format(date);
     }
 
     /**

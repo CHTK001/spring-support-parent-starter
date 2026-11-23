@@ -658,6 +658,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return handleRemoteSshFile(request, response, sshUrl);
         }
 
+   // FTP 远程文件透传：路径形如 /{bucket}/ftp:/主机:端口/路径
+          // 凭据走 query 参数（user/password），避免出现在 URL 路径中
+        if (setting.isOpenRemoteFile() && segments.size() > 2
+                && "ftp:".equals(segments.get(1))) {
+            String ftpUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
+            return handleRemoteFtpFile(request, response, ftpUrl);
+        }
+
    // 提取对象 键（第二段之后的所有路径段），并做 URL 解码与穿越防护
         String rawKey = segments.size() > 1 ? String.join("/", segments.subList(1, segments.size())) : "";
         String key = sanitizeKey(rawKey);
@@ -4005,6 +4013,11 @@ var search=document.getElementById('search');
             return handleRemoteSshFile(request, response, key);
         }
 
+          // FTP 远程文件透传：Key 为 ftp:// 地址时通过 SPI 读取
+        if (setting.isOpenRemoteFile() && key.startsWith("ftp://")) {
+            return handleRemoteFtpFile(request, response, key);
+        }
+
         GetObjectResult result = storage.getObject(key);
         if ((result.getResultCode() != ObjectResult.ResultCode.SUCCESS || result.getInputStream() == null)
                 && !directoryIntent) {
@@ -4113,7 +4126,7 @@ var search=document.getElementById('search');
        * @param rawChannel raw 字节直吐的放行来源：null=不允许；
        *                   "token"=经 {@code /ot/{token}} 消费；
        *                   "third"=三方 URL 预览会话；
-       *                   "remote" / "ssh"=远程（http(s) / SSH）文件会话（内容不在本存储，
+       *                   "remote" / "ssh" / "ftp"=远程（http(s) / SSH / FTP）文件会话（内容不在本存储，
        *                   无法令牌化，字节直链按当前请求重放）
        * @param metadata   对象元数据（取内容类型与文件名）
        * @return 异步阶段
@@ -4128,7 +4141,7 @@ var search=document.getElementById('search');
           // 拉字节渲染用；不属于附件下载语义，因此不要求 openDownload 开启。
           // rawChannel：null=不允许 raw；"token"=经 /ot/{token} 消费；
           // "third"=三方 URL 预览会话（内容不在本存储，字节直链按会话重放）；
-          // "remote"/"ssh"=远程文件会话，同上按当前请求重放。
+          // "remote"/"ssh"/"ftp"=远程文件会话，同上按当前请求重放。
         boolean wantRaw = boolParam(request, "raw") && rawChannel != null;
         boolean download;
         if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
@@ -4747,15 +4760,16 @@ var search=document.getElementById('search');
               // 路径里，不像 ssh 那样还要把凭据从 query 再带一遍。
             return request.getPath() + "?preview=true&raw=true" + suffix;
         }
-        if ("remote".equals(rawChannel) || "ssh".equals(rawChannel)) {
-              // 远程 / SSH 会话重放：内容不在本存储，无法令牌化，只能按当前请求重放。
-              // SSH 的凭据在 query 里而非路径里，必须原样带回，否则入口壳里的字节直链
+        if ("remote".equals(rawChannel) || "ssh".equals(rawChannel) || "ftp".equals(rawChannel)) {
+              // 远程 / SSH / FTP 会话重放：内容不在本存储，无法令牌化，只能按当前请求重放。
+              // SSH/FTP 的凭据在 query 里而非路径里，必须原样带回，否则入口壳里的字节直链
               // 会被判成「Missing 'user' parameter」，壳拿不到字节就只剩空白。
             StringBuilder replay = new StringBuilder(request.getPath()).append("?preview=true&raw=true");
-            if ("ssh".equals(rawChannel)) {
+            if ("ssh".equals(rawChannel) || "ftp".equals(rawChannel)) {
                 Map<String, String> params = request.getParams();
                 if (params != null) {
-                    for (String name : new String[]{"user", "password", "key"}) {
+                    for (String name : "ftp".equals(rawChannel)
+                            ? new String[]{"user", "password"} : new String[]{"user", "password", "key"}) {
                         String value = params.get(name);
                         if (value != null && !value.isEmpty()) {
                             replay.append('&').append(name).append('=').append(urlEncodeUtf8(value));
@@ -5451,6 +5465,67 @@ var search=document.getElementById('search');
         } catch (Exception e) {
             log.warn("SSH 远程文件读取失败: {} - {}", sshUrl, e.getMessage());
             response.sendError(502, "SSH Remote Read Failed: " + e.getMessage());
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+      /**
+       * FTP 远程文件读取：通过 {@link FileStorageRemoteReader} SPI 读取远程 FTP 服务器文件。
+       *
+       * <p>URL 格式：{@code ftp://host:port/path}，凭据走 query 参数
+       * （{@code user} / {@code password}）。实现方必须为每次请求新建连接，用完即关。</p>
+       *
+       * @param request  请求
+       * @param response 响应
+       * @param ftpUrl   FTP 地址（{@code ftp://host:port/path}）
+       * @return 异步阶段
+       */
+    private CompletionStage<Void> handleRemoteFtpFile(ServerRequest request, ServerResponse response, String ftpUrl) {
+        try {
+            FileStorageRemoteReader reader = resolveRemoteReader("ftp://");
+            if (reader == null || !reader.supportsRemoteRead()) {
+                return error(response, 403, "FTP remote read disabled");
+            }
+
+              // 解析 ftp://host:port/path
+            String withoutScheme = ftpUrl.substring("ftp://".length());
+            int slashIdx = withoutScheme.indexOf('/');
+            String hostPort = slashIdx >= 0 ? withoutScheme.substring(0, slashIdx) : withoutScheme;
+            String path = slashIdx >= 0 ? withoutScheme.substring(slashIdx) : "/";
+
+            String host;
+            int port = 21;
+            int colonIdx = hostPort.indexOf(':');
+            if (colonIdx >= 0) {
+                host = hostPort.substring(0, colonIdx);
+                port = Integer.parseInt(hostPort.substring(colonIdx + 1));
+            } else {
+                host = hostPort;
+            }
+
+            Map<String, String> params = request.getParams();
+            String username = params != null ? params.get("user") : null;
+            String password = params != null ? params.get("password") : null;
+
+            if (username == null || username.isBlank()) {
+                return error(response, 400, "Missing 'user' parameter");
+            }
+
+            RemoteFileRequest rfRequest = new RemoteFileRequest(host, port, username, password, null, path, null);
+            RemoteFileResult result = reader.readRemote(rfRequest);
+              // 与本地对象走同一条预览分发：格式转换 / 客户端渲染 / 入口壳 / Range /
+              // 内联兜底全部复用。bucket 传空串的理由同 {@link #handleRemoteFile}：
+              // 避免壳把真实桶里的同名对象误认成这个远程文件。
+            String fileName = result.fileName() != null && !result.fileName().isEmpty()
+                    ? result.fileName()
+                    : path.substring(path.lastIndexOf('/') + 1);
+            if (fileName.isEmpty()) {
+                fileName = "remote";
+            }
+            return serveObjectContent(request, response, result.data(), fileName, "", "ftp", null);
+        } catch (Exception e) {
+            log.warn("FTP 远程文件读取失败: {} - {}", ftpUrl, e.getMessage());
+            response.sendError(502, "FTP Remote Read Failed: " + e.getMessage());
         }
         return CompletableFuture.completedFuture(null);
     }

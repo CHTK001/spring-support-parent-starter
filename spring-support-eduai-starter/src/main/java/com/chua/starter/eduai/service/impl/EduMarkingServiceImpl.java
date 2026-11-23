@@ -3780,6 +3780,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         if (!skipOwnershipCheck) {
             EduUserContext.checkWritable(task.getOwnerUserId());
         }
+        // 排队/处理中的任务还没有完整判分结果，提前「完成」会按残缺结果登记错题、
+        // 并把任务钉死在已完成态——批量完成时尤其容易误选这类任务。
+        Integer finishTaskStatus = task.getMarkingTaskStatus();
+        if (finishTaskStatus != null
+                && (finishTaskStatus == EduMarkingTask.STATUS_PENDING
+                || finishTaskStatus == EduMarkingTask.STATUS_PROCESSING)) {
+            throw new BusinessException("任务还在阅卷中，请等判分完成后再点完成");
+        }
+        // 整卷判分失败：没有可登记的有效结果，走重判而不是完成
+        if (finishTaskStatus != null && finishTaskStatus == EduMarkingTask.STATUS_FAILED) {
+            throw new BusinessException("任务判分失败，请先重判失败题后再完成");
+        }
         EduAnswerSheet sheet = task.getMarkingTaskAnswerSheetId() == null
                 ? findSheet(taskId)
                 : answerSheetMapper.selectById(task.getMarkingTaskAnswerSheetId());

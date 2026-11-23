@@ -8,6 +8,8 @@ import com.chua.starter.datasource.runtime.model.DsShardingRule;
 import com.chua.starter.datasource.runtime.sharding.ShardingPhysicalTableService;
 import com.chua.starter.datasource.runtime.sharding.ShardingRuleManager;
 import com.chua.starter.datasource.runtime.store.DsRuntimeConfigStore;
+import com.chua.starter.datasource.runtime.support.DsConnectionTestService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -41,6 +43,8 @@ public class DsRuntimeController {
     private final ShardingRuleManager shardingRuleManager;
     private final ShardingPhysicalTableService physicalTableService;
     private final DsRuntimeConfigStore store;
+    private final DsConnectionTestService connectionTestService;
+    private final ObjectMapper objectMapper;
 
     // ==================== 概览 ====================
 
@@ -269,6 +273,47 @@ public class DsRuntimeController {
         try {
             DsShardingRule rule = requireRule(longValue(body.get("ruleId")));
             return ReturnResult.ok(physicalTableService.applyAddColumn(rule, strValue(body.get("columnDdl"))));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    // ==================== 连接测试 / 路由预览 ====================
+
+    /**
+     * 连接测试（联邦成员 / 分库成员保存前预检，不落库）。
+     */
+    @PostMapping("/test-connection")
+    public ReturnResult<Map<String, Object>> testConnection(@RequestBody Map<String, String> body) {
+        Map<String, String> params = body == null ? Map.of() : body;
+        try {
+            return ReturnResult.ok(connectionTestService.test(
+                    params.get("url"), params.get("username"), params.get("password"), params.get("driverClassName")));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 分片路由预览（按分片值推算目标分库与物理表，不执行 SQL）。
+     *
+     * <p>body 传 <code>ruleId</code> 按已保存规则预览，或传 <code>rule</code>（规则草稿对象）
+     * 在保存前预览编辑中的规则；二者都没有返回参数错误。</p>
+     */
+    @PostMapping("/sharding/route-preview")
+    public ReturnResult<Map<String, Object>> routePreview(@RequestBody Map<String, Object> body) {
+        Map<String, Object> params = body == null ? Map.of() : body;
+        try {
+            DsShardingRule rule;
+            Long ruleId = longValue(params.get("ruleId"));
+            if (ruleId != null) {
+                rule = requireRule(ruleId);
+            } else if (params.get("rule") instanceof Map) {
+                rule = objectMapper.convertValue(params.get("rule"), DsShardingRule.class);
+            } else {
+                return ReturnResult.error("缺少 ruleId 或 rule 草稿");
+            }
+            return ReturnResult.ok(shardingRuleManager.routePreview(rule, strValue(params.get("value"))));
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
