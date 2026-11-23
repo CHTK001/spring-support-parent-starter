@@ -7,6 +7,7 @@ import com.chua.starter.collect.dto.CollectRunDTO;
 import com.chua.starter.collect.engine.CollectContext;
 import com.chua.starter.collect.engine.CollectEngine;
 import com.chua.starter.collect.engine.CollectRunResult;
+import com.chua.starter.collect.engine.CollectSink;
 import com.chua.starter.collect.entity.CollectFlow;
 import com.chua.starter.collect.entity.CollectTask;
 import com.chua.starter.collect.mapper.CollectFlowMapper;
@@ -19,7 +20,7 @@ import com.chua.starter.collect.service.CollectFieldService;
 import com.chua.starter.collect.service.CollectFlowService;
 import com.chua.starter.collect.service.CollectNoticeService;
 import com.chua.starter.collect.service.CollectVariableService;
-import com.chua.starter.collect.store.CollectDatabaseSink;
+import com.chua.starter.collect.store.CollectSinkFactory;
 import com.chua.starter.collect.support.CollectJson;
 import com.chua.starter.collect.support.CollectTaskStatus;
 import com.chua.starter.collect.support.CollectTriggerType;
@@ -113,6 +114,11 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * 执行通知服务，任务落定终态后按配置投递。
      */
     private final CollectNoticeService noticeService;
+
+    /**
+     * 落库通道工厂：按配置创建每次任务的通道，宿主可注册自定义实现整体替换。
+     */
+    private final CollectSinkFactory sinkFactory;
 
     /**
      * 每次执行占一个虚拟线程，引擎内部再按流程线程数建池。
@@ -284,8 +290,7 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
             }
             CollectDslDTO runtime = prepareDsl(flow, dsl, overrides);
             CollectTask saved = task;
-            CollectDatabaseSink sink = new CollectDatabaseSink(flowId, saved.getCollectTaskId(), persist,
-                    taskLogMapper, recordMapper, taskMapper, fieldService);
+            CollectSink sink = sinkFactory.create(flowId, saved.getCollectTaskId(), persist);
             CollectContext context = new CollectContext(flowId, saved.getCollectTaskId(),
                     saved.getCollectTaskNo(), properties, sink);
             sink.attach(context);
@@ -309,7 +314,7 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * @param counter  并发计数，草稿运行为 null
      */
     private void execute(CollectContext context, CollectDslDTO dsl, CollectTask task,
-                         CollectDatabaseSink sink, Integer reservedFlowId) {
+                         CollectSink sink, Integer reservedFlowId) {
         CollectRunResult result;
         try {
             result = engine.execute(context, dsl);

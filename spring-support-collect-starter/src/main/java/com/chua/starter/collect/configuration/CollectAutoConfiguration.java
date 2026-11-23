@@ -1,10 +1,18 @@
 package com.chua.starter.collect.configuration;
 
+import com.chua.starter.collect.mapper.CollectRecordMapper;
+import com.chua.starter.collect.mapper.CollectTaskLogMapper;
+import com.chua.starter.collect.mapper.CollectTaskMapper;
 import com.chua.starter.collect.properties.CollectProperties;
+import com.chua.starter.collect.service.CollectFieldService;
+import com.chua.starter.collect.store.CollectDatabaseSinkFactory;
+import com.chua.starter.collect.store.CollectSinkFactory;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
@@ -56,4 +64,25 @@ public class CollectAutoConfiguration {
      * 采集模块的 Mapper 包，消费方自行扫描时使用。
      */
     public static final String MAPPER_PACKAGE = "com.chua.starter.collect.mapper";
+
+    /**
+     * 采集结果落库通道工厂：默认按 {@code plugin.collect.persistence.type} 提供数据库落库，
+     * 宿主注册自己的 {@code CollectSinkFactory} Bean 即可整体替换持久化实现。
+     *
+     * @param taskLogMapper 节点日志表访问
+     * @param recordMapper  采集结果表访问
+     * @param taskMapper    任务表访问
+     * @param fieldService  字段定义服务
+     * @param properties    平台配置
+     * @return 落库通道工厂
+     */
+    @Bean
+    @ConditionalOnMissingBean(CollectSinkFactory.class)
+    public CollectSinkFactory collectSinkFactory(CollectTaskLogMapper taskLogMapper,
+                                                 CollectRecordMapper recordMapper,
+                                                 CollectTaskMapper taskMapper,
+                                                 CollectFieldService fieldService,
+                                                 CollectProperties properties) {
+        return new CollectDatabaseSinkFactory(taskLogMapper, recordMapper, taskMapper, fieldService, properties);
+    }
 }

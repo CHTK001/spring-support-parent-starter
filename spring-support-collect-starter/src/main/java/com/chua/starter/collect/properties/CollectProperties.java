@@ -143,6 +143,11 @@ public class CollectProperties {
     private Agent agent = new Agent();
 
     /**
+     * 结果持久化配置。
+     */
+    private Persistence persistence = new Persistence();
+
+    /**
      * 脚本节点开关。
      *
      * <p>关闭后脚本执行器不再注册，工具箱里不会出现脚本节点，
@@ -283,6 +288,23 @@ public class CollectProperties {
          * 默认失败策略：fail 中断流程 / skip 记警告后跳过 / defaultValue 写入兜底值继续。
          */
         private String failureStrategy = "fail";
+    }
+
+    /**
+     * 结果持久化配置。
+     *
+     * <p>默认把节点日志与采集结果写入本模块数据表；宿主注册自己的
+     * {@code CollectSinkFactory} Bean 即可整体替换持久化实现（如写 ES、写数仓）。</p>
+     */
+    @Data
+    public static class Persistence {
+
+        /**
+         * 内置实现：database=数据库落库；none=只跑流程不落结果。
+         *
+         * <p>仅对默认工厂生效；宿主替换工厂 Bean 后本项不再参与选择。</p>
+         */
+        private String type = "database";
     }
 
 }
