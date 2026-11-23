@@ -1,11 +1,12 @@
 package com.chua.starter.redis.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.redis.support.lang.date.ComparableDateTime;
-import com.chua.starter.redis.support.lang.date.DateTime;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 /**
  * 简单服务
@@ -36,8 +37,7 @@ public interface SimpleRedisService {
      * @param key 键字符串，表示指标下的具体项
      */
     default void incrementDay(String indicator, String key) {
-        ComparableDateTime comparableDateTime = DateTime.now().withLastTimeOfDay();
-        long ofSeconds = comparableDateTime.betweenOfSeconds(LocalDateTime.now());
+        long ofSeconds = Duration.between(LocalDateTime.now(), LocalDate.now().atTime(LocalTime.MAX)).getSeconds();
         /**
          * increment。
          * @param indicator indicator
@@ -61,8 +61,7 @@ public interface SimpleRedisService {
      * @param key 键字符串，表示指标下的具体项
      */
     default void decrementDay(String indicator, String key) {
-        ComparableDateTime comparableDateTime = DateTime.now().withLastTimeOfDay();
-        long ofSeconds = comparableDateTime.betweenOfSeconds(LocalDateTime.now());
+        long ofSeconds = Duration.between(LocalDateTime.now(), LocalDate.now().atTime(LocalTime.MAX)).getSeconds();
         /**
          * decrement。
          * @param indicator indicator
