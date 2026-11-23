@@ -13,8 +13,9 @@
 -- 命名规范: 表名一律以 datasource_ 开头；业务列以「完整表名」作前缀；
 --   审计列统一为 SysBase 通用六列
 --   （create_name / create_by / create_time / update_name / update_by / update_time）。
--- 约束: MySQL 专属语法（ENGINE / COMMENT / DATETIME）；本模块不随 H2 执行
---   （H2 通道见 spring-support-monitor-starter 的 db/h2/V1.1__init_all_datasource.sql）。
+-- 约束: MySQL 专属语法（ENGINE / COMMENT / DATETIME）；H2 环境由 FlywayLike
+--   的 H2ScriptConverter 将本文件转换为 H2 等价语句执行，无需维护 H2 副本
+--   （monitor 模块 db/h2 下的历史 H2 副本已删除，以本文件为唯一来源）。
 -- 幂等: 全文件只含 CREATE TABLE IF NOT EXISTS，可反复执行。
 -- =====================================================================
 
