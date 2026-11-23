@@ -101,7 +101,7 @@ public class SysAiMemoryStore {
     }
 
     /**
-     * 幂等建表（与 {@code db/init/V5.0__init_all_ai.sql} 同结构）。
+     * 幂等建表（与 {@code db/init/V7.5__init_all_ai.sql} 同结构）。
      *
      * <p>本表已收进 init_all 脚本（原先全仓没有迁移脚本，只靠运行期补建），
      * 这里的兜底建表保留：新库靠迁移脚本建表，存量库/脚本未跑到的环境靠它自证存在。

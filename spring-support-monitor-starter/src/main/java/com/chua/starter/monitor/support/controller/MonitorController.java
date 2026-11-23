@@ -757,7 +757,7 @@ public class MonitorController {
     }
 
     // ==================== 数据源管理 ====================
-    // 数据源台账 CRUD/测试/类型已抽为独立模块 spring-support-datasource-hub-starter，
+    // 数据源台账 CRUD/测试/类型已抽为独立模块 spring-support-datapool-starter，
 
     // ==================== Redis 操作 ====================
 

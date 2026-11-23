@@ -117,10 +117,10 @@
         <!-- 数据源中心（台账/连接/跨方言），独立模块，供监控与采集系统共享 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-datasource-hub-starter</artifactId>
+            <artifactId>spring-support-datapool-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 租户契约：datasource-hub 里的 DatasourceTenantLookupAdapter 实现了租户侧的
+        <!-- 租户契约：datapool 里的 DatasourceTenantLookupAdapter 实现了租户侧的
              TenantDatasourceLookup 窄接口（该适配器在 hub 里是 @Component），而 hub 对这个
              依赖声明为 optional，不会传递过来。宿主不声明它，Spring 解析该 @Component 的
              接口元数据时会读不到 TenantDatasourceLookup.class，启动直接报

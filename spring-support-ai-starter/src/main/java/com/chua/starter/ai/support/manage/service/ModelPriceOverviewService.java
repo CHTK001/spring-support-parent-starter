@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -146,12 +147,13 @@ public class ModelPriceOverviewService {
      * @param keyword 模型名/厂商关键字（可空）
      * @param provider 提供商过滤（可空，精确匹配）
      * @param band    价格带过滤：economy/value/standard/flagship（可空）
-     * @param sort    排序键：price（价格，默认）/ value（性价比）/ index（智能指数）
+     * @param sort    排序键：price（价格，默认）/ value（性价比）/ index（智能指数）/ popularity（热度）
      * @param order   排序方向：asc / desc（price 默认 asc，value/index 默认 desc）
-     * @return {total, page, size, totalModels, withPrice, providerCount, bands, providers, cnyPricingSkipped, models}
+     * @param hotOnly 是否只看热门模型（热门 = 近 {@value #POPULARITY_DAYS} 天用量令牌前 {@value #POPULARITY_RANK_LIMIT}）
+     * @return {total, page, size, totalModels, withPrice, providerCount, bands, providers, cnyPricingSkipped, hotModels, hotCount, models}
      */
     public Map<String, Object> overview(long page, long size, String keyword, String provider,
-                                        String band, String sort, String order) {
+                                        String band, String sort, String order, boolean hotOnly) {
         long safePage = Math.max(page, 1);
         long safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
 
@@ -198,14 +200,37 @@ public class ModelPriceOverviewService {
                     null, null, source);
         }
 
-        // 3) 无任何可用价格的组（如定价行两价皆空）不进比价页
+        // 3) 无任何可用价格的组（如定价行两价皆空）不进比价页；
+        //    免费模型（基准价 0）整卡隐藏，不参与比价
         List<ModelGroup> all = new ArrayList<>();
         for (ModelGroup group : groups.values()) {
-            if (group.effectivePrice() != null) {
+            BigDecimal min = group.effectivePrice();
+            if (min != null && min.compareTo(BigDecimal.ZERO) > 0) {
                 all.add(group);
             }
         }
         long withPrice = all.size();
+
+        // 3.5) 热度：近 POPULARITY_DAYS 天用量令牌按模型聚合（读取即计算，不落库）。
+        //      热门 = 有热度用量的模型；TOP POPULARITY_RANK_LIMIT 记排名（卡片徽标用）。
+        Map<String, Long> popularityByModel = loadPopularityTokens();
+        for (ModelGroup group : all) {
+            Long tokens = popularityByModel.get(group.model.toLowerCase(Locale.ROOT));
+            if (tokens != null && tokens > 0) {
+                group.popularityTokens = tokens;
+            }
+        }
+        List<ModelGroup> hotSorted = new ArrayList<>(all);
+        hotSorted.removeIf(group -> group.popularityTokens <= 0);
+        hotSorted.sort(Comparator.comparingLong((ModelGroup g) -> g.popularityTokens).reversed());
+        long hotCount = hotSorted.size();
+        int rank = 0;
+        for (ModelGroup group : hotSorted) {
+            if (++rank > POPULARITY_RANK_LIMIT) {
+                break;
+            }
+            group.popularityRank = rank;
+        }
 
         // 4) 关键字过滤（模型名 / 提供商），并在过滤结果上汇总价格带与提供商分布
         String needle = blankToNull(keyword);
@@ -232,6 +257,18 @@ public class ModelPriceOverviewService {
             matched.add(group);
         }
 
+        // 5.5) 「只看热门」门：只保留有热度排名的模型（含置顶的 hot 榜）
+        if (hotOnly) {
+            matched.removeIf(group -> group.popularityRank <= 0);
+        }
+        // 热门模型 id 清单（供前端「热门优先」置顶排序时跳过置顶判定）
+        List<String> hotModels = new ArrayList<>();
+        for (ModelGroup group : matched) {
+            if (group.popularityRank > 0) {
+                hotModels.add(group.model);
+            }
+        }
+
         // 6) 排序 + 分页
         sortGroups(matched, sort, order);
         long total = matched.size();
@@ -252,6 +289,8 @@ public class ModelPriceOverviewService {
         result.put("bands", bands);
         result.put("providers", providers);
         result.put("cnyPricingSkipped", cnySkipped);
+        result.put("hotModels", hotModels);
+        result.put("hotCount", hotCount);
         result.put("models", models);
         return result;
     }
@@ -319,6 +358,8 @@ public class ModelPriceOverviewService {
 
     /**
      * 排序：price（默认升序）/ value、index（默认降序），空值恒排最后。
+     * popularity（热度）恒降序，热门优先：有热度排名的模型按排名升序置顶，
+     * 之后的模型按热度令牌降序，无热度令牌的排最后。
      *
      * @param groups 模型组
      * @param sort   排序键
@@ -327,6 +368,15 @@ public class ModelPriceOverviewService {
     private static void sortGroups(List<ModelGroup> groups, String sort, String order) {
         String key = blankToNull(sort) == null ? SORT_PRICE : sort.trim().toLowerCase(Locale.ROOT);
         Comparator<ModelGroup> comparator;
+        if (SORT_POPULARITY.equals(key)) {
+            // 热门优先：popularityRank（TOP n 徽标）在前，其次热度令牌降序，最后无热度
+            Comparator<ModelGroup> ranked = Comparator.comparingInt((ModelGroup g) ->
+                    g.popularityRank > 0 ? g.popularityRank : Integer.MAX_VALUE);
+            Comparator<ModelGroup> byTokens = Comparator.comparingLong((ModelGroup g) -> g.popularityTokens)
+                    .reversed();
+            groups.sort(ranked.thenComparing(byTokens));
+            return;
+        }
         boolean asc;
         if (SORT_VALUE.equals(key)) {
             comparator = Comparator.comparing(ModelGroup::valueScore, Comparator.nullsLast(Comparator.naturalOrder()));
@@ -340,6 +390,80 @@ public class ModelPriceOverviewService {
             asc = order == null || ORDER_ASC.equalsIgnoreCase(order);
         }
         groups.sort(asc ? comparator : comparator.reversed());
+    }
+
+    /**
+     * 近 {@value #POPULARITY_DAYS} 天模型热度：用量明细按模型聚合令牌合计。
+     *
+     * <p>复用用量服务的「按天 × 按模型」聚合出口（数据库端聚合，不穿透其它模块
+     * 持久层；同模块 Service 调用合规），把 30 天逐日行按模型归并成一张
+     * 模型 → 令牌合计 的映射。模型名大小写不敏感（聚合键统一小写），
+     * 与定价 / 指标的行 key 对齐。</p>
+     *
+     * @return model（小写）→ 近 30 天令牌合计；统计窗口内无用量则为空映射
+     */
+    private Map<String, Long> loadPopularityTokens() {
+        Map<String, Long> tokens = new HashMap<>();
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusDays(POPULARITY_DAYS - 1L);
+        try {
+            List<com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO> points =
+                    usageService.getDailyModelTrend(start, end, null);
+            if (points != null) {
+                for (com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO point : points) {
+                    if (point == null || point.model() == null || point.totalTokens() == null
+                            || point.totalTokens() <= 0) {
+                        continue;
+                    }
+                    String key = point.model().trim().toLowerCase(Locale.ROOT);
+                    if (key.isEmpty()) {
+                        continue;
+                    }
+                    tokens.merge(key, point.totalTokens(), Long::sum);
+                }
+            }
+        } catch (Exception e) {
+            // 热度是增强信息：统计失败不拖垮比价页，回退为无热度
+            log.warn("[price-overview] 热度统计失败，本次热门榜置空 cause={}", e.getMessage());
+        }
+        return tokens;
+    }
+
+    /**
+     * 解析提供商官网地址（可空）。
+     *
+     * <p>先后按 id / 别名 / kind 前缀剥离找登记项，命中即取 {@code website}；
+     * 登记表未收录或官网为空时返回 {@code null}（前端不渲染跳转入口）。</p>
+     *
+     * @param provider 提供商名（原始行列值，可为 null）
+     * @return 官网地址；查不到返回 null
+     */
+    private static String resolveWebsite(String provider) {
+        if (provider == null) {
+            return null;
+        }
+        String trimmed = provider.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            // 优先按 id 精确查；再按别名查（ProviderRegistries.find 内部带别名归一）
+            ProviderDescriptor descriptor = ProviderRegistries.find(trimmed);
+            if (descriptor == null) {
+                // kind 前缀剥离（如 "anthropic:claude" → "anthropic"）
+                int colon = trimmed.indexOf(':');
+                if (colon > 0) {
+                    descriptor = ProviderRegistries.find(trimmed.substring(0, colon));
+                }
+            }
+            if (descriptor == null) {
+                return null;
+            }
+            String website = descriptor.getWebsite();
+            return website == null || website.isBlank() ? null : website.trim();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -381,6 +505,17 @@ public class ModelPriceOverviewService {
          * 智能指数（多行取最大）
          */
         private BigDecimal intelligenceIndex;
+
+        /**
+         * 近 30 天用量令牌合计（0 = 无热度；由外部热度榜赋值）
+         */
+        private long popularityTokens;
+
+        /**
+         * 热门榜排名（1 ~ {@value ModelPriceOverviewService#POPULARITY_RANK_LIMIT}；
+         * 0 = 未入热门榜）
+         */
+        private int popularityRank;
 
         /**
          * 提供商报价（provider 归一键 → 报价；null 提供商归一为空串键）
@@ -495,7 +630,7 @@ public class ModelPriceOverviewService {
         /**
          * 输出为前端展示结构。
          *
-         * @return {model, intelligenceIndex, band, minPrice, maxPrice, valueScore, providers}
+         * @return {model, intelligenceIndex, band, minPrice, maxPrice, valueScore, popularityTokens, popularityRank, providers}
          */
         private Map<String, Object> toMap() {
             List<Quote> sorted = new ArrayList<>(quotes.values());
@@ -520,6 +655,7 @@ public class ModelPriceOverviewService {
                 item.put("price", quote.price());
                 item.put("source", quote.source);
                 item.put("cheapest", quote.price() != null && quote.price().compareTo(minPrice) == 0);
+                item.put("website", resolveWebsite(quote.provider));
                 providerList.add(item);
             }
             Map<String, Object> item = new LinkedHashMap<>();
@@ -529,6 +665,8 @@ public class ModelPriceOverviewService {
             item.put("minPrice", minPrice);
             item.put("maxPrice", maxPrice);
             item.put("valueScore", valueScore());
+            item.put("popularityTokens", popularityTokens);
+            item.put("popularityRank", popularityRank);
             item.put("providers", providerList);
             return item;
         }

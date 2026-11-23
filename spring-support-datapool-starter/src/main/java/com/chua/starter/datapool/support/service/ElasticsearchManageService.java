@@ -1,0 +1,129 @@
+package com.chua.starter.datapool.support.service;
+
+import com.chua.starter.datapool.support.model.ElasticsearchClusterVO;
+import com.chua.starter.datapool.support.model.ElasticsearchGraphVO;
+import com.chua.starter.datapool.support.model.ElasticsearchIndexDetailVO;
+import com.chua.starter.datapool.support.model.ElasticsearchIndexVO;
+import com.chua.starter.datapool.support.model.ElasticsearchShardVO;
+import com.chua.starter.datapool.support.model.MiddlewareTestVO;
+import com.chua.starter.datapool.support.model.dto.ElasticsearchClusterSettingsDTO;
+import com.chua.starter.datapool.support.model.dto.ElasticsearchIndexDTO;
+import com.chua.starter.datapool.support.model.dto.ElasticsearchMappingDTO;
+import com.chua.starter.datapool.support.model.dto.MiddlewareTestDTO;
+import java.util.List;
+
+/**
+ * Elasticsearch 搜索引擎管理服务：索引与字段设计、集群配置、关系图
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+public interface ElasticsearchManageService {
+
+    /**
+     * 测试连通性
+     *
+     * @param request 请求，可为空
+     * @return 测试结果
+     */
+    MiddlewareTestVO test(MiddlewareTestDTO request);
+
+    /**
+     * 索引列表
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @return 索引列表
+     */
+    List<ElasticsearchIndexVO> indices(Long datasourceId);
+
+    /**
+     * 索引详情（字段映射 + 设置）
+     *
+     * @param index        索引名
+     * @param datasourceId 数据源 ID，可为空
+     * @return 索引详情
+     */
+    ElasticsearchIndexDetailVO index(String index, Long datasourceId);
+
+    /**
+     * 新建索引（相当于建表）
+     *
+     * @param request 新建请求
+     * @return 新建后的索引详情
+     */
+    ElasticsearchIndexDetailVO createIndex(ElasticsearchIndexDTO request);
+
+    /**
+     * 删除索引
+     *
+     * @param index        索引名
+     * @param datasourceId 数据源 ID，可为空
+     * @return 是否删除成功
+     */
+    Boolean deleteIndex(String index, Long datasourceId);
+
+    /**
+     * 给已有索引追加字段
+     *
+     * @param request 追加请求
+     * @return 更新后的索引详情
+     */
+    ElasticsearchIndexDetailVO addMapping(ElasticsearchMappingDTO request);
+
+    /**
+     * 重建索引：按新的字段集合重做 mapping 并搬运数据（删除 / 修复字段的唯一途径）
+     *
+     * <p>ES 不支持删除字段、也不支持改已存在字段的类型，只能「建新索引 → 搬运 → 换回同名」。
+     * 因此本操作会短暂删除原索引，只在临时索引里保有数据副本。</p>
+     *
+     * @param request 重建请求（{@code name} 为要重建的索引，{@code fields} 为目标字段全集）
+     * @return 重建后的索引详情
+     */
+    ElasticsearchIndexDetailVO rebuildIndex(ElasticsearchIndexDTO request);
+
+    /**
+     * 集群信息（健康度 + 节点 + 设置）
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @return 集群信息
+     */
+    ElasticsearchClusterVO cluster(Long datasourceId);
+
+    /**
+     * 分片分配
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @return 分片列表
+     */
+    List<ElasticsearchShardVO> shards(Long datasourceId);
+
+    /**
+     * 更新集群设置
+     *
+     * @param request 更新请求
+     * @return 更新后的集群信息
+     */
+    ElasticsearchClusterVO updateClusterSettings(ElasticsearchClusterSettingsDTO request);
+
+    /**
+     * 关系图：索引/字段为节点、别名为边
+     *
+     * @param datasourceId 数据源 ID，可为空
+     * @return 关系图
+     */
+    ElasticsearchGraphVO graph(Long datasourceId);
+
+    /**
+     * Dev Tools 原始查询：透传任意 ES REST 调用
+     *
+     * <p>ES 的 Dev Tools（如 Kibana Console）需要能发任意 REST 请求，
+     * 本接口透传 method + path + body 到 ES，对 ES 原样返回结果。</p>
+     *
+     * @param method       HTTP 方法（GET / POST / PUT / DELETE）
+     * @param path         ES 端点（如 _search、_settings、_mapping，等，不含 /{index} 前缀）
+     * @param body         请求体（ES DSL JSON，GET/PUT/DELETE 可为空）
+     * @param datasourceId 数据源 ID，可为空
+     * @return ES 返回的原始 JSON
+     */
+    String raw(String method, String path, String body, Long datasourceId);
+}

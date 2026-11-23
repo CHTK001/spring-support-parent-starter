@@ -445,10 +445,9 @@ CREATE TABLE IF NOT EXISTS `ms_tshark_packet` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='TShark 抓包数据包';
 
 -- ============================================================
--- Nginx 时序指标：实体与建表已归位 spring-support-datasource-hub-starter
--- 新表名 datasource_nginx_metric，DDL 见该模块
---   db/h2/V1.0__init_all_datasource_hub.sql；
--- 存量库表名/列名迁移见同目录 V3.0__rename_datasource_hub_tables.sql。
+-- Nginx 时序指标：实体与建表已归位 spring-support-datapool-starter
+-- 新表名 datasource_nginx_metric，DDL 与存量库表名/列名迁移
+--   已并入同目录 V1.1__init_all_datasource.sql。
 -- ============================================================
 
 -- ============================================================

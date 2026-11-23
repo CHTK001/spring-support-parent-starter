@@ -197,7 +197,7 @@ AiChatResult result = chatFacade.callForResult(req);
 |---|---|
 | `spring-boot-starter-actuator`（optional） | 不引入则 `ai-*` 端点不装配，对话主链路不受影响 |
 | `spring-api-support-common-system-starter`（optional） | 余额低量告警静默跳过，不影响余额查询主链路 |
-| MySQL（`sys_ai_*` 表） | **硬前提**：`AiConfiguration` 无条件 Mapper 扫描，缺库启动失败；表由 `db/init/V7.0__init_all_ai.sql` 初始化 |
+| MySQL（`sys_ai_*` 表） | **硬前提**：`AiConfiguration` 无条件 Mapper 扫描，缺库启动失败；表由 `db/init/V7.5__init_all_ai.sql` 初始化 |
 | Redis | **可降级**：`CacheResilienceConfiguration` 把缓存读写异常降为 WARN，读回源 DB |
 | ONNX 模型权重（`utils-support-models-onnx-*`） | 刻意不引入，由应用按需声明；缺模型时对应能力报「未配置」 |
 

@@ -13,7 +13,7 @@ flowchart TB
     end
     subgraph BIZ["依赖的兄弟 starter（依赖即带入）"]
         B1["server-starter：主机台账 / HostOnlineScheduler<br/>ai-starter：AiChatFacadeService<br/>account-starter：账号资产 / 渠道"]
-        B2["control / docker / tunnel(+ngrok·cloudflared·tailscale)<br/>device / apm(+skywalking·hotspot) / cdp<br/>socket(+io·websocket) / queue / sync / datasource-hub / job"]
+        B2["control / docker / tunnel(+ngrok·cloudflared·tailscale)<br/>device / apm(+skywalking·hotspot) / cdp<br/>socket(+io·websocket) / queue / sync / datapool / job"]
     end
     subgraph UTILS["底层 utils 支撑"]
         U["metrics / ssh / redis / prometheus<br/>influxdb / tshark / datasync<br/>zookeeper / elasticsearch / mysql / common"]
@@ -240,11 +240,11 @@ plugin:
 | `...monitor.support.spi.SystemInfoProvider` | `LocalOshiProvider`、`AgentProvider`、`SshProvider`、`WindowsWinrmProvider` | 系统信息分区采集 |
 | `...monitor.support.spi.HostOperationsProvider` | `PosixHostOperationsProvider`、`WindowsHostOperationsProvider`、`MacHostOperationsProvider` | 主机运维动作 |
 | `...monitor.support.service.alarm.NotifySender` | `LogNotifySender`、`WebhookNotifySender` | 告警通知渠道 |
-| `...datasourcehub.support.nginx.spi.NginxExecutor`（属 datasource-hub-starter，`@Spi("nginx-ssh")` / `@Spi("nginx-local")` 自动注册） | `SshNginxExecutor`、`LocalNginxExecutor` | Nginx 配置执行通道 |
-| `...datasourcehub.support.nginx.spi.NginxCommandProvider`（同上，`@Spi("nginx-posix")` / `@Spi("nginx-windows")`） | `PosixNginxCommandProvider`、`WindowsNginxCommandProvider` | Nginx 管理命令集 |
+| `...datapool.support.nginx.spi.NginxExecutor`（属 datapool-starter，`@Spi("nginx-ssh")` / `@Spi("nginx-local")` 自动注册） | `SshNginxExecutor`、`LocalNginxExecutor` | Nginx 配置执行通道 |
+| `...datapool.support.nginx.spi.NginxCommandProvider`（同上，`@Spi("nginx-posix")` / `@Spi("nginx-windows")`） | `PosixNginxCommandProvider`、`WindowsNginxCommandProvider` | Nginx 管理命令集 |
 | `...monitor.support.datasync.loader.JdbcCsvLoader` | `mysql=MysqlCsvLoader`、`postgresql=PostgresqlCsvLoader` | CSV 批量导入方言 |
 
-> 注：本模块 `META-INF/extensions/` 下另有 `…monitor.support.nginx.spi.NginxExecutor` / `…NginxCommandProvider` 两个文件，是 Nginx 能力迁往 datasource-hub 后的历史残留（登记的类不在本模块源码内）；Nginx 执行通道以上表 datasource-hub-starter 的 `@Spi` 实现为准。
+> 注：本模块 `META-INF/extensions/` 下另有 `…monitor.support.nginx.spi.NginxExecutor` / `…NginxCommandProvider` 两个文件，是 Nginx 能力迁往 datapool 后的历史残留（登记的类不在本模块源码内）；Nginx 执行通道以上表 datapool-starter 的 `@Spi` 实现为准。
 
 本模块另实现了 server-starter 的三个 SPI（对外提供的实现）：`HostCollectProvider`（`LocalHostCollectProvider`）、`HostDetectProvider`（`AgentHostDetectProvider`）、`HostAgentHistoryWriter`（`AgentHostHistoryWriter`）。
 

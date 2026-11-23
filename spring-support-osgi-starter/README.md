@@ -158,6 +158,8 @@ flowchart TD
 
 ## 6. 使用方式
 
+宿主侧：引入依赖（6.1）→ 最小配置（6.2）→ 按接口取插件服务（6.3，核心）→ 生命周期管理与事件（6.4–6.6）。插件侧：怎么把一个 jar 做成可安装的 bundle，见 6.7（工程依赖 / Activator / 打包 Manifest / 生命周期 / 常见失败）。
+
 ### 6.1 引入依赖
 
 ```xml
@@ -335,7 +337,7 @@ public class PluginAuditListener implements BundleLifecycleListener {
 
 ### 6.6 宿主向框架注册服务（BundleApplication）
 
-宿主也可以把 Spring 侧能力反向暴露给插件消费。实现 `BundleApplication` 并标注 `@Spi`，在 `src/main/resources/META-INF/extensions/com.chua.common.support.osgi.BundleApplication` 中登记实现类全限定名（未标 `@AutoSpi` 时必须手工登记，否则启动时静默不注册）：
+宿主也可以把 Spring 侧能力反向暴露给插件消费。实现 `BundleApplication` 并标注 `@Spi`，在 `src/main/resources/META-INF/extensions/com.chua.common.support.osgi.BundleApplication` 中登记实现类全限定名（未标 `@AutoSpi` 时必须手工登记，否则启动时静默不注册）。`BundleApplication` / `BundleContext` 等契约类型位于零依赖模块 `utils-support-osgi-bundle-starter`，宿主引入本 starter 时传递获得：
 
 ```java
 @Spi("hostServices")
@@ -354,9 +356,53 @@ public class HostServicePublisher implements BundleApplication {
 }
 ```
 
-### 6.7 插件（bundle jar）侧写法
+### 6.7 插件（bundle）怎么实现
 
-插件是标准 OSGi bundle：`META-INF/MANIFEST.MF` 声明 `Bundle-SymbolicName`、`Bundle-Version`、`Bundle-Activator` 与 `Import-Package`，Activator 里把实现注册进自己的 `BundleContext`。用 maven-bundle-plugin（bnd）可免手写 Manifest：
+插件 = 标准 OSGi bundle jar。最小实现只要三样：一个 `BundleActivator` 实现类、正确的 `META-INF/MANIFEST.MF`、要注册的服务实现。按「建工程 → 写 Activator → 打包 → 上架」四步走。
+
+**① 建工程、配依赖**：普通 maven `jar` 工程即可，不需要任何 chua 依赖；OSGi API 打 provided（运行期由宿主的 Felix 提供）：
+
+```xml
+<dependency>
+    <groupId>org.osgi</groupId>
+    <artifactId>org.osgi.framework</artifactId>
+    <version>1.10.0</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+服务接口（如 `Exporter`）定义在宿主侧或共享 API 包，bundle 只 import 不携带——接口包由宿主经 `plugin.osgi.framework-properties` 的 `org.osgi.framework.system.packages.extra` 导出进框架类空间，缺了它 bundle 解析或调用会失败。
+
+要引用 chua 契约类型（`com.chua.common.support.osgi.*`）的插件：依赖零依赖契约模块 `com.chua:utils-support-osgi-bundle-starter`（`provided` 作用域），**不要**依赖 `spring-support-osgi-starter` 或 `utils-support-osgi-starter`——那会把 Felix、SSHD、Spring 装配整包拖进插件 classpath；运行期契约包由宿主经 `org.osgi.framework.system.packages.extra` 导出进框架类空间，bundle 内不嵌入契约 jar。
+
+**② 写 Activator**：`start` 里注册服务、`stop` 里注销；`service.ranking` 决定宿主 `getBeanOfType` / `getService` 取谁（取最高者）：
+
+```java
+public class ExcelActivator implements BundleActivator {
+
+    private ServiceRegistration<Exporter> registration;
+
+    @Override
+    public void start(BundleContext context) {
+        registration = context.registerService(Exporter.class,
+                new ExcelExporter(),
+                Map.of("service.ranking", 100));
+    }
+
+    @Override
+    public void stop(BundleContext context) {
+        if (registration != null) {
+            registration.unregister();   // 框架 stop 也会自动注销；显式调用便于释放自己的资源
+        }
+    }
+}
+```
+
+不对外提供能力、只想在启动/停止时干活的插件（如预热连接池），只实现 `start`/`stop` 即可，服务注册不是必须的。
+
+**③ 打包出 bundle jar**
+
+方式 A（推荐）：maven-bundle-plugin（bnd），免手写 Manifest，`Import-Package` 自动分析：
 
 ```xml
 <plugin>
@@ -374,21 +420,44 @@ public class HostServicePublisher implements BundleApplication {
 </plugin>
 ```
 
-```java
-public class ExcelActivator implements BundleActivator {
+方式 B：maven-jar-plugin 手写 Manifest（最小四件套，任何构建工具等价）：
 
-    @Override
-    public void start(org.osgi.framework.BundleContext context) {
-        context.registerService(Exporter.class, new ExcelExporter(), null);
-    }
-
-    @Override
-    public void stop(org.osgi.framework.BundleContext context) {
-    }
-}
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-jar-plugin</artifactId>
+    <configuration>
+        <archive>
+            <manifestEntries>
+                <Manifest-Version>1.0</Manifest-Version>
+                <Bundle-SymbolicName>com.acme.report.excel</Bundle-SymbolicName>
+                <Bundle-Version>1.0.0</Bundle-Version>
+                <Bundle-Activator>com.acme.report.excel.ExcelActivator</Bundle-Activator>
+                <Import-Package>org.osgi.framework,com.acme.report.api</Import-Package>
+            </manifestEntries>
+        </archive>
+    </configuration>
+</plugin>
 ```
 
-插件要调用的宿主 API 接口（如 `Exporter`）通过 `plugin.osgi.framework-properties` 的 `org.osgi.framework.system.packages.extra` 导出给框架类空间。
+四个头缺一不可：`Bundle-SymbolicName`（全局唯一，REST 与 SSH 命令都按它寻址）、`Bundle-Version`、`Bundle-Activator`（Activator 全限定名，须 public 且有无参构造）、`Import-Package`（至少 `org.osgi.framework`，用到的宿主接口包也要列上）。
+
+**④ 上架与生命周期对照**
+
+| 操作 | 端点 | bundle 状态变化 |
+|:-----|:-----|:----------------|
+| 安装 | `POST /osgi/bundles/install`（或 jar 放 deploy 目录热部署） | → INSTALLED |
+| 启动 | install 参数 `start=true`，或 `POST /bundles/{name}/start` | INSTALLED → RESOLVED → ACTIVE（Activator.start 执行，服务可被宿主取到） |
+| 停止 | `POST /bundles/{name}/stop` | ACTIVE → RESOLVED（Activator.stop 执行，服务注销） |
+| 升级 | `POST /bundles/{name}/update`（同符号名新版本 jar） | 保留身份换内容，需再 start / refresh 生效 |
+| 卸载 | `POST /bundles/{name}/uninstall` | 从框架摘除；deploy 目录 jar 仍在，删文件另调 `POST /jars/{fileName}/delete` |
+
+**⑤ 常见失败与定位**
+
+- 启动报缺少 `Import-Package` / 无法解析：宿主没把接口包加进 `org.osgi.framework.system.packages.extra`，或 MF 的 `Import-Package` 漏写；安装/启动接口会返回 Felix 的真实解析原因（见 FAQ 7）。
+- start 返回 504：Activator.start 阻塞超过 `lifecycle-timeout-seconds`（默认 60s），此时 bundle 状态可能不确定，以查询接口为准。
+- 服务取不到：bundle 没到 ACTIVE、没 `registerService`，或 ranking 被更高实现压住；`GET /osgi/services` 看注册表现状。
+- 宿主接口演进后 bundle 未同步重打包：调用期抛 `NoSuchMethodError`；接口变更时宿主与插件要一起发版。
 
 ### 6.8 REST 管理端点调用示例
 
@@ -462,6 +531,7 @@ socket.subscribe("osgi", "operation-log", (msg) => {
 ### 6.9 可选依赖说明
 
 - `utils-support-osgi-starter`（必依赖）：缺失时类级 `@ConditionalOnClass` 不满足，整个模块**静默不装配**；
+- `utils-support-osgi-bundle-starter`（必依赖，经 `utils-support-osgi-starter` 传递）：OSGi 契约类型（`OsgiLauncher` / `BundleApplication` / `BundleContext` 等）的唯一定义处，零第三方依赖；
 - `spring-support-socket-starter`（optional）：引入后日志经 `SocketOsgiLogPublisher` 广播到全局 socket；缺失时 noop 兜底，模块可独立运行；
 - `spring-boot-configuration-processor` / `lombok`（optional）：仅编译期元数据与代码生成，运行期无依赖；
 - Felix / Gogo / SSHD 版本由 `utils-support-osgi-starter` 与父 pom 依赖管理托管。

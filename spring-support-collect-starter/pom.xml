@@ -30,7 +30,7 @@
     <!-- 数据源中心：SQL/入库节点统一从这里取数据源台账，不再自建 collect_datasource 台账 -->
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>spring-support-datasource-hub-starter</artifactId>
+      <artifactId>spring-support-datapool-starter</artifactId>
       <version>${module.version}</version>
     </dependency>
       <dependency>

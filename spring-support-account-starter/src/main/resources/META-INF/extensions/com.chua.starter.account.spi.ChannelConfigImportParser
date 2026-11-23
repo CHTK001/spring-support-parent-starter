@@ -1,0 +1,8 @@
+com.chua.starter.account.spi.impl.OpencodeConfigImportParser
+com.chua.starter.account.spi.impl.CcSwitchConfigImportParser
+com.chua.starter.account.spi.impl.ClaudeSettingsConfigImportParser
+com.chua.starter.account.spi.impl.EnvConfigImportParser
+com.chua.starter.account.spi.impl.MagpieConfigImportParser
+com.chua.starter.account.spi.impl.CursorConfigImportParser
+com.chua.starter.account.spi.impl.GeminiCliConfigImportParser
+com.chua.starter.account.spi.impl.CodexCliConfigImportParser

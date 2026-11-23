@@ -9,7 +9,7 @@
 --   V2.16 / V2.18 八个数据修复增量脚本（collect_flow DSL / collect_task
 --   悬挂任务 / edu_fun_config 清理）已在本次收敛中并入文末 [9] 节并删除；
 --   两条结构放宽（V2.13 word_structure、V2.17 poem 三列）进入
---   V3.0__init_all_eduai.sql。FlywayLike 按「脚本名 + 版本」记账，
+--   V3.1__init_all_eduai.sql。FlywayLike 按「脚本名 + 版本」记账，
 --   合并增量须递进版本号，否则存量库不会重跑。
 -- 约束: 全部语句必须幂等（INSERT IGNORE / ON DUPLICATE KEY / 条件 UPDATE），
 --   可反复执行。data-scan-mode=ONCE 时只在空库执行一次。

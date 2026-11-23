@@ -8,7 +8,7 @@ import com.chua.starter.collect.engine.spi.CollectShapeExecutor;
 import com.chua.starter.collect.engine.spi.CollectShapeMeta;
 import com.chua.starter.collect.engine.spi.CollectShapeMetas;
 import com.chua.starter.collect.support.CollectJdbcSupport;
-import com.chua.starter.datasourcehub.support.model.dto.DdlColumn;
+import com.chua.starter.datapool.support.model.dto.DdlColumn;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

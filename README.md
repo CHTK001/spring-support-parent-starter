@@ -42,7 +42,7 @@ flowchart TB
     subgraph STARTERS["spring-support-*-starter（55 个在构建模块）"]
         direction LR
         WEB["Web 公共<br/>common / oauth-client<br/>swagger / swagger2 / console"]
-        DATA["数据<br/>datasource / datasource-hub / mybatis"]
+        DATA["数据<br/>datasource / datapool / mybatis"]
         CACHE["缓存与队列<br/>cache / redis / queue / message"]
         RT["实时通信<br/>socket* / sync / rpc"]
         AI["AI 与观测<br/>ai / ai-training / eduai / ueba<br/>datasearch / apm* / hotsport / agent"]
@@ -73,7 +73,7 @@ flowchart TB
 | 业务域 | 模块 | 代表入口 / Bean |
 | --- | --- | --- |
 | Web 公共 | common、oauth-client、swagger、swagger2、console | `ApiProperties`、`AuthService`、`CaptchaProvider`、认证过滤器、Knife4j 页面、`ConsoleOverrideProvider` |
-| 数据 | datasource、datasource-hub、mybatis | `DataSource`、`JdbcTemplate`、`TransactionTemplate`、`MybatisPlusInterceptor`、`DatasourceHubProperties` |
+| 数据 | datasource、datapool、mybatis | `DataSource`、`JdbcTemplate`、`TransactionTemplate`、`MybatisPlusInterceptor`、`DatapoolProperties` |
 | 缓存与队列 | cache、redis、queue、message | `CacheManager`、`CacheTemplate`、`RedissonClient`、`RedisTemplate`、`LockTemplate`、`MessageTemplate`、`DeadLetterTemplate` |
 | 实时通信 | socket、socket-websocket、socket-io、socket-sse、socket-rsocket、sync、rpc | `SocketSessionTemplate`、`SseTemplate`、`SyncServer`/`SyncClient`、`@RpcService`/`@RpcResource` |
 | 任务与治理 | job、taskdistribution、datasync、collect、discovery、configcenter、osgi、bundle、lowcode | `JobOperator`、`DataSyncServer`、`DiscoveryService`、`ConfigCenter`、`BundleManagerService`、`LowFormService` |
@@ -124,7 +124,7 @@ flowchart TB
 | spring-support-tunnel-tailscale-starter | Tailscale Funnel：基于 tailscale CLI 子进程把本机服务暴露为公网 HTTPS | [README.md](spring-support-tunnel-tailscale-starter/README.md) |
 | spring-support-eduai-starter | 教育 AI：题库、AI 组卷/阅卷（SSE 进度）、知识库检索、错题库、考试与语文素养语料 | [README.md](spring-support-eduai-starter/README.md) |
 | spring-support-device-starter | 设备接入 SPI：海康/大华/宇视/精讯畅通/GB28181/ONVIF 收敛为 `DeviceProvider` + 能力矩阵 | [README.md](spring-support-device-starter/README.md) |
-| spring-support-datasource-hub-starter | 数据源中心：台账 CRUD、连通性探测、可复用 JDBC、Web 管理器、SSH 隧道与中间件管理面 | [README.md](spring-support-datasource-hub-starter/README.md) |
+| spring-support-datapool-starter | 数据源中心：台账 CRUD、连通性探测、可复用 JDBC、Web 管理器、SSH 隧道与中间件管理面 | [README.md](spring-support-datapool-starter/README.md) |
 | spring-support-monitor-starter | 服务器与中间件监控一站式：资产台账 + 采集 + 时序 + 告警 + 抓包 + AI 诊断 | [README.md](spring-support-monitor-starter/README.md) |
 | spring-support-server-starter | 服务器资产与远程运维：主机台账、远程终端、SFTP、工作台、发布管理、批量执行 | [README.md](spring-support-server-starter/README.md) |
 | spring-support-docker-starter | Docker 管理台后端：容器/镜像/网络/卷/镜像库，经 SSH 执行 docker CLI，SSE 回显 | [README.md](spring-support-docker-starter/README.md) |
@@ -293,7 +293,7 @@ flowchart LR
 | --- | --- |
 | common | `plugin.api`、`plugin.api.cors`、`plugin.api.security.header`、`plugin.actuator`、`plugin.captcha`、`plugin.captcha.external`、`plugin.ip`、`plugin.jackson`、`plugin.log`、`plugin.log.portal`、`plugin.message`、`plugin.nonce.sign`、`plugin.notice`、`plugin.optional`、`plugin.security.fingerprint`、`plugin.service-info`、`plugin.thread` |
 | datasource | `plugin.datasource.calcite` / `.document` / `.materialized` / `.monitor` / `.script` / `.sharding`、`plugin.h2`、`plugin.sqlite`、`plugin.multi-datasource`（含 `.hikari`）、`plugin.transaction` |
-| datasource-hub | `plugin.datasource.hub` |
+| datapool | `plugin.datapool` |
 | mybatis | `plugin.mybatis`、`plugin.mybatis.data.scope`、`plugin.mybatis.slow-sql` |
 | cache | `plugin.cache` |
 | redis | `plugin.redis.server` |

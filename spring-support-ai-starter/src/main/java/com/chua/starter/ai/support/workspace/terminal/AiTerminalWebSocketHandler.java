@@ -191,7 +191,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
 
     /**
-     * 设置读取器：判断「重启自动继续」开关
+     * 设置读取器：判断「打开终端时自动继续」开关
      */
     private final GlobalSettingReader settingReader;
 
@@ -201,9 +201,9 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
     private static final String SETTING_GROUP = "session";
 
     /**
-     * 重启自动继续开关字段
+     * 打开时自动继续开关字段（与重启后自动继续是独立开关）
      */
-    private static final String FIELD_AUTO_CONTINUE = "auto_continue_on_restart";
+    private static final String FIELD_AUTO_CONTINUE = "auto_continue_on_open";
 
     /**
      * 补发内容（与聊天侧口径一致）
@@ -336,7 +336,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
         log.info("[terminal-ws] 终端就绪 id={} session={} cwd={} shell={}",
                 session.getId(), sessionId, ptySession.cwd(), ptySession.shellName());
 
-        // 重启自动继续：上一次终端还开着（进程随重启被杀）时，这里补输入一次「继续」。
+        // 打开时自动继续：上一次终端还开着（进程随重启被杀）时，这里补输入一次「继续」。
         // 先消费标记再登记：本次启动把标记重新写回去，供下一次重启使用。
         boolean pending = consumePending(sessionId);
         markPending(sessionId);
@@ -346,7 +346,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
                         if (!ptySession.isAlive()) {
                             return;
                         }
-                        log.info("[terminal-ws] 重启后自动输入「继续」session={}", sessionId);
+                        log.info("[terminal-ws] 打开时自动输入「继续」session={}", sessionId);
                         ptySession.write(CONTINUE_PROMPT + "\r");
                     });
         }
@@ -525,7 +525,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
         sessions.values().forEach(ptySession -> ptySession.close());
         sessions.clear();
         // 再补写一次：即便连接关闭早于本方法、标记被 finish() 清掉，这里也会恢复，
-        // 保证「重启后自动继续」不依赖 Spring 与容器关闭的先后顺序。
+        // 保证「打开时自动继续」的标记不依赖 Spring 与容器关闭的先后顺序。
         running.forEach(this::markPending);
         log.info("[terminal-ws] 全部终端已关闭，待继续会话 {} 个", running.size());
     }
@@ -905,7 +905,7 @@ public class AiTerminalWebSocketHandler extends TextWebSocketHandler {
          * 同一聊天会话没有其它存活终端时才清标记。
          *
          * <p>旧连接的收尾可能晚于新终端的启动（关面板后立刻重开、重连重发 terminal.start），
-         * 无条件清理会把新终端刚写下的标记删掉，导致「重启后自动继续」时有时无。</p>
+         * 无条件清理会把新终端刚写下的标记删掉，导致「打开时自动继续」时有时无。</p>
          *
          * @param chatSessionId 聊天会话标识
          */

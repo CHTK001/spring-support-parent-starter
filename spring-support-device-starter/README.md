@@ -162,7 +162,7 @@ public class DeviceHostApplication {
 }
 ```
 
-建表：模块自带 `db/init/V2.6__init_all_device.sql`（幂等建表）与 `V2.6__initdata_all_device.sql`（种子数据），存量库另由 `db/migration/V2.7__device_v26_schema_align.sql` 做列名规范化与审计列补齐；三者由 `spring-support-datasource-starter` 的 FlywayLike 脚本机制执行；未引入该机制时需手工执行。随后通过 `/api/device/provider-credential` 录入平台凭据并触发一次同步。
+建表：模块自带 `db/init/V2.8__init_all_device.sql`（幂等建表，已并入原 V2.6 全量建表与原 V2.7 的列名规范化、审计列补齐）与 `V2.6__initdata_all_device.sql`（种子数据），二者由 `spring-support-datasource-starter` 的 FlywayLike 脚本机制执行；未引入该机制时需手工执行。随后通过 `/api/device/provider-credential` 录入平台凭据并触发一次同步。
 
 可选依赖（缺了会怎样）：
 

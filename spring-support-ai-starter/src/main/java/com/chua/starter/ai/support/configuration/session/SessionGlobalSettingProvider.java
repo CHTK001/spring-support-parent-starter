@@ -139,7 +139,19 @@ public class SessionGlobalSettingProvider implements GlobalSettingProvider {
                  */
                 new SettingItem("auto_continue_on_restart", "true", "BOOLEAN",
                         "重启后自动继续（默认开启）：服务重启时若有未完成的回合并未收到结果，"
-                                + "自动补发「继续」把它跑完；关闭时保持原样，由用户手动继续", 13)
+                                + "自动补发「继续」把它跑完；关闭时保持原样，由用户手动继续", 13),
+                /*
+                 * 打开时自动继续：与「重启后自动继续」互补——那个管「服务重启那一刻的批量补发」，
+                 * 这个管「用户/前端打开会话或终端的那一刻」：
+                 * 1. 聊天页打开曾被打断的会话（上一轮只有提问没有回答）时，自动重发队列里的
+                 *    待发消息、或弹「继续 / 忽略」确认条（见 ChatPanel.resumeQueuedMessagesOnLoad）；
+                 * 2. 工作区终端打开时，若上一次进程是被重启杀掉的（pending 标记），自动输入一次
+                 *    「继续」（见 AiTerminalWebSocketHandler）。
+                 * 两个开关独立：管理员可只留「重启后自动继续」，让打开场景全部靠用户手动。
+                 */
+                new SettingItem("auto_continue_on_open", "true", "BOOLEAN",
+                        "打开时自动继续（默认开启）：打开曾被打断的会话时自动续跑未完成的回合，"
+                                + "工作区终端打开时也自动输入一次「继续」；关闭时打开场景保持原样，由用户手动继续", 14)
         );
     }
 }

@@ -79,7 +79,7 @@ plugin:
   # eduAuthDataSource / eduAuthJdbcTemplate 的 Hikari 数据源。不配这段时
   # properties 里没有 url，Hikari 初始化直接报：
   #   ERROR HikariPool-2 - dataSource or dataSourceClassName or jdbcUrl is required
-  # 并连带让 DataSourceScriptBeanPostProcessor 无法给它跑建表脚本（V1.2__init_all_api_common_system.sql）。
+  # 并连带让 DataSourceScriptBeanPostProcessor 无法给它跑建表脚本（V1.3__init_all_api_common_system.sql）。
   # 每次启动 6 条 ERROR + 一串 WARN，日志被噪声淹没，真正的错误反而看不见。
   #
   # 本应用是**单库部署**（系统表 sys_user / sys_error_log 与业务表同在 eduai 库），
@@ -186,7 +186,7 @@ plugin:
       # 初始化数据保持 ONCE：种子脚本体积已达 16MB，且业务表非空即无需重灌。
       # ⚠ 操作 collect_flow（采集平台的表）的语句已并入 initdata 末尾：
       #   那批语句操作的是**另一个库**的表，本库没有其建表脚本，FlywayLike 遇到
-      #   「目标表不存在」会跳过该语句（不记失败）—— 详见 V2.1__initdata_all_eduai.sql
+      #   「目标表不存在」会跳过该语句（不记失败）—— 详见 V3.0__initdata_all_eduai.sql
       #   文件头的说明。流程定义实际送达采集平台靠 D:\ch\_collect-deploy\collect-flow-seed.sql。
       data-scan-mode: ONCE
       continue-on-error: true

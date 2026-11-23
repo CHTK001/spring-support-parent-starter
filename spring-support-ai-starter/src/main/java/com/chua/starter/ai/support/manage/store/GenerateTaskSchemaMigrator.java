@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * <p>为 {@code sys_ai_generate_task} 幂等补齐<b>拼接提示词</b>列
  * {@code sys_ai_generate_task_final_prompt}：风格语义由后端拼接，
  * {@code prompt} 列只存用户原文，拼接结果（风格描述 + 用户提示词，实际送模型生成）
- * 单独落本列，供前端展示与一键复制。新库由 {@code db/init/V7.0__init_all_ai.sql}
+ * 单独落本列，供前端展示与一键复制。新库由 {@code db/init/V7.5__init_all_ai.sql}
  * 建表时直接带上该列，本迁移器只服务存量库。</p>
  *
  * <p>应用启动后通过 JDBC 幂等执行；当数据库暂不可达时后台每 30 秒重试，

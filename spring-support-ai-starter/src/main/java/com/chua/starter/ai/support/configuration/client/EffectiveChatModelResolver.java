@@ -26,7 +26,7 @@ import java.util.List;
  * <p>读取一律直连数据库（不走 Redis 缓存）：模型解析错一次就整条链路失败，
  * 缓存里残留的旧模型名会让报错与库里的配置完全对不上。</p>
  *
- * <p>其它模块（如 datasource-hub 的数据库控制台）只依赖本接口；
+ * <p>其它模块（如 datapool 的数据库控制台）只依赖本接口；
  * 实现由 {@code DefaultEffectiveChatModelResolver} 提供。</p>
  *
  * @author CH

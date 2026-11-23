@@ -1,7 +1,7 @@
 package com.chua.starter.collect.support;
 
 import com.chua.starter.collect.engine.CollectExpression;
-import com.chua.starter.datasourcehub.support.model.DataSourceVO;
+import com.chua.starter.datapool.support.model.DataSourceVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

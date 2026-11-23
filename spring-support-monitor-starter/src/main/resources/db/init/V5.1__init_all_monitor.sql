@@ -25,9 +25,9 @@
 -- =====================================================================
 --
 -- 表归位: nginx 时序指标表 datasource_nginx_metric 的实体
---   MsMonitorNginxMetric 属于 spring-support-datasource-hub-starter，
---   建表语句在该模块的 V2.0__init_all_datasource_hub.sql（新表名/新列名），
---   存量库表名/列名迁移见同模块 V3.0__rename_datasource_hub_tables.sql。
+--   MsMonitorNginxMetric 属于 spring-support-datapool-starter，
+--   建表语句在该模块的 V3.1__init_all_datapool.sql（新表名/新列名），
+--   存量库表名/列名迁移见 monitor 模块 db/h2/V1.1__init_all_datasource.sql。
 --
 -- 命名规范: 列名使用完整表名作为前缀，如 ms_monitor_name
 -- 数据库: MySQL 8.x / H2 (MySQL 模式) / 达梦 / Oracle 通过方言转换

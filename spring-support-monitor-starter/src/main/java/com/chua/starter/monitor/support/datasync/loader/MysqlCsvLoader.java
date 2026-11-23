@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.support.datasync.loader;
 
 import com.chua.common.support.spi.annotations.Spi;
-import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
+import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;

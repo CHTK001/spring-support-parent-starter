@@ -371,7 +371,7 @@ public class AiModelServiceImpl implements AiModelService {
     /**
      * 入参校验：把建表约束（NOT NULL / 列宽）提到业务层，避免撞库后被兜成 HTTP 500。
      *
-     * <p>{@code sys_ai_model}（{@code db/init/V7.0__init_all_ai.sql}）里
+     * <p>{@code sys_ai_model}（{@code db/init/V7.5__init_all_ai.sql}）里
      * {@code sys_ai_model_name} / {@code sys_ai_model_code} 是 {@code NOT NULL} 且 VARCHAR(255)，
      * 描述与各 JSON 列是 VARCHAR(512)。此前不校验：字段缺失撞 NOT NULL、内容超长撞列宽，
      * 都会落到 common-starter 的 {@code ApiExceptionAdvice#handleDataAccessException}

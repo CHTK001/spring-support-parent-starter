@@ -25,7 +25,7 @@ flowchart TB
 
     subgraph BASE["依赖的基础设施模块"]
         MYB["spring-support-mybatis-starter ｜ spring-support-datasource-starter"]
-        DH["spring-support-datasource-hub-starter（数据源台账 datasource_info）"]
+        DH["spring-support-datapool-starter（数据源台账 datasource_info）"]
         CS["spring-api-support-common-system-starter（消息中心 SysMessageService）"]
         CR["utils-support-crawler-starter / utils-support-common-starter"]
         GR["utils-support-groovy-starter + groovy（ScriptProvider 的 groovy 实现）"]
@@ -69,7 +69,7 @@ flowchart TB
 | 设计器支撑 | `CollectDesignerServiceImpl`、`CollectAgentCatalog` | `GET /v2/collect/designer/metas`、`GET /v2/collect/designer/runtime`、`POST /v2/collect/designer/ai-generate` |
 | 流程执行 | `CollectExecutionServiceImpl`、`CollectEngine`、`CollectExecutorRegistry`、`CollectDatabaseSink` | `POST /v2/collect/execution/run`、`POST /v2/collect/execution/dry-run`、`POST /v2/collect/execution/stop` |
 | 节点执行器（23 种） | `CollectRequestExecutor`、`CollectExtractExecutor`、`CollectSqlExecutor`、`CollectScriptExecutor`、`CollectProcessExecutor` 等 | 经 `CollectShapeExecutor` SPI 注册；设计器 `GET /v2/collect/designer/metas` 展示工具箱 |
-| 数据源管理 | `CollectDatasourceServiceImpl`、`CollectDatasourceRegistry`（读 datasource-hub 台账） | `GET /v2/collect/datasource/options`、`POST /v2/collect/datasource/test`、`GET /v2/collect/datasource/tables` |
+| 数据源管理 | `CollectDatasourceServiceImpl`、`CollectDatasourceRegistry`（读 datapool 台账） | `GET /v2/collect/datasource/options`、`POST /v2/collect/datasource/test`、`GET /v2/collect/datasource/tables` |
 | 变量与函数 | `CollectVariableServiceImpl`、`CollectFunctionServiceImpl`（兼 `CollectFunctionProvider`）、`CollectFunctionRegistry` | `POST /v2/collect/variable/save`、`POST /v2/collect/function/save`、`POST /v2/collect/function/test` |
 | 任务与结果观测 | `CollectTaskServiceImpl`、`CollectRecordServiceImpl`、`CollectFieldServiceImpl`、`CollectRecordDedupStore` | `GET /v2/collect/task/page`、`GET /v2/collect/task/logs`、`GET /v2/collect/task/quality`、`GET /v2/collect/record/page` |
 | 通知与告警 | `CollectNoticeServiceImpl`、`CollectNotifyChannel` 三个实现、`CollectAlertRuleServiceImpl` | `GET /v2/collect/notice/channels`、`POST /v2/collect/notice/test`、`POST /v2/collect/alert-rule/toggle` |
@@ -174,7 +174,7 @@ plugin:
     sql-allow-write: false  # SQL 节点默认只读
     notify:
       enable: true
-# 数据源与建表脚本遵循 spring-support-datasource-starter / datasource-hub 约定；pom 已自带 h2（runtime）可免外部库启动，生产换 MySQL 按数据源中心登记。
+# 数据源与建表脚本遵循 spring-support-datasource-starter / datapool 约定；pom 已自带 h2（runtime）可免外部库启动，生产换 MySQL 按数据源中心登记。
 ```
 
 保存并运行一个最小流程（`start → request → output`，DSL 契约见 `CollectFlowSaveDTO` / `CollectDslDTO` / `CollectNodeDTO` / `CollectEdgeDTO` / `CollectParamDTO`）：
@@ -210,7 +210,7 @@ curl 'http://localhost:8080/v2/collect/task/page?current=1&size=10'
 | `mysql-connector-j` / `h2` | runtime 自带 | h2 支持免外部数据库启动；生产建议 MySQL，DDL 均为 `CREATE TABLE IF NOT EXISTS` |
 | `utils-support-groovy-starter` + `groovy` | 必带 | 脚本节点与自定义函数的 Groovy 执行运行时 |
 | `utils-support-crawler-starter` / `jsoup` | 必带 | 抓取与 DOM 解析能力 |
-| `spring-support-datasource-hub-starter` | 必带 | SQL / 入库节点的数据源台账来源（`datasource_info`），迁移期回落老 `collect_datasource` |
+| `spring-support-datapool-starter` | 必带 | SQL / 入库节点的数据源台账来源（`datasource_info`），迁移期回落老 `collect_datasource` |
 | `spring-support-ai-starter` | **非 Maven 依赖** | 仅「AI 生成流程」经 HTTP 调用（`plugin.collect.ai.*`）；默认只在采集后端与 ai-starter 同机部署时可用（本地信任头回环放行） |
 
 ## 7. 使用场景
@@ -232,7 +232,7 @@ curl 'http://localhost:8080/v2/collect/task/page?current=1&size=10'
 | 相邻模块 | 取舍结论 |
 | --- | --- |
 | `spring-support-job-starter` | 采集本体不依赖调度器，排期收口在 `CollectFlowSchedulePort`；要定时就显式引入 job-starter |
-| `spring-support-datasource-hub-starter` | 数据源台账统一读数据源中心 `datasource_info`，本模块不自建台账（老 `collect_datasource` 仅迁移期回落） |
+| `spring-support-datapool-starter` | 数据源台账统一读数据源中心 `datasource_info`，本模块不自建台账（老 `collect_datasource` 仅迁移期回落） |
 | `spring-support-ai-starter` | 只在「AI 生成流程」时经 HTTP 调用，不是编译期依赖；AI 节点（`ai` / `agent` shape）按 `@ConditionalOnClass` 自动降级 |
 | `spring-api-support-common-system-starter` 的消息中心 | 站内通知复用 `SysMessageService.broadcast → sys_message`，不引 `spring-support-message-starter`（两者各带一套同名 `SysMessage*`，共存会 `ConflictingBeanDefinitionException`） |
 

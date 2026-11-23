@@ -127,8 +127,16 @@ public class SessionAutoContinueService {
 
     /**
      * 扫描未完成会话并逐个补发。
+     *
+     * <p>进入执行时<b>再实时读一次开关</b>：启动排程与真正扫描之间隔着
+     * {@value #START_DELAY_SECONDS} 秒，若期间设置被改为关闭，此处能拦住
+     * 已排队的扫描，保证「关闭立即生效、不用等下次重启」。</p>
      */
     void scanAndContinue() {
+        if (!settingReader.getBool(GROUP, FIELD_AUTO_CONTINUE, true)) {
+            log.info("[AutoContinue] 扫描开始时自动继续已被关闭，取消本次补发");
+            return;
+        }
         List<SysAiSession> sessions;
         try {
             sessions = sessionMapper.selectList(new LambdaQueryWrapper<SysAiSession>()

@@ -25,6 +25,13 @@
             <artifactId>utils-support-osgi-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
+        <!-- OSGi 插件契约（BundleApplication / OsgiLauncher 等）唯一定义处，
+             插件侧也应依赖该零依赖契约模块（provided）而非本 starter -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-osgi-bundle-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>

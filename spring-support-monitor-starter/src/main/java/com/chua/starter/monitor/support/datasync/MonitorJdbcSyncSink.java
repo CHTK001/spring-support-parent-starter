@@ -3,7 +3,7 @@ package com.chua.starter.monitor.support.datasync;
 import com.chua.datasync.agent.support.DataSyncAgentSink;
 import com.chua.datasync.agent.support.model.Direction;
 import com.chua.datasync.agent.support.model.Directional;
-import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
+import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 

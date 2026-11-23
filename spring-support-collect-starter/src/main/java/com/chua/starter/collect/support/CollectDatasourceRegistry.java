@@ -5,9 +5,9 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.collect.entity.CollectDatasource;
 import com.chua.starter.collect.mapper.CollectDatasourceMapper;
-import com.chua.starter.datasourcehub.support.constants.DatasourceHubConstants;
-import com.chua.starter.datasourcehub.support.model.DataSourceVO;
-import com.chua.starter.datasourcehub.support.service.DatasourceService;
+import com.chua.starter.datapool.support.constants.DatapoolConstants;
+import com.chua.starter.datapool.support.model.DataSourceVO;
+import com.chua.starter.datapool.support.service.DatasourceService;
 import com.zaxxer.hikari.HikariConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -133,14 +133,14 @@ public class CollectDatasourceRegistry {
             throw new IllegalStateException("数据源 " + row.name() + " 不是 JDBC 类型，无法被 SQL/入库节点使用");
         }
         String url = trim(row.database());
-        if (!url.regionMatches(true, 0, DatasourceHubConstants.JDBC_URL_PREFIX, 0,
-                DatasourceHubConstants.JDBC_URL_PREFIX.length())) {
+        if (!url.regionMatches(true, 0, DatapoolConstants.JDBC_URL_PREFIX, 0,
+                DatapoolConstants.JDBC_URL_PREFIX.length())) {
             String host = trim(row.host());
             if (host.isEmpty() || url.isEmpty()) {
                 throw new IllegalStateException("JDBC 数据源缺少主机或库名: " + row.name());
             }
             int port = row.port() != null ? row.port()
-                    : DatasourceHubConstants.DS_DEFAULT_PORTS.getOrDefault("jdbc", 3306);
+                    : DatapoolConstants.DS_DEFAULT_PORTS.getOrDefault("jdbc", 3306);
             url = String.format(
                     "jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai",
                     host, port, url);

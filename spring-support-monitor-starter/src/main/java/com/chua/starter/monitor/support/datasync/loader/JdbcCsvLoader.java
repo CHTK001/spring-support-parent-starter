@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.support.datasync.loader;
 
-import com.chua.starter.datasourcehub.support.model.DatasourceJdbcInfo;
+import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
 
 import java.nio.file.Path;
 import java.util.List;

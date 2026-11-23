@@ -145,7 +145,7 @@
         <module>spring-support-device-starter</module>
         <!-- 模板管理已并入账号管理模块（spring-support-account-starter），不再单独成模块 -->
         <!-- 服务器与中间件监控模块 -->
-        <module>spring-support-datasource-hub-starter</module>
+        <module>spring-support-datapool-starter</module>
         <module>spring-support-monitor-core-starter</module>   <!-- 监控双模式核心：Agent 协议 record + 指标点 + 客户端引擎基座 -->
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>

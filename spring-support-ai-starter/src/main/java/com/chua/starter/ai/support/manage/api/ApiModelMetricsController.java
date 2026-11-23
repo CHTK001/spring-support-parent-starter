@@ -137,8 +137,9 @@ public class ApiModelMetricsController {
      * @param keyword  模型名/厂商关键字（可空）
      * @param provider 提供商过滤（可空，精确匹配）
      * @param band     价格带过滤：economy/value/standard/flagship（可空）
-     * @param sort     排序键：price（默认）/ value（性价比）/ index（智能指数）
+     * @param sort     排序键：price（默认）/ value（性价比）/ index（智能指数）/ popularity（热度）
      * @param order    排序方向：asc / desc
+     * @param hotOnly  只看热门模型（热门 = 近 30 天用量令牌前 8）
      * @return 分页模型报价与筛选元数据
      */
     @GetMapping("/model-metrics/price-overview")
@@ -149,8 +150,9 @@ public class ApiModelMetricsController {
             @RequestParam(value = "provider", required = false) String provider,
             @RequestParam(value = "band", required = false) String band,
             @RequestParam(value = "sort", defaultValue = "price") String sort,
-            @RequestParam(value = "order", required = false) String order) {
-        return ApiResult.ok(priceOverviewService.overview(page, size, keyword, provider, band, sort, order));
+            @RequestParam(value = "order", required = false) String order,
+            @RequestParam(value = "hotOnly", defaultValue = "false") boolean hotOnly) {
+        return ApiResult.ok(priceOverviewService.overview(page, size, keyword, provider, band, sort, order, hotOnly));
     }
 
     /**
