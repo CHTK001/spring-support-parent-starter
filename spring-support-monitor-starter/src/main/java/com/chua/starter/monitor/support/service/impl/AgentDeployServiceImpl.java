@@ -6,6 +6,7 @@ import com.chua.starter.monitor.support.config.AgentDeployProperties;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.model.AgentDeployProgressVO;
 import com.chua.starter.monitor.support.model.AgentHealthVO;
+import com.chua.starter.monitor.support.model.AgentOnboardVO;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.monitor.support.service.MonitorService;
@@ -490,10 +491,10 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * 同地址主机与同主机下的 SERVER 监控项均幂等复用，不重复创建。
      * </p>
      *
-     * @return 受理结果，data 为提示信息
+     * @return 受理结果，data 含 hostId、主机名与提示信息
      */
     @Override
-    public ReturnResult<String> onboardLocal() {
+    public ReturnResult<AgentOnboardVO> onboardLocal() {
         String localAddress = "127.0.0.1";
         MsServerHost host = serverHostService.listByAddress(localAddress).stream()
                 .filter(item -> item != null && item.getId() != null)
@@ -514,15 +515,18 @@ public class AgentDeployServiceImpl implements AgentDeployService {
         }
         Long hostId = host.getId();
         ensureServerMonitor(host);
+        String message;
         if (busy(hostId)) {
-            return ReturnResult.ok("本机主机 #" + hostId + " 已有 Agent 操作在执行中，请稍后查看进度");
+            message = "本机主机 #" + hostId + " 已有 Agent 操作在执行中，请稍后查看进度";
+        } else {
+            ReturnResult<String> submitted = submit(hostId, Action.INSTALL);
+            if (submitted == null || !submitted.isOk()) {
+                return ReturnResult.error("Agent 安装任务提交失败，请检查服务端日志");
+            }
+            message = (hostCreated ? "已创建本机主机" : "已复用本机主机")
+                    + " #" + hostId + "，Agent 安装任务已受理";
         }
-        ReturnResult<String> submitted = submit(hostId, Action.INSTALL);
-        if (submitted == null || !submitted.isOk()) {
-            return submitted == null ? ReturnResult.error("Agent 安装任务提交失败") : submitted;
-        }
-        return ReturnResult.ok((hostCreated ? "已创建本机主机" : "已复用本机主机")
-                + " #" + hostId + "，Agent 安装任务已受理");
+        return ReturnResult.ok(new AgentOnboardVO(hostId, host.getServerHostName(), hostCreated, message));
     }
 
     /**

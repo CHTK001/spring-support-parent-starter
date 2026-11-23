@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.model.AgentOnboardVO;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -86,9 +87,9 @@ public interface AgentDeployService {
      * 同地址主机与同主机下的 SERVER 监控项均幂等复用，不重复创建。
      * </p>
      *
-     * @return 受理结果，data 为提示信息
+     * @return 受理结果，data 含 hostId（前端据此订阅进度推送）、主机名与提示信息
      */
-    ReturnResult<String> onboardLocal();
+    ReturnResult<AgentOnboardVO> onboardLocal();
 
     /**
      * 部署使用的本地 agent 包路径，与下载端点共用同一套定位规则。

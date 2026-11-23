@@ -383,14 +383,6 @@
             <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
 
-        <!-- 数据中台管理（/v2/datalake/**，前端 @pages/datalake 的「数据中台」分组）：
-             管理端点仅在 datalake.enabled=true（DatalakeServer 已装配）时生效；
-             管线配置经 JdbcPipelineManager 落库 sys_datalake_pipeline。管理类接口走宿主统一鉴权。 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-datalake-starter</artifactId>
-        </dependency>
-
         <!-- MySQL 内核 SPI 实现（UserManager / PermissionManager / ProcessManager / SlowQueryManager）。
              数据源中心的「用户管理 / 显示进程 / 慢查询」三项能力，判据就是
              DbSpiCapabilityController.spi(XxxManager.class, "mysql", id) != null —— 走的是

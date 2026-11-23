@@ -9,6 +9,8 @@ import com.chua.starter.account.spi.ChannelImportEntry;
 import com.chua.starter.account.spi.ChannelImportFile;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -44,13 +47,44 @@ public class ChannelConfigImportController {
     private static final int MAX_TOTAL_BYTES = 128 * 1024 * 1024;
 
     /**
+     * 本端点专用 JSON 读取器。请求体含 base64 大文件（如 ~15MB 的 cc-switch 库，
+     * 序列化后约 2000 万字符），会撞上 Jackson 默认 maxStringLength=2000 万；
+     * 全局 ObjectMapper（common-starter JacksonConfiguration 自建）保持默认约束，
+     * 故在此用放宽后的独立 mapper 解析请求体，不牵动其它接口的 JSON 行为。
+     */
+    private static final ObjectMapper REQUEST_MAPPER = new ObjectMapper();
+
+    static {
+        // JsonFactory#setStreamReadConstraints 自 Jackson 2.15 起可用，构建后再放宽上限
+        REQUEST_MAPPER.getFactory().setStreamReadConstraints(
+                StreamReadConstraints.builder().maxStringLength(200_000_000).build());
+    }
+
+    /**
      * 解析配置文件为供应商草稿清单。
      *
-     * @param request 来源与文件清单
+     * <p>请求体以原始字节接收、由本端点专用 mapper 解析：base64 大文件会超过
+     * 全局 ObjectMapper 的默认字符串上限，走 {@code @RequestBody ImportParseRequest}
+     * 会在消息转换阶段直接 500。</p>
+     *
+     * @param body 原始 JSON 请求体（{@code { source, files: [{ name, dataBase64 }] }}）
      * @return 供应商草稿清单（可能为空：该来源没有可导入的配置）
      */
     @PostMapping("/parse")
-    public ApiResult<List<ChannelImportEntry>> parse(@RequestBody ImportParseRequest request) {
+    public ApiResult<List<ChannelImportEntry>> parse(@RequestBody byte[] body) {
+        if (body == null || body.length == 0) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "缺少请求体");
+        }
+        // base64 约膨胀 4/3，加 1MB JSON 结构余量做粗筛；精确的 128MB 校验在解码后进行
+        if (body.length > MAX_TOTAL_BYTES / 3 * 4 + 1024 * 1024) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "上传内容过大（上限 128MB）");
+        }
+        ImportParseRequest request;
+        try {
+            request = REQUEST_MAPPER.readValue(new String(body, StandardCharsets.UTF_8), ImportParseRequest.class);
+        } catch (Exception e) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "请求体不是有效的 JSON: " + e.getMessage());
+        }
         if (request == null || request.getSource() == null || request.getSource().trim().isEmpty()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "缺少解析来源 source");
         }

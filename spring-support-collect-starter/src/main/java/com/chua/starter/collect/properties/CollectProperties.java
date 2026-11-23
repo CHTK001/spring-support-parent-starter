@@ -138,6 +138,11 @@ public class CollectProperties {
     private Ai ai = new Ai();
 
     /**
+     * Agent 节点配置（采集流程里的 agent 节点）。
+     */
+    private Agent agent = new Agent();
+
+    /**
      * 脚本节点开关。
      *
      * <p>关闭后脚本执行器不再注册，工具箱里不会出现脚本节点，
@@ -245,6 +250,39 @@ public class CollectProperties {
          */
         // [P3C A20 豁免]
         private int timeoutMs = 180000;
+    }
+
+    /**
+     * Agent 节点配置。
+     *
+     * <p>采集流程的 agent 节点经运行期 {@code AgentRegistry} 调用平台 Agent；
+     * 这里只放节点未显式配置时的兜底值，节点参数优先于本配置。</p>
+     */
+    @Data
+    public static class Agent {
+
+        /**
+         * 是否启用 Agent 节点。
+         *
+         * <p>对应 {@code plugin.collect.agent.enable}（执行器装配开关）；
+         * 关闭后 Agent 执行器不再注册，工具箱里不会出现 Agent 节点，
+         * 已保存的含 Agent 节点的流程在保存与运行校验时报「类型未注册」。</p>
+         */
+        private boolean enable = true;
+
+        /**
+         * Agent 调用兜底超时毫秒；节点 callTimeoutMs 留空时使用，0 表示不限制。
+         *
+         * <p>Agent 调用是长阻塞操作，超时只中断等待并按失败策略处置，
+         * 不保证底层 Agent 立即停止。</p>
+         */
+        // [P3C A20 豁免]
+        private long timeoutMs = 120000L;
+
+        /**
+         * 默认失败策略：fail 中断流程 / skip 记警告后跳过 / defaultValue 写入兜底值继续。
+         */
+        private String failureStrategy = "fail";
     }
 
 }

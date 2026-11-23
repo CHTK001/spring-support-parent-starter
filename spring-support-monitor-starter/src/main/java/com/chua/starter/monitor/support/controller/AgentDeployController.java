@@ -5,6 +5,7 @@ import com.chua.starter.monitor.support.config.AgentDeployProperties;
 import com.chua.starter.monitor.support.model.AgentConnectTestVO;
 import com.chua.starter.monitor.support.model.AgentDeployStatusVO;
 import com.chua.starter.monitor.support.model.AgentHealthVO;
+import com.chua.starter.monitor.support.model.AgentOnboardVO;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
 import com.chua.starter.server.support.constants.ServerConstants;
@@ -114,7 +115,7 @@ public class AgentDeployController {
      */
     @Operation(summary = "添加本机", description = "复用或创建本机主机与 SERVER 监控项，并触发 Agent 本地直装（免 SSH/WinRM 凭据）")
     @PostMapping("/onboard-local")
-    public ReturnResult<String> onboardLocal() {
+    public ReturnResult<AgentOnboardVO> onboardLocal() {
         return deployService.onboardLocal();
     }
 

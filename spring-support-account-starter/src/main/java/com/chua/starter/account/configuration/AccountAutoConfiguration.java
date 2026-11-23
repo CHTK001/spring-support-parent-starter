@@ -48,11 +48,8 @@ import com.chua.starter.account.web.VideoChannelController;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.jackson.autoconfigure.JsonFactoryBuilderCustomizer;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
-import tools.jackson.core.StreamReadConstraints;
 
 /**
  * 账号与渠道模块自动配置。
@@ -183,16 +180,5 @@ public class AccountAutoConfiguration {
                 + "账号管理 /api/accounts、免登录对话 /api/channels/{channel}/chat、"
                 + "文生图 /api/channels/{channel}/images、文生视频 /api/channels/{channel}/videos、"
                 + "图生 3D /api/channels/{channel}/3d-models、消息模板 /api/channels/templates");
-    }
-
-    /**
-     * 放宽 JSON 流读取的字符串长度上限，适配「从配置导入供应商」的 base64 大文件：
-     * 端点允许 128MB 字节（base64 约 1.7 亿字符），超过 Jackson 默认 2000 万字符上限
-     * （真实 cc-switch 库 ~15MB 即触发 500）。仅放大 maxStringLength，其余约束保持默认。
-     */
-    @Bean
-    public JsonFactoryBuilderCustomizer channelImportStreamReadConstraints() {
-        return factoryBuilder -> factoryBuilder.streamReadConstraints(
-                StreamReadConstraints.builder().maxStringLength(200_000_000).build());
     }
 }
