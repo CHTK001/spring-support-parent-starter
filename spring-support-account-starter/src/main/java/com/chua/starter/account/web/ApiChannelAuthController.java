@@ -810,7 +810,6 @@ public class ApiChannelAuthController {
      * @param channel 渠道标识（大小写不敏感）
      * @return provider 行（必然存在）
      */
-    @Transactional
     private SysAccountChannel requireChannelProvider(String channel) {
         AccountChannelAuthManager impl = resolveManager(managers(), channel);
         if (impl == null) {
@@ -821,20 +820,25 @@ public class ApiChannelAuthController {
         if (existing != null) {
             return existing;
         }
-        long now = System.currentTimeMillis();
-        SysAccountChannel p = new SysAccountChannel();
-        p.setProviderId(providerId);
-        p.setPlatform(providerId);
-        p.setName(impl.displayName());
-        p.setBaseUrl(""); // 渠道类 provider 的 base_url 由鉴权流程自行处理，落空占位
-        p.setAuthScheme(OAUTH_SCHEME);
-        p.setEnabled(true);
-        p.setSortOrder(providerMapper.selectCount(null).intValue());
-        p.setCreatedAt(now);
-        p.setUpdatedAt(now);
-        providerMapper.insert(p);
-        log.info("[ChannelAuth] 惰性物化渠道 provider 行: {}", providerId);
-        return p;
+        // 编程式事务：本方法被本类多处<b>自调用</b>，@Transactional 标在 private 方法上
+        // 经 Spring 代理自调用不生效（同 {@link #persistCredentials} 的口径），
+        // 用 TransactionTemplate 保证「取排序号 + insert」原子。
+        return transactionTemplate.execute(status -> {
+            long now = System.currentTimeMillis();
+            SysAccountChannel p = new SysAccountChannel();
+            p.setProviderId(providerId);
+            p.setPlatform(providerId);
+            p.setName(impl.displayName());
+            p.setBaseUrl(""); // 渠道类 provider 的 base_url 由鉴权流程自行处理，落空占位
+            p.setAuthScheme(OAUTH_SCHEME);
+            p.setEnabled(true);
+            p.setSortOrder(providerMapper.selectCount(null).intValue());
+            p.setCreatedAt(now);
+            p.setUpdatedAt(now);
+            providerMapper.insert(p);
+            log.info("[ChannelAuth] 惰性物化渠道 provider 行: {}", providerId);
+            return p;
+        });
     }
 
     /**
@@ -849,7 +853,6 @@ public class ApiChannelAuthController {
      * @param channel 渠道标识
      * @return providerId（必然存在对应的 provider 行）
      */
-    @Transactional
     private String ensureChannelProviderId(String channel) {
         AccountChannelAuthManager impl = resolveManager(managers(), channel);
         if (impl != null) {
@@ -863,20 +866,24 @@ public class ApiChannelAuthController {
         if (existing != null) {
             return providerId;
         }
-        long now = System.currentTimeMillis();
-        SysAccountChannel p = new SysAccountChannel();
-        p.setProviderId(providerId);
-        p.setPlatform(providerId);
-        p.setName(channel);
-        // 内置模型渠道没有上游地址：base_url 落空占位，模型清单由客户端提供
-        p.setBaseUrl("");
-        p.setAuthScheme(OAUTH_SCHEME);
-        p.setEnabled(true);
-        p.setSortOrder(providerMapper.selectCount(null).intValue());
-        p.setCreatedAt(now);
-        p.setUpdatedAt(now);
-        providerMapper.insert(p);
-        log.info("[ChannelAuth] 惰性物化内置模型渠道 provider 行: {}", providerId);
+        // 编程式事务：同 {@link #requireChannelProvider}，private 方法上的
+        // @Transactional 自调用不生效，用 TransactionTemplate 保证 insert 原子。
+        transactionTemplate.executeWithoutResult(status -> {
+            long now = System.currentTimeMillis();
+            SysAccountChannel p = new SysAccountChannel();
+            p.setProviderId(providerId);
+            p.setPlatform(providerId);
+            p.setName(channel);
+            // 内置模型渠道没有上游地址：base_url 落空占位，模型清单由客户端提供
+            p.setBaseUrl("");
+            p.setAuthScheme(OAUTH_SCHEME);
+            p.setEnabled(true);
+            p.setSortOrder(providerMapper.selectCount(null).intValue());
+            p.setCreatedAt(now);
+            p.setUpdatedAt(now);
+            providerMapper.insert(p);
+            log.info("[ChannelAuth] 惰性物化内置模型渠道 provider 行: {}", providerId);
+        });
         return providerId;
     }
 
