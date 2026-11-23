@@ -78,7 +78,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 创建
      * @param model 参数
@@ -114,7 +114,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 更新
      * @param model 参数
@@ -141,7 +141,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 删除
      * @param modelId 长整数
@@ -164,7 +164,7 @@ public class AiModelServiceImpl implements AiModelService {
      * @return 实际删除的模型数量
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int batchDelete(List<Long> modelIds) {
         if (modelIds == null || modelIds.isEmpty()) {
             return 0;
@@ -229,7 +229,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * test Latency
      * @param modelId 长整数

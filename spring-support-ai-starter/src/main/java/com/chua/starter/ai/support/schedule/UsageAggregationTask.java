@@ -1191,7 +1191,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     /**
      * 聚合当前小时 usage 明细到日汇总表（当前小时 00分00秒 ~ 当前时间）。
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void aggregateCurrentHour() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = now.withMinute(0).withSecond(0).withNano(0);
@@ -1259,7 +1259,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * @return 聚合的明细条数
      * @throws NullPointerException 当 启动 或 结束 为 空 时
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public long aggregateRange(LocalDateTime start, LocalDateTime end) {
         Objects.requireNonNull(start, "start must not be null");
         Objects.requireNonNull(end, "end must not be null");

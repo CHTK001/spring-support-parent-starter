@@ -91,7 +91,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     private final IptablesService iptablesService;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
       /**
        * Record
        * @param groupName 群体名称
@@ -206,7 +206,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId, String source) {
         if (usage == null) {

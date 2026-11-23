@@ -84,7 +84,7 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @return 创建后的分组 DTO
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public AiGroupDTO create(AiGroupDTO group) {
         SysAiGroup entity = toEntity(group);
         LocalDateTime now = LocalDateTime.now();
@@ -118,7 +118,7 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @return 更新后的分组 DTO
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public AiGroupDTO update(Long groupId, AiGroupDTO group) {
         SysAiGroup entity = toEntity(group);
         entity.setGroupId(groupId);
@@ -150,7 +150,7 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @param groupId 分组主键
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long groupId) {
         syncAppKeys(groupId, Collections.emptyList());
         groupMapper.deleteById(groupId);

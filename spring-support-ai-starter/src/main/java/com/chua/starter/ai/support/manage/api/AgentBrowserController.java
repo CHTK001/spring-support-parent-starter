@@ -305,7 +305,7 @@ public class AgentBrowserController {
      */
     @PostMapping("/lanes/{lane_id}/close")
     @Operation(summary = "关闭 Lane", description = "关闭指定的浏览器 Lane")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> closeLane(
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
         AgentBrowserLane lane = requireWritableLane(laneId);
@@ -387,7 +387,7 @@ public class AgentBrowserController {
      */
     @PostMapping("/conversations/{conversation_id}/close")
     @Operation(summary = "关闭对话的 Lane", description = "关闭指定对话关联的所有浏览器 Lane")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> closeConversationLanes(
             @Parameter(description = "对话 ID") @PathVariable("conversation_id") String conversationId) {
         List<AgentBrowserLane> lanes = laneMapper.selectList(new LambdaQueryWrapper<AgentBrowserLane>()
@@ -420,7 +420,7 @@ public class AgentBrowserController {
      */
     @PostMapping("/close-all")
     @Operation(summary = "全局关闭", description = "关闭所有浏览器 Lane 和 Tab")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> closeAll() {
         if (AiUserContext.isReadonly()) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "只读账号不允许执行写操作");

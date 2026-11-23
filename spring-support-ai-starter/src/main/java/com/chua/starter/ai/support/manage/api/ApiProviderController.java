@@ -854,7 +854,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PostMapping("/providers")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
         String platform = requireStr(body, "platform");
         String name = requireStr(body, "name");
@@ -972,7 +972,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PutMapping("/providers/{provider_id}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> updateProvider(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
         SysAccountChannel entity = requireProvider(providerId);
@@ -1047,7 +1047,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @DeleteMapping("/providers/{provider_id}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
         deleteProviderRows(providerId);
         return ApiResult.ok();
@@ -1090,7 +1090,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @DeleteMapping("/providers/batch")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> batchDeleteProviders(@RequestBody Map<String, ?> body) {
         List<String> ids = parseBatchProviderIds(body);
         int deleted = doBatchDeleteProviders(ids);
@@ -1222,7 +1222,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/clone")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> cloneProvider(@PathVariable("provider_id") String providerId,
                                                         @RequestBody(required = false) Map<String, Object> body) {
         SysAccountChannel source = requireProvider(providerId);
@@ -1281,7 +1281,7 @@ public class ApiProviderController {
     @SuppressWarnings("unchecked")
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/models/import-all")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> importAllProviderModels(@PathVariable("provider_id") String providerId,
                                                                   @RequestBody(required = false) Map<String, Object> body) {
         SysAccountChannel entity = requireProvider(providerId);
@@ -1539,7 +1539,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/models/sync-pricing")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> syncPricing(@PathVariable("provider_id") String providerId) {
         SysAccountChannel entity = requireProvider(providerId);
         ChatClientIndicator indicator = resolveIndicator(entity);
@@ -6063,7 +6063,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PutMapping("/providers/{provider_id}/connections")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> saveConnection(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
         SysAccountChannel entity = requireProvider(providerId);
@@ -6081,7 +6081,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @DeleteMapping("/providers/{provider_id}/connections/{role}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
                                             @PathVariable("role") String role) {
         requireProvider(providerId);
@@ -6125,7 +6125,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PutMapping("/provider-models")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> saveProviderModel(@RequestBody Map<String, Object> body) {
         String providerId = requireStr(body, "provider_id");
         SysAccountChannel provider = requireProvider(providerId);
@@ -6164,7 +6164,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PostMapping("/provider-models/rename")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> renameProviderModel(@RequestBody Map<String, Object> body) {
         String providerId = requireStr(body, "provider_id");
         SysAccountChannel provider = requireProvider(providerId);
@@ -6193,7 +6193,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @DeleteMapping("/provider-models")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
                                                @RequestParam("model") String model) {
         SysAccountChannel provider = requireProvider(providerId);
@@ -6216,7 +6216,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @DeleteMapping("/provider-models/batch")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> batchDeleteProviderModels(@RequestBody Map<String, ?> body) {
         @SuppressWarnings("unchecked")
         List<String> ids = body == null ? null : (List<String>) body.get("ids");
@@ -6623,7 +6623,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PutMapping("/providers/{provider_id}/router-group")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> saveRouterGroup(@PathVariable("provider_id") String providerId,
                                                           @RequestBody Map<String, Object> body) {
         SysAccountChannel provider = requireProvider(providerId);
@@ -6654,7 +6654,7 @@ public class ApiProviderController {
      */
     @Permission("admin")
     @PutMapping("/providers/{provider_id}/router-group/order")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> reorderRouterGroup(@PathVariable("provider_id") String providerId,
                                                              @RequestBody Map<String, Object> body) {
         SysAccountChannel provider = requireProvider(providerId);
@@ -9788,7 +9788,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/sync")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> syncProvider(@PathVariable("provider_id") String providerId,
                                                        @RequestBody(required = false) Map<String, Object> body) {
         SysAccountChannel entity = requireProvider(providerId);

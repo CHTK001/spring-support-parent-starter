@@ -53,7 +53,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      * @param serviceName 服务名称
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void start(String serviceName) {
         SysAiServiceStatus exist = statusMapper.selectOne(
                 new LambdaQueryWrapper<SysAiServiceStatus>()
@@ -85,7 +85,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      * @param serviceName 服务名称
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void stop(String serviceName) {
         SysAiServiceStatus exist = statusMapper.selectOne(
                 new LambdaQueryWrapper<SysAiServiceStatus>()

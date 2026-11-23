@@ -113,7 +113,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @return 操作结果
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     public ReturnResult<AiAppKeyDTO> create(AiAppKeyDTO dto) {
         if (dto == null || dto.getName() == null || dto.getName().isBlank()) {
@@ -155,7 +155,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @return 操作结果
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO dto) {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");
@@ -202,7 +202,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @return 操作结果
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ReturnResult<Void> delete(Long appKeyId) {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");
@@ -223,7 +223,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @return 实际删除的 appKey 数量
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public int batchDelete(List<Long> appKeyIds) {
         if (appKeyIds == null || appKeyIds.isEmpty()) {
             return 0;
@@ -257,7 +257,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * @return 操作结果
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ReturnResult<AiAppKeyDTO> toggle(Long appKeyId, Boolean enabled) {
         if (appKeyId == null) {
             return ReturnResult.illegal("AppKey ID 不能为空");

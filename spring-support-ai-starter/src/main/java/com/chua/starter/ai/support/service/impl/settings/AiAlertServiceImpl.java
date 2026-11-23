@@ -59,7 +59,7 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @return 创建后的告警 DTO
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public AiAlertDTO create(AiAlertDTO alert) {
         SysAiAlert entity = toEntity(alert);
         LocalDateTime now = LocalDateTime.now();
@@ -84,7 +84,7 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @return 更新后的告警 DTO
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public AiAlertDTO update(Long alertId, AiAlertDTO alert) {
         SysAiAlert entity = toEntity(alert);
         entity.setAlertId(alertId);
@@ -99,7 +99,7 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @param alertId 告警主键
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long alertId) {
         alertMapper.deleteById(alertId);
         log.debug("[SysAiAlert] 删除成功: id={}", alertId);
@@ -113,7 +113,7 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @return 更新后的告警 DTO
      */
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public AiAlertDTO toggle(Long alertId, Boolean enabled) {
         LambdaUpdateWrapper<SysAiAlert> wrapper = new LambdaUpdateWrapper<SysAiAlert>()
                 .eq(SysAiAlert::getAlertId, alertId)

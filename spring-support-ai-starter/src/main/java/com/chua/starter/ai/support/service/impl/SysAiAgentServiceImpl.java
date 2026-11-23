@@ -93,7 +93,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
  // ==================== 主 Agent CRUD ====================
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 创建Agent。
      * @param body 主体
@@ -124,7 +124,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 更新Agent。
      * @param agentId Agent标识
@@ -157,7 +157,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 删除Agent。
      * @param agentId Agent标识
@@ -175,7 +175,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
  // ==================== 子 Agent CRUD ====================
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 创建subAgent。
      * @param agentId Agent标识
@@ -216,7 +216,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 更新subAgent。
      * @param agentId Agent标识
@@ -261,7 +261,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * 删除subAgent。
      * @param agentId Agent标识

@@ -315,7 +315,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * delete World
      * @param id 长整数
@@ -528,7 +528,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * remove Npc
      * @param id 长整数
@@ -550,7 +550,7 @@ public class WorldSimServiceImpl implements WorldSimService {
     /* ---------------- 关系 ---------------- */
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public List<Map<String, Object>> createNpcsByAi(Long worldId, Integer count, String hint) {
         SysAiWorld world = requireOwned(worldId);
         int n = count == null ? 2 : Math.max(1, Math.min(3, count));

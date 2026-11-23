@@ -97,7 +97,7 @@ public class TavernServiceImpl implements TavernService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     /**
      * delete Group
      * @param id 长整数
