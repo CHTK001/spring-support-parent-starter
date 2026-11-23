@@ -78,7 +78,7 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("usage_sync_providers", "", "STRING", "Provider SPI 配置开关：逗号分隔的数据源白名单，留空 = 全部启用", 6),
                 // 本地工具用量解析根目录：逗号分隔的附加用户主目录；
                 // 当前用户主目录始终参与解析，无需配置。留空 = 仅解析当前用户。
-                new SettingItem("usage_parse_dirs", "", "STRING", "用量解析目录：逗号分隔的附加用户主目录（始终包含当前用户主目录，无需重复填写），用于解析其它 Windows/Linux 账号下的本地工具用量", 19),
+                new SettingItem("usage_parse_dirs", "", "STRING", "用量解析目录：逗号/分号分隔的附加用户主目录，支持 ~（当前用户）与 ~账号 简写（始终包含当前用户主目录，无需重复填写），用于解析其它 Windows/Linux 账号下的本地工具用量", 19),
                 // 余额定时刷新（CreditRefreshScheduler）：每 5 分钟把有 Key 的已启用供应商
                 // 余额真查一遍并按 Key 落库。默认开启；关闭后只在打开余额面板或手动「同步」时查询。
                 new SettingItem("credit_refresh_enabled", "true", "BOOLEAN", "余额定时刷新：开启后每 5 分钟自动刷新已启用供应商的余额快照", 12),

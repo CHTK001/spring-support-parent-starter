@@ -11,11 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.ai.support.paper.pipeline.PaperAiService;
+import com.chua.starter.eduai.mapper.EduKnowledgePointMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
+import com.chua.starter.eduai.model.EduKnowledgePoint;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiGenerateDTO;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
+import com.chua.starter.eduai.model.vo.QuestionDraftVO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
@@ -69,6 +73,11 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
      * 属性
      */
     private final PaperAiService eduAiService;
+
+    /**
+     * 知识点 Mapper（AI 出题时把知识点 ID 解析成名称拼进提示词；知识点是 eduai 自有表）
+     */
+    private final EduKnowledgePointMapper knowledgePointMapper;
 
     /**
      * 应用配置：老师上传题目是否自动通过（V1.14 起）
@@ -624,6 +633,61 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         log.info("[EduAi] AI 选题: subject={}, gradeLevel={}, 期望={}, 候选={}, 实得={}",
                 dto.subject(), gradeLevel, count, fallbackIds.size(), ordered.size());
         return ordered;
+    }
+
+    @Override
+    /**
+     * AI 出题：生成题目草稿（未入库），教师审核修订后走 save 链路采纳。
+     * @param dto 出题条件
+     * @return 题目草稿列表
+     */
+    public List<QuestionDraftVO> aiGenerateDraft(QuestionAiGenerateDTO dto) {
+        if (!StringUtils.hasText(dto.subject())) {
+            throw new BusinessException("学科不能为空");
+        }
+        if (!StringUtils.hasText(dto.gradeLevel())) {
+            throw new BusinessException("学段不能为空");
+        }
+        // 前端可能传码值（PRIMARY），提示词里统一用中文名
+        String gradeLevel = GradeLevels.normalize(dto.gradeLevel());
+        // 出题一次生成多题、模型调用代价高：数量收敛到 1..20，防止误传大数拖垮调用
+        int count = dto.count() == null || dto.count() <= 0 ? 5 : Math.min(dto.count(), 20);
+
+        // 知识点 ID → 名称（eduai 自有表）：提示词里给名称比给 ID 更利于模型命中考点；
+        // 查不到的 ID 直接跳过，不阻断出题
+        List<String> kpNames = List.of();
+        if (dto.knowledgePointIds() != null && !dto.knowledgePointIds().isEmpty()) {
+            kpNames = knowledgePointMapper.selectBatchIds(dto.knowledgePointIds()).stream()
+                    .map(EduKnowledgePoint::getKnowledgePointName)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+
+        List<PaperAiService.QuestionDraft> drafts;
+        try {
+            drafts = eduAiService.generateQuestionDrafts(dto.subject(), gradeLevel, dto.grade(),
+                    dto.types(), dto.difficulty(), count, kpNames);
+        } catch (Exception e) {
+            // 模型调用失败/解析失败：转成业务异常给前端友好提示（原始原因已在 ai 侧留日志）
+            log.warn("[EduAi] AI 出题失败: subject={}, err={}", dto.subject(), e.getMessage());
+            throw new BusinessException("AI 出题失败：" + e.getMessage());
+        }
+        if (drafts == null || drafts.isEmpty()) {
+            // ai 侧仅在「AI 未配置可用模型」时返回空列表
+            throw new BusinessException("AI 服务不可用，暂无法出题，请检查 AI 模型配置");
+        }
+        return drafts.stream().map(d -> {
+            QuestionDraftVO vo = new QuestionDraftVO();
+            vo.setQuestionType(d.getQuestionType());
+            vo.setQuestionStem(d.getStem());
+            vo.setQuestionOptions(d.getOptions());
+            vo.setQuestionAnswer(d.getAnswer());
+            vo.setQuestionAnalysis(d.getAnalysis());
+            vo.setQuestionDifficulty(d.getDifficulty());
+            vo.setQuestionScore(d.getScore());
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override

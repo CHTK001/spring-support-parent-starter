@@ -797,6 +797,15 @@ public class AiSessionController {
             content.put("id", String.valueOf(msg.getId()));
             content.put("content", msg.getContent());
             content.put("state", Map.of("isStreaming", false));
+              // 用户消息附件回填：web 浏览器推理链路的消息经 /messages/import 落库，
+              // 附件元数据存在 attachment（JSON 数组，TurnItem 渲染形状）。
+              // 刷新/重载后从这里还原 contents[0].files，否则附件只在发送当场可见。
+            if ("user".equals(msg.getRole())) {
+                List<Map<String, Object>> attachmentFiles = parseAttachmentFiles(msg.getAttachment());
+                if (!attachmentFiles.isEmpty()) {
+                    content.put("files", attachmentFiles);
+                }
+            }
               // 在 content 级别也添加 metadata，包含 usage
             Map<String, Object> contentMetadata = new HashMap<>();
             if ("assistant".equals(msg.getRole())) {
@@ -2451,6 +2460,119 @@ public class AiSessionController {
         log.info("[Session] 回退会话: sessionId={}, 回退点={}, 删除 {} 条 ({} 轮)",
                 sessionId, boundary, removed, turns);
         return ReturnResult.ok(result);
+    }
+
+      /**
+       * 批量导入消息（web 浏览器推理等前端执行链路的落库通道）。
+       *
+       * <p>web 推理模型在前端动态加载脚本并在浏览器里推理，不经过后端 SSE 编排，
+       * 消息不会自动落库。前端在推理成功后把本轮「用户消息 + 助手回复」经这里补记，
+       * 重启/刷新后历史不丢。仅做持久化，不触发任何模型调用；assistant 行自动挂到
+       * 本批上一条 user 行，user 行的 files 数组原样存入 attachment（JSON）。</p>
+       *
+       * @param id       会话标识
+       * @param messages 消息列表：[{role, content, files?, modelName?}]
+       * @return 创建的消息行（id / role / parentId，均为字符串主键）
+       */
+    @PostMapping("/{id}/messages/import")
+    public ReturnResult<Map<String, Object>> importMessages(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) List<Map<String, Object>> messages) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        SysAiSession session = requireWritableSession(sessionId);
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        int imported = 0;
+        Long lastUserId = null;
+        if (messages != null) {
+            for (Map<String, Object> input : messages) {
+                if (input == null) {
+                    continue;
+                }
+                String role = String.valueOf(input.get("role"));
+                if (!"user".equals(role) && !"assistant".equals(role)) {
+                    continue;
+                }
+                Object contentRaw = input.get("content");
+                String content = contentRaw == null ? "" : String.valueOf(contentRaw);
+                Object modelRaw = input.get("modelName");
+                String modelName = modelRaw == null ? null : String.valueOf(modelRaw);
+
+                SysAiMessage row = new SysAiMessage();
+                row.setSysAiSessionId(sessionId);
+                row.setRole(role);
+                row.setType("TEXT");
+                row.setContent(content);
+                row.setModelName(modelName);
+                row.setUserId(session.getSysUserId());
+                row.setCreateTime(LocalDateTime.now());
+                row.setUpdateTime(LocalDateTime.now());
+                if ("user".equals(role)) {
+                    Object filesRaw = input.get("files");
+                    if (filesRaw != null) {
+                        try {
+                            row.setAttachment(objectMapper.writeValueAsString(filesRaw));
+                        } catch (Exception ex) {
+                            log.warn("[Messages] 导入消息附件序列化失败: {}", ex.getMessage());
+                        }
+                    }
+                    row.setParentId(null);
+                } else {
+                    row.setParentId(lastUserId);
+                }
+                messageMapper.insert(row);
+                imported++;
+                if ("user".equals(role)) {
+                    lastUserId = row.getId();
+                }
+                Map<String, Object> rowView = new LinkedHashMap<>();
+                rowView.put("id", String.valueOf(row.getId()));
+                rowView.put("role", role);
+                rowView.put("parentId", row.getParentId() == null ? null : String.valueOf(row.getParentId()));
+                rows.add(rowView);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", rows);
+        result.put("imported", imported);
+        log.info("[Messages] 导入会话消息: sessionId={}, 导入 {} 条", sessionId, imported);
+        return ReturnResult.ok(result);
+    }
+
+      /**
+       * 解析消息 attachment 里的附件元数据（JSON 数组）。
+       *
+       * <p>元素为前端 TurnItem 渲染所需形状（id/displayName/fileType/fileExtension/
+       * fileSize/previewUrl），原样透传；解析失败只告警并返回空列表，不影响历史加载。</p>
+       *
+       * @param attachment attachment 原始字符串
+       * @return 附件元数据列表
+       */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> parseAttachmentFiles(String attachment) {
+        if (attachment == null || attachment.isBlank()) {
+            return List.of();
+        }
+        try {
+            Object parsed = objectMapper.readValue(attachment, Object.class);
+            if (!(parsed instanceof List)) {
+                return List.of();
+            }
+            List<Map<String, Object>> files = new ArrayList<>();
+            for (Object element : (List<Object>) parsed) {
+                if (element instanceof Map) {
+                    files.add((Map<String, Object>) element);
+                }
+            }
+            return files;
+        } catch (Exception ex) {
+            log.warn("[Messages] 解析消息附件失败: {}", ex.getMessage());
+            return List.of();
+        }
     }
 
       /**

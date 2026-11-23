@@ -5,9 +5,11 @@ import com.chua.common.support.lang.code.PageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiGenerateDTO;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
+import com.chua.starter.eduai.model.vo.QuestionDraftVO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 import com.chua.starter.eduai.service.IEduQuestionService;
@@ -162,6 +164,25 @@ public class EduQuestionController {
     @PostMapping("/ai-select")
     public ReturnResult<List<EduQuestion>> aiSelect(@RequestBody QuestionAiSelectDTO dto) {
         return ReturnResult.ok(questionService.aiSelect(dto));
+    }
+
+    /**
+     * AI 出题：按条件让 AI 原创一批题目草稿（未入库）。
+     *
+     * <p>草稿返回给前端对话框，由教师逐条审核、修订后勾选采纳；
+     * 采纳时走既有 {@code /save} 链路入库（来源标为「AI 生成」，进入待审核队列，
+     * 与手工新增同一审核口径——AI 生成内容不自动过审）。</p>
+     *
+     * @param dto 出题条件（学科/学段必填；题型、难度、知识点、数量可选）
+     * @return 题目草稿列表
+     */
+    @Operation(summary = "AI 出题")
+    @PostMapping("/ai-generate")
+    public ReturnResult<List<QuestionDraftVO>> aiGenerate(@RequestBody QuestionAiGenerateDTO dto) {
+        if (dto == null) {
+            throw new BusinessException("出题条件不能为空");
+        }
+        return ReturnResult.ok(questionService.aiGenerateDraft(dto));
     }
 
     /**

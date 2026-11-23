@@ -105,7 +105,7 @@ public class LocalToolUsageSyncService {
         try {
             String raw = settingReader.getStr("global", "usage_parse_dirs");
             if (raw != null && !raw.isBlank()) {
-                for (String part : raw.split("[,，\\n\\r]+")) {
+                for (String part : raw.split("[,，;；\\n\\r]+")) {
                     String dir = part.trim();
                     if (!dir.isEmpty()) {
                         homes.add(dir);
@@ -115,7 +115,13 @@ public class LocalToolUsageSyncService {
         } catch (Exception e) {
             log.warn("[LocalUsageSync] 读取解析目录配置失败，仅解析当前用户主目录: {}", e.getMessage());
         }
-        return String.join(",", homes);
+        String joined = String.join(",", homes);
+        if (homes.size() > 1) {
+            log.info("[LocalUsageSync] 启用多目录用量解析: {}", joined);
+        } else {
+            log.debug("[LocalUsageSync] 用量解析目录: {}", joined);
+        }
+        return joined;
     }
 
     /**

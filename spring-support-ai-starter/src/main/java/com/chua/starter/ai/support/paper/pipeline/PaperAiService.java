@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  * <p>提示词、返回结构、降级策略属于教育业务：</p>
  * <ul>
  *   <li>{@link #generatePaperOutline} — AI 组卷大纲（知识点+难度+题量 → 题目ID列表）</li>
+ *   <li>{@link #generateQuestionDrafts} — AI 出题（按条件原创题目草稿，教师审核后入库）</li>
  *   <li>{@link #markQuestion} — AI 阅卷（题目+学生答案 → 得分+评语）</li>
  *   <li>{@link #answerQuestion} — 通用问答（知识点/错题推荐等）</li>
  * </ul>
@@ -199,6 +200,262 @@ public class PaperAiService {
             log.warn("[EduAi] AI 组卷异常: {}", e.getMessage());
             return fallbackIds == null ? new ArrayList<>() : new ArrayList<>(fallbackIds);
         }
+    }
+
+    /**
+     * AI 出题：按学科/学段/年级/题型/难度/知识点新写题目草稿。
+     *
+     * <p>与 {@link #generatePaperOutline} 的「从候选池选已有题」不同，本方法让模型
+     * <b>原创</b>题干、选项、答案与解析，返回的是<b>尚未入库</b>的草稿；是否采纳、
+     * 如何入库由 eduai 的题库业务决定（教师审核修订后走 save 链路，与手工新增同一审核口径）。</p>
+     *
+     * @param subject     学科
+     * @param gradeLevel  学段（中文名）
+     * @param grade       年级
+     * @param types       期望题型列表（可空 = 不限，由模型合理搭配）
+     * @param difficulty  目标难度 1-5（null = 由模型按内容自定）
+     * @param count       期望题目数（1-50，越界自动收敛）
+     * @param knowledgePointNames 知识点名称列表（可空 = 不限）
+     * @return 题目草稿列表（题型已归一化、答案已做合法性校验）；AI 未配置可用模型时返回空列表
+     * @throws IllegalStateException 模型调用失败，或返回内容解析不出任何可用题目
+     */
+    public List<QuestionDraft> generateQuestionDrafts(
+            String subject,
+            String gradeLevel,
+            String grade,
+            List<String> types,
+            Integer difficulty,
+            int count,
+            List<String> knowledgePointNames
+    ) {
+        if (!isAvailable()) {
+            // 调用方把空结果转译为「AI 服务不可用」的业务提示；出题没有题库兜底，
+            // 不能像组卷那样静默回退，必须让老师明确知道这次没生成。
+            log.info("[EduAi] AI 不可用，出题请求直接返回空");
+            return List.of();
+        }
+        int safeCount = Math.max(1, Math.min(count, 50));
+        String typeHint = (types == null || types.isEmpty()) ? "不限，按学科合理搭配" : String.join("、", types);
+        String kpHint = (knowledgePointNames == null || knowledgePointNames.isEmpty())
+                ? "不限" : String.join("、", knowledgePointNames);
+        String diffHint = (difficulty == null || difficulty < 1 || difficulty > 5)
+                ? "不限（按学科常规难度分布）" : difficulty + "（1=很易，3=中等，5=很难）";
+        String systemPrompt = """
+                你是资深学科教研专家，擅长按知识点与难度命制中小学试题。
+                你必须只返回 JSON，禁止任何解释或 Markdown。
+                """;
+        String userPrompt = String.format("""
+                请命制 %d 道题，要求如下。
+
+                学科: %s
+                学段: %s
+                年级: %s
+                题型: %s
+                难度: %s
+                知识点: %s
+
+                输出 JSON Schema:
+                {
+                  "questions": [
+                    {
+                      "questionType": "SINGLE_CHOICE|MULTIPLE_CHOICE|JUDGE|FILL|SHORT_ANSWER|SUBJECTIVE|ESSAY",
+                      "stem": "题干（可直接作答，不要包含答案）",
+                      "options": ["选项1内容", "选项2内容"],
+                      "answer": "答案",
+                      "analysis": "解析：考点 + 解题思路",
+                      "difficulty": 3,
+                      "score": 5
+                    }
+                  ]
+                }
+
+                注意：
+                1. 只返回 JSON，不要 ``` 包裹
+                2. 选择题 options 给 4 个左右选项，answer 用字母（单选如 A；多选如 A,C）；选项文字不要带「A.」等字母前缀
+                3. 判断题 answer 用「对」或「错」，options 给空数组
+                4. 填空/简答/主观/作文题 answer 给参考答案文字，options 给空数组；填空题多个空用 | 分隔
+                5. 题目必须与学科、学段、年级匹配，表述规范、无歧义、答案唯一可判
+                """,
+                safeCount, subject, gradeLevel, grade, typeHint, diffHint, kpHint
+        );
+
+        // 出题一次生成多题，调用代价高；走带重试的通道，瞬时故障/限流不直接失败
+        String response = callWithRateLimitRetry(systemPrompt, userPrompt);
+        String json = extractJson(response);
+        if (StringUtils.isBlank(json)) {
+            throw new IllegalStateException("AI 返回内容为空");
+        }
+        List<QuestionDraft> drafts = new ArrayList<>();
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode arr = root.path("questions");
+            if (arr.isArray()) {
+                for (JsonNode n : arr) {
+                    QuestionDraft d = parseDraft(n, difficulty);
+                    // 单题不合法只丢弃该题，不整体失败；教师拿到的每一题都结构可用
+                    if (d != null) {
+                        drafts.add(d);
+                    }
+                    if (drafts.size() >= safeCount) {
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("AI 返回内容无法解析: " + e.getMessage(), e);
+        }
+        if (drafts.isEmpty()) {
+            throw new IllegalStateException("AI 未返回有效题目（返回内容解析不出任何可用题）");
+        }
+        log.info("[EduAi] AI 出题成功: subject={}, gradeLevel={}, 期望={}, 实得={}",
+                subject, gradeLevel, safeCount, drafts.size());
+        return drafts;
+    }
+
+    /**
+     * 把模型返回的单题 JSON 归一化为草稿；无法修复的条目返回 null 丢弃。
+     *
+     * <p>校验口径：题干/答案非空；选择题至少 2 个选项且答案字母不越界；
+     * 判断题答案归一化为「对/错」。宽松解析（别名收敛）+ 严格校验（结构不合法即弃），
+     * 与组卷「只信任候选池」是同一思路：模型输出永不直接采信。</p>
+     */
+    private QuestionDraft parseDraft(JsonNode n, Integer defaultDifficulty) {
+        String type = normalizeDraftType(n.path("questionType").asText(""));
+        String stem = n.path("stem").asText("").trim();
+        String answer = n.path("answer").asText("").trim();
+        if (type == null || stem.isEmpty() || answer.isEmpty()) {
+            return null;
+        }
+        QuestionDraft d = new QuestionDraft();
+        d.setQuestionType(type);
+        d.setStem(stem);
+
+        List<String> options = new ArrayList<>();
+        JsonNode optArr = n.path("options");
+        if (optArr.isArray()) {
+            for (JsonNode o : optArr) {
+                String text = stripOptionPrefix(o.asText("").trim());
+                if (!text.isEmpty()) {
+                    options.add(text);
+                }
+            }
+        }
+
+        if ("SINGLE_CHOICE".equals(type) || "MULTIPLE_CHOICE".equals(type)) {
+            // 选项不足或答案字母越界的草稿直接丢弃：入库后无法作答
+            if (options.size() < 2) {
+                return null;
+            }
+            List<String> letters = extractAnswerLetters(answer, options.size());
+            if (letters.isEmpty()) {
+                return null;
+            }
+            d.setOptions(options);
+            d.setAnswer("SINGLE_CHOICE".equals(type) ? letters.get(0) : String.join(",", letters));
+        } else if ("JUDGE".equals(type)) {
+            String low = answer.toLowerCase();
+            if (low.contains("对") || low.contains("正确") || low.contains("是") || low.contains("true") || low.contains("√")) {
+                d.setAnswer("对");
+            } else if (low.contains("错") || low.contains("否") || low.contains("false") || low.contains("×")) {
+                d.setAnswer("错");
+            } else {
+                return null;
+            }
+        } else {
+            // 填空/简答/主观/作文：答案去掉 HTML 标签后必须仍有内容
+            String plain = answer.replaceAll("<[^>]+>", "").trim();
+            if (plain.isEmpty()) {
+                return null;
+            }
+            d.setAnswer(answer);
+        }
+
+        d.setAnalysis(n.path("analysis").asText("").trim());
+        int fb = (defaultDifficulty == null || defaultDifficulty < 1 || defaultDifficulty > 5) ? 3 : defaultDifficulty;
+        int diff = n.path("difficulty").asInt(fb);
+        d.setDifficulty(Math.max(1, Math.min(diff, 5)));
+        int score = n.path("score").asInt(5);
+        d.setScore(Math.max(1, Math.min(score, 150)));
+        return d;
+    }
+
+    /**
+     * 从答案文本提取合法选项字母（如 "A,C" → [A, C]），越界/重复字母忽略。
+     */
+    private static List<String> extractAnswerLetters(String answer, int optionCount) {
+        List<String> letters = new ArrayList<>();
+        if (answer == null) {
+            return letters;
+        }
+        for (char c : answer.toCharArray()) {
+            char up = Character.toUpperCase(c);
+            if (up >= 'A' && up < 'A' + optionCount) {
+                String letter = String.valueOf(up);
+                if (!letters.contains(letter)) {
+                    letters.add(letter);
+                }
+            }
+        }
+        return letters;
+    }
+
+    /**
+     * 题型别名收敛：模型可能返回 CHOICE / MULTI_CHOICE / TRUE_FALSE / BLANK 等变体，
+     * 统一映射为系统码值；不认识的返回 null（该题丢弃）。
+     */
+    private static String normalizeDraftType(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String t = raw.trim().toUpperCase().replace('-', '_').replace(' ', '_');
+        switch (t) {
+            case "SINGLE_CHOICE":
+            case "SINGLE":
+            case "CHOICE":
+            case "单选":
+            case "单选题":
+                return "SINGLE_CHOICE";
+            case "MULTIPLE_CHOICE":
+            case "MULTI_CHOICE":
+            case "MULTI":
+            case "多选":
+            case "多选题":
+                return "MULTIPLE_CHOICE";
+            case "JUDGE":
+            case "TRUE_FALSE":
+            case "JUDGMENT":
+            case "判断":
+            case "判断题":
+                return "JUDGE";
+            case "FILL":
+            case "FILL_BLANK":
+            case "BLANK":
+            case "填空":
+            case "填空题":
+                return "FILL";
+            case "SHORT_ANSWER":
+            case "SHORT":
+            case "简答":
+            case "简答题":
+                return "SHORT_ANSWER";
+            case "SUBJECTIVE":
+            case "主观":
+            case "主观题":
+                return "SUBJECTIVE";
+            case "ESSAY":
+            case "COMPOSITION":
+            case "作文":
+                return "ESSAY";
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * 去掉模型偶尔加在选项前的「A.」「A、」「(A)」等前缀。
+     */
+    private static String stripOptionPrefix(String text) {
+        return text.replaceFirst("^[（(]?[A-Ha-h][）)]?[.、:：,，)）]?\\s*", "");
     }
 
     /**
@@ -667,5 +924,46 @@ public class PaperAiService {
          * 它们本身就是可靠的判定结果，不是失败。</p>
          */
         private boolean unavailable;
+    }
+
+    /**
+     * AI 出题草稿（尚未入库）。
+     *
+     * <p>由 {@link #generateQuestionDrafts} 返回，字段与题库保存链路的
+     * 入参对齐；教师可在前端修订后再走既有 save 链路入库（待审核态）。</p>
+     *
+     * @author CH
+     * @since 4.0.0.51
+     */
+    @lombok.Data
+    public static class QuestionDraft {
+        /**
+         * 题型（系统码值：SINGLE_CHOICE / MULTIPLE_CHOICE / JUDGE / FILL / SHORT_ANSWER / SUBJECTIVE / ESSAY）
+         */
+        private String questionType;
+        /**
+         * 题干
+         */
+        private String stem;
+        /**
+         * 选项内容列表（仅选择题非空；已去掉「A.」等字母前缀）
+         */
+        private List<String> options;
+        /**
+         * 答案（选择题为字母，单选单个、多选逗号连接；判断题为「对/错」；其余为参考答案文字）
+         */
+        private String answer;
+        /**
+         * 解析（考点 + 解题思路，可为空）
+         */
+        private String analysis;
+        /**
+         * 难度 1-5
+         */
+        private Integer difficulty;
+        /**
+         * 建议分值 1-150
+         */
+        private Integer score;
     }
 }

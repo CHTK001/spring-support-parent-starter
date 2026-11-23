@@ -3,9 +3,11 @@ package com.chua.starter.eduai.service;
 import com.baomidou.mybatisplus.spring.service.IService;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.eduai.model.EduQuestion;
+import com.chua.starter.eduai.model.dto.QuestionAiGenerateDTO;
 import com.chua.starter.eduai.model.dto.QuestionAiSelectDTO;
 import com.chua.starter.eduai.model.dto.QuestionQueryDTO;
 import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
+import com.chua.starter.eduai.model.vo.QuestionDraftVO;
 import com.chua.starter.eduai.model.vo.QuestionGradeDimensionVO;
 import com.chua.starter.eduai.model.vo.QuestionImportResultVO;
 import com.chua.starter.eduai.model.vo.TeacherQuestionUploadVO;
@@ -104,6 +106,19 @@ public interface IEduQuestionService extends IService<EduQuestion> {
      * @return 题目列表，保持 AI 给出的顺序
      */
     List<EduQuestion> aiSelect(QuestionAiSelectDTO dto);
+
+    /**
+     * AI 出题：按学科/学段/年级/题型/难度/知识点让模型<b>原创</b>题目草稿（未入库）。
+     *
+     * <p>与 {@link #aiSelect(QuestionAiSelectDTO)} 的区别：选题是模型从已有题库挑题号；
+     * 出题是模型生成新题内容。草稿由教师在前端审核修订后，走 {@link #saveQuestion(QuestionSaveDTO)}
+     * 逐条采纳入库（来源标为「AI 生成」，与手工新增同一审核口径）。</p>
+     *
+     * @param dto 出题条件
+     * @return 题目草稿列表（题型已归一化、答案已做合法性校验）
+     * @throws com.chua.starter.common.support.exception.BusinessException AI 不可用或生成失败时
+     */
+    List<QuestionDraftVO> aiGenerateDraft(QuestionAiGenerateDTO dto);
 
     /**
      * 题目导出为 CSV 格式。
