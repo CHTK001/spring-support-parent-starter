@@ -71,6 +71,14 @@ public interface SkillCatalogService {
     List<Map<String, Object>> listBuiltin();
 
     /**
+     * 读取内置技能的官方文档（SKILL.md 全文，不截断）。
+     *
+     * @param id 技能标识（builtin 目录名，或 {@code agent:} 前缀的 Agent 技能）
+     * @return 含 found/name/description/content 的文档结果
+     */
+    Map<String, Object> getBuiltinDoc(String id);
+
+    /**
      * 将本地工具的技能复制安装到本系统 {@code skills/user}。
      *
      * @param tool  来源工具键（provider name）

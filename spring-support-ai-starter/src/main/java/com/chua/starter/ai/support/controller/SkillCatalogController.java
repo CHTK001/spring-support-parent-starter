@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -103,6 +104,18 @@ public class SkillCatalogController {
     @GetMapping("/builtin")
     public List<Map<String, Object>> builtin() {
         return skillCatalogService.listBuiltin();
+    }
+
+    /**
+     * 读取内置技能的官方文档（SKILL.md 全文，不截断）。
+     *
+     * @param id 技能标识（builtin 目录名，或 agent: 前缀的 Agent 技能）
+     * @return 含 found/name/description/content 的文档结果
+     */
+    @Operation(summary = "读取内置技能官方文档")
+    @GetMapping("/builtin/{id}/doc")
+    public Map<String, Object> builtinDoc(@PathVariable("id") String id) {
+        return skillCatalogService.getBuiltinDoc(id);
     }
 
     /**

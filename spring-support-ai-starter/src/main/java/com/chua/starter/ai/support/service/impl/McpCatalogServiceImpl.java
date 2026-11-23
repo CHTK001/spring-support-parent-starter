@@ -145,6 +145,64 @@ public class McpCatalogServiceImpl implements McpCatalogService {
                 true, false, "Search20Regular",
                 "https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search"));
 
+        // ---- 补充的常见官方 / 热门 MCP（远程 streamable HTTP 与本机 stdio 混合） ----
+
+        // GitHub 官方远程 MCP（OAuth / PAT 鉴权）
+        result.add(builtin("github", "GitHub", "代码协作",
+                "GitHub 官方远程 MCP：仓库、Issue、PR、Actions、代码检索等全套能力，需 GitHub 账号授权（OAuth 或 PAT）。",
+                remote("https://api.githubcopilot.com/mcp"), true, false, "Code20Regular",
+                "https://github.com/github/github-mcp-server"));
+
+        // Context7：框架 / 库官方文档实时检索，免鉴权
+        result.add(builtin("context7", "Context7 文档", "知识检索",
+                "实时检索主流框架与库的最新官方文档和代码示例，免鉴权、开箱即用。",
+                remote("https://mcp.context7.com/mcp"), false, false, "BookSearch20Regular",
+                "https://context7.com"));
+
+        // Notion 官方远程 MCP（OAuth）
+        result.add(builtin("notion", "Notion", "办公协作",
+                "Notion 官方远程 MCP：搜索、读取、创建与更新页面和数据库，需 Notion OAuth 授权。",
+                remote("https://mcp.notion.com/mcp"), true, false, "DocumentBulletList20Regular",
+                "https://developers.notion.com/docs/get-started-with-mcp"));
+
+        // Sentry 官方远程 MCP（OAuth）
+        result.add(builtin("sentry", "Sentry", "监控诊断",
+                "Sentry 官方远程 MCP：查询错误事件、堆栈、发布与问题趋势，需 Sentry 账号授权。",
+                remote("https://mcp.sentry.dev/mcp"), true, false, "Bug20Regular",
+                "https://docs.sentry.io/product/explore/mcp/"));
+
+        // 本机 uvx 启动的官方 stdio 服务器（需要 Python uv）
+        result.add(builtin("git", "Git 仓库", "研发工具",
+                "对本地 Git 仓库执行 status/diff/log/commit/branch 等常规操作。需要本机 Python uv/uvx。",
+                stdioCmd("uvx", List.of("mcp-server-git"), null),
+                false, false, "Branch20Regular",
+                "https://github.com/modelcontextprotocol/servers/tree/main/src/git"));
+
+        result.add(builtin("sqlite", "SQLite", "数据库",
+                "对本地 SQLite 数据库执行查询、schema 分析与数据字典导出；安装后需把数据库路径填入参数。需要本机 Python uv/uvx。",
+                stdioCmd("uvx", List.of("mcp-server-sqlite"), null),
+                false, true, "Database20Regular",
+                "https://github.com/modelcontextprotocol/servers/tree/main/src/sqlite"));
+
+        // 本机 npx 启动的官方 stdio 服务器（需要 Node.js/npx）
+        result.add(builtin("postgres", "PostgreSQL", "数据库",
+                "只读访问 PostgreSQL 的 schema、表结构与数据（支持 SELECT 查询）；安装后需在参数中填连接串。需要本机 Node.js/npx。",
+                stdio("@modelcontextprotocol/server-postgres", List.of(), null),
+                false, true, "Database20Regular",
+                "https://github.com/modelcontextprotocol/servers/tree/main/src/postgres"));
+
+        result.add(builtin("puppeteer", "Puppeteer 浏览器", "浏览器自动化",
+                "基于 Puppeteer 驱动本机 Chrome：截图、点击、填表、抓取动态渲染页面。需要本机 Node.js/npx 与 Chrome。",
+                stdio("@modelcontextprotocol/server-puppeteer", List.of(), null),
+                false, false, "WindowConsole20Regular",
+                "https://github.com/modelcontextprotocol/servers/tree/main/src/puppeteer"));
+
+        result.add(builtin("playwright", "Playwright 浏览器", "浏览器自动化",
+                "微软官方 Playwright MCP：以可访问性树驱动浏览器完成导航、表单、截图与断言。需要本机 Node.js/npx。",
+                stdio("@playwright/mcp@latest", List.of(), null),
+                false, false, "ScanType20Regular",
+                "https://github.com/microsoft/playwright-mcp"));
+
         return result;
     }
 
@@ -239,6 +297,24 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         args.add(pkg);
         args.addAll(extra);
         t.put("args", args);
+        if (env != null && !env.isEmpty()) {
+            t.put("env", env);
+        }
+        return t;
+    }
+
+    /**
+     * 构造本机 stdio transport（自定义命令 + 参数，如 uvx mcp-server-git）。
+     * @param command 命令
+     * @param args 参数
+     * @param env 环境变量
+     * @return 返回值
+     */
+    private static Map<String, Object> stdioCmd(String command, List<String> args, Map<String, String> env) {
+        Map<String, Object> t = new LinkedHashMap<>();
+        t.put("type", "stdio");
+        t.put("command", command);
+        t.put("args", new ArrayList<>(args));
         if (env != null && !env.isEmpty()) {
             t.put("env", env);
         }

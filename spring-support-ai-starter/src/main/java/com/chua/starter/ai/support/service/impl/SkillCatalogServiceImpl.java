@@ -264,14 +264,62 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     // ============================ 内置技能 ============================
 
     /**
-     * 内置技能目录 → 市场分类映射
+     * 内置技能目录 → 市场分类映射（SKILL.md frontmatter 显式声明 category 时优先）
      */
-    private static final Map<String, String> BUILTIN_CATEGORY = Map.of(
-            "docx", "文档处理",
-            "excel", "文档处理",
-            "pdf", "文档处理",
-            "agent-browser", "浏览器自动化",
-            "playwright", "浏览器自动化");
+    private static final Map<String, String> BUILTIN_CATEGORY = Map.ofEntries(
+            Map.entry("docx", "文档处理"),
+            Map.entry("excel", "文档处理"),
+            Map.entry("pdf", "文档处理"),
+            Map.entry("agent-browser", "浏览器自动化"),
+            Map.entry("playwright", "浏览器自动化"),
+            // 研发效能
+            Map.entry("java-dev", "研发效能"),
+            Map.entry("go-dev", "研发效能"),
+            Map.entry("rust-dev", "研发效能"),
+            Map.entry("spring-boot-dev", "研发效能"),
+            Map.entry("graphql-api", "研发效能"),
+            Map.entry("websocket-dev", "研发效能"),
+            Map.entry("microservices", "研发效能"),
+            Map.entry("message-queue", "研发效能"),
+            Map.entry("algorithm-guide", "研发效能"),
+            Map.entry("ci-cd", "研发效能"),
+            // 数据库 / 数据分析
+            Map.entry("sql-optimization", "数据库"),
+            Map.entry("redis-dev", "数据库"),
+            Map.entry("pandas-guide", "数据分析"),
+            Map.entry("sql-cookbook", "数据分析"),
+            Map.entry("data-visualization", "数据分析"),
+            Map.entry("statistics-basics", "数据分析"),
+            Map.entry("etl-guide", "数据分析"),
+            // 运维与安全
+            Map.entry("performance-tuning", "运维部署"),
+            Map.entry("linux-ops", "运维部署"),
+            Map.entry("nginx-config", "运维部署"),
+            Map.entry("k8s-ops", "运维部署"),
+            Map.entry("security-hardening", "安全审计"),
+            // 文档处理
+            Map.entry("tech-writing", "文档处理"),
+            Map.entry("api-doc-writing", "文档处理"),
+            Map.entry("business-writing", "文档处理"),
+            Map.entry("note-taking", "文档处理"),
+            // 办公协作
+            Map.entry("okr-guide", "办公协作"),
+            Map.entry("project-plan", "办公协作"),
+            Map.entry("time-management", "办公协作"),
+            // 运营增长
+            Map.entry("seo-guide", "营销运营"),
+            Map.entry("content-marketing", "营销运营"),
+            Map.entry("user-growth", "营销运营"),
+            // 教育学习
+            Map.entry("study-plan", "教育学习"),
+            Map.entry("feynman-learning", "教育学习"),
+            Map.entry("english-learning", "教育学习"),
+            Map.entry("interview-prep", "教育学习"),
+            // 生活规划
+            Map.entry("cooking-guide", "生活规划"),
+            Map.entry("fitness-plan", "生活规划"),
+            Map.entry("finance-basics", "生活规划"),
+            Map.entry("habit-building", "生活规划"));
 
     @Override
     public List<Map<String, Object>> listBuiltin() {
@@ -284,6 +332,57 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         if (agentRoot != null && Files.isDirectory(agentRoot)) {
             result.addAll(listBuiltinsFrom(agentRoot, "agent:", "agent"));
         }
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getBuiltinDoc(String id) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        String key = id == null ? "" : id.trim();
+        if (key.isEmpty()) {
+            result.put("found", false);
+            result.put("message", "技能 id 不能为空");
+            return result;
+        }
+        // 仅允许目录名字面量，杜绝 ../ 穿越技能根目录
+        if (key.contains("..") || key.contains("/") || key.contains("\\")) {
+            result.put("found", false);
+            result.put("message", "非法技能 id: " + key);
+            return result;
+        }
+        String raw = key.startsWith("agent:") ? key.substring("agent:".length()) : key;
+        List<Path> candidates = new ArrayList<>();
+        candidates.add(Paths.get(skillsRoot).resolve("builtin").resolve(raw));
+        Path agentRoot = resolveAgentRoot();
+        if (agentRoot != null) {
+            candidates.add(agentRoot.resolve(raw));
+        }
+        for (Path dir : candidates) {
+            if (dir == null || !Files.isDirectory(dir)) {
+                continue;
+            }
+            Path md = dir.resolve("SKILL.md");
+            if (!Files.isRegularFile(md)) {
+                md = dir.resolve("skill.md");
+            }
+            if (!Files.isRegularFile(md)) {
+                continue;
+            }
+            try {
+                String content = Files.readString(md);
+                Map<String, String> front = parseSimpleFrontmatter(content);
+                result.put("found", true);
+                result.put("id", key);
+                result.put("name", front.getOrDefault("title", front.getOrDefault("name", raw)));
+                result.put("description", front.getOrDefault("description", ""));
+                result.put("content", content);
+                return result;
+            } catch (IOException e) {
+                log.warn("[SkillCatalog] 读取内置技能文档失败 id={}: {}", key, e.getMessage());
+            }
+        }
+        result.put("found", false);
+        result.put("message", "内置技能不存在: " + key);
         return result;
     }
 
@@ -344,20 +443,19 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
                 item.put("source", source);
                 item.put("builtin", true);
                 String idOrName = dir.getFileName().toString();
-                String category = BUILTIN_CATEGORY.getOrDefault(idOrName, "内置工具");
-                List<String> labels = new ArrayList<>();
-                labels.add(category);
-                item.put("labels", labels);
-                item.put("category", category);
+                Map<String, String> front = new LinkedHashMap<>();
                 if (Files.isRegularFile(md)) {
                     try {
                         String content = Files.readString(md);
-                        Map<String, String> front = parseSimpleFrontmatter(content);
+                        front = parseSimpleFrontmatter(content);
                         // 项目内置以 title 为准，Agent 技能没有 title 则取 name（两者均未声明时取目录名）
                         item.put("name", front.getOrDefault("title", front.getOrDefault("name", idOrName)));
                         item.put("description", front.getOrDefault("description", ""));
                         if (front.get("version") != null) {
                             item.put("version", front.get("version"));
+                        }
+                        if (front.get("icon") != null && !front.get("icon").isEmpty()) {
+                            item.put("icon", front.get("icon"));
                         }
                     } catch (IOException e) {
                         item.put("name", idOrName);
@@ -367,6 +465,16 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
                     item.put("name", idOrName);
                     item.put("description", "");
                 }
+                // 分类：frontmatter 显式声明优先，其次内置映射，最后「内置工具」
+                String frontCategory = front.get("category");
+                String category = frontCategory == null || frontCategory.isEmpty()
+                        ? BUILTIN_CATEGORY.getOrDefault(idOrName, "内置工具") : frontCategory;
+                List<String> labels = new ArrayList<>();
+                labels.add(category);
+                item.put("labels", labels);
+                item.put("category", category);
+                // 官方文档地址：本服务 doc 端点（完整 SKILL.md，不截断）
+                item.put("detailUrl", "/v2/skills/catalog/builtin/" + id + "/doc");
                 result.add(item);
             }
         } catch (IOException e) {
