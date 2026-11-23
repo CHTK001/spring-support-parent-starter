@@ -80,6 +80,17 @@ public interface AgentDeployService {
     boolean busy(Long hostId);
 
     /**
+     * 一键接入本机：复用或创建本机主机资产与 SERVER 监控项，并触发 Agent 本地直装。
+     * <p>
+     * 服务端与 Agent 同机时部署走本地进程/文件系统通道，无需 SSH/WinRM 凭据；
+     * 同地址主机与同主机下的 SERVER 监控项均幂等复用，不重复创建。
+     * </p>
+     *
+     * @return 受理结果，data 为提示信息
+     */
+    ReturnResult<String> onboardLocal();
+
+    /**
      * 部署使用的本地 agent 包路径，与下载端点共用同一套定位规则。
      *
      * @return 可读的 jar 路径

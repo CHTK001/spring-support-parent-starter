@@ -2193,6 +2193,14 @@ public class ServerHostServiceImpl implements ServerHostService {
        * @param address 主机地址
        * @return 是否本机地址
        */
+    @Override
+    public boolean isLocalHostAddress(String address) {
+        if (address == null || address.isBlank()) {
+            return false;
+        }
+        return isLocalAddress(address.trim());
+    }
+
     private boolean isLocalAddress(String address) {
         if (address.isEmpty()) {
             return false;

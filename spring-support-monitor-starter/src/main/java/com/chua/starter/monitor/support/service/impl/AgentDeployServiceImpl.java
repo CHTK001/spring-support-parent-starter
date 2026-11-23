@@ -3,13 +3,16 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
+import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.model.AgentDeployProgressVO;
 import com.chua.starter.monitor.support.model.AgentHealthVO;
 import com.chua.starter.monitor.support.service.AgentDeployService;
 import com.chua.starter.monitor.support.service.AgentHttpClient;
+import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.provider.remote.LocalHostRemoteProvider;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.spi.HostRemoteProvider;
 import com.chua.starter.server.support.spi.HostRemoteProviderRegistry;
@@ -109,6 +112,11 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * 模块配置
     */
     private final AgentDeployProperties properties;
+
+    /**
+     * 监控资产服务（一键接入本机时创建 SERVER 监控项）
+     */
+    private final MonitorService monitorService;
 
     /**
      * 执行中的主机集合，防同一主机并发操作
@@ -475,6 +483,73 @@ public class AgentDeployServiceImpl implements AgentDeployService {
      * @param hostId 主机标识
      * @param action 动作
      */
+    /**
+     * 一键接入本机：复用或创建本机主机资产与 SERVER 监控项，并触发 Agent 本地直装。
+     * <p>
+     * 服务端与 Agent 同机时部署走本地进程/文件系统通道，无需 SSH/WinRM 凭据；
+     * 同地址主机与同主机下的 SERVER 监控项均幂等复用，不重复创建。
+     * </p>
+     *
+     * @return 受理结果，data 为提示信息
+     */
+    @Override
+    public ReturnResult<String> onboardLocal() {
+        String localAddress = "127.0.0.1";
+        MsServerHost host = serverHostService.listByAddress(localAddress).stream()
+                .filter(item -> item != null && item.getId() != null)
+                .findFirst()
+                .orElse(null);
+        boolean hostCreated = false;
+        if (host == null) {
+            MsServerHost local = new MsServerHost();
+            local.setServerHostName("本机");
+            local.setServerHostAddress(localAddress);
+            local.setServerHostCollectMode(HostCollectType.AGENT.name());
+            ReturnResult<MsServerHost> created = serverHostService.create(local);
+            if (created == null || !created.isOk() || created.getData() == null) {
+                return ReturnResult.error("创建本机主机资产失败，请检查主机台账配置");
+            }
+            host = created.getData();
+            hostCreated = true;
+        }
+        Long hostId = host.getId();
+        ensureServerMonitor(host);
+        if (busy(hostId)) {
+            return ReturnResult.ok("本机主机 #" + hostId + " 已有 Agent 操作在执行中，请稍后查看进度");
+        }
+        ReturnResult<String> submitted = submit(hostId, Action.INSTALL);
+        if (submitted == null || !submitted.isOk()) {
+            return submitted == null ? ReturnResult.error("Agent 安装任务提交失败") : submitted;
+        }
+        return ReturnResult.ok((hostCreated ? "已创建本机主机" : "已复用本机主机")
+                + " #" + hostId + "，Agent 安装任务已受理");
+    }
+
+    /**
+     * 确保本机主机存在关联的 SERVER 监控项（幂等）。
+     *
+     * @param host 本机主机
+     */
+    private void ensureServerMonitor(MsServerHost host) {
+        List<MsMonitor> monitors = monitorService.listAll().getData();
+        boolean exists = monitors != null && monitors.stream().anyMatch(item -> item != null
+                && host.getId().equals(item.getMsServerHostId())
+                && "SERVER".equalsIgnoreCase(item.getServiceType()));
+        if (exists) {
+            return;
+        }
+        MsMonitor monitor = new MsMonitor();
+        monitor.setMonitorName(host.getServerHostName());
+        monitor.setMonitorHost(host.getServerHostAddress());
+        monitor.setServiceType("SERVER");
+        monitor.setServerType(new LocalHostRemoteProvider().osType());
+        monitor.setMonitorPort(host.getServerHostAgentPort() == null || host.getServerHostAgentPort() <= 0
+                ? properties.getPort() : host.getServerHostAgentPort());
+        monitor.setMonitorEnabled(1);
+        monitor.setMsServerHostId(host.getId());
+        monitorService.create(monitor);
+    }
+
     private void run(Long hostId, Action action) {
         MsServerHost host = serverHostService.findById(hostId);
         if (host == null) {
@@ -512,6 +587,16 @@ public class AgentDeployServiceImpl implements AgentDeployService {
             throw new IllegalStateException("主机不存在");
         }
         Long hostId = host.getId();
+        // 本机直装分支：目标地址指向本机（回环/本机网卡）时走本地进程通道，免 SSH/WinRM 凭据
+        if (serverHostService.isLocalHostAddress(host.getServerHostAddress())) {
+            push(hostId, 8, "目标为本机，走本地直装通道（免凭据）", "info");
+            HostRemoteProvider local = new LocalHostRemoteProvider();
+            boolean localWindows = local.shellDialect() == HostShellDialect.POWERSHELL;
+            String localDir = local.join(local.tempDir(), properties.getRemoteDirName());
+            push(hostId, 20, "创建远端目录 " + localDir, "info");
+            local.mkdirs(host, null, localDir);
+            return new Session(host, null, local, localWindows, localDir);
+        }
         push(hostId, 8, "解析主机凭据...", "info");
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
         if (resolved == null || !resolved.isOk() || resolved.getData() == null) {

@@ -96,7 +96,7 @@ public record DataSourceVO(
                         String controlMode, String controlTarget, String version) {
         this(id, name, type, host, port, database, username, password, remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, null, null, null);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, null, null, null, 0);
     }
 
     /**
@@ -115,6 +115,7 @@ public record DataSourceVO(
         }
         return new DataSourceVO(id, name, type, host, port, database, username, "", remark, status,
                 driverClassName, driverJarId, createTime, updateTime, connectLatencyMs, sessionLatencyMs,
-                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet, fastLoadEnabled, topFlag);
+                lastTestTime, lastTestOk, controlMode, controlTarget, version, passwordSet, fastLoadEnabled,
+                topFlag, sharedCollect);
     }
 }

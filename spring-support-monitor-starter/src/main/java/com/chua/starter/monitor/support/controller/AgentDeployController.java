@@ -108,6 +108,17 @@ public class AgentDeployController {
     }
 
     /**
+     * 一键接入本机：复用或创建本机主机资产与 SERVER 监控项，并触发 Agent 本地直装。
+     *
+     * @return 受理结果
+     */
+    @Operation(summary = "添加本机", description = "复用或创建本机主机与 SERVER 监控项，并触发 Agent 本地直装（免 SSH/WinRM 凭据）")
+    @PostMapping("/onboard-local")
+    public ReturnResult<String> onboardLocal() {
+        return deployService.onboardLocal();
+    }
+
+    /**
      * 查询 Agent 状态：台账记录 + 实时探活，供画像页与列表按钮判定。
      *
      * @param id 主机标识

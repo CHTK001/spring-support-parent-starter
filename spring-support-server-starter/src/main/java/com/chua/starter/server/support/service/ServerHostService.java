@@ -180,6 +180,17 @@ public interface ServerHostService {
     List<MsServerHost> listByAddress(String address);
 
     /**
+     * 判断地址是否指向部署本服务的这台机器（回环地址或本机任一网卡地址）
+     * <p>
+     * 供 Agent 部署编排等调用方做「本机直装」判定，与主机表单「本机采集」校验同口径。
+     * </p>
+     *
+     * @param address 主机地址，可为空
+     * @return true 表示该地址指向本机
+     */
+    boolean isLocalHostAddress(String address);
+
+    /**
      * 按 Agent 探针标识查询主机
      *
      * @param agentKey 探针标识

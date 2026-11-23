@@ -113,6 +113,11 @@ public class DatasourceServiceImpl implements DatasourceService {
 
     @Override
     public ReturnResult<List<DataSourceVO>> list() {
+        return list(null);
+    }
+
+    @Override
+    public ReturnResult<List<DataSourceVO>> list(Boolean sharedCollect) {
         try {
             // 置顶在前、其余按 ID 升序：置顶是用户偏好，不随连通性变化，排序口径保持稳定
             List<MsDatasource> rows = datasourceMapper.selectList(
@@ -121,13 +126,39 @@ public class DatasourceServiceImpl implements DatasourceService {
                             .orderByAsc(MsDatasource::getId));
             List<DataSourceVO> result = new ArrayList<>(rows.size());
             for (MsDatasource row : rows) {
-                result.add(toVO(row));
+                DataSourceVO vo = toVO(row);
+                // 采集台的下拉按「已注册」过滤：未注册行对采集侧不可见，台账自身不受影响
+                if (sharedCollect != null
+                        && (vo.sharedCollect() == null ? 0 : vo.sharedCollect()) != (sharedCollect ? 1 : 0)) {
+                    continue;
+                }
+                result.add(vo);
             }
             return ReturnResult.ok(result);
         } catch (Exception e) {
             log.error("[datapool] 查询数据源列表失败", e);
             return ReturnResult.error("查询数据源列表失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<DataSourceVO> toggleSharedCollect(Long id, boolean shared) {
+        if (id == null) {
+            return ReturnResult.error("数据源 ID 不能为空");
+        }
+        MsDatasource row = datasourceMapper.selectById(id);
+        if (row == null) {
+            return ReturnResult.error("数据源不存在");
+        }
+        if (DatapoolConstants.isCalciteType(row.getDatasourceType())) {
+            return ReturnResult.error("合并数据源暂不支持共享给采集平台");
+        }
+        MsDatasource update = new MsDatasource();
+        update.setId(id);
+        update.setDatasourceSharedCollect(shared ? 1 : 0);
+        datasourceMapper.updateById(update);
+        row.setDatasourceSharedCollect(shared ? 1 : 0);
+        return ReturnResult.ok(toVO(row));
     }
 
     @Override
@@ -698,6 +729,8 @@ public class DatasourceServiceImpl implements DatasourceService {
         entity.setDatasourceVersion(influxdb && ("2".equals(version) || "3".equals(version)) ? version : "");
         // 置顶标记：null 按不置顶处理；其余值归一为 0/1（避免库里灌进 7 这类哨兵值）
         entity.setDatasourceTopFlag(data.topFlag() == null ? 0 : (data.topFlag() == 1 ? 1 : 0));
+        // 共享给采集平台：null 按未注册处理；其余值归一为 0/1
+        entity.setDatasourceSharedCollect(data.sharedCollect() == null ? 0 : (data.sharedCollect() == 1 ? 1 : 0));
     }
 
     /**
@@ -723,7 +756,8 @@ public class DatasourceServiceImpl implements DatasourceService {
                 row.getDatasourceLastTestOk(), nullToEmpty(row.getDatasourceControlMode()),
                 nullToEmpty(row.getDatasourceControlTarget()), nullToEmpty(row.getDatasourceVersion()),
                 !nullToEmpty(stored).isEmpty(), fastLoadOf(row),
-                row.getDatasourceTopFlag() == null ? 0 : row.getDatasourceTopFlag());
+                row.getDatasourceTopFlag() == null ? 0 : row.getDatasourceTopFlag(),
+                row.getDatasourceSharedCollect() == null ? 0 : row.getDatasourceSharedCollect());
     }
 
     /**

@@ -34,6 +34,23 @@ public interface DatasourceService {
     ReturnResult<List<DataSourceVO>> list();
 
     /**
+     * 列出数据源，可按「共享给采集平台」过滤。
+     *
+     * @param sharedCollect {@code true} 只列已注册给采集平台的；{@code false} 只列未注册的；null 不过滤
+     * @return 数据源列表
+     */
+    ReturnResult<List<DataSourceVO>> list(Boolean sharedCollect);
+
+    /**
+     * 切换数据源的「共享给采集平台」标记。
+     *
+     * @param id     数据源 ID
+     * @param shared true 注册共享、false 取消共享
+     * @return 更新后的数据源
+     */
+    ReturnResult<DataSourceVO> toggleSharedCollect(Long id, boolean shared);
+
+    /**
      * 查询数据源详情。
      *
      * @param id 数据源 ID

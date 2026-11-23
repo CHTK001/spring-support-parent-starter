@@ -43,12 +43,14 @@ public class DatasourceController {
     /**
      * 数据源列表。
      *
+     * @param sharedCollect 可选：{@code true} 只列已共享给采集平台的，{@code false} 只列未共享的，缺省不过滤
      * @return 数据源列表
      */
     @Operation(summary = "获取所有数据源")
     @GetMapping({"", "/list"})
-    public ReturnResult<List<DataSourceVO>> list() {
-        return maskedList(datasourceService.list());
+    public ReturnResult<List<DataSourceVO>> list(
+            @RequestParam(required = false) Boolean sharedCollect) {
+        return maskedList(datasourceService.list(sharedCollect));
     }
 
     /**
@@ -133,6 +135,21 @@ public class DatasourceController {
     @PostMapping("/{id}/top")
     public ReturnResult<DataSourceVO> toggleTop(@PathVariable Long id, @RequestParam(defaultValue = "true") boolean top) {
         return datasourceService.toggleTop(id, top);
+    }
+
+    /**
+     * 切换数据源的「共享给采集平台」标记。
+     *
+     * @param id     数据源 ID
+     * @param shared true 注册共享、false 取消共享
+     * @return 更新后的数据源
+     */
+    @SysLog(name = "共享/取消共享数据源给采集平台")
+    @Operation(summary = "共享/取消共享数据源给采集平台")
+    @PostMapping("/{id}/shared-collect")
+    public ReturnResult<DataSourceVO> toggleSharedCollect(
+            @PathVariable Long id, @RequestParam(defaultValue = "true") boolean shared) {
+        return datasourceService.toggleSharedCollect(id, shared);
     }
 
     /**
