@@ -27,7 +27,11 @@ import java.util.Set;
 @Component
 public class PaymentCipherService {
 
-    static final String LEGACY_DEFAULT_KEY = "PaymentSystem16"; // legacy 默认 Key
+    /**
+     * legacy 默认 Key：仅作为历史数据解密与未配置时的兜底密钥，
+     * 可经配置项 {@code plugin.payment.security.legacy-key}（或 {@code payment.encryption.legacy-key}）覆盖。
+     */
+    static final String LEGACY_DEFAULT_KEY = "PaymentSystem16";
 
     /**
      * 应用环境，用于读取密钥配置项。
@@ -98,17 +102,32 @@ public class PaymentCipherService {
                 "plugin.payment.security.legacyKeys",
                 "payment.encryption.legacy-keys",
                 "payment.encryption.legacyKeys")));
-        keys.add(LEGACY_DEFAULT_KEY);
+        keys.add(configuredLegacyKey());
         return new ArrayList<>(keys);
     }
 
     /**
      * 获取本次加密必须使用的密钥。
      *
-     * @return 加密密钥值，未配置时返回内置兼容密钥
+     * @return 加密密钥值，未配置时返回 legacy 兜底密钥（可经 {@code plugin.payment.security.legacy-key} 覆盖）
      */
     String requiredEncryptionKey() {
         String key = configuredEncryptionKey();
+        return StringUtils.hasText(key) ? key : configuredLegacyKey();
+    }
+
+    /**
+     * 读取 legacy 兜底密钥配置，未配置时回落到内置历史兼容密钥。
+     *
+     * <p>内置值必须保留：历史库中的存量密文以它加密，移除将导致旧数据不可读。</p>
+     *
+     * @return legacy 密钥值
+     */
+    private String configuredLegacyKey() {
+        String key = property(
+                "plugin.payment.security.legacy-key",
+                "plugin.payment.security.legacyKey",
+                "payment.encryption.legacy-key");
         return StringUtils.hasText(key) ? key : LEGACY_DEFAULT_KEY;
     }
 

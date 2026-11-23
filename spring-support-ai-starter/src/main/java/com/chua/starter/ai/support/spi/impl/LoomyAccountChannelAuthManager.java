@@ -80,9 +80,10 @@ public class LoomyAccountChannelAuthManager implements AccountChannelAuthManager
     /** 业务成功码。 */
     static final String OK_CODE = "000000";
 
-    /** 讯飞账号 AccessKey（取自 Loomy 客户端 .env.prod，公开值，仅用于签名，不含用户数据）。 */
-    static final String ACCESS_KEY_ID = "2thryby66wxi53sk";
-    static final String ACCESS_KEY_SECRET = "zsak6eadrbawz683wf5r3m2snrwj868r";
+    /** 讯飞账号 AccessKey（取自 Loomy 客户端 .env.prod，公开值，仅用于签名，不含用户数据）；
+     * 可经系统属性 {@code chua.loomy.access_key_id} / 环境变量 {@code CHUA_LOOMY_ACCESS_KEY_ID} 覆盖。 */
+    static final String ACCESS_KEY_ID = loomCfg("access_key_id", "2thryby66wxi53sk");
+    static final String ACCESS_KEY_SECRET = loomCfg("access_key_secret", "zsak6eadrbawz683wf5r3m2snrwj868r");
     /** 讯飞 appId（账号请求体 base.appid）。 */
     static final String APP_ID = "GM3LOOMY";
     /** 客户端 UA（照抄官方：Windows 上也是 macOS，不要改）。 */

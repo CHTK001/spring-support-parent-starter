@@ -104,7 +104,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     public OrderPartitionConfigVO updateConfig(String businessType, OrderPartitionConfigDTO dto) {
         OrderPartitionConfig config = requireConfig(businessType);
         if (dto != null) {
-            config.setPartitionPrefix(validateTableName(fallback(dto.partitionPrefix(), config.getPartitionPrefix()), "分表前缀"));
+            config.setPartitionPrefix(validateOrderTableName(fallback(dto.partitionPrefix(), config.getPartitionPrefix()), "分表前缀"));
             config.setPartitionGranularity(resolveGranularity(dto.partitionGranularity()));
             config.setRetentionDays(resolvePositive(dto.retentionDays(), config.getRetentionDays(), "保留天数"));
             config.setCreateAheadDays(resolveNonNegative(dto.createAheadDays(), config.getCreateAheadDays(), "提前建表天数"));
@@ -190,7 +190,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
            * @param config.getSourceTable() 获取源表名
            */
         ensurePartitionTableExists(config.getSourceTable(), targetTable);
-        String sourceTable = validateTableName(config.getSourceTable(), "源表名");
+        String sourceTable = validateOrderTableName(config.getSourceTable(), "源表名");
         String safeTimeCol = validateTableName(timeCol, "timeColumn");
         String safeIdCol = validateTableName(idCol, "idColumn");
         validatePartitionMetadata(sourceTable, safeTimeCol, safeIdCol);
@@ -313,7 +313,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     private String resolvePartitionTable(OrderPartitionConfig config, LocalDate date) {
         String suffix = "DAY".equalsIgnoreCase(config.getPartitionGranularity()) ? DAY_FORMAT.format(date) : MONTH_FORMAT.format(date
             .withDayOfMonth(1));
-        return validateTableName(config.getPartitionPrefix(), "分表前缀") + "_" + suffix;
+        return validateOrderTableName(config.getPartitionPrefix(), "分表前缀") + "_" + suffix;
     }
 
       /**
@@ -323,8 +323,8 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
        * @param targetTable 目标表名
        */
     private void ensurePartitionTableExists(String sourceTable, String targetTable) {
-        String safeSourceTable = validateTableName(sourceTable, "源表名");
-        String safeTargetTable = validateTableName(targetTable, "目标表名");
+        String safeSourceTable = validateOrderTableName(sourceTable, "源表名");
+        String safeTargetTable = validateOrderTableName(targetTable, "目标表名");
         validateSourceTableExists(safeSourceTable);
         if (isH2Database()) {
             orderPartitionConfigMapper.createPartitionFromEmptyResult(safeSourceTable, safeTargetTable);
@@ -601,6 +601,22 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         } catch (IllegalArgumentException e) {
             throw new PaymentException(label + "不合法: " + value, e);
         }
+    }
+
+    /**
+     * 校验分表涉及的表名/前缀：在标识符合法性之外，强制限定在本模块 {@code pay_} 表前缀内，
+     * 防止通过动态表名对任意表执行写入。
+     *
+     * @param value 值
+     * @param label 参数名称
+     * @return 校验通过的表名
+     */
+    private String validateOrderTableName(String value, String label) {
+        String name = validateTableName(value, label);
+        if (!name.startsWith("pay_")) {
+            throw new PaymentException(label + "必须以 pay_ 前缀开头: " + name);
+        }
+        return name;
     }
 
       /**

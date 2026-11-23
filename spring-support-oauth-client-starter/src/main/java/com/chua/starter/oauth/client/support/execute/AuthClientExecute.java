@@ -67,9 +67,26 @@ public class AuthClientExecute {
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
 
     /**
-     * 默认_Key
-    */
-    public static final String DEFAULT_KEY = "1234567980123456";
+     * 默认_Key（可经系统属性 {@code chua.oauth.token-key} 或环境变量 {@code CHUA_OAUTH_TOKEN_KEY} 覆盖，
+     * 内置值仅作未配置时的兜底）
+     */
+    public static final String DEFAULT_KEY = configOr("chua.oauth.token-key", "CHUA_OAUTH_TOKEN_KEY", "1234567980123456");
+
+    /**
+     * 依次读取系统属性与环境变量，均未配置时返回兜底值。
+     *
+     * @param sysProp  系统属性名
+     * @param envVar   环境变量名
+     * @param fallback 兜底值
+     * @return 配置值或兜底值
+     */
+    private static String configOr(String sysProp, String envVar, String fallback) {
+        String value = System.getProperty(sysProp);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(envVar);
+        }
+        return (value == null || value.isBlank()) ? fallback : value;
+    }
 
     /**
      * 获取Instance

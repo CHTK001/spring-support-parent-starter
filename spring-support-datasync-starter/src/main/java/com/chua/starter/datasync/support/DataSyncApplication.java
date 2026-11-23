@@ -21,6 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 
+import java.security.SecureRandom;
+import java.util.Base64;
+
 /**
  * 数据同步模块启动类（真实启动测试入口）。
  *
@@ -47,6 +50,11 @@ public class DataSyncApplication {
     private static final String MAPPING_DIR = "./src/main/resources/datasync/mappings";
 
     /**
+     * 随机口令源（未显式配置管理口令时按次生成）
+     */
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
      * 数据库模式参数值
      */
     private static final String MODE_DATABASE = "database";
@@ -55,6 +63,33 @@ public class DataSyncApplication {
      * 数据库类型参数值（MySQL 显式指定；默认嵌入式 H2 便于本地真实启动验证）
      */
     private static final String DB_MYSQL = "mysql";
+
+    /**
+     * 依次读取系统属性与环境变量，均未配置时返回兜底值。
+     *
+     * @param sysProp  系统属性名
+     * @param envVar   环境变量名
+     * @param fallback 兜底值
+     * @return 配置值或兜底值
+     */
+    private static String configOr(String sysProp, String envVar, String fallback) {
+        String value = System.getProperty(sysProp);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(envVar);
+        }
+        return (value == null || value.isBlank()) ? fallback : value;
+    }
+
+    /**
+     * 生成 16 字符的按次随机口令。
+     *
+     * @return 随机口令
+     */
+    private static String randomSecret() {
+        byte[] buf = new byte[12];
+        SECURE_RANDOM.nextBytes(buf);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
+    }
 
     /**
      * 程序入口。
@@ -88,21 +123,27 @@ public class DataSyncApplication {
             defaults.put("plugin.datasync.mapping-source", "file");
             defaults.put("plugin.datasync.file-mapping.directory-path", MAPPING_DIR);
         }
- // 启用 SSH 服务（端口 2222，账号 admin/admin；密码 为认证开关布尔型，密码值用 用户-密码）
+ // 启用 SSH 服务（端口 2222；管理口令可经系统属性/环境变量配置，未配置时按次随机生成）
+        String sshUsername = configOr("chua.datasync.ssh.username", "CHUA_DATASYNC_SSH_USERNAME", "admin");
+        String sshPassword = configOr("chua.datasync.ssh.password", "CHUA_DATASYNC_SSH_PASSWORD", randomSecret());
+        String shellUsername = configOr("chua.datasync.shell.username", "CHUA_DATASYNC_SHELL_USERNAME", "admin");
+        String shellPassword = configOr("chua.datasync.shell.password", "CHUA_DATASYNC_SHELL_PASSWORD", randomSecret());
+        log.info("[DATA-SYNC] SSH/Shell 管理账号（口令未显式配置时为本次启动随机值，可用 chua.datasync.ssh.password / chua.datasync.shell.password 固定）：ssh={}/{} shell={}/{}",
+                sshUsername, sshPassword, shellUsername, shellPassword);
         defaults.put("server.port", "28978");
         defaults.put("plugin.ssh.server.enabled", "true");
         defaults.put("plugin.ssh.server.port", "2222");
         defaults.put("plugin.ssh.server.host", "127.0.0.1");
-        defaults.put("plugin.ssh.server.authentication.username", "admin");
-        defaults.put("plugin.ssh.server.authentication.user-password", "admin");
+        defaults.put("plugin.ssh.server.authentication.username", sshUsername);
+        defaults.put("plugin.ssh.server.authentication.user-password", sshPassword);
         defaults.put("plugin.ssh.server.file-transfer.sftp-enabled", "true");
         defaults.put("plugin.ssh.server.file-transfer.root-directory", "./");
  // osgi Shell 远程管理（端口 6666）
         defaults.put("plugin.osgi.shell.enabled", "true");
         defaults.put("plugin.osgi.shell.ssh-port", "6666");
         defaults.put("plugin.osgi.shell.ssh-enabled", "true");
-        defaults.put("plugin.osgi.shell.username", "admin");
-        defaults.put("plugin.osgi.shell.password", "admin");
+        defaults.put("plugin.osgi.shell.username", shellUsername);
+        defaults.put("plugin.osgi.shell.password", shellPassword);
         application.setDefaultProperties(defaults);
         ApplicationContext context = application.run(args);
 

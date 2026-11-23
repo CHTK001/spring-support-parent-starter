@@ -66,10 +66,29 @@ public class GeminiAccountChannelAuthManager implements AccountChannelAuthManage
      */
     static final int CALLBACK_PORT = 8845;
 
-    /** 上游 Cloud Code 客户端的公开 client（与 gemini-oauth.ts 默认值一致）。 */
-    static final String DEFAULT_CLIENT_ID =
-            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
-    static final String DEFAULT_CLIENT_SECRET = "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";
+    /** 上游 Cloud Code 客户端的公开 client（与 gemini-oauth.ts 默认值一致）；
+     * 可经系统属性 {@code chua.gemini.client-id} / {@code chua.gemini.client-secret}
+     * 或环境变量 {@code CHUA_GEMINI_CLIENT_ID} / {@code CHUA_GEMINI_CLIENT_SECRET} 覆盖。 */
+    static final String DEFAULT_CLIENT_ID = configOr("chua.gemini.client-id", "CHUA_GEMINI_CLIENT_ID",
+            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com");
+    static final String DEFAULT_CLIENT_SECRET = configOr("chua.gemini.client-secret", "CHUA_GEMINI_CLIENT_SECRET",
+            "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");
+
+    /**
+     * 依次读取系统属性与环境变量，均未配置时返回兜底值。
+     *
+     * @param sysProp  系统属性名
+     * @param envVar   环境变量名
+     * @param fallback 兜底值
+     * @return 配置值或兜底值
+     */
+    private static String configOr(String sysProp, String envVar, String fallback) {
+        String value = System.getProperty(sysProp);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(envVar);
+        }
+        return (value == null || value.isBlank()) ? fallback : value;
+    }
 
     /** 六项 scope（逐字照抄；cloud-platform 必需，后两项是 Cloud Code 自己的通道）。 */
     static final String SCOPES = String.join(" ",
