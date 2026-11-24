@@ -189,6 +189,29 @@ public interface SysAiUsageService {
             LocalDateTime startTime, LocalDateTime endTime, String userId);
 
     /**
+     * 按「模型」聚合用量并取前 N 名（用量页「模型 TopN」榜单的数据源）。
+     *
+     * <p>与 {@link #getCallTypeBreakdown} 同一套口径：明细表数据库端 GROUP BY，
+     * 普通账号只统计本人（含无主明细并入），管理员统计全部账号。排序口径由
+     * {@code metric} 指定（{@code token}/{@code cost}/{@code calls}，缺省 token），
+     * 数据库端 ORDER BY + LIMIT，不需要把全量模型拉到内存再裁剪。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（含，可为空）
+     * @param endTime   结束时间（含，可为空）
+     * @param userId    归属用户（可为空，为空时统计全部用户）
+     * @param metric    排序口径：{@code token}/{@code cost}/{@code calls}，缺省与非法值回落 token
+     * @param topN      榜单长度（1~100，缺省 10，越界收敛到边界）
+     * @return 按排序口径降序的前 N 行，附占全量百分比
+     */
+    List<com.chua.starter.ai.support.model.vo.AiUsageModelTopVO> getModelTopN(
+            String groupName, String provider, String model,
+            LocalDateTime startTime, LocalDateTime endTime, String userId,
+            String metric, Integer topN);
+
+    /**
      * 用量统计摘要
      * @author CH
      * @since 4.0.0

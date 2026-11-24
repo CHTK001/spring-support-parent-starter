@@ -194,6 +194,22 @@ public interface AiReidService {
     boolean delete(String group, String id);
 
     /**
+     * 更新一条底库记录的档案字段（姓名/关联人脸名/经纬度），不换向量、不重跑检测。
+     *
+     * <p>与 {@link #delete(String, String)} 同理：元数据改 MySQL，特征向量原样保留 ——
+     * 「只改个名字」不该要求重新上传照片，也不该因为原照片质量被判失败。</p>
+     *
+     * <p><b>分组不可改</b>：向量按组存储，改组会导致 DB 与向量库分叉
+     * （列表按新组查得到、检索却还在旧组）。记录按「账号 + 分组 + id」定位。</p>
+     *
+     * @param group    分组名（空值按默认组）
+     * @param id       底库行的向量标识
+     * @param metadata 档案字段（name/faceName/lat/lng；其余字段原样保留）
+     * @return 是否更新成功（记录不存在返回 false）
+     */
+    boolean update(String group, String id, Map<String, Object> metadata);
+
+    /**
      * 当前账号已有数据的分组名列表（供前端分组选择器）。
      *
      * <p>总是包含 {@link AiLibraryGroups#DEFAULT}：即使某账号还没有任何数据，

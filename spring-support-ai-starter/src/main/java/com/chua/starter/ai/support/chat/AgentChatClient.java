@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentResponse;
+import com.chua.common.support.ai.agent.AgentStreamEvent;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
@@ -10,6 +11,7 @@ import com.chua.common.support.ai.chat.ModelDefinition;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -46,6 +48,12 @@ public class AgentChatClient implements ChatClient {
     private Runnable closeHook;
 
     /**
+     * 工具观察者：TOOL_START 时旁路回调 {@code (toolName, toolInput)}，可空。
+     * 由构建方注入（如会话待办镜像），只旁路消费、不影响对话主链路。
+     */
+    private transient BiConsumer<String, String> toolObserver;
+
+    /**
      * 当前正在跑的流订阅；{@link #interrupt()} 用它立刻掐断本客户端的执行。
      */
     private volatile reactor.core.Disposable currentStream;
@@ -68,6 +76,36 @@ public class AgentChatClient implements ChatClient {
     public AgentChatClient withCloseHook(Runnable hook) {
         this.closeHook = hook;
         return this;
+    }
+
+    /**
+     * 注入工具观察者并返回自身（链式）。
+     *
+     * @param observer TOOL_START 时回调 {@code (toolName, toolInput)}，可空
+     * @return 当前客户端
+     */
+    public AgentChatClient withToolObserver(BiConsumer<String, String> observer) {
+        this.toolObserver = observer;
+        return this;
+    }
+
+    /**
+     * 旁路通知工具观察者（仅 TOOL_START 时调用）。
+     *
+     * <p>观察者异常只记日志、不外抛，保证工具事件不影响对话流。</p>
+     *
+     * @param event 工具开始事件
+     */
+    private void notifyToolObserver(AgentStreamEvent event) {
+        BiConsumer<String, String> observer = this.toolObserver;
+        if (observer == null || event.getToolName() == null) {
+            return;
+        }
+        try {
+            observer.accept(event.getToolName(), event.getToolInput());
+        } catch (Exception e) {
+            log.warn("[AgentChatClient] 工具观察者回调失败 tool={}: {}", event.getToolName(), e.getMessage());
+        }
     }
 
     /**
@@ -183,8 +221,11 @@ public class AgentChatClient implements ChatClient {
                                 break;
                             }
                             case TOOL_START:
+                                // 工具步骤不注入正文，避免污染答案；观察者可旁路消费（如待办镜像）
+                                notifyToolObserver(event);
+                                break;
                             case TOOL_RESULT:
-                                // 工具步骤不注入正文，避免污染答案；后续可由独立工具面板展示
+                                // 工具结果不注入正文；后续可由独立工具面板展示
                                 break;
                             case COMPLETE:
                                 if (event.getUsage() != null) {
@@ -318,8 +359,11 @@ public class AgentChatClient implements ChatClient {
                                 break;
                             }
                             case TOOL_START:
+                                // 工具步骤不注入正文；观察者可旁路消费（如待办镜像）
+                                notifyToolObserver(event);
+                                break;
                             case TOOL_RESULT:
-                                // 工具步骤不注入正文
+                                // 工具结果不注入正文
                                 break;
                             case COMPLETE:
                                 if (event.getUsage() != null) {

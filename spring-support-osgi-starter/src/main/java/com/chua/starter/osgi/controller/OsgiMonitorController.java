@@ -1,5 +1,7 @@
 package com.chua.starter.osgi.controller;
 
+import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.lang.json.JsonNode;
 import com.chua.common.support.osgi.OsgiBundle;
 import com.chua.common.support.osgi.OsgiLauncher;
 import com.chua.common.support.osgi.OsgiServiceDescriptor;
@@ -8,6 +10,9 @@ import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.osgi.properties.OsgiProperties;
 import com.chua.starter.logger.event.OsgiLogEvent;
 import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
+import com.chua.starter.osgi.support.stats.OsgiActionStat;
+import com.chua.starter.osgi.support.stats.OsgiStatSample;
+import com.chua.starter.osgi.support.stats.OsgiStatsCollector;
 import lombok.extern.slf4j.Slf4j;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -20,6 +25,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,10 +40,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -88,6 +97,12 @@ public class OsgiMonitorController {
     /** OSGi 未声明版本时的缺省版本。 */
     private static final String DEFAULT_BUNDLE_VERSION = "0.0.0";
 
+    /** 回收站元数据边车文件后缀。 */
+    private static final String RECYCLE_META_SUFFIX = ".meta.json";
+
+    /** 回收站重名文件追加的时间戳后缀格式。 */
+    private static final DateTimeFormatter RECYCLE_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
+
     /** 批量操作单次允许的最大目标数；防止一次超大批量长期持有生命周期锁。 */
     private static final int MAX_BATCH_SIZE = 100;
 
@@ -112,6 +127,11 @@ public class OsgiMonitorController {
     private final OsgiLogPublisher logPublisher;
 
     /**
+     * 框架体征采样器与操作统计聚合器（趋势图 / 操作统计图的数据源）。
+     */
+    private final OsgiStatsCollector statsCollector;
+
+    /**
      * 生命周期操作互斥锁：安装/升级/启停/卸载/删文件/刷新/批量串行执行。
      *
      * <p>这些操作普遍是「先查重/查状态，再动框架」的复合动作，且 OSGi 框架对
@@ -124,17 +144,20 @@ public class OsgiMonitorController {
     /**
      * 构造 osgi 观测端点。
      *
-     * @param launcher     osgi 启动器
-     * @param register     Bean 桥接注册器，可为 {@code null}
-     * @param properties   osgi 配置
-     * @param logPublisher 操作日志发布器
+     * @param launcher       osgi 启动器
+     * @param register       Bean 桥接注册器，可为 {@code null}
+     * @param properties     osgi 配置
+     * @param logPublisher   操作日志发布器
+     * @param statsCollector 体征采样器与操作统计聚合器
      */
     public OsgiMonitorController(OsgiLauncher launcher, OsgiBeanDefinitionRegister register,
-                                 OsgiProperties properties, OsgiLogPublisher logPublisher) {
+                                 OsgiProperties properties, OsgiLogPublisher logPublisher,
+                                 OsgiStatsCollector statsCollector) {
         this.launcher = launcher;
         this.register = register;
         this.properties = properties;
         this.logPublisher = logPublisher;
+        this.statsCollector = statsCollector;
     }
 
     /**
@@ -147,6 +170,31 @@ public class OsgiMonitorController {
         Map<String, Object> stats = new LinkedHashMap<>(launcher.getFrameworkStats());
         stats.put("registeredServiceTypes", launcher.getRegisteredServiceTypes());
         return stats;
+    }
+
+    /**
+     * 获取框架体征历史采样（时间升序），供前端趋势图绘制。
+     *
+     * <p>只采样、不落库：宿主重启后历史清零；{@code plugin.osgi.stats.enabled=false}
+     * 时返回空列表，前端展示空态。</p>
+     *
+     * @return 采样点列表，时间升序
+     */
+    @GetMapping("/stats/history")
+    public List<OsgiStatSample> statsHistory() {
+        return statsCollector.history();
+    }
+
+    /**
+     * 获取插件操作统计（按总次数降序），供前端操作统计图绘制。
+     *
+     * <p>只统计 success / failure 终态事件，start 阶段不计数；暂无操作时返回空列表。</p>
+     *
+     * @return 操作统计列表
+     */
+    @GetMapping("/stats/actions")
+    public List<OsgiActionStat> statsActions() {
+        return statsCollector.actionStats();
     }
 
     /**
@@ -579,11 +627,24 @@ public class OsgiMonitorController {
                 throw new IllegalStateException("插件仍在框架中（" + installed.getSymbolicName()
                         + "），请先卸载再删除 jar");
             }
-            boolean deleted = Files.deleteIfExists(target);
+            boolean deleted;
+            boolean recycled = false;
+            if (properties.getRecycle().isEnabled() && Files.exists(target)) {
+                // 回收站模式：移入部署目录下的回收站目录，可恢复或彻底清除
+                moveToRecycle(target);
+                deleted = true;
+                recycled = true;
+            } else {
+                deleted = Files.deleteIfExists(target);
+            }
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("fileName", name);
             result.put("deleted", deleted);
-            if (deleted) {
+            result.put("recycled", recycled);
+            if (deleted && recycled) {
+                logPublisher.publish(OsgiLogEvent.success("delete-jar", name, startedAt,
+                        "已移入回收站，可在车辆段恢复或彻底删除"));
+            } else if (deleted) {
                 logPublisher.publish(OsgiLogEvent.success("delete-jar", name, startedAt, "已删除 jar 文件"));
             } else {
                 logPublisher.publish(OsgiLogEvent.warn("delete-jar", name, "jar 文件已不存在: " + name));
@@ -594,6 +655,361 @@ public class OsgiMonitorController {
                     "删除失败: " + rootMessage(ex)));
             throw new IllegalStateException("删除 jar 失败: " + rootMessage(ex), ex);
         }
+    }
+
+    // ==================== jar 回收站 ====================
+
+    /**
+     * 查看回收站清单。
+     *
+     * <p>回收站位于部署目录之下（目录名见 {@code plugin.osgi.recycle.dir-name}，默认
+     * {@code .recycle}），删除的 jar 连同 {@code .meta.json} 元数据边车一起放在这里。
+     * 清单按删除时间倒序排列；个别边车损坏只跳过该条目，不影响整表。</p>
+     *
+     * @return 回收站条目清单
+     */
+    @GetMapping("/jars/recycle")
+    public List<Map<String, Object>> recycleJars() {
+        requireManageEnabled();
+        Path recycleDir = recycleDirectory();
+        if (!Files.isDirectory(recycleDir)) {
+            return new ArrayList<>();
+        }
+        try (Stream<Path> stream = Files.list(recycleDir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))
+                    .map(this::describeRecycleJar)
+                    .filter(item -> item != null)
+                    .sorted(Comparator.comparing((Map<String, Object> item) ->
+                            ((Number) item.get("deletedAt")).longValue()).reversed())
+                    .toList();
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.warn("recycle-list", "", "读取回收站失败: " + rootMessage(ex)));
+            throw new IllegalStateException("读取回收站失败: " + rootMessage(ex), ex);
+        }
+    }
+
+    /**
+     * 从回收站恢复 jar 到部署目录。
+     *
+     * <p>恢复即把文件移回部署目录的原始文件名（元数据里记录的 {@code originalName}）；
+     * 部署目录已存在同名文件时拒绝恢复，由用户先处理冲突。恢复后 jar 重新回到
+     * 热部署扫描范围，是否立刻安装由扫描器与 {@code plugin.osgi.deploy} 配置决定。</p>
+     *
+     * @param fileName 回收站中的文件名
+     * @return 恢复结果
+     */
+    @PostMapping("/jars/recycle/{fileName}/restore")
+    public Map<String, Object> restoreRecycleJar(@PathVariable String fileName) {
+        requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doRestoreRecycleJar(fileName);
+        }
+    }
+
+    /**
+     * 彻底删除回收站中的 jar（连同元数据边车）。
+     *
+     * <p>这是不可逆操作：文件删除后无法再恢复，前端必须二次确认后才调用。</p>
+     *
+     * @param fileName 回收站中的文件名
+     * @return 删除结果
+     */
+    @DeleteMapping("/jars/recycle/{fileName}")
+    public Map<String, Object> purgeRecycleJar(@PathVariable String fileName) {
+        requireManageEnabled();
+        synchronized (lifecycleLock) {
+            return doPurgeRecycleJar(fileName);
+        }
+    }
+
+    /**
+     * 执行回收站恢复（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param fileName 回收站中的文件名
+     * @return 恢复结果
+     */
+    private Map<String, Object> doRestoreRecycleJar(String fileName) {
+        String name = Paths.get(fileName).getFileName().toString();
+        if (!name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("只支持恢复 .jar 文件: " + name);
+        }
+        Path recycleDir = recycleDirectory();
+        Path source = recycleDir.resolve(name).normalize();
+        if (!source.startsWith(recycleDir)) {
+            throw new IllegalArgumentException("非法文件名: " + name);
+        }
+        if (!Files.isRegularFile(source)) {
+            throw new IllegalArgumentException("回收站中不存在该文件: " + name);
+        }
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("restore-jar", name));
+        try {
+            Map<String, String> meta = readRecycleMeta(source);
+            String originalName = meta.getOrDefault("originalName", name);
+            Path dir = deployDirectory();
+            Path dest = dir.resolve(originalName).normalize();
+            if (!dest.startsWith(dir)) {
+                throw new IllegalArgumentException("非法文件名: " + originalName);
+            }
+            if (Files.exists(dest)) {
+                throw new IllegalStateException("部署目录已存在同名文件: " + originalName
+                        + "，请先处理冲突文件再恢复");
+            }
+            Files.move(source, dest);
+            Files.deleteIfExists(recycleMetaPath(source));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("fileName", originalName);
+            result.put("restored", true);
+            logPublisher.publish(OsgiLogEvent.success("restore-jar", originalName, startedAt,
+                    "已从回收站恢复到部署目录"));
+            return result;
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("restore-jar", name, startedAt,
+                    "恢复失败: " + rootMessage(ex)));
+            throw new IllegalStateException("恢复 jar 失败: " + rootMessage(ex), ex);
+        }
+    }
+
+    /**
+     * 执行回收站彻底删除（调用方须已持有 {@link #lifecycleLock}）。
+     *
+     * @param fileName 回收站中的文件名
+     * @return 删除结果
+     */
+    private Map<String, Object> doPurgeRecycleJar(String fileName) {
+        String name = Paths.get(fileName).getFileName().toString();
+        if (!name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("只支持删除 .jar 文件: " + name);
+        }
+        Path recycleDir = recycleDirectory();
+        Path source = recycleDir.resolve(name).normalize();
+        if (!source.startsWith(recycleDir)) {
+            throw new IllegalArgumentException("非法文件名: " + name);
+        }
+        long startedAt = System.currentTimeMillis();
+        logPublisher.publish(OsgiLogEvent.start("purge-jar", name));
+        try {
+            boolean deleted = Files.deleteIfExists(source);
+            Files.deleteIfExists(recycleMetaPath(source));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("fileName", name);
+            result.put("deleted", deleted);
+            if (deleted) {
+                logPublisher.publish(OsgiLogEvent.success("purge-jar", name, startedAt, "已彻底删除回收站文件"));
+            } else {
+                logPublisher.publish(OsgiLogEvent.warn("purge-jar", name, "回收站文件已不存在: " + name));
+            }
+            return result;
+        } catch (IOException | RuntimeException ex) {
+            logPublisher.publish(OsgiLogEvent.failure("purge-jar", name, startedAt,
+                    "彻底删除失败: " + rootMessage(ex)));
+            throw new IllegalStateException("彻底删除 jar 失败: " + rootMessage(ex), ex);
+        }
+    }
+
+    /**
+     * 把部署目录中的 jar 移入回收站目录，并写入元数据边车。
+     *
+     * <p>回收站里重名时在扩展名前追加「日期时间-毫秒」后缀，保证先后删除的
+     * 同名文件共存；元数据记录原始文件名、删除时间与 manifest 头信息，
+     * 供恢复与展示使用。边车写失败不回滚移动——文件已在回收站，元数据缺失时
+     * 按回收站文件名兜底展示。</p>
+     *
+     * @param target 部署目录中的 jar 文件（调用方保证存在）
+     * @throws IOException 移动失败
+     */
+    private void moveToRecycle(Path target) throws IOException {
+        Path recycleDir = recycleDirectory();
+        Files.createDirectories(recycleDir);
+        String originalName = target.getFileName().toString();
+        Path recycled = uniqueRecycleTarget(recycleDir, originalName);
+        Files.move(target, recycled);
+        try {
+            writeRecycleMeta(recycleMetaPath(recycled), originalName, readBundleHeadersQuietly(recycled));
+        } catch (IOException ex) {
+            log.warn("回收站元数据写入失败: {}", recycled, ex);
+        }
+    }
+
+    /**
+     * 计算回收站中不重复的目标文件名。
+     *
+     * @param recycleDir   回收站目录
+     * @param originalName 原始文件名（basename）
+     * @return 不与现有文件冲突的目标路径
+     */
+    private Path uniqueRecycleTarget(Path recycleDir, String originalName) {
+        Path candidate = recycleDir.resolve(originalName).normalize();
+        if (!Files.exists(candidate)) {
+            return candidate;
+        }
+        String base = originalName.substring(0, originalName.length() - ".jar".length());
+        String stamp = LocalDateTime.now().format(RECYCLE_STAMP);
+        candidate = recycleDir.resolve(base + "-" + stamp + ".jar").normalize();
+        if (!Files.exists(candidate)) {
+            return candidate;
+        }
+        return recycleDir.resolve(base + "-" + stamp + "-" + System.currentTimeMillis() + ".jar").normalize();
+    }
+
+    /**
+     * 回收站目录绝对路径。
+     *
+     * <p>目录名相对部署目录解析，越出部署目录（如 {@code ../}）直接拒绝。</p>
+     *
+     * @return 回收站目录
+     */
+    private Path recycleDirectory() {
+        String dirName = properties.getRecycle().getDirName();
+        if (dirName == null || dirName.isBlank()) {
+            dirName = ".recycle";
+        }
+        Path dir = deployDirectory();
+        Path recycleDir = dir.resolve(dirName).normalize();
+        if (!recycleDir.startsWith(dir)) {
+            throw new IllegalArgumentException("回收站目录名非法: " + dirName);
+        }
+        return recycleDir;
+    }
+
+    /**
+     * 回收站条目对应的元数据边车路径。
+     *
+     * @param jarFile 回收站中的 jar 文件
+     * @return 边车文件路径
+     */
+    private Path recycleMetaPath(Path jarFile) {
+        return jarFile.resolveSibling(jarFile.getFileName().toString() + RECYCLE_META_SUFFIX);
+    }
+
+    /**
+     * 写回收站元数据边车。
+     *
+     * @param metaPath     边车文件路径
+     * @param originalName 删除前的原始文件名
+     * @param headers      jar 的 OSGi manifest 头信息
+     * @throws IOException 写入失败
+     */
+    private void writeRecycleMeta(Path metaPath, String originalName, BundleHeaders headers) throws IOException {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("originalName", originalName);
+        meta.put("deletedAt", System.currentTimeMillis());
+        meta.put("symbolicName", headers.symbolicName());
+        meta.put("version", headers.version());
+        Files.writeString(metaPath, Json.toJson(meta), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 读取回收站元数据边车（容错版）。
+     *
+     * @param jarFile 回收站中的 jar 文件
+     * @return 元数据键值；边车缺失或损坏时返回尽量少的键
+     */
+    private Map<String, String> readRecycleMeta(Path jarFile) {
+        Map<String, String> meta = new HashMap<>();
+        Path metaPath = recycleMetaPath(jarFile);
+        if (!Files.isRegularFile(metaPath)) {
+            return meta;
+        }
+        try {
+            JsonNode node = Json.parse(Files.readString(metaPath, StandardCharsets.UTF_8));
+            meta.put("originalName", node.get("originalName").toStringValue(jarFile.getFileName().toString()));
+            meta.put("deletedAt", String.valueOf(node.get("deletedAt").toLongValue(0L)));
+            meta.put("symbolicName", node.get("symbolicName").toStringValue(""));
+            meta.put("version", node.get("version").toStringValue(""));
+        } catch (IOException | RuntimeException ex) {
+            log.warn("回收站元数据读取失败: {}", metaPath, ex);
+        }
+        return meta;
+    }
+
+    /**
+     * 描述回收站中的一个 jar 条目。
+     *
+     * @param jarFile 回收站中的 jar 文件
+     * @return 条目描述；文件不可读时返回 null（跳过该条目）
+     */
+    private Map<String, Object> describeRecycleJar(Path jarFile) {
+        try {
+            Map<String, Object> item = new LinkedHashMap<>();
+            Map<String, String> meta = readRecycleMeta(jarFile);
+            item.put("fileName", jarFile.getFileName().toString());
+            item.put("originalName", meta.getOrDefault("originalName", jarFile.getFileName().toString()));
+            item.put("size", sizeQuietly(jarFile));
+            long deletedAt = 0L;
+            try {
+                deletedAt = Long.parseLong(meta.getOrDefault("deletedAt", "0"));
+            } catch (NumberFormatException ignored) {
+                // 边车损坏时退化用文件修改时间
+            }
+            if (deletedAt <= 0) {
+                deletedAt = lastModifiedQuietly(jarFile);
+            }
+            item.put("deletedAt", deletedAt);
+            item.put("symbolicName", meta.getOrDefault("symbolicName", ""));
+            item.put("version", meta.getOrDefault("version", ""));
+            return item;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 读取 jar 的 OSGi 头信息（容错版）：缺 manifest 或解析失败返回空串。
+     *
+     * @param jarPath jar 文件路径
+     * @return 符号名与版本（读不到时为空串）
+     */
+    private BundleHeaders readBundleHeadersQuietly(Path jarPath) {
+        try (InputStream input = Files.newInputStream(jarPath); JarInputStream jar = new JarInputStream(input)) {
+            Manifest manifest = jar.getManifest();
+            if (manifest == null) {
+                return new BundleHeaders("", "");
+            }
+            String symbolicName = manifest.getMainAttributes().getValue(BUNDLE_SYMBOLIC_NAME);
+            symbolicName = symbolicName == null ? "" : symbolicName.split(";", 2)[0].trim();
+            String version = manifest.getMainAttributes().getValue(BUNDLE_VERSION);
+            version = version == null || version.isBlank() ? "" : version.trim();
+            return new BundleHeaders(symbolicName, version);
+        } catch (IOException | RuntimeException ex) {
+            return new BundleHeaders("", "");
+        }
+    }
+
+    /**
+     * 下载部署目录中的 jar 文件（按文件名）。
+     *
+     * <p>与按符号名的 bundle 下载互补：bundle 卸载后符号名入口失效，而文件还在
+     * 部署目录里——删除前备份、误删后取回都走这里。路径校验与删除同口径：
+     * 只取 basename、限定部署目录内、只放行 .jar。</p>
+     *
+     * @param fileName 部署目录中的文件名（只取 basename）
+     * @return jar 文件流
+     * @throws IOException 读取文件失败
+     */
+    @GetMapping("/jars/{fileName}/download")
+    public ResponseEntity<Resource> downloadJar(@PathVariable String fileName) throws IOException {
+        String name = Paths.get(fileName).getFileName().toString();
+        if (!name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("只支持下载 .jar 文件: " + name);
+        }
+        Path dir = deployDirectory();
+        Path target = dir.resolve(name).normalize();
+        if (!target.startsWith(dir)) {
+            throw new IllegalArgumentException("非法文件名: " + name);
+        }
+        if (!Files.isRegularFile(target)) {
+            throw new IllegalArgumentException("jar 文件不存在: " + name);
+        }
+        InputStream input = Files.newInputStream(target);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + name + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(Files.size(target))
+                .body(new InputStreamResource(input));
     }
 
     /**

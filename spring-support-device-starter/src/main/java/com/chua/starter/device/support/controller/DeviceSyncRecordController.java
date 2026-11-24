@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,6 +67,18 @@ public class DeviceSyncRecordController {
     @GetMapping("/summary")
     public ReturnResult<Map<String, Object>> summary() {
         return ReturnResult.ok(syncRecordService.summary());
+    }
+
+    /**
+     * 批量查询各凭据最近一条同步记录（凭据表「最近同步」列）。
+     *
+     * @param credentialIds 凭据 ID 清单（逗号分隔）
+     * @return {credentialId: 最近一条同步记录}；没有同步记录的凭据不在结果里
+     */
+    @GetMapping("/latest")
+    public ReturnResult<Map<String, DeviceSyncRecord>> latestByCredentials(
+            @RequestParam("credentialIds") List<String> credentialIds) {
+        return ReturnResult.ok(syncRecordService.latestByCredentialIds(credentialIds));
     }
 
     /**

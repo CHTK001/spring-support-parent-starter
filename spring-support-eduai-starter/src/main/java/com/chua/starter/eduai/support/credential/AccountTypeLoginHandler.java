@@ -10,7 +10,7 @@ import com.chua.starter.oauth.client.support.provider.LoginData;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.system.constant.SystemConstant;
 import com.chua.starter.system.handler.LoginHandler;
-import com.chua.starter.system.pojo.LoginResult;
+import com.chua.starter.sso.pojo.LoginResult;
 import com.chua.starter.system.service.impl.SysLoginServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

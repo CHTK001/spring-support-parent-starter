@@ -95,6 +95,20 @@ public class OsgiProperties {
     private Shell shell = new Shell();
 
     /**
+     * 框架体征统计采样配置。
+     */
+    private Stats stats = new Stats();
+
+    /**
+     * jar 回收站配置。
+     *
+     * <p>删除部署目录中的 jar 时，先把文件连同元数据边车移入部署目录下的
+     * 回收站目录，支持在控制台「车辆段」里查看、恢复与彻底清除；
+     * 关闭后删除即物理删除，行为与旧版本一致。</p>
+     */
+    private Recycle recycle = new Recycle();
+
+    /**
      * Bean 桥接配置。
      *
      * <p>控制 OSGi 服务投影为容器 Bean 时的验收与切换行为。</p>
@@ -419,5 +433,87 @@ public class OsgiProperties {
          * 待上游补齐导出版本号后开启即可生效。</p>
          */
         private boolean installFrameworkSshdBundles = false;
+    }
+
+    /**
+     * 框架体征统计采样配置。
+     *
+     * <p>采样器周期读取框架读数（bundle 总数 / 活跃数 / 服务类型数 / 自动启动失败数）
+     * 写入内存环形缓冲，供前端趋势图展示；同时监听插件操作日志事件，
+     * 按操作类型聚合成功 / 失败次数与平均耗时。只采样、不落库：
+     * 宿主重启后历史清零，趋势从新积累。</p>
+     *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     stats:
+     *       enabled: true          # 是否开启体征采样（关闭后趋势图为空态）
+     *       interval-seconds: 60   # 采样间隔（秒），最小 5
+     *       history-size: 240      # 历史保留点数，范围 [10, 1440]
+     * </pre>
+     */
+    @Data
+    public static class Stats {
+
+        /**
+         * 是否开启框架体征周期采样。
+         *
+         * <p>默认开启。关闭后不再起采样线程，趋势接口返回空列表；
+         * 操作统计不受影响（事件聚合是被动旁路，无独立线程）。</p>
+         */
+        private boolean enabled = true;
+
+        /**
+         * 采样间隔（秒）。
+         *
+         * <p>默认 60 秒；配置小于 5 时按 5 秒兜底，过密的采样对框架读数没有额外意义。</p>
+         */
+        private long intervalSeconds = 60;
+
+        /**
+         * 历史保留点数。
+         *
+         * <p>默认 240 个点（60 秒间隔约 4 小时趋势）；配置会被收敛到 [10, 1440] 区间，
+         * 上限按分钟级采样封顶一天。</p>
+         */
+        private int historySize = 240;
+    }
+
+    /**
+     * jar 回收站配置。
+     *
+     * <p>删除部署目录中的 jar 时，先把文件连同 {@code .meta.json} 元数据边车
+     * 移入部署目录下的回收站目录；误删可在控制台恢复，确认不需要后再彻底清除。</p>
+     *
+     * <p>配置示例：</p>
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     recycle:
+     *       enabled: true          # 删除是否先进回收站（默认 true）
+     *       dir-name: .recycle     # 回收站目录名（相对部署目录）
+     * </pre>
+     *
+     * @author CH
+     * @since 4.0.0.51
+     */
+    @Data
+    public static class Recycle {
+
+        /**
+         * 是否启用回收站。
+         *
+         * <p>默认开启：删除 jar 先移入回收站目录，可恢复或彻底清除；
+         * 关闭后删除即物理删除，不可恢复。</p>
+         */
+        private boolean enabled = true;
+
+        /**
+         * 回收站目录名（相对部署目录）。
+         *
+         * <p>默认 {@code .recycle}。热部署扫描器只扫描部署目录第一层的
+         * {@code .jar} 文件，回收站子目录天然不会被当作插件加载。</p>
+         */
+        private String dirName = ".recycle";
     }
 }

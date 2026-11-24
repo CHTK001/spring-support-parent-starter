@@ -274,6 +274,34 @@ public class ReidController {
     }
 
     /**
+     * 更新一条观测记录的档案字段（姓名/关联人脸名/经纬度）。
+     *
+     * <p>与 {@code enroll} 的区别：本接口<b>只改档案字段</b>，不重跑检测、不动特征向量。
+     * 「只改个名字」不该要求重新上传照片。分组不可改（向量按组存储）。</p>
+     *
+     * @param id       观测记录 ID（即向量标识）
+     * @param group    分组名（可空，只查默认组）
+     * @param metadata 档案字段（name/faceName/lat/lng）
+     * @return 是否成功
+     */
+    @Operation(summary = "更新重识别观测", description = "只更新档案字段（姓名/关联人脸名/经纬度），不重跑检测、不动特征向量；分组不可改")
+    @PutMapping("/library/{id}")
+    public ReturnResult<?> updateLibraryItem(@PathVariable("id") String id,
+                                             @RequestParam(value = "group", required = false) String group,
+                                             @RequestBody Map<String, Object> metadata) {
+        if (id == null || id.isBlank()) {
+            return ReturnResult.error("观测记录 ID 不能为空");
+        }
+        try {
+            boolean ok = reidService.update(group, id, metadata);
+            return ok ? ReturnResult.ok("更新成功") : ReturnResult.error("未找到该观测记录：" + id);
+        } catch (Exception e) {
+            log.error("[Reid] 观测信息更新失败", e);
+            return ReturnResult.error("观测信息更新失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 轨迹统计。
      *
      * @param group 分组名（可空，只查默认组）

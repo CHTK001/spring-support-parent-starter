@@ -883,6 +883,69 @@ public class AiReidServiceImpl implements AiReidService {
     }
 
     @Override
+    public boolean update(String group, String id, Map<String, Object> metadata) {
+        if (id == null || id.isBlank() || metadata == null) {
+            return false;
+        }
+        String account = AiUserContext.requireUserId();
+        String resolvedGroup = AiLibraryGroups.normalize(group);
+        // 记录按「账号 + 分组」定位：列表按组过滤，跨组提交的 id 在本组视为不存在，
+        // 避免改到别的分组里同 id 的记录（向量是按组隔离的）
+        Map<String, Object> row = null;
+        for (Map<String, Object> item : library.listMine(account, List.of(resolvedGroup))) {
+            if (id.equals(String.valueOf(item.get("id")))) {
+                row = item;
+                break;
+            }
+        }
+        if (row == null) {
+            log.info("[Reid] 更新底库记录未找到: user={} group={} id={}", account, resolvedGroup, id);
+            return false;
+        }
+        // updateMeta 是「档案整体替换」：先并回旧档案，再覆盖允许编辑的字段，
+        // 否则 cameraId/trackId/关联人脸标识这些没让改的字段会被清掉
+        Map<String, Object> merged = new LinkedHashMap<>();
+        if (row.get("metadata") instanceof Map<?, ?> old) {
+            for (Map.Entry<?, ?> entry : old.entrySet()) {
+                merged.put(String.valueOf(entry.getKey()), entry.getValue());
+            }
+        }
+        for (String key : List.of("name", "faceName")) {
+            if (metadata.containsKey(key)) {
+                merged.put(key, metadata.get(key));
+            }
+        }
+        // 分组不可改（向量按组存储）；updateMeta 会把 meta 里的 group 写回分组列，
+        // 这里回填记录当前分组，防止 meta 缺 group 时被归一成默认组
+        merged.put("group", resolvedGroup);
+        // 经纬度走独立列（DECIMAL），不落 meta JSON
+        merged.remove("lat");
+        merged.remove("lng");
+        String name = merged.get("name") == null ? "" : String.valueOf(merged.get("name"));
+        boolean ok = library.updateMeta(account, id, name, merged,
+                decimalOf(metadata.get("lat")), decimalOf(metadata.get("lng")));
+        log.info("[Reid] 更新底库记录: user={} group={} id={} ok={}", account, resolvedGroup, id, ok);
+        return ok;
+    }
+
+    /**
+     * 档案里的经纬度可能是字符串或数字，统一转 {@link BigDecimal}（空值/非法值返回 {@code null}）。
+     *
+     * @param value 原始值
+     * @return 数值；不可解析返回 {@code null}
+     */
+    private static BigDecimal decimalOf(Object value) {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    @Override
     public List<String> groups() {
         String account = AiUserContext.requireUserId();
         // listMine 传空分组列表 = 不按分组过滤，拿到该账号全部观测的分组值

@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class IdempotentTemplate {
 
 // [P3C C1 豁免] 场景化创建线程，需文档化
-    private static final ScheduledExecutorService CLEANER = Executors.newSingleThreadScheduledExecutor(r -> {
+    private static final ScheduledExecutorService CLEANER = new ScheduledThreadPoolExecutor(1, r -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
         Thread t = new Thread(r, "idempotent-cleaner");
         t.setDaemon(true);

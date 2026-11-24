@@ -18,6 +18,7 @@ import com.chua.starter.ai.support.manage.ssh.SshConnectionManager;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiMemoryService;
+import com.chua.starter.ai.support.stream.ChatStreamRegistry;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.common.support.log.MdcWrap;
 import lombok.RequiredArgsConstructor;
@@ -90,6 +91,11 @@ public class ApiChatController {
        * 记忆体存储（会话删除时连带清理该会话的会话级记忆）
        */
     private final SysAiMemoryStore memoryStore;
+
+      /**
+       * 活跃聊天流注册表（SSE 与 WebSocket 共用；开放 API 侧取消委托给它）
+       */
+    private final ChatStreamRegistry chatStreamRegistry;
 
     @PostMapping
       /**
@@ -472,7 +478,11 @@ public class ApiChatController {
        */
     public ApiResult<Void> cancel(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
-        throw new ApiException(ApiErrorCode.NOT_IMPLEMENTED, "当前流式对话服务未实现任务取消");
+        // 委托流式注册表停止该会话的活跃轮次：归属校验、Agent 中断、收尾帧均为现成能力。
+        // nomicore 侧 chat.start 以 conversationId 作为流式 sessionId，键空间一致；
+        // 无活跃流时为幂等成功，与内部 /v2/chat/stream/{id}/stop 口径一致。
+        chatStreamRegistry.requestStop(conversationId, AiUserContext.currentUserId());
+        return ApiResult.ok();
     }
 
     @PostMapping("/{conversationId}/clear-context")

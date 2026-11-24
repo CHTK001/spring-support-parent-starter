@@ -153,6 +153,13 @@
             <version>4.0.0.51</version>
         </dependency>
 
+        <!-- SSO 三方登录契约（LoginResult 等）：AccountTypeLoginHandler 直接使用 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-api-support-common-sso-starter</artifactId>
+            <version>4.0.0.51</version>
+        </dependency>
+
         <!-- 单元测试：覆盖学生口令摘要/校验这类安全核心逻辑。
              刻意不引 mockito：被测对象是纯函数（无外部依赖），
              打桩只会掩盖真实行为。 -->

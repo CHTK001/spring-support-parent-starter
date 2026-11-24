@@ -100,6 +100,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                             credentialId, remote.externalId(), e.getMessage());
                 }
             }
+            finishRecord(record, created, updated, skipped, null);
         } catch (Exception e) {
             log.error("[Device][Sync] 凭据 {} 设备目录同步失败: {}", credentialId, e.getMessage());
             finishRecord(record, created, updated, skipped, "设备目录同步失败: " + e.getMessage());
@@ -108,7 +109,6 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                 session.close();
             }
         }
-        finishRecord(record, created, updated, skipped, null);
         return result(created, updated, skipped);
     }
 
@@ -153,6 +153,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                             credentialId, org.orgId(), e.getMessage());
                 }
             }
+            finishRecord(record, created, updated, skipped, null);
         } catch (Exception e) {
             log.error("[Device][Sync] 凭据 {} 组织同步失败: {}", credentialId, e.getMessage());
             finishRecord(record, created, updated, skipped, "组织同步失败: " + e.getMessage());
@@ -161,7 +162,6 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                 session.close();
             }
         }
-        finishRecord(record, created, updated, skipped, null);
         return result(created, updated, skipped);
     }
 
@@ -205,6 +205,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                             credentialId, remote.externalId(), e.getMessage());
                 }
             }
+            finishRecord(record, created, updated, skipped, null);
         } catch (Exception e) {
             log.error("[Device][Sync] 凭据 {} 人员同步失败: {}", credentialId, e.getMessage());
             finishRecord(record, created, updated, skipped, "人员同步失败: " + e.getMessage());
@@ -213,7 +214,6 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
                 session.close();
             }
         }
-        finishRecord(record, created, updated, skipped, null);
         return result(created, updated, skipped);
     }
 
@@ -928,7 +928,7 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
             record.setDeviceSyncRecordUpdated(updated);
             record.setDeviceSyncRecordRemoved(removed);
             record.setDeviceSyncRecordFailed(failed);
-            record.setDeviceSyncRecordStatus(statusOf(added, updated, removed, failed));
+            record.setDeviceSyncRecordStatus(statusOf(added, updated, removed, failed, message));
             record.setDeviceSyncRecordMessage(message);
             record.setDeviceSyncRecordFinishedAt(LocalDateTime.now());
             syncRecordMapper.updateById(record);
@@ -938,19 +938,21 @@ public class DeviceSyncServiceImpl implements DeviceSyncService {
     }
 
     /**
-     * 按计数推导结果状态：全部失败 = failed；部分失败 = partial；否则 success。
+     * 按计数与说明推导结果状态：有失败计数 = failed / partial；
+     * 无失败计数但带失败说明（凭据失效、Provider 未注册、拉取异常等整段未跑通）= failed；否则 success。
      *
      * @param added   新增数
      * @param updated 更新数
      * @param removed 删除数
      * @param failed  失败数
+     * @param message 结果说明；失败原因非空
      * @return success / partial / failed
      */
-    private static String statusOf(int added, int updated, int removed, int failed) {
+    private static String statusOf(int added, int updated, int removed, int failed, String message) {
         if (failed > 0) {
             return (added + updated + removed) > 0 ? "partial" : "failed";
         }
-        return "success";
+        return StringUtils.hasText(message) ? "failed" : "success";
     }
 
     /**

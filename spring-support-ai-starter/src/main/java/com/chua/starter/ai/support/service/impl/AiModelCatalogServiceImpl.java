@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.manage.service.OnnxExternalDirectoryService;
 import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.ai.support.service.settings.AiModelService;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,10 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AI 统一能力模型清单服务实现。
@@ -183,10 +188,36 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
 
     /**
      * 本地模型详情缓存（只读探测，不触发下载）；TTL 内复用，避免每次打开选择器都做大量路径探测。
+     *
+     * <p>过期后按 stale-while-revalidate 口径处理：请求线程立即返回旧快照，
+     * 由后台单飞线程重算。全量类路径扫描（ModelRegistry.discoverAll）在 fat jar 与
+     * 内存分页压力下单次可达数十秒，若在请求线程内持锁重算，并发的设置读取会全部
+     * 排队挂死（实测坏窗口 8~25 分钟）。本地模型文件极少变化，短暂旧值可接受；
+     * 外部目录变更仍由 {@link #onModelDirsChanged} 即时失效。</p>
      */
     private volatile List<Map<String, Object>> localDetailsCache;
     private volatile long localDetailsCacheAt;
-    private static final long LOCAL_DETAILS_TTL_MS = 10_000L;
+    private static final long LOCAL_DETAILS_TTL_MS = 60_000L;
+
+    /**
+     * 本地模型目录专用锁：与能力清单缓存的 this 锁分离，
+     * 两类扫描互不排队（discoverAll 只做 SPI 类加载，并发安全）。
+     */
+    private final Object localDetailsLock = new Object();
+
+    /**
+     * 后台刷新单飞标记（同一时刻至多一个线程在重算）
+     */
+    private final AtomicBoolean localDetailsRefreshing = new AtomicBoolean(false);
+
+    /**
+     * 后台刷新线程池：单线程、守护线程，进程退出不阻塞
+     */
+    private final ExecutorService localDetailsRefresher = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "ai-model-catalog-refresh");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     @Override
     public List<Map<String, Object>> listLocalModelDetails() {
@@ -194,15 +225,69 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
         if (cache != null && System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
             return cache;
         }
-        synchronized (this) {
-            if (localDetailsCache != null && System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
-                return localDetailsCache;
-            }
-            List<Map<String, Object>> computed = computeLocalModelDetails();
-            localDetailsCache = computed;
-            localDetailsCacheAt = System.currentTimeMillis();
-            return computed;
+        if (cache != null) {
+            // 过期但可用：立即返回旧值，重算交给后台单飞线程
+            triggerLocalDetailsRefresh();
+            return cache;
         }
+        // 首次访问（无任何快照）：同步计算，保持原有语义
+        synchronized (localDetailsLock) {
+            cache = localDetailsCache;
+            if (cache != null && System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
+                return cache;
+            }
+            return computeAndStoreLocalDetails();
+        }
+    }
+
+    /**
+     * 触发一次后台重算（已在跑则跳过）。
+     */
+    private void triggerLocalDetailsRefresh() {
+        if (!localDetailsRefreshing.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            localDetailsRefresher.execute(() -> {
+                try {
+                    synchronized (localDetailsLock) {
+                        // 双检：等锁期间别的路径刚算完就不再重复扫描
+                        if (System.currentTimeMillis() - localDetailsCacheAt < LOCAL_DETAILS_TTL_MS) {
+                            return;
+                        }
+                        computeAndStoreLocalDetails();
+                    }
+                } catch (Throwable e) {
+                    // 重算失败沿用旧快照，不打断业务
+                    log.warn("[AiModelCatalog] 后台刷新本地模型目录失败，沿用旧快照: {}", e.getMessage());
+                } finally {
+                    localDetailsRefreshing.set(false);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            // 线程池已关闭（停机中）：放弃本次后台刷新，不影响调用方
+            localDetailsRefreshing.set(false);
+        }
+    }
+
+    /**
+     * 计算并落缓存（调用方需持有 {@link #localDetailsLock}）。
+     *
+     * @return 新计算的本地模型详情
+     */
+    private List<Map<String, Object>> computeAndStoreLocalDetails() {
+        List<Map<String, Object>> computed = computeLocalModelDetails();
+        localDetailsCache = computed;
+        localDetailsCacheAt = System.currentTimeMillis();
+        return computed;
+    }
+
+    /**
+     * 停机时释放后台刷新线程。
+     */
+    @PreDestroy
+    void shutdownLocalDetailsRefresher() {
+        localDetailsRefresher.shutdownNow();
     }
 
     /**

@@ -22,6 +22,9 @@ import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.entity.SysAiMessage;
 import com.chua.starter.ai.support.entity.SysAiSessionGroup;
 import com.chua.starter.ai.support.entity.SysAiSessionTrace;
+import com.chua.starter.ai.support.service.AiSessionEventBroadcaster;
+import com.chua.starter.ai.support.service.AiSessionTodoService;
+import com.chua.starter.ai.support.service.SessionGoalService;
 import com.chua.starter.ai.support.service.SessionNextTaskService;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -92,9 +95,24 @@ public class AiSessionController {
     private final com.chua.starter.ai.support.service.SessionInputSuggestService sessionInputSuggestService;
 
       /**
+       * 会话待办服务（opencode todowrite 镜像查询入口）
+       */
+    private final AiSessionTodoService sessionTodoService;
+
+      /**
+       * 会话目标服务（settings.goal 状态机：读取/保存/暂停/恢复/销毁）
+       */
+    private final SessionGoalService sessionGoalService;
+
+      /**
        * 工作目录文件变化事件流（工作区侧栏实时刷新用）
        */
     private final com.chua.starter.ai.support.service.AiWorkspaceEventStreamService workspaceEventStream;
+
+    /**
+     * 会话事件广播器（会话增删改跨标签页同步）
+     */
+    private final AiSessionEventBroadcaster sessionEventBroadcaster;
     private final SysAiSessionTraceMapper sessionTraceMapper;
 
       /**
@@ -1300,6 +1318,12 @@ public class AiSessionController {
         result.put("mcpServerIds", parseIdList(session.getMcpServerIds()));
         result.put("settings", updatedSettings);
         result.put("workspacePath", updatedSettings.get(SessionWorkspaceResolver.WORKSPACE_PATH_KEY));
+
+        // 广播会话更新事件：其他标签页同步标题/分组/模型/设置（发起方按 source 自忽略）
+        Map<String, Object> eventSession = new HashMap<>(result);
+        eventSession.remove("success");
+        sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_SESSION_UPDATED,
+                session.getSysUserId(), String.valueOf(session.getId()), Map.of("session", eventSession));
         return ReturnResult.ok(result);
     }
 
@@ -1311,10 +1335,18 @@ public class AiSessionController {
        */
     @PostMapping
     public ReturnResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        String title = body.getOrDefault("title", "新会话").toString();
+        // null 防御：getOrDefault 对「键存在但值为 null」会返回 null，直接 .toString() 会 NPE
+        // （前端模型列表未就绪时 payload 会带 modelId:null，2026-11-24 实测踩雷）
+        Object titleRaw = body.get("title");
+        String title = titleRaw == null ? "新会话" : titleRaw.toString();
           // 前端字段为 characterId，兼容旧字段 roleId
-        String characterIdRaw = body.getOrDefault("characterId", body.getOrDefault("roleId", "")).toString();
-        String modelId = body.getOrDefault("modelId", "").toString();
+        Object characterRaw = body.get("characterId");
+        if (characterRaw == null) {
+            characterRaw = body.get("roleId");
+        }
+        String characterIdRaw = characterRaw == null ? "" : characterRaw.toString();
+        Object modelIdRaw = body.get("modelId");
+        String modelId = modelIdRaw == null ? "" : modelIdRaw.toString();
         Object mcpServerIdsRaw = body.get("mcpServerIds");
 
           // 真正保存到数据库
@@ -1355,6 +1387,10 @@ public class AiSessionController {
         result.put("updatedAt", session.getUpdateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli());
 
         log.info("[Session] 创建会话: id={}, title={}, characterId={}", session.getId(), title, session.getCharacterId());
+
+        // 广播会话创建事件：其他标签页同步侧边栏（发起方按 source 自忽略）
+        sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_SESSION_CREATED,
+                session.getSysUserId(), String.valueOf(session.getId()), Map.of("session", result));
         return ReturnResult.ok(result);
     }
 
@@ -1953,14 +1989,15 @@ public class AiSessionController {
     }
 
       /**
-       * 取会话待办列表。
+       * 取会话待办列表（opencode todowrite 的服务端镜像）。
        *
-       * <p>后端目前没有待办存储，这里**如实返回空列表**：前端据此显示「暂无待办」，
-       * 而不是因为 404 在控制台报「资源不存在」并把面板置为错误态。
-       * 待办要真做需要独立的存储与写入链路，属另一个功能。</p>
+       * <p>Agent 运行时每次 {@code todowrite} 都会把全量待办列表镜像到
+       * {@code sys_ai_session_todo} 并广播 {@code todo_updated}；本接口按
+       * Agent 下发顺序返回镜像列表，供前端「待办」面板在刷新 / 重开标签页后恢复。
+       * 写入只发生在后端 Agent 链路，前端无写入口。</p>
        *
        * @param id 会话标识
-       * @return items（当前恒为空数组）
+       * @return {items:[{id,todoId,content,status,priority,sortNo}], total}
        */
     @GetMapping("/{id}/todo")
     public ReturnResult<Map<String, Object>> todo(@PathVariable("id") String id) {
@@ -1969,9 +2006,95 @@ public class AiSessionController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
         }
         requireReadableSession(sessionId);
-        Map<String, Object> result = new HashMap<>();
-        result.put("items", new ArrayList<>());
-        return ReturnResult.ok(result);
+        return ReturnResult.ok(sessionTodoService.listBySession(
+                String.valueOf(sessionId), AiUserContext.currentUserId()));
+    }
+
+      /**
+       * 读取会话目标。
+       *
+       * @param id 会话标识
+       * @return 目标；未设置时 data 为 null
+       */
+    @GetMapping("/{id}/goal")
+    public ReturnResult<SessionGoalService.GoalView> goal(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireReadableSession(sessionId);
+        return ReturnResult.ok(sessionGoalService.getGoal(sessionId));
+    }
+
+      /**
+       * 新建或覆盖会话目标（状态置 RUNNING；标题不变保留计数，标题变更计数清零）。
+       *
+       * @param id   会话标识
+       * @param body {title, detail?}
+       * @return 落库后的目标
+       */
+    @PutMapping("/{id}/goal")
+    public ReturnResult<SessionGoalService.GoalView> saveGoal(@PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        String title = body == null || body.get("title") == null ? null : String.valueOf(body.get("title"));
+        String detail = body == null || body.get("detail") == null ? "" : String.valueOf(body.get("detail"));
+        return ReturnResult.ok(sessionGoalService.saveGoal(sessionId, title, detail));
+    }
+
+      /**
+       * 暂停会话目标（RUNNING/PENDING → PAUSED；终态 409）。
+       *
+       * @param id 会话标识
+       * @return 暂停后的目标
+       */
+    @PostMapping("/{id}/goal/pause")
+    public ReturnResult<SessionGoalService.GoalView> pauseGoal(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        return ReturnResult.ok(sessionGoalService.pauseGoal(sessionId));
+    }
+
+      /**
+       * 恢复会话目标（PAUSED → RUNNING；终态 409）。
+       *
+       * @param id 会话标识
+       * @return 恢复后的目标
+       */
+    @PostMapping("/{id}/goal/resume")
+    public ReturnResult<SessionGoalService.GoalView> resumeGoal(@PathVariable("id") String id) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        return ReturnResult.ok(sessionGoalService.resumeGoal(sessionId));
+    }
+
+      /**
+       * 取消并彻底销毁会话目标（settings.goal 节点移除，前后端都不保留；幂等）。
+       *
+       * @param id   会话标识
+       * @param body {reason?} 取消原因（仅记日志）
+       * @return 被销毁的目标（state=CANCELED）；本就无目标时 data 为 null
+       */
+    @PostMapping("/{id}/goal/cancel")
+    public ReturnResult<SessionGoalService.GoalView> cancelGoal(@PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        Long sessionId = resolveSessionId(id);
+        if (sessionId == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在");
+        }
+        requireWritableSession(sessionId);
+        String reason = body == null || body.get("reason") == null ? "" : String.valueOf(body.get("reason"));
+        return ReturnResult.ok(sessionGoalService.cancelGoal(sessionId, reason));
     }
 
       /**
@@ -2638,6 +2761,7 @@ public class AiSessionController {
         Long sessionId = Long.parseLong(id);
    // 写出口校验：仅归属人可删，管理员对他人数据只读
         requireWritableSession(sessionId);
+        SysAiSession deleting = sessionMapper.selectById(sessionId);
         
           // 删除会话的所有消息
         LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();
@@ -2651,6 +2775,12 @@ public class AiSessionController {
 
           // 删除会话
         sessionMapper.deleteById(sessionId);
+
+        // 广播会话删除事件：发给会话归属人（管理员代删时，归属人的其他标签页同步摘除）
+        if (deleting != null) {
+            sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_SESSION_DELETED,
+                    deleting.getSysUserId(), String.valueOf(sessionId), null);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);

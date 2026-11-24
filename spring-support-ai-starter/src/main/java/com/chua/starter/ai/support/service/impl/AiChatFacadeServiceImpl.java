@@ -21,6 +21,7 @@ import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.chat.DecisionClientRegistry;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
+import com.chua.starter.ai.support.controller.AiSessionController;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiRole;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
@@ -43,6 +44,7 @@ import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.AiSessionTodoService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiGroupRoleResolver;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
@@ -121,6 +123,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiGroupRoleResolver sysAiGroupRoleResolver; // 分组默认角色（分组 → 角色 → 分形态提示词）
     private final SysAiRoleMapper sysAiRoleMapper; // 角色表：把子代理白名单（settings.agents）解析成可路由子 Agent
     private final DecisionClientRegistry decisionClientRegistry; // 决策能力入口：按会话配置取 DecisionsClient 挂到 Agent
+    private final AiSessionTodoService sessionTodoService; // 会话待办镜像（opencode todowrite → sys_ai_session_todo）
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -1490,6 +1493,20 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         AgentChatClient wrapper = new AgentChatClient(agent)
                 .withCloseHook(runtime != null ? runtime::close : null);
+        // 会话待办镜像（G2）：Agent 运行时（opencode）调用 todowrite 时，工具入参
+        // 经 TOOL_START 事件透出；这里按会话旁路拦截，把全量待办列表整表替换进
+        // sys_ai_session_todo 并广播 todo_updated。回调异常已在 AgentChatClient 兜底，
+        // 不影响对话流；无业务会话（解析不出数字主键）的轮次不挂镜像。
+        Long todoSessionId = resolveMirrorableSessionId(request.getSessionId());
+        if (todoSessionId != null) {
+            final Long mirrorSessionId = todoSessionId;
+            final String mirrorUserId = AiUserContext.currentUserId();
+            wrapper.withToolObserver((toolName, toolInput) -> {
+                if (AiSessionTodoService.TOOL_NAME_TODOWRITE.equals(toolName)) {
+                    sessionTodoService.replaceFromAgent(mirrorSessionId, mirrorUserId, toolInput);
+                }
+            });
+        }
         // 把本轮的中断动作登记到活跃流注册表：
         // 用户点「停止」时，ChatStreamRegistry.requestStop 会调它，
         // 真正掐断在跑的执行（opencode 子进程 / agentscope Harness / langchain4j 循环），
@@ -1503,6 +1520,26 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 AiUserContext.currentUserId(), admin, agentId, subAgentOn ? "AUTO" : "SINGLE",
                 mcpOn, subAgentOn, routedSubAgents, planOn);
         return wrapper;
+    }
+
+    /**
+     * 解析可镜像待办的业务会话数字标识。
+     *
+     * <p>聊天请求的 {@code sessionId} 通常是 {@code sys_ai_session} 数字主键的字符串形式
+     * （前端 {@code String(session.id)}）；历史别名（UUID 等）经会话映射表归一。
+     * 解析不到时返回 {@code null}，本轮回退不挂待办镜像。</p>
+     *
+     * @param sessionId 请求携带的会话标识
+     * @return 数字主键；不可解析时 {@code null}
+     */
+    private Long resolveMirrorableSessionId(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            return null;
+        }
+        if (sessionId.matches("\\d+")) {
+            return Long.parseLong(sessionId);
+        }
+        return AiSessionController.SESSION_DIALOG_MAP.get(sessionId);
     }
 
     /**

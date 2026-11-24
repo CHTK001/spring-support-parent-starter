@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.service;
 
 import com.chua.common.support.browser.BrowserOptions;
 import com.chua.common.support.browser.BrowserPage;
+import com.chua.common.support.browser.LiveProxyServer;
 import com.chua.common.support.browser.cdp.CdpBrowserEngine;
 import com.chua.common.support.browser.cdp.CdpLiveServer;
 import com.chua.starter.account.channel.service.AccountChannelService;
@@ -15,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -85,7 +88,16 @@ public class ProviderCreditLoginService {
     /**
      * 轮询间隔（毫秒）
      */
-    private static final long POLL_INTERVAL_MILLIS = 800L;
+    private static final long POLL_INTERVAL_MILLIS = 250L;
+
+    /**
+     * 实时登录窗口的令牌轮询间隔（毫秒）。
+     *
+     * <p>比无头链路更密：用户在画面里完成登录后要立即看到结果，
+     * 250ms 的粒度会让「登录成功」到界面提示多等一个轮询周期。
+     * 代价是每秒多 6 次页面 evaluate，量级远小于画面推流。</p>
+     */
+    private static final long LIVE_POLL_INTERVAL_MILLIS = 100L;
 
     /**
      * 静默续期的回访等待上限（毫秒）：无头页面加载 + 平台可能的令牌轮换窗口。
@@ -110,6 +122,13 @@ public class ProviderCreditLoginService {
      */
     private static final long LIVE_REAPER_PERIOD_SECONDS = 60L;
 
+    /**
+     * 常驻登录浏览器空闲释放时间（秒）：实时登录结束后复用进程，超过该时长无新登录则关闭，
+     * 避免长期占用内存。{@code -Dchua.credit.live.engine-idle-seconds} 可覆盖，0 表示用完即关。
+     */
+    private static final long LIVE_ENGINE_IDLE_SECONDS =
+            Long.getLong("chua.credit.live.engine-idle-seconds", 180L);
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
@@ -124,6 +143,23 @@ public class ProviderCreditLoginService {
      * 浏览器——登录窗口不再弹在服务端桌面上，而是嵌进管理页面里。
      */
     private volatile CdpLiveServer liveServer;
+
+    /**
+     * 上游登录页反向代理（懒启动）：用户浏览器经代理<b>原生加载</b>上游登录页，
+     * 注入脚本在页面内截获令牌后同源回传——零截屏、零输入转发，无推流卡顿与延迟。
+     */
+    private volatile LiveProxyServer liveProxy;
+
+    /**
+     * 常驻登录浏览器：实时登录会话共享同一个无头进程，每个会话开一个隔离上下文，
+     * 把「打开登录窗口」从 Chromium 冷启动（1.3~3.3s）降到百毫秒级
+     */
+    private volatile CdpBrowserEngine liveEngine;
+
+    /**
+     * 常驻浏览器空闲起始时间（毫秒）；0 表示正在使用
+     */
+    private volatile long liveEngineIdleSince;
 
     /**
      * 实时登录会话表：sessionToken → 会话（含进行中与已出终态待领取的）
@@ -859,6 +895,23 @@ public class ProviderCreditLoginService {
                             + "（令牌接口地址特征）或 credit_cookie_name / credit_storage_key",
                     null, null, 0, loginUrl);
         }
+        // 优先走反向代理：用户浏览器原生加载上游登录页（无截屏推流，卡顿/延迟从根上消除）；
+        // 代理不可用或打开失败时回落 CDP 推流链路
+        LiveProxyServer proxy = null;
+        try {
+            proxy = liveProxy();
+        } catch (RuntimeException e) {
+            log.warn("[credit-live-login] 供应商 {} 启动登录代理失败，回落 CDP 推流: {}",
+                    entity.getProviderId(), e.getMessage());
+        }
+        if (proxy != null) {
+            try {
+                return openProxyLiveLogin(entity, proxy, hooks, loginUrl);
+            } catch (RuntimeException | IOException e) {
+                log.warn("[credit-live-login] 供应商 {} 代理打开登录页失败，回落 CDP 推流: {}",
+                        entity.getProviderId(), e.getMessage());
+            }
+        }
         CdpLiveServer server;
         try {
             server = liveServer();
@@ -867,25 +920,37 @@ public class ProviderCreditLoginService {
             return new LiveLoginHandle(false, "无法启动登录画面服务：" + e.getMessage(), null, null, 0, loginUrl);
         }
         // 无头引擎：画面经 CDP screencast 推流，不依赖服务端桌面（部署在远端机也能登录）
-        CdpBrowserEngine engine = new CdpBrowserEngine();
+        // 复用常驻浏览器 + 独立上下文：每次登录不再冷启动 Chromium（实测 1.3~3.3s），
+        // 开窗只付上下文/标签页创建（实测 0.4~1.4s）；不同供应商的 Cookie / 存储靠 incognito 上下文隔离
         BrowserOptions browserOptions = new BrowserOptions().setHeadless(true).setWidth(1280).setHeight(900);
+        CdpBrowserEngine engine;
         try {
-            engine.start(browserOptions);
+            engine = liveEngine(browserOptions);
         } catch (RuntimeException e) {
-            engine.close();
             log.warn("[credit-live-login] 供应商 {} 启动登录浏览器失败: {}", entity.getProviderId(), e.getMessage());
             return new LiveLoginHandle(false, "无法启动登录浏览器：" + e.getMessage(), null, null, 0, loginUrl);
         }
         String sessionToken = UUID.randomUUID().toString().replace("-", "");
+        String origin = originOf(loginUrl);
         try {
-            BrowserPage page = engine.openPage(browserOptions);
+            // 复用页面同一时刻只能归一个会话：还有待登录会话时退回隔离上下文，避免画面/登录态互盖
+            boolean sharedPage = !hasPendingLiveSession();
+            BrowserPage page = sharedPage
+                    ? engine.acquireReusablePage(browserOptions)
+                    : engine.openIsolatedPage(browserOptions);
+            if (sharedPage) {
+                // 先清掉上一会话残留的 Cookie / 站点存储 / 初始化脚本
+                engine.releaseReusablePage(origin);
+            }
             String capturePattern = hooks.capturePattern();
             if (nonBlank(capturePattern)) {
                 page.addInitScript(captureScript(capturePattern));
             }
-            page.navigate(loginUrl);
+            page.navigateEarly(loginUrl);
             LiveSession session = new LiveSession(sessionToken, entity.getProviderId(),
                     engine, page, hooks, capturePattern);
+            session.sharedPage = sharedPage;
+            session.origin = origin;
             liveSessions.put(sessionToken, session);
             // 画面/交互接管：同一 token 重复观看时旧流自动让位；会话空闲 30 分钟自动回收
             server.view(page, sessionToken);
@@ -907,7 +972,7 @@ public class ProviderCreditLoginService {
             return new LiveLoginHandle(true, "登录窗口已就绪，请在画面中完成上游门户登录",
                     sessionToken, "/live/s/" + sessionToken, server.port(), loginUrl);
         } catch (RuntimeException e) {
-            engine.close();
+            closeLiveEngineQuietly();
             log.warn("[credit-live-login] 供应商 {} 打开登录页失败: {}", entity.getProviderId(), e.getMessage());
             return new LiveLoginHandle(false, "打开登录页失败：" + e.getMessage(), null, null, 0, loginUrl);
         }
@@ -950,6 +1015,216 @@ public class ProviderCreditLoginService {
     }
 
     /**
+     * 反向代理版实时登录：建立代理会话（注入截获脚本）并挂后台令牌嗅探线程。
+     *
+     * <p>前端拿到的仍是 {@code livePort + livePath}，拼进 iframe 的地址变成
+     * {@code http://<后端主机>:<livePort>/live/p/<token>}——与 CDP 推流版同构，
+     * 前端零改动；区别是 iframe 里跑的是上游页面的原生渲染，不再是服务端截屏。</p>
+     *
+     * @param entity 供应商
+     * @param proxy  反向代理服务
+     * @param hooks  截获钩子集
+     * @param loginUrl 上游登录页地址
+     * @return 会话创建结果
+     * @throws IOException 代理会话建立失败
+     */
+    private LiveLoginHandle openProxyLiveLogin(SysAccountChannel entity, LiveProxyServer proxy,
+                                               LoginHooks hooks, String loginUrl) throws IOException {
+        String sessionToken = UUID.randomUUID().toString().replace("-", "");
+        String publicPath = proxy.open(loginUrl, proxyCaptureScript(hooks));
+        LiveSession session = new LiveSession(sessionToken, entity.getProviderId(), null, null,
+                hooks, hooks.capturePattern());
+        session.proxy = proxy;
+        liveSessions.put(sessionToken, session);
+        startLiveReaperIfAbsent();
+        ThreadPoolExecutor worker = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), runnable -> {
+            Thread thread = new Thread(runnable, "credit-live-proxy-" + sessionToken.substring(0, 8));
+            thread.setDaemon(true);
+            return thread;
+        });
+        worker.execute(() -> {
+            try {
+                awaitLiveProxyToken(session);
+            } finally {
+                worker.shutdown();
+            }
+        });
+        log.info("[credit-live-login] 供应商 {} 反向代理登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
+        return new LiveLoginHandle(true, "登录窗口已就绪，请在页面中完成上游门户登录",
+                sessionToken, publicPath, proxy.port(), loginUrl);
+    }
+
+    /**
+     * 代理版令牌嗅探：页面注入脚本截获到候选令牌后经 capture 端点投递进队列，
+     * 这里轮询队列直到拿到令牌或超时；成功 / 超时 / 取消口径与 {@link #awaitLiveToken} 一致。
+     *
+     * @param session 实时登录会话（代理模式）
+     */
+    private void awaitLiveProxyToken(LiveSession session) {
+        String token = null;
+        try {
+            long deadline = System.currentTimeMillis() + TOKEN_WAIT_MILLIS;
+            while (System.currentTimeMillis() < deadline) {
+                // 已取消（会话已被移除）：直接退出，状态由取消方写好
+                if (session.cancelled || liveSessions.get(session.token) != session) {
+                    return;
+                }
+                token = session.capturedTokens.poll(LIVE_POLL_INTERVAL_MILLIS, TimeUnit.MILLISECONDS);
+                if (token != null && !token.isBlank()) {
+                    break;
+                }
+            }
+            if (session.cancelled) {
+                return;
+            }
+            if (token != null && !token.isBlank()) {
+                persistToken(session.providerId, token);
+                finish(session, LiveLoginStatus.SUCCESS, "登录成功：会话令牌已追加为余额密钥", mask(token));
+                log.info("[credit-live-login] 供应商 {} 登录成功（代理链路），令牌 {} 已追加",
+                        session.providerId, session.tokenMask);
+            } else {
+                finish(session, LiveLoginStatus.FAILED, "等待登录超时：请在登录窗口内完成上游门户登录后重试", null);
+                log.warn("[credit-live-login] 供应商 {} 等待登录超时（代理链路）", session.providerId);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            finish(session, LiveLoginStatus.FAILED, "登录轮询被中断", null);
+        } catch (RuntimeException e) {
+            if (session.cancelled) {
+                return;
+            }
+            finish(session, LiveLoginStatus.FAILED, "登录执行失败：" + e.getMessage(), null);
+            log.warn("[credit-live-login] 供应商 {} 登录失败（代理链路）: {}", session.providerId, e.getMessage());
+        } finally {
+            closeLiveBrowser(session);
+        }
+    }
+
+    /**
+     * 懒启动上游登录页反向代理，并挂上令牌捕获回调（按会话 token 投递到对应队列）。
+     *
+     * @return 代理服务实例
+     * @throws IllegalStateException 端口监听失败
+     */
+    private synchronized LiveProxyServer liveProxy() {
+        LiveProxyServer proxy = liveProxy;
+        if (proxy != null) {
+            return proxy;
+        }
+        LiveProxyServer created = new LiveProxyServer();
+        created.setCaptureListener((token, payload) -> {
+            LiveSession session = liveSessions.get(token);
+            if (session == null) {
+                return;
+            }
+            String candidate = extractPayloadToken(payload);
+            if (nonBlank(candidate)) {
+                session.capturedTokens.offer(candidate);
+            }
+        });
+        try {
+            created.start();
+        } catch (IOException e) {
+            throw new IllegalStateException("启动登录代理服务失败：" + e.getMessage(), e);
+        }
+        liveProxy = created;
+        log.info("[credit-live-login] 反向代理登录服务已启动: 端口 {}", created.port());
+        return created;
+    }
+
+    /**
+     * 从页面回传的 JSON 负载里取候选令牌（{@code {"token":"..."}}）。
+     *
+     * @param payload 页面上交的 JSON 文本
+     * @return 候选令牌；解析不出返回 null
+     */
+    private String extractPayloadToken(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode node = MAPPER.readTree(payload);
+            JsonNode token = node.get("token");
+            if (token != null && token.isTextual() && !token.asText().isBlank()) {
+                return token.asText();
+            }
+        } catch (Exception ignored) {
+            // 非 JSON 负载忽略
+        }
+        return null;
+    }
+
+    /**
+     * 生成代理版页面注入脚本：与 {@link #captureScript(String)} 同一套截获口径
+     * （Cookie 名 → localStorage 键 → 地址特征响应体按 JSON 路径 / 递归
+     * access_token / token），但命中后直接经 {@code __chuaCapturePost} 同源回传，
+     * 另加定时扫描覆盖「令牌只落存储、无显式接口响应」的门户。
+     *
+     * @param hooks 截获钩子集
+     * @return 注入脚本（&lt;script&gt;...&lt;/script&gt;）
+     */
+    private String proxyCaptureScript(LoginHooks hooks) {
+        String pattern = nonBlank(hooks.capturePattern()) ? quote(hooks.capturePattern()) : "null";
+        String cookieName = nonBlank(hooks.cookieName()) ? quote(hooks.cookieName()) : "null";
+        String storageKey = nonBlank(hooks.storageKey()) ? quote(hooks.storageKey()) : "null";
+        String tokenPath = nonBlank(hooks.tokenPath()) ? quote(hooks.tokenPath()) : "null";
+        return "<script>(function(){"
+                + "var PATTERN=" + pattern + ",COOKIE=" + cookieName + ",SKEY=" + storageKey + ",TPATH=" + tokenPath + ";"
+                + "var sent={};"
+                + "function pick(s){if(!s||sent[s]){return}sent[s]=1;try{window.__chuaCapturePost({token:String(s)});}catch(e){}}"
+                + "function parse(o){try{if(typeof o==='string'){o=JSON.parse(o)}}catch(e){return null}return o}"
+                + "function deep(o){o=parse(o);if(!o||typeof o!=='object'){return null}"
+                + " var hit=null;function walk(n){if(hit||!n||typeof n!=='object'){return}"
+                + " ['access_token','token','accessToken','jwt'].some(function(k){"
+                + "  if(n[k]&&(typeof n[k]==='string'||typeof n[k]==='number')&&String(n[k]).length>6){hit=String(n[k]);return true}return false});"
+                + " if(!hit){Object.keys(n).forEach(function(k){if(!hit){walk(n[k])}})}}walk(o);return hit}"
+                + "function byPath(o){try{if(!TPATH){return deep(o)}var n=parse(o);if(!n){return null}"
+                + " TPATH.split('/').forEach(function(s){if(s&&n){n=n[s]}});"
+                + " return (typeof n==='string'||typeof n==='number')?String(n):null}catch(e){return null}}"
+                + "function checkUrl(url,body){try{if(PATTERN&&!new RegExp(PATTERN).test(String(url||''))){return}"
+                + " var t=byPath(body)||deep(body);if(t){pick(t)}}catch(e){}}"
+                + "function sweep(){try{"
+                + " if(COOKIE){var m=document.cookie.match(new RegExp('(?:^|;\\\\s*)'+COOKIE+'=([^;]*)'));"
+                + "  if(m){pick(decodeURIComponent(m[1]))}}"
+                + " if(SKEY){var v=localStorage.getItem(SKEY)||sessionStorage.getItem(SKEY);"
+                + "  if(v){var t=deep(v);if(t){pick(t)}}}"
+                + "}catch(e){}}"
+                + "if(!window.__chuaLiveHooked){window.__chuaLiveHooked=1;"
+                + " var of=window.fetch;"
+                + " if(of){window.fetch=function(){var a=arguments;return of.apply(this,a).then(function(r){"
+                + "  try{r.clone().text().then(function(t){checkUrl(r.url||a[0],t)})}catch(e){}return r})}}"
+                + " var oo=XMLHttpRequest.prototype.open,os=XMLHttpRequest.prototype.send;"
+                + " XMLHttpRequest.prototype.open=function(m,u){this.__chuaUrl=u;return oo.apply(this,arguments)};"
+                + " XMLHttpRequest.prototype.send=function(){var x=this;x.addEventListener('load',function(){"
+                + "  try{checkUrl(x.__chuaUrl,x.responseText)}catch(e){}});return os.apply(this,arguments)};"
+                + " sweep();setInterval(sweep,2000);"
+                + "}"
+                + "})()</script>";
+    }
+
+    /**
+     * 确保终态会话回收器在跑（CDP 推流与反向代理两种登录链路共用）。
+     */
+    private void startLiveReaperIfAbsent() {
+        if (liveReaper != null) {
+            return;
+        }
+        synchronized (this) {
+            if (liveReaper == null) {
+                ScheduledThreadPoolExecutor reaper = new ScheduledThreadPoolExecutor(1, runnable -> {
+                    Thread thread = new Thread(runnable, "credit-live-login-reaper");
+                    thread.setDaemon(true);
+                    return thread;
+                });
+                reaper.scheduleWithFixedDelay(this::reapLiveSessions,
+                        LIVE_REAPER_PERIOD_SECONDS, LIVE_REAPER_PERIOD_SECONDS, TimeUnit.SECONDS);
+                liveReaper = reaper;
+            }
+        }
+    }
+
+    /**
      * 后台令牌嗅探：与 {@link #login} 同一套截获钩子轮询，截获即追加落库；
      * 超时 / 异常按 failed 收尾。会话记录保留 {@link #LIVE_RESULT_TTL_MILLIS}
      * 供前端领取结果，之后由回收器清理。
@@ -969,7 +1244,7 @@ public class ProviderCreditLoginService {
                 if (token != null && !token.isBlank()) {
                     break;
                 }
-                Thread.sleep(POLL_INTERVAL_MILLIS);
+                Thread.sleep(LIVE_POLL_INTERVAL_MILLIS);
             }
             if (session.cancelled) {
                 return;
@@ -1019,6 +1294,16 @@ public class ProviderCreditLoginService {
      * @param session 实时登录会话
      */
     private void closeLiveBrowser(LiveSession session) {
+        LiveProxyServer proxy = session.proxy;
+        if (proxy != null) {
+            // 代理会话：没有服务端浏览器可关，只销毁代理会话（对应路径随即失效）
+            try {
+                proxy.close(session.token);
+            } catch (Exception e) {
+                log.debug("[credit-live-login] 关闭代理会话失败: {}", e.getMessage());
+            }
+            return;
+        }
         if (liveServer != null) {
             try {
                 liveServer.close(session.token);
@@ -1027,13 +1312,68 @@ public class ProviderCreditLoginService {
             }
         }
         CdpBrowserEngine engine = session.engine;
+        BrowserPage page = session.page;
         session.engine = null;
         session.page = null;
+        if (page != null) {
+            if (session.sharedPage && engine != null && page == engine.reusablePage()) {
+                // 复用页面不销毁：只清掉登录态，留给下一个供应商的登录窗口
+                engine.releaseReusablePage(session.origin);
+            } else {
+                try {
+                    // 页面关闭即销毁所属隔离上下文（引擎侧绑定），浏览器进程保留供下次复用
+                    page.close();
+                } catch (Exception e) {
+                    log.debug("[credit-live-login] 关闭登录页面失败: {}", e.getMessage());
+                }
+            }
+        }
+        if (LIVE_ENGINE_IDLE_SECONDS <= 0) {
+            closeLiveEngineQuietly();
+        } else {
+            liveEngineIdleSince = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * 取常驻登录浏览器（未启动 / 已退出时重新拉起）。
+     *
+     * @param options 启动参数
+     * @return 可用的浏览器引擎
+     */
+    private synchronized CdpBrowserEngine liveEngine(BrowserOptions options) {
+        CdpBrowserEngine engine = liveEngine;
+        if (engine != null && engine.isRunning()) {
+            liveEngineIdleSince = 0L;
+            return engine;
+        }
         if (engine != null) {
             try {
                 engine.close();
             } catch (Exception e) {
-                log.debug("[credit-live-login] 关闭登录浏览器失败: {}", e.getMessage());
+                log.debug("[credit-live-login] 回收失效浏览器失败: {}", e.getMessage());
+            }
+        }
+        CdpBrowserEngine created = new CdpBrowserEngine();
+        created.start(options);
+        liveEngine = created;
+        liveEngineIdleSince = 0L;
+        log.info("[credit-live-login] 常驻登录浏览器已启动，后续登录窗口复用该进程");
+        return created;
+    }
+
+    /**
+     * 关闭常驻登录浏览器（幂等）。
+     */
+    private void closeLiveEngineQuietly() {
+        CdpBrowserEngine engine = liveEngine;
+        liveEngine = null;
+        liveEngineIdleSince = 0L;
+        if (engine != null) {
+            try {
+                engine.close();
+            } catch (Exception e) {
+                log.debug("[credit-live-login] 关闭常驻浏览器失败: {}", e.getMessage());
             }
         }
     }
@@ -1056,14 +1396,7 @@ public class ProviderCreditLoginService {
                 } catch (IOException e) {
                     throw new IllegalStateException("启动登录画面服务失败：" + e.getMessage(), e);
                 }
-                ScheduledThreadPoolExecutor reaper = new ScheduledThreadPoolExecutor(1, runnable -> {
-                    Thread thread = new Thread(runnable, "credit-live-login-reaper");
-                    thread.setDaemon(true);
-                    return thread;
-                });
-                reaper.scheduleWithFixedDelay(this::reapLiveSessions,
-                        LIVE_REAPER_PERIOD_SECONDS, LIVE_REAPER_PERIOD_SECONDS, TimeUnit.SECONDS);
-                liveReaper = reaper;
+                startLiveReaperIfAbsent();
                 log.info("[credit-live-login] 内嵌登录画面服务已启动: 端口 {}", liveServer.port());
             }
             return liveServer;
@@ -1082,6 +1415,28 @@ public class ProviderCreditLoginService {
                 liveSessions.remove(session.token);
             }
         }
+        // 常驻浏览器空闲回收：没有进行中的会话且超过空闲时长时释放进程
+        long idleSince = liveEngineIdleSince;
+        if (LIVE_ENGINE_IDLE_SECONDS > 0 && idleSince > 0 && liveEngine != null
+                && System.currentTimeMillis() - idleSince > LIVE_ENGINE_IDLE_SECONDS * 1000L
+                && !hasPendingLiveSession()) {
+            closeLiveEngineQuietly();
+            log.info("[credit-live-login] 空闲超过 {}s，已释放常驻登录浏览器", LIVE_ENGINE_IDLE_SECONDS);
+        }
+    }
+
+    /**
+     * 是否有进行中的实时登录会话。
+     *
+     * @return true 表示还有会话在等令牌
+     */
+    private boolean hasPendingLiveSession() {
+        for (LiveSession session : liveSessions.values()) {
+            if (LiveLoginStatus.PENDING.equals(session.status)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1096,16 +1451,45 @@ public class ProviderCreditLoginService {
         }
         liveSessions.values().forEach(this::closeLiveBrowser);
         liveSessions.clear();
+        closeLiveEngineQuietly();
         CdpLiveServer server = liveServer;
         liveServer = null;
         if (server != null) {
             server.close();
+        }
+        LiveProxyServer proxy = liveProxy;
+        liveProxy = null;
+        if (proxy != null) {
+            proxy.close();
         }
     }
 
     /**
      * 一局实时登录会话：持有服务端无头浏览器与截获钩子，状态字段供前端轮询。
      */
+    /**
+     * 取 URL 的站点源（scheme://host[:port]）。
+     *
+     * @param url 地址
+     * @return 源；解析失败返回 null
+     */
+    private static String originOf(String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        try {
+            URI uri = new URI(url);
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                return null;
+            }
+            return uri.getPort() > 0
+                    ? uri.getScheme() + "://" + uri.getHost() + ":" + uri.getPort()
+                    : uri.getScheme() + "://" + uri.getHost();
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
     private static final class LiveSession {
 
         /** 会话标识（即画面服务的路径令牌） */
@@ -1126,6 +1510,12 @@ public class ProviderCreditLoginService {
         /** 登录页面（随引擎释放） */
         volatile BrowserPage page;
 
+        /** 是否使用复用页面（关闭时只复位不销毁） */
+        volatile boolean sharedPage;
+
+        /** 复用页面对应的站点源（复位清存储用） */
+        volatile String origin;
+
         /** 状态：pending / success / failed */
         volatile String status = LiveLoginStatus.PENDING;
 
@@ -1137,6 +1527,12 @@ public class ProviderCreditLoginService {
 
         /** 是否已被用户取消 */
         volatile boolean cancelled;
+
+        /** 反向代理会话（代理模式非空；出终态或取消时关闭对应代理会话） */
+        volatile LiveProxyServer proxy;
+
+        /** 代理注入脚本截获的候选令牌（capture 端点投递，后台嗅探线程消费） */
+        final LinkedBlockingQueue<String> capturedTokens = new LinkedBlockingQueue<>();
 
         /** 终态时间（回收器据此清理记录；0 = 未终态） */
         volatile long finishedAt;

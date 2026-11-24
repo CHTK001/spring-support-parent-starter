@@ -6,6 +6,7 @@ import com.chua.starter.device.support.model.SyncOutboxQuery;
 import com.chua.starter.device.support.model.SyncRecordQuery;
 import com.chua.starter.mybatis.entity.PageResult;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,6 +27,14 @@ public interface DeviceSyncRecordService {
      * @return 分页结果，按开始时间倒序
      */
     PageResult<DeviceSyncRecord> pageRecords(SyncRecordQuery query);
+
+    /**
+     * 批量查询各凭据最近一条同步记录（凭据表「最近同步」列）。
+     *
+     * @param credentialIds 凭据 ID 清单
+     * @return {credentialId: 最近一条记录}；没有同步记录的凭据不出现在结果里
+     */
+    Map<String, DeviceSyncRecord> latestByCredentialIds(List<String> credentialIds);
 
     /**
      * 分页查询推送队列。

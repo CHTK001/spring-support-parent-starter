@@ -280,6 +280,37 @@ public class UsageController {
                 groupName, provider, model, startTime, endTime, currentScopeUserId()));
     }
 
+    /**
+     * 按模型聚合用量 TopN（用量页「模型 TopN」榜单的数据源）。
+     *
+     * <p>只看总调用量看不出「哪些模型吃掉了最多 Token / 费用」：按模型聚合后
+     * 取前 N 名，并给出每个模型占全量的百分比，头部模型与长尾一目了然。
+     * 排序口径可切（Token / 费用 / 次数），与页面榜单的口径切换联动。</p>
+     *
+     * @param groupName 分组（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @param metric    排序口径：token/cost/calls，缺省 token
+     * @param topN      榜单长度（1~100，缺省 10）
+     * @return 按排序口径降序的前 N 行，附占全量百分比
+     */
+    @Operation(summary = "用量按模型 TopN",
+            description = "把同一时间段的明细按模型聚合，按 Token/费用/次数排序取前 N 名，附占全量百分比")
+    @GetMapping("/model-top")
+    public ReturnResult<List<com.chua.starter.ai.support.model.vo.AiUsageModelTopVO>> modelTop(
+            @RequestParam(required = false) String groupName,
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
+            @RequestParam(required = false) String metric,
+            @RequestParam(required = false) Integer topN) {
+        return ReturnResult.ok(usageService.getModelTopN(
+                groupName, provider, model, startTime, endTime, currentScopeUserId(), metric, topN));
+    }
+
       /**
        * 订阅**实时**用量（Token 计算量）。
        *

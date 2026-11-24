@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -61,6 +62,7 @@ public class DeviceSyncRecordServiceImpl implements DeviceSyncRecordService {
         Page<DeviceSyncRecord> page = new Page<>(Math.max(q.getPageNo(), 1), Math.max(q.getPageSize(), 1));
         LambdaQueryWrapper<DeviceSyncRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(q.getVendor()), DeviceSyncRecord::getDeviceSyncRecordVendor, q.getVendor())
+                .eq(StringUtils.hasText(q.getCredentialId()), DeviceSyncRecord::getDeviceSyncRecordTaskId, q.getCredentialId())
                 .eq(StringUtils.hasText(q.getMode()), DeviceSyncRecord::getDeviceSyncRecordMode, q.getMode())
                 .eq(StringUtils.hasText(q.getPhase()), DeviceSyncRecord::getDeviceSyncRecordPhase, q.getPhase())
                 .eq(StringUtils.hasText(q.getStatus()), DeviceSyncRecord::getDeviceSyncRecordStatus, q.getStatus())
@@ -69,6 +71,37 @@ public class DeviceSyncRecordServiceImpl implements DeviceSyncRecordService {
                 .orderByDesc(DeviceSyncRecord::getDeviceSyncRecordStartedAt)
                 .orderByDesc(DeviceSyncRecord::getDeviceSyncRecordId);
         return PageResult.copy(recordMapper.selectPage(page, wrapper));
+    }
+
+    /**
+     * 批量查询各凭据最近一条同步记录（凭据同步的 taskId = 凭据 ID）。
+     *
+     * <p>凭据数量通常是个位数，逐条取最近一行即可，不引入按分组的窗口 SQL。</p>
+     *
+     * @param credentialIds 凭据 ID 清单
+     * @return {credentialId: 最近一条记录}；没有同步记录的凭据不出现在结果里
+     */
+    @Override
+    public Map<String, DeviceSyncRecord> latestByCredentialIds(List<String> credentialIds) {
+        Map<String, DeviceSyncRecord> latest = new LinkedHashMap<>();
+        if (credentialIds == null || credentialIds.isEmpty()) {
+            return latest;
+        }
+        for (String credentialId : credentialIds) {
+            if (!StringUtils.hasText(credentialId)) {
+                continue;
+            }
+            LambdaQueryWrapper<DeviceSyncRecord> wrapper = new LambdaQueryWrapper<DeviceSyncRecord>()
+                    .eq(DeviceSyncRecord::getDeviceSyncRecordTaskId, credentialId.trim())
+                    .orderByDesc(DeviceSyncRecord::getDeviceSyncRecordStartedAt)
+                    .orderByDesc(DeviceSyncRecord::getDeviceSyncRecordId);
+            Page<DeviceSyncRecord> page = new Page<>(1, 1, false);
+            List<DeviceSyncRecord> records = recordMapper.selectPage(page, wrapper).getRecords();
+            if (!records.isEmpty()) {
+                latest.put(credentialId.trim(), records.get(0));
+            }
+        }
+        return latest;
     }
 
     @Override

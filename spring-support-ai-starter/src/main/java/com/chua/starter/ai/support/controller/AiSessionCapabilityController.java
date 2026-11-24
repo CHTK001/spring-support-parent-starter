@@ -8,9 +8,11 @@ import com.chua.oshi.support.Mem;
 import com.chua.oshi.support.Oshi;
 import com.chua.oshi.support.Sys;
 import com.chua.starter.ai.support.entity.SysAiSession;
+import com.chua.starter.ai.support.entity.SysAiSessionSubAgent;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
+import com.chua.starter.ai.support.service.AiSessionSubAgentService;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +71,11 @@ public class AiSessionCapabilityController {
     private final SysAiSessionMapper sessionMapper;
 
     private final SysAiAgentService agentService;
+
+    /**
+     * 会话子代理运行记录服务（invoke 生命周期持久化 + 事件广播，G4）
+     */
+    private final AiSessionSubAgentService sessionSubAgentService;
 
     /**
      * 服务器信息（只读）。
@@ -192,9 +199,13 @@ public class AiSessionCapabilityController {
     /**
      * 手动调用单个子代理（角色子代理调用路径）。
      *
+     * <p>invoke 生命周期（G4）：先落一条 RUNNING 运行记录并广播 {@code sub_agent_create}，
+     * 调用结束回填输出 / 失败原因并广播 {@code sub_agent_closed}——前端 Tab 实时增删，
+     * 调用历史经 {@code GET /api/sessions/{id}/sub-sessions} 持久可查。</p>
+     *
      * @param id   会话标识
      * @param body {agentId: 子 Agent 标识, input: 用户输入}
-     * @return {agentId, name, masterId, input, output, error?}
+     * @return {agentId, name, masterId, input, output, subSessionId, error?}
      */
     @PostMapping("/sub-agents/invoke")
     public ReturnResult<Map<String, Object>> invokeSubAgent(@PathVariable("id") String id,
@@ -208,11 +219,27 @@ public class AiSessionCapabilityController {
         if (input.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "input 不能为空");
         }
+        String userId = AiUserContext.requireUserId();
+        SysAiSessionSubAgent binding = sessionSubAgentService.beginInvoke(id, agentId, input, userId);
+        String subSessionId = String.valueOf(binding.getId());
         try {
-            return ReturnResult.ok(agentService.invokeSubAgent(agentId, input));
-        } catch (IllegalArgumentException e) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, e.getMessage());
-        } catch (IllegalStateException e) {
+            Map<String, Object> result = agentService.invokeSubAgent(agentId, input);
+            Object error = result.get("error");
+            sessionSubAgentService.finishInvoke(subSessionId, userId,
+                    result.get("output") == null ? "" : String.valueOf(result.get("output")),
+                    error == null ? null : String.valueOf(error));
+            result.put("subSessionId", subSessionId);
+            return ReturnResult.ok(result);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            // 前置校验失败（子 Agent 不存在 / 停用 / 无可用模型凭证）：记录失败现场后再抛
+            try {
+                sessionSubAgentService.finishInvoke(subSessionId, userId, "", e.getMessage());
+            } catch (Exception ignore) {
+                // 收尾失败不影响原错误抛出
+            }
+            if (e instanceof IllegalArgumentException) {
+                throw new ApiException(ApiErrorCode.NOT_FOUND, e.getMessage());
+            }
             throw new ApiException(ApiErrorCode.CONFLICT, e.getMessage());
         }
     }

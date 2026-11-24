@@ -21,6 +21,9 @@ public class SyncRecordQuery {
     /** 厂商标识 */
     private String vendor;
 
+    /** 凭据 ID（凭据维度同步的任务 ID，即 device_sync_record_task_id） */
+    private String credentialId;
+
     /** 方向：pull / push / preview */
     private String mode;
 

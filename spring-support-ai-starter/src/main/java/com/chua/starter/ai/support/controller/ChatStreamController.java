@@ -1,7 +1,9 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.common.support.ai.agent.AgentTrace;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.PlatformAccessKeyService;
+import com.chua.starter.ai.support.service.AiSessionEventBroadcaster;
 import com.chua.starter.ai.support.stream.ChatFrameSink;
 import com.chua.starter.ai.support.stream.ChatStreamOrchestrator;
 import com.chua.starter.ai.support.stream.ChatStreamRegistry;
@@ -20,11 +22,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.OutputStream;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Guada 前端聊天 SSE 控制器（薄传输适配层）。
@@ -45,6 +51,11 @@ public class ChatStreamController {
     private final ChatStreamOrchestrator orchestrator;
     private final ChatStreamRegistry registry;
     private final ObjectMapper objectMapper;
+
+    /**
+     * 会话事件广播器（流开始/结束跨标签页同步）
+     */
+    private final AiSessionEventBroadcaster sessionEventBroadcaster;
 
     /**
      * 平台访问密钥校验（web:/onnx: 模型逐请求门禁）
@@ -99,6 +110,103 @@ public class ChatStreamController {
             watchdog.start();
         }
         return wrapped;
+    }
+
+    /**
+     * 给帧槽套上「会话事件广播」：流结束时向该用户的所有标签页发 stream_finished。
+     *
+     * <p>结束时机取 sendDone / close 中先到者（编排器所有收尾路径都会经过其中之一，
+     * {@code finished} 原子标记保证每轮只广播一次）；结束原因取自最后的 finish 帧
+     * （{@code stop} 映射为前端口径的 {@code completed}，其余原样透传）。
+     * 发起方标签页（X-Client-Id）在请求线程捕获——异步收尾线程没有请求上下文，
+     * 不预取就拿不到 source。</p>
+     *
+     * @param delegate  真实帧槽，不允许为 null
+     * @param sessionId 会话标识，不允许为 null
+     * @param userId    发起本轮的用户标识，可为空（空则广播器不推送）
+     * @return 带事件广播的帧槽
+     */
+    private ChatFrameSink withSessionEvents(ChatFrameSink delegate, String sessionId, String userId) {
+        String source = currentClientId();
+        return new ChatFrameSink() {
+            /**
+             * 每轮只广播一次结束事件
+             */
+            private final AtomicBoolean finished = new AtomicBoolean(false);
+            /**
+             * 结束原因（默认按正常完成；以最后的 finish 帧为准）
+             */
+            private volatile String reason = "completed";
+
+            @Override
+            public void sendEvent(Map<String, Object> event) {
+                if (event != null && "finish".equals(event.get("type"))) {
+                    Object finishReason = event.get("finishReason");
+                    if (finishReason == null) {
+                        reason = "completed";
+                    } else {
+                        String value = String.valueOf(finishReason);
+                        reason = "stop".equals(value) ? "completed" : value;
+                    }
+                }
+                delegate.sendEvent(event);
+            }
+
+            @Override
+            public void sendTrace(AgentTrace trace) {
+                delegate.sendTrace(trace);
+            }
+
+            @Override
+            public void sendDone() {
+                publishFinishedOnce();
+                delegate.sendDone();
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return delegate.isCancelled();
+            }
+
+            @Override
+            public void markCancelled() {
+                delegate.markCancelled();
+            }
+
+            @Override
+            public void close() {
+                publishFinishedOnce();
+                delegate.close();
+            }
+
+            /**
+             * 首次到达的收尾点广播 stream_finished，其后忽略
+             */
+            private void publishFinishedOnce() {
+                if (!finished.compareAndSet(false, true)) {
+                    return;
+                }
+                try {
+                    sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_FINISHED,
+                            userId, sessionId, Map.of("reason", reason), source);
+                } catch (Exception e) {
+                    log.warn("[ChatStream] 广播 stream_finished 失败 sessionId={}: {}", sessionId, e.getMessage());
+                }
+            }
+        };
+    }
+
+    /**
+     * 从当前请求线程读前端标签页标识（X-Client-Id）。
+     *
+     * @return 标签页标识；无请求上下文或未携带时为 {@code null}
+     */
+    private String currentClientId() {
+        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servletAttributes) {
+            return servletAttributes.getRequest().getHeader("X-Client-Id");
+        }
+        return null;
     }
 
     /**
@@ -167,11 +275,17 @@ public class ChatStreamController {
         // registry 存的是带看门狗的槽，「停止生成」与超时收口才会作用在同一层，
         // 否则取消会绕过看门狗、直接关掉真实传输，留下一个还在跑的看门狗。
         ChatFrameSink guarded = withIdleTimeout(sink, p.sessionId(), p.memoryUser());
-        registry.register(p.sessionId(), p.memoryUser(), guarded);
+        // 2.6 再套上「会话事件广播」：流结束（sendDone/close）时向该用户广播 stream_finished
+        ChatFrameSink eventAware = withSessionEvents(guarded, p.sessionId(), p.memoryUser());
+        registry.register(p.sessionId(), p.memoryUser(), eventAware);
         registerCleanup(emitter, p.sessionId());
 
+        // 广播流开始：其他标签页把该会话标为「工作中」（发起方标签页按 source 区分）
+        sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_STARTED,
+                p.memoryUser(), p.sessionId(), null);
+
         // 3. 异步产出帧
-        orchestrator.execute(p, guarded);
+        orchestrator.execute(p, eventAware);
         return emitter;
     }
 
@@ -211,13 +325,20 @@ public class ChatStreamController {
                 log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
-        registry.register(p.sessionId(), p.memoryUser(), sink);
         registerCleanup(emitter, p.sessionId());
 
         // 恢复轮次同样套会话超时看门狗（注册的是带看门狗的槽，取消/停止才会作用在真实传输上）
         ChatFrameSink guardedResume = withIdleTimeout(sink, p.sessionId(), p.memoryUser());
-        registry.register(p.sessionId(), p.memoryUser(), guardedResume);
-        orchestrator.executeResume(p, guardedResume);
+        // 再套上「会话事件广播」：流结束时广播 stream_finished
+        ChatFrameSink eventAwareResume = withSessionEvents(guardedResume, p.sessionId(), p.memoryUser());
+        // 只注册最终包装槽一次（此前裸槽与看门狗槽各注册一次，先注册的裸槽会让停止绕过看门狗）
+        registry.register(p.sessionId(), p.memoryUser(), eventAwareResume);
+
+        // 广播流开始：恢复轮次同样是活跃流
+        sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_STARTED,
+                p.memoryUser(), p.sessionId(), null);
+
+        orchestrator.executeResume(p, eventAwareResume);
         return emitter;
     }
 

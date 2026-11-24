@@ -604,6 +604,119 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     }
 
     /**
+     * 按「模型」聚合用量并取前 N 名（用量页「模型 TopN」榜单的数据源）。
+     *
+     * <p>占比的分母是<b>筛选范围内所有模型的合计</b>而不是榜单内合计：只按榜单内
+     * 合计算占比，会把 TopN 之外的长尾排除在分母外，头部模型占比被高估；
+     * 占全量的比例才能直接回答「第一名吃掉了多少」。因此这里查两条聚合：
+     * 一条全量分母、一条 GROUP BY + ORDER BY + LIMIT 的前 N 名。</p>
+     */
+    @Override
+    public List<com.chua.starter.ai.support.model.vo.AiUsageModelTopVO> getModelTopN(
+            String groupName, String provider, String model,
+            LocalDateTime startTime, LocalDateTime endTime, String userId,
+            String metric, Integer topN) {
+        // 排序口径白名单：列别名要拼进 ORDER BY，必须收敛成固定几个合法值防注入
+        String metricKey = metric == null ? "token" : metric.trim().toLowerCase();
+        String metricAlias = switch (metricKey) {
+            case "cost" -> "total_cost";
+            case "calls" -> "calls";
+            default -> "total_tokens";
+        };
+        int limit = topN == null ? 10 : topN;
+        limit = Math.max(1, Math.min(100, limit));
+        String modelExpr = "COALESCE(NULLIF(sys_ai_usage_model, ''), '未知')";
+
+        QueryWrapper<SysAiUsage> totalWrapper =
+                usageAggWrapper(groupName, provider, model, startTime, endTime, userId);
+        totalWrapper.select("COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS total_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_cost), 0) AS total_cost",
+                "COUNT(*) AS calls");
+        List<Map<String, Object>> totalRows = usageMapper.selectMaps(totalWrapper);
+        double grandTotal = 0;
+        if (totalRows != null && !totalRows.isEmpty()) {
+            grandTotal = switch (metricAlias) {
+                case "total_cost" -> doubleOf(totalRows.get(0), "total_cost");
+                case "calls" -> longOf(totalRows.get(0), "calls");
+                default -> longOf(totalRows.get(0), "total_tokens");
+            };
+        }
+
+        QueryWrapper<SysAiUsage> wrapper =
+                usageAggWrapper(groupName, provider, model, startTime, endTime, userId);
+        wrapper.select(modelExpr + " AS model",
+                "COUNT(*) AS calls",
+                "COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS prompt_tokens",
+                "COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS completion_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS total_tokens",
+                "COALESCE(SUM(sys_ai_usage_total_cost), 0) AS total_cost");
+        wrapper.groupBy(modelExpr);
+        wrapper.orderByDesc(metricAlias);
+        wrapper.last("LIMIT " + limit);
+        List<Map<String, Object>> rows = usageMapper.selectMaps(wrapper);
+        List<com.chua.starter.ai.support.model.vo.AiUsageModelTopVO> result =
+                new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                Object name = valueOf(row, "model");
+                double metricValue = switch (metricAlias) {
+                    case "total_cost" -> doubleOf(row, "total_cost");
+                    case "calls" -> longOf(row, "calls");
+                    default -> longOf(row, "total_tokens");
+                };
+                Double sharePct = grandTotal > 0
+                        ? Math.round(metricValue * 1000.0 / grandTotal) / 10.0
+                        : null;
+                result.add(new com.chua.starter.ai.support.model.vo.AiUsageModelTopVO(
+                        name == null || String.valueOf(name).isBlank() ? "未知" : String.valueOf(name),
+                        longOf(row, "calls"),
+                        longOf(row, "prompt_tokens"),
+                        longOf(row, "completion_tokens"),
+                        longOf(row, "total_tokens"),
+                        doubleOf(row, "total_cost"),
+                        sharePct));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 组装用量聚合查询的公共过滤条件（分组 / 服务商 / 模型 / 归属 / 时间窗）。
+     *
+     * <p>{@link #getCallTypeBreakdown} 等聚合方法各自内联了同一套条件；TopN 要查
+     * 「全量分母 + 前 N 名」两条聚合，抽出来复用，避免两份条件将来漂移。</p>
+     */
+    private QueryWrapper<SysAiUsage> usageAggWrapper(String groupName, String provider, String model,
+                                                     LocalDateTime startTime, LocalDateTime endTime,
+                                                     String userId) {
+        QueryWrapper<SysAiUsage> wrapper = new QueryWrapper<>();
+        if (groupName != null && !groupName.isBlank()) {
+            wrapper.eq("sys_ai_usage_group_name", groupName);
+        }
+        if (provider != null && !provider.isBlank()) {
+            wrapper.eq("sys_ai_usage_provider", provider);
+        }
+        if (model != null && !model.isBlank()) {
+            wrapper.eq("sys_ai_usage_model", model);
+        }
+        if (userId != null && !userId.isBlank()) {
+            if (includeOrphanEffective()) {
+                wrapper.and(w -> w.eq("sys_ai_usage_user_id", userId)
+                        .or().isNull("sys_ai_usage_user_id"));
+            } else {
+                wrapper.eq("sys_ai_usage_user_id", userId);
+            }
+        }
+        if (startTime != null) {
+            wrapper.ge("sys_ai_usage_call_time", startTime);
+        }
+        if (endTime != null) {
+            wrapper.le("sys_ai_usage_call_time", endTime);
+        }
+        return wrapper;
+    }
+
+    /**
      * 从 {@code selectMaps} 结果里按列名取值（忽略大小写）。
      *
      * @param row   一行结果

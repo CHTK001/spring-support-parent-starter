@@ -15,6 +15,8 @@ import com.chua.starter.osgi.controller.OsgiMonitorController;
 import com.chua.starter.osgi.properties.OsgiProperties;
 import com.chua.starter.osgi.shell.GogoSshShellServer;
 import com.chua.starter.osgi.support.realtime.OsgiLogPublisher;
+import com.chua.starter.osgi.support.realtime.OsgiStateEventBridge;
+import com.chua.starter.osgi.support.stats.OsgiStatsCollector;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -22,6 +24,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
@@ -305,6 +308,46 @@ public class OsgiAutoConfiguration {
     }
 
     /**
+     * 创建框架体征采样器与操作统计聚合器。
+     *
+     * <p>与观测端点同条件装配：端点关闭时采样器也没有消费方，不创建。
+     * 采样线程随 Bean 销毁关闭；{@code plugin.osgi.stats.enabled=false} 时
+     * Bean 仍存在（操作统计照常聚合），但不启动采样线程。</p>
+     *
+     * @param osgiLauncher Felix osgi 启动器
+     * @param properties   osgi 配置属性
+     * @return 体征采样器
+     */
+    @Bean(destroyMethod = "stop")
+    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
+    @ConditionalOnProperty(prefix = "plugin.osgi.endpoint", name = "enabled", havingValue = "true")
+    public OsgiStatsCollector osgiStatsCollector(FelixOsgiLauncher osgiLauncher, OsgiProperties properties) {
+        OsgiStatsCollector collector = new OsgiStatsCollector(osgiLauncher, properties.getStats());
+        collector.start();
+        return collector;
+    }
+
+    /**
+     * 创建 bundle 状态事件桥，把框架生命周期回调转成 Spring 应用事件。
+     *
+     * <p>挂在框架级监听器链上：任何来源（控制台操作、热部署扫描器、shell 命令、
+     * 其他 bundle 的编程式调用）引发的 bundle 状态变化都会发布 {@code OsgiStateEvent}。
+     * 宿主引入 socket-starter 时由 SocketOsgiStateBridge 监听并广播到前端实时刷新；
+     * 未引入时事件无人消费，天然 no-op。</p>
+     *
+     * @param osgiLauncher   Felix osgi 启动器
+     * @param eventPublisher Spring 事件发布器
+     * @return 状态事件桥
+     */
+    @Bean
+    public OsgiStateEventBridge osgiStateEventBridge(FelixOsgiLauncher osgiLauncher,
+                                                     ApplicationEventPublisher eventPublisher) {
+        OsgiStateEventBridge bridge = new OsgiStateEventBridge(eventPublisher);
+        osgiLauncher.addListener(bridge);
+        return bridge;
+    }
+
+    /**
      * 创建 osgi 运行时只读观测端点。
      *
      * <p>仅在显式开启 {@code plugin.osgi.endpoint.enabled} 且 classpath 中存在
@@ -314,6 +357,7 @@ public class OsgiAutoConfiguration {
      * @param registerProvider OsgiBeanDefinitionRegister 提供者（可为空）
      * @param properties       osgi 配置属性
      * @param logPublisher     OSGi 日志发布器
+     * @param statsCollector   体征采样器与操作统计聚合器
      * @return 观测端点
      */
     @Bean
@@ -322,9 +366,10 @@ public class OsgiAutoConfiguration {
     public OsgiMonitorController osgiMonitorController(FelixOsgiLauncher osgiLauncher,
                                                        ObjectProvider<OsgiBeanDefinitionRegister> registerProvider,
                                                        OsgiProperties properties,
-                                                       OsgiLogPublisher logPublisher) {
-        log.info("[OSGi] 运行时观测端点已启用: /osgi/stats, /osgi/bundles, /osgi/services, /osgi/snapshot");
-        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable(), properties, logPublisher);
+                                                       OsgiLogPublisher logPublisher,
+                                                       OsgiStatsCollector statsCollector) {
+        log.info("[OSGi] 运行时观测端点已启用: /osgi/stats, /osgi/stats/history, /osgi/stats/actions, /osgi/bundles, /osgi/services, /osgi/snapshot");
+        return new OsgiMonitorController(osgiLauncher, registerProvider.getIfAvailable(), properties, logPublisher, statsCollector);
     }
 
     /**
