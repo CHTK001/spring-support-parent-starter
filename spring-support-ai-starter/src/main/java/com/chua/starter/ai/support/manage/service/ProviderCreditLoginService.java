@@ -896,13 +896,23 @@ public class ProviderCreditLoginService {
                     null, null, 0, loginUrl);
         }
         // 优先走反向代理：用户浏览器原生加载上游登录页（无截屏推流，卡顿/延迟从根上消除）；
-        // 代理不可用或打开失败时回落 CDP 推流链路
+        // 代理不可用或打开失败时回落 CDP 推流链路。
+        // 例外：上游开启 Cloudflare Turnstile 等绑定域名的质询时，代理 origin 与上游不一致，
+        // 质询组件在代理页面上直接拒绝工作（widget 报「无法连接到网站」），用户永远无法完成登录。
+        // 此时可用扩展配置 credit_login_mode=cdp 跳过代理，直接走服务端正式浏览器 + CDP 推流：
+        // 无头浏览器打开的仍是上游真实 origin，质询可正常交互，操作经画面坐标转发。
+        boolean forceCdp = "cdp".equalsIgnoreCase(text(extra.get("credit_login_mode")));
         LiveProxyServer proxy = null;
-        try {
-            proxy = liveProxy();
-        } catch (RuntimeException e) {
-            log.warn("[credit-live-login] 供应商 {} 启动登录代理失败，回落 CDP 推流: {}",
-                    entity.getProviderId(), e.getMessage());
+        if (forceCdp) {
+            log.info("[credit-live-login] 供应商 {} 指定 credit_login_mode=cdp，跳过反向代理直接走 CDP 推流",
+                    entity.getProviderId());
+        } else {
+            try {
+                proxy = liveProxy();
+            } catch (RuntimeException e) {
+                log.warn("[credit-live-login] 供应商 {} 启动登录代理失败，回落 CDP 推流: {}",
+                        entity.getProviderId(), e.getMessage());
+            }
         }
         if (proxy != null) {
             try {
