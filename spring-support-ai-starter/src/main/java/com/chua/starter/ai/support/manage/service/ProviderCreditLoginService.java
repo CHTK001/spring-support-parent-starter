@@ -949,7 +949,8 @@ public class ProviderCreditLoginService {
                     ? engine.acquireReusablePage(browserOptions)
                     : engine.openIsolatedPage(browserOptions);
             if (sharedPage) {
-                // 先清掉上一会话残留的 Cookie / 站点存储 / 初始化脚本
+                // 清掉上一会话残留的应用 Cookie / 站点存储 / 初始化脚本；
+                // Cloudflare 放行 Cookie（cf_clearance 等）保留，减轻下次 Turnstile 交互质询
                 engine.releaseReusablePage(origin);
             }
             String capturePattern = hooks.capturePattern();
