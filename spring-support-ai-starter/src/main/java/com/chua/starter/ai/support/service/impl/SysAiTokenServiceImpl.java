@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiToken;
 import com.chua.starter.ai.support.mapper.SysAiTokenMapper;
@@ -14,9 +15,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -387,23 +385,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
      * @return sha256的结果
      */
     private static String sha256(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hash) {
-                hex.append(String.format("%02x", b));
-            }
-            return hex.toString();
-        } catch (NoSuchAlgorithmException e) {
-            /**
-             * runtime异常。
-             * @param available" 可用"
-             * @param e e
-             * @return runtime异常的结果
-             */
-            throw new RuntimeException("SHA-256 not available", e);
-        }
+        return DigestUtils.sha256(input);
     }
 }
 

@@ -9,12 +9,11 @@ import com.chua.starter.ai.support.model.AiMemoryDTO;
 import com.chua.starter.ai.support.model.AiMemoryMaintenanceDTO;
 import com.chua.starter.ai.support.model.MemoryTuningDTO;
 import com.chua.starter.ai.support.util.AiUserContext;
+import com.chua.common.support.utils.DigestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -887,14 +886,7 @@ public class SysAiMemoryStore {
      */
     private static String sha256Hex(String normalized) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(normalized.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(32);
-            for (int i = 0; i < 16 && i < hash.length; i++) {
-                sb.append(Character.forDigit((hash[i] >> 4) & 0xF, 16));
-                sb.append(Character.forDigit(hash[i] & 0xF, 16));
-            }
-            return sb.toString();
+            return DigestUtils.sha256(normalized).substring(0, 32);
         } catch (Exception e) {
             return Integer.toHexString(normalized.hashCode());
         }

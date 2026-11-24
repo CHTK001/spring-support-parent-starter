@@ -1,6 +1,7 @@
 // [P3C C1 豁免] C1: 内部创建单线程调度线程池与 Thread，见第 128-133 行。
 package com.chua.starter.filesystem.support.collab;
 
+import com.chua.common.support.utils.DigestUtils;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,8 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1129,21 +1128,7 @@ public class FileCollabHub {
      * @return 十六进制串
      */
     private static String sha256(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-            StringBuilder builder = new StringBuilder(bytes.length * 2);
-            for (byte b : bytes) {
-                // [P3C A20 豁免]
-                builder.append(Character.forDigit((b >> 4) & 0xF, 16));
-                // [P3C A20 豁免]
-                builder.append(Character.forDigit(b & 0xF, 16));
-            }
-            return builder.toString();
-        } catch (NoSuchAlgorithmException e) {
-            // JVM 必然提供 SHA-256；退化成 hashCode 只为不中断请求
-            return Integer.toHexString(value.hashCode());
-        }
+        return DigestUtils.sha256(value);
     }
 
     /**

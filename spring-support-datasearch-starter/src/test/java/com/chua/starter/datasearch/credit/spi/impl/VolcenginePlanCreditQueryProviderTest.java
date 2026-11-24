@@ -3,12 +3,11 @@ package com.chua.starter.datasearch.credit.spi.impl;
 import com.chua.starter.datasearch.credit.model.BalancePart;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
 import com.chua.starter.datasearch.credit.model.CreditResult;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.datasearch.credit.support.CreditSigner;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -408,16 +407,6 @@ class VolcenginePlanCreditQueryProviderTest {
      * @return 小写十六进制
      */
     private static String sha256Hex(String data) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(data.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(digest.length * 2);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+        return DigestUtils.sha256(data);
     }
 }

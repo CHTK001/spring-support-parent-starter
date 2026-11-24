@@ -1,5 +1,6 @@
 package com.chua.starter.datasearch.credit.support;
 
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
 
 import javax.crypto.Mac;
@@ -8,7 +9,6 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -627,12 +627,7 @@ public final class CreditSigner {
      * @return 小写十六进制
      */
     private static String sha256Hex(String data) {
-        try {
-            return hex(MessageDigest.getInstance("SHA-256")
-                    .digest(data.getBytes(StandardCharsets.UTF_8)));
-        } catch (Exception e) {
-            throw new IllegalStateException("SHA-256 计算失败: " + e.getMessage(), e);
-        }
+        return DigestUtils.sha256(data);
     }
 
     /**

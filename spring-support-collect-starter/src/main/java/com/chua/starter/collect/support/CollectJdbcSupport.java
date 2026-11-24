@@ -6,6 +6,7 @@ import com.chua.starter.collect.mapper.CollectDatasourceMapper;
 import com.chua.starter.collect.vo.CollectColumnVO;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.datasource.dialect.SqlName;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.datasource.support.url.JdbcDriverUtils;
 import com.chua.starter.datapool.support.model.SchemaColumnVO;
 import com.chua.starter.datapool.support.model.dto.DdlColumn;
@@ -20,9 +21,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -40,7 +38,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.HexFormat;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -979,13 +976,7 @@ public class CollectJdbcSupport {
      * @return 十六进制摘要
      */
     private static String sha256(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 摘要算法不可用", ex);
-        }
+        return DigestUtils.sha256(value);
     }
 
     /**

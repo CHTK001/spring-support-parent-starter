@@ -1,13 +1,9 @@
 package com.chua.starter.datapool.support.support;
 
+import com.chua.common.support.lang.algorithm.crypto.AesGcmCodec;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
@@ -29,6 +25,10 @@ import java.util.Base64;
  * {@code enc:v1:} 值就再也解不开了 —— 那些数据源的口令只能重新录入。
  * 密钥本身放在配置文件/环境变量里，不进代码库。</p>
  *
+ * <p>AES-GCM 运算与密钥派生统一委托给底层 {@link AesGcmCodec}
+ * （SHA-256 派生 32 字节密钥、12 字节 IV、128 位认证标签，与历史格式字节兼容），
+ * 本类只负责 {@code enc:v1:}+Base64 封装与降级策略。</p>
+ *
  * <p>接口出参不回传口令明文，页面只显示「是否已设置」。</p>
  *
  * @author CH
@@ -48,19 +48,9 @@ public final class DatasourceSecrets {
     private static final String PREFIX_ENC = "enc:v1:";
 
     /**
-     * 加密算法：AES-GCM，带认证标签，密文被篡改会解不开而不是解出垃圾。
-     */
-    private static final String TRANSFORMATION = "AES/GCM/NoPadding";
-
-    /**
-     * GCM 推荐的 IV 长度（字节）。
+     * GCM IV 长度（字节），与底层 {@link AesGcmCodec} 的 IV 长度一致。
      */
     private static final int IV_LENGTH = 12;
-
-    /**
-     * 认证标签长度（位）。
-     */
-    private static final int TAG_BITS = 128;
 
     /**
      * 配置的密钥原文；空白表示未启用加密。
@@ -118,15 +108,7 @@ public final class DatasourceSecrets {
             return plain;
         }
         try {
-            byte[] iv = new byte[IV_LENGTH];
-            new SecureRandom().nextBytes(iv);
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(deriveKey(), "AES"),
-                    new GCMParameterSpec(TAG_BITS, iv));
-            byte[] encrypted = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));
-            byte[] combined = new byte[iv.length + encrypted.length];
-            System.arraycopy(iv, 0, combined, 0, iv.length);
-            System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
+            byte[] combined = codec().encryptToCombined(plain.getBytes(StandardCharsets.UTF_8));
             return PREFIX_ENC + Base64.getEncoder().encodeToString(combined);
         } catch (Exception ex) {
             // 加密失败不能把明文写库：宁可让这次保存失败，也不能悄悄降级成明文
@@ -180,11 +162,7 @@ public final class DatasourceSecrets {
                 log.warn("[datapool] 加密口令长度异常，无法解密");
                 return "";
             }
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(deriveKey(), "AES"),
-                    new GCMParameterSpec(TAG_BITS, combined, 0, IV_LENGTH));
-            byte[] plain = cipher.doFinal(combined, IV_LENGTH, combined.length - IV_LENGTH);
-            return new String(plain, StandardCharsets.UTF_8);
+            return new String(codec().decryptCombined(combined), StandardCharsets.UTF_8);
         } catch (Exception ex) {
             log.warn("[datapool] 加密口令解密失败（密钥被更换过？）: {}", ex.getMessage());
             return "";
@@ -192,16 +170,16 @@ public final class DatasourceSecrets {
     }
 
     /**
-     * 由密钥原文派生 32 字节 AES 密钥。
+     * 以当前密钥构造底层编解码器。
      *
-     * <p>用 SHA-256 而不是直接取前 32 字节：用户配置的密钥长度不受控，
-     * 短密钥补零会显著削弱强度，哈希之后长度固定且分布均匀。</p>
+     * <p>实例持有密钥字节，而密钥可经 {@link #setSecretKey(String)} 刷新，
+     * 因此每次按当前 {@code secretKey} 新建，不做跨调用缓存。</p>
      *
-     * @return 32 字节密钥
-     * @throws Exception 摘要算法不可用（实际不会发生）
+     * @return 已注入密钥的 AES-GCM 编解码器
      */
-    private static byte[] deriveKey() throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        return digest.digest(secretKey.getBytes(StandardCharsets.UTF_8));
+    private static AesGcmCodec codec() {
+        AesGcmCodec codec = new AesGcmCodec();
+        codec.key(secretKey);
+        return codec;
     }
 }

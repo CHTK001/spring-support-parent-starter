@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * 能编排流程即等价于能执行任意代码，边界是控制台会话认证；{@code plugin.collect.script.enable=false}
  * 可以整体关掉这个节点类型。</p>
  *
+ * <p>文件型脚本引擎的通用 SPI 见
+ * {@code com.chua.common.support.task.script.ScriptProvider}；本类专注流程变量
+ * 的内联 Groovy 求值，不承接脚本文件加载/卸载。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
