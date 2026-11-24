@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 分片物理表管理服务。
@@ -401,6 +402,171 @@ public class ShardingPhysicalTableService {
         String token = space > 0 ? trimmed.substring(0, space) : trimmed;
         token = token.replace("(", "");
         return token.isBlank() ? null : token;
+    }
+
+    /**
+     * 按首个分库中已存在的物理表结构生成建表模板 DDL（只读元数据，不执行任何 DDL）。
+     *
+     * <p>补建模板辅助生成：取规则首个分库目标，读取该库中与逻辑表名一致（或按前缀
+     * 匹配到的第一个）物理表的列、主键与表选项，生成表名为逻辑表名的 CREATE TABLE
+     * 模板，供用户粘贴为样板 DDL 后走补建 / 追加列流程。</p>
+     */
+    public Map<String, Object> generateTemplate(DsShardingRule rule) {
+        List<DbTarget> targets = resolveTargets(rule);
+        if (targets.isEmpty()) {
+            throw new IllegalArgumentException("规则没有可用的分库目标，请先配置分库成员或刷新规则");
+        }
+        DbTarget target = targets.get(0);
+        String physical = firstExistingTable(target, rule.getLogicTable());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("db", target.name);
+        result.put("sourceTable", physical);
+        result.put("logicTable", rule.getLogicTable());
+        try (Connection conn = target.open()) {
+            List<Map<String, Object>> columns = new ArrayList<>();
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT column_name, column_type, is_nullable, column_default, extra, column_key, column_comment "
+                            + "FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? "
+                            + "ORDER BY ordinal_position")) {
+                ps.setString(1, physical);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> col = new LinkedHashMap<>();
+                        col.put("name", rs.getString("column_name"));
+                        col.put("type", rs.getString("column_type"));
+                        col.put("nullable", "YES".equalsIgnoreCase(rs.getString("is_nullable")));
+                        col.put("defaultValue", rs.getString("column_default"));
+                        col.put("extra", rs.getString("extra"));
+                        col.put("primaryKey", "PRI".equalsIgnoreCase(rs.getString("column_key")));
+                        col.put("comment", rs.getString("column_comment"));
+                        columns.add(col);
+                    }
+                }
+            }
+            if (columns.isEmpty()) {
+                throw new IllegalArgumentException("分库 " + target.name + " 中未找到物理表 " + physical
+                        + " 的结构信息，无法生成模板；请先补建物理表或手填样板 DDL");
+            }
+            String engine = "InnoDB";
+            String tableComment = null;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT engine, table_comment FROM information_schema.tables "
+                            + "WHERE table_schema = DATABASE() AND table_name = ?")) {
+                ps.setString(1, physical);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        String tableEngine = rs.getString("engine");
+                        if (tableEngine != null && !tableEngine.isBlank()) {
+                            engine = tableEngine;
+                        }
+                        tableComment = rs.getString("table_comment");
+                    }
+                }
+            } catch (Exception ignored) {
+                // 表选项读取失败不影响列模板生成
+            }
+            result.put("ddl", buildCreateTemplate(rule.getLogicTable(), columns, engine, tableComment));
+            result.put("columnCount", columns.size());
+            result.put("primaryKey", columns.stream()
+                    .filter(c -> Boolean.TRUE.equals(c.get("primaryKey")))
+                    .map(c -> String.valueOf(c.get("name")))
+                    .collect(Collectors.toList()));
+            result.put("engine", engine);
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("读取分库 " + target.name + " 元数据失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 首个分库中与逻辑表名一致（优先）或按前缀匹配的现有物理表；没有则回退逻辑表名本身。
+     */
+    private String firstExistingTable(DbTarget target, String logicTable) {
+        try (Connection conn = target.open();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY table_name");
+             ResultSet rs = ps.executeQuery()) {
+            String fallback = null;
+            while (rs.next()) {
+                String name = rs.getString(1);
+                if (name == null || name.isBlank()) {
+                    continue;
+                }
+                if (name.equalsIgnoreCase(logicTable)) {
+                    return name;
+                }
+                if (fallback == null && name.toLowerCase().startsWith(logicTable.toLowerCase())) {
+                    fallback = name;
+                }
+            }
+            return fallback != null ? fallback : logicTable;
+        } catch (Exception e) {
+            log.warn("[ds-runtime] 模板源表探测失败（按逻辑表名处理）: {}: {}", target.name, e.getMessage());
+            return logicTable;
+        }
+    }
+
+    /**
+     * 按列元数据拼装 CREATE TABLE 模板（表名为逻辑表名，统一带 IF NOT EXISTS）。
+     */
+    private String buildCreateTemplate(String logicTable, List<Map<String, Object>> columns,
+                                       String engine, String tableComment) {
+        StringBuilder ddl = new StringBuilder("CREATE TABLE IF NOT EXISTS `").append(logicTable).append("` (\n");
+        List<String> primaryKeys = new ArrayList<>();
+        for (int i = 0; i < columns.size(); i++) {
+            Map<String, Object> col = columns.get(i);
+            String name = String.valueOf(col.get("name"));
+            String type = String.valueOf(col.get("type"));
+            ddl.append("  `").append(name).append("` ").append(type);
+            if (!Boolean.TRUE.equals(col.get("nullable"))) {
+                ddl.append(" NOT NULL");
+            }
+            String extra = col.get("extra") == null ? "" : String.valueOf(col.get("extra")).toLowerCase();
+            Object defaultValue = col.get("defaultValue");
+            if (extra.contains("auto_increment")) {
+                ddl.append(" AUTO_INCREMENT");
+            } else if (defaultValue != null) {
+                String text = String.valueOf(defaultValue);
+                if (isNumericType(type) || "CURRENT_TIMESTAMP".equalsIgnoreCase(text)
+                        || "NULL".equalsIgnoreCase(text)) {
+                    ddl.append(" DEFAULT ").append(text);
+                } else {
+                    ddl.append(" DEFAULT '").append(text.replace("'", "''")).append("'");
+                }
+            } else if (Boolean.TRUE.equals(col.get("nullable"))) {
+                ddl.append(" DEFAULT NULL");
+            }
+            String comment = col.get("comment") == null ? "" : String.valueOf(col.get("comment"));
+            if (!comment.isBlank()) {
+                ddl.append(" COMMENT '").append(comment.replace("'", "''")).append("'");
+            }
+            if (Boolean.TRUE.equals(col.get("primaryKey"))) {
+                primaryKeys.add(name);
+            }
+            if (i < columns.size() - 1 || !primaryKeys.isEmpty()) {
+                ddl.append(",");
+            }
+            ddl.append("\n");
+        }
+        if (!primaryKeys.isEmpty()) {
+            ddl.append("  PRIMARY KEY (").append(primaryKeys.stream()
+                    .map(k -> "`" + k + "`")
+                    .collect(Collectors.joining(", "))).append(")\n");
+        }
+        ddl.append(") ENGINE=").append(engine).append(" DEFAULT CHARSET=utf8mb4");
+        if (tableComment != null && !tableComment.isBlank()) {
+            ddl.append(" COMMENT='").append(tableComment.replace("'", "''")).append("'");
+        }
+        ddl.append(";");
+        return ddl.toString();
+    }
+
+    private boolean isNumericType(String type) {
+        String lower = type == null ? "" : type.toLowerCase();
+        return lower.contains("int") || lower.contains("decimal") || lower.contains("numeric")
+                || lower.contains("float") || lower.contains("double") || lower.contains("bit");
     }
 
     /**

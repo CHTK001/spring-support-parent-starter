@@ -3,9 +3,11 @@ package com.chua.starter.datasource.runtime.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasource.runtime.calcite.CalciteFederationManager;
+import com.chua.starter.datasource.runtime.materialized.DsMaterializedManagementService;
 import com.chua.starter.datasource.runtime.model.DsCalciteFederation;
 import com.chua.starter.datasource.runtime.model.DsShardingRule;
 import com.chua.starter.datasource.runtime.model.FederationMember;
+import com.chua.starter.datasource.runtime.partition.DsPartitionManagementService;
 import com.chua.starter.datasource.runtime.sharding.ShardingPhysicalTableService;
 import com.chua.starter.datasource.runtime.sharding.ShardingRuleManager;
 import com.chua.starter.datasource.runtime.store.DsRuntimeConfigStore;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +50,8 @@ public class DsRuntimeController {
     private final ShardingPhysicalTableService physicalTableService;
     private final DsRuntimeConfigStore store;
     private final DsConnectionTestService connectionTestService;
+    private final DsMaterializedManagementService materializedManagementService;
+    private final DsPartitionManagementService partitionManagementService;
     private final ObjectMapper objectMapper;
 
     // ==================== 概览 ====================
@@ -84,6 +89,28 @@ public class DsRuntimeController {
                     .filter(name -> name != null && !name.isBlank())
                     .distinct()
                     .collect(Collectors.toList()));
+            // 物理化 / 分区能力计数（只读盘点，失败降级不计入，不阻断概览）
+            try {
+                result.put("materializedRoutes", materializedManagementService.routes().size());
+                result.put("materializedCaches", materializedManagementService.caches().size());
+            } catch (Exception e) {
+                log.debug("[ds-runtime] 物理化盘点失败（概览降级）: {}", e.getMessage());
+            }
+            try {
+                Map<String, Object> partition = partitionManagementService.tables();
+                result.put("partitionSources", partition.get("total"));
+                long partitionTables = 0;
+                if (partition.get("tables") instanceof List<?> rows) {
+                    for (Object row : rows) {
+                        if (row instanceof Map<?, ?> table && table.get("partitionTables") instanceof List<?> list) {
+                            partitionTables += list.size();
+                        }
+                    }
+                }
+                result.put("partitionTables", partitionTables);
+            } catch (Exception e) {
+                log.debug("[ds-runtime] 分区盘点失败（概览降级）: {}", e.getMessage());
+            }
             return ReturnResult.ok(result);
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
@@ -154,6 +181,38 @@ public class DsRuntimeController {
     public ReturnResult<Map<String, Object>> queryFederation(@RequestBody Map<String, String> body) {
         try {
             return ReturnResult.ok(federationManager.query(body == null ? null : body.get("sql")));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 启用联邦的成员健康检查（逐成员真实建连 + SELECT 1，结果不含密码）。
+     */
+    @GetMapping("/calcite/health")
+    public ReturnResult<List<Map<String, Object>>> federationHealth() {
+        try {
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (DsCalciteFederation federation : store.findEnabledFederations()) {
+                List<FederationMember> members = federation.getMemberList() == null
+                        ? List.of() : federation.getMemberList();
+                for (FederationMember member : members) {
+                    Map<String, Object> test = connectionTestService.test(member.getUrl(), member.getUsername(),
+                            member.getPassword(), member.getDriverClassName());
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("federationId", federation.getId());
+                    row.put("federationSchema", federation.getSchemaName());
+                    row.put("member", member.getSchemaName());
+                    row.put("url", member.getUrl());
+                    row.put("ok", test.get("ok"));
+                    row.put("latencyMs", test.get("latencyMs"));
+                    row.put("server", test.get("server"));
+                    row.put("version", test.get("version"));
+                    row.put("message", test.get("message"));
+                    rows.add(row);
+                }
+            }
+            return ReturnResult.ok(rows);
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
@@ -238,6 +297,19 @@ public class DsRuntimeController {
         try {
             DsShardingRule rule = requireRule(ruleId);
             return ReturnResult.ok(physicalTableService.listPhysicalTables(rule));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 补建模板辅助生成：按首个分库现有物理表结构生成逻辑表建表模板 DDL（只读，不执行）。
+     */
+    @PostMapping("/tables/generate-template")
+    public ReturnResult<Map<String, Object>> generateTemplate(@RequestBody Map<String, Object> body) {
+        try {
+            DsShardingRule rule = requireRule(longValue(body == null ? null : body.get("ruleId")));
+            return ReturnResult.ok(physicalTableService.generateTemplate(rule));
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());
         }
@@ -332,6 +404,85 @@ public class DsRuntimeController {
             }
             return ReturnResult.ok(shardingRuleManager.routePreview(rule, strValue(params.get("value"))));
         } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    // ==================== 配置导入导出 ====================
+
+    /**
+     * 导出全部联邦与分片规则配置（管理端配置备份语义：成员 JSON 按库内原样，含密码，请妥善保管导出文件）。
+     */
+    @GetMapping("/config/export")
+    public ReturnResult<Map<String, Object>> exportConfig() {
+        try {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("exportedAt", System.currentTimeMillis());
+            result.put("federations", store.findAllFederations());
+            result.put("rules", store.findAllShardingRules());
+            return ReturnResult.ok(result);
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 导入联邦与分片规则配置（按自然键 upsert：联邦 = schemaName，规则 = logicTable；
+     * 命中已有行回填 id/version 走乐观锁更新，导入后分别刷新联邦与分片运行时）。
+     */
+    @PostMapping("/config/import")
+    public ReturnResult<Map<String, Object>> importConfig(@RequestBody Map<String, Object> body) {
+        Map<String, Object> params = body == null ? Map.of() : body;
+        try {
+            int federationCount = 0;
+            int ruleCount = 0;
+            if (params.get("federations") instanceof List<?> federations) {
+                for (Object item : federations) {
+                    DsCalciteFederation federation = objectMapper.convertValue(item, DsCalciteFederation.class);
+                    DsCalciteFederation existing = store.findFederationBySchemaName(federation.getSchemaName());
+                    if (existing != null) {
+                        federation.setId(existing.getId());
+                        federation.setVersion(existing.getVersion());
+                    }
+                    store.saveFederation(federation);
+                    federationCount++;
+                }
+            }
+            if (params.get("rules") instanceof List<?> rules) {
+                for (Object item : rules) {
+                    DsShardingRule rule = objectMapper.convertValue(item, DsShardingRule.class);
+                    DsShardingRule existing = store.findShardingRuleByLogicTable(rule.getLogicTable());
+                    if (existing != null) {
+                        rule.setId(existing.getId());
+                        rule.setVersion(existing.getVersion());
+                    }
+                    store.saveShardingRule(rule);
+                    ruleCount++;
+                }
+            }
+            // 导入后分别刷新运行时；单侧刷新失败不影响另一侧，结果中如实带回
+            String federationRefresh;
+            String shardingRefresh;
+            try {
+                federationManager.refresh();
+                federationRefresh = federationManager.lastRefreshResult();
+            } catch (Exception e) {
+                federationRefresh = "刷新失败: " + e.getMessage();
+            }
+            try {
+                shardingRuleManager.refresh();
+                shardingRefresh = shardingRuleManager.lastRefreshResult();
+            } catch (Exception e) {
+                shardingRefresh = "刷新失败: " + e.getMessage();
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("federations", federationCount);
+            result.put("rules", ruleCount);
+            result.put("federationRefresh", federationRefresh);
+            result.put("shardingRefresh", shardingRefresh);
+            return ReturnResult.ok(result);
+        } catch (Exception e) {
+            log.warn("[ds-runtime] 配置导入失败: {}", e.getMessage());
             return ReturnResult.error(e.getMessage());
         }
     }

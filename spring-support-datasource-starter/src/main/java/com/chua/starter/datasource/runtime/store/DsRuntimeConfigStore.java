@@ -46,7 +46,7 @@ public class DsRuntimeConfigStore {
      */
     public List<DsCalciteFederation> findAllFederations() {
         return jdbcTemplate.query(
-                "SELECT id, schema_name, default_schema, enabled, members, remark, created_at, updated_at "
+                "SELECT id, schema_name, default_schema, enabled, members, remark, version, created_at, updated_at "
                         + "FROM ds_calcite_federation ORDER BY id",
                 (rs, i) -> mapFederation(rs));
     }
@@ -56,7 +56,7 @@ public class DsRuntimeConfigStore {
      */
     public List<DsCalciteFederation> findEnabledFederations() {
         return jdbcTemplate.query(
-                "SELECT id, schema_name, default_schema, enabled, members, remark, created_at, updated_at "
+                "SELECT id, schema_name, default_schema, enabled, members, remark, version, created_at, updated_at "
                         + "FROM ds_calcite_federation WHERE enabled = 1 ORDER BY id",
                 (rs, i) -> mapFederation(rs));
     }
@@ -66,7 +66,7 @@ public class DsRuntimeConfigStore {
      */
     public DsCalciteFederation findFederationById(Long id) {
         List<DsCalciteFederation> list = jdbcTemplate.query(
-                "SELECT id, schema_name, default_schema, enabled, members, remark, created_at, updated_at "
+                "SELECT id, schema_name, default_schema, enabled, members, remark, version, created_at, updated_at "
                         + "FROM ds_calcite_federation WHERE id = ?",
                 (rs, i) -> mapFederation(rs), id);
         return list.isEmpty() ? null : list.getFirst();
@@ -77,7 +77,7 @@ public class DsRuntimeConfigStore {
      */
     public DsCalciteFederation findFederationBySchemaName(String schemaName) {
         List<DsCalciteFederation> list = jdbcTemplate.query(
-                "SELECT id, schema_name, default_schema, enabled, members, remark, created_at, updated_at "
+                "SELECT id, schema_name, default_schema, enabled, members, remark, version, created_at, updated_at "
                         + "FROM ds_calcite_federation WHERE schema_name = ?",
                 (rs, i) -> mapFederation(rs), schemaName);
         return list.isEmpty() ? null : list.getFirst();
@@ -90,7 +90,8 @@ public class DsRuntimeConfigStore {
         if (f.getId() != null) {
             int updated = jdbcTemplate.update(
                     "UPDATE ds_calcite_federation SET schema_name = ?, default_schema = ?, enabled = ?, "
-                            + "members = ?, remark = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                            + "members = ?, remark = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP "
+                            + "WHERE id = ? AND version = ?",
                     ps -> {
                         ps.setString(1, f.getSchemaName());
                         ps.setString(2, f.getDefaultSchema());
@@ -98,9 +99,14 @@ public class DsRuntimeConfigStore {
                         ps.setString(4, f.getMembers());
                         ps.setString(5, f.getRemark());
                         ps.setLong(6, f.getId());
+                        ps.setInt(7, f.getVersion() == null ? 0 : f.getVersion());
                     });
             if (updated > 0) {
                 return f.getId();
+            }
+            // 未命中：行已被删除则继续走插入；行仍在说明携带的版本已过期（并发修改冲突）
+            if (federationExists(f.getId())) {
+                throw new IllegalStateException("联邦配置已被他人修改，请刷新后重试");
             }
         }
         jdbcTemplate.update(
@@ -131,6 +137,7 @@ public class DsRuntimeConfigStore {
         f.setEnabled(rs.getInt("enabled"));
         f.setMembers(rs.getString("members"));
         f.setRemark(rs.getString("remark"));
+        f.setVersion(rs.getInt("version"));
         Timestamp created = rs.getTimestamp("created_at");
         Timestamp updated = rs.getTimestamp("updated_at");
         f.setCreatedAt(created == null ? null : created.getTime());
@@ -183,7 +190,7 @@ public class DsRuntimeConfigStore {
     public List<DsShardingRule> findAllShardingRules() {
         return jdbcTemplate.query(
                 "SELECT id, logic_table, sharding_column, algorithm, shard_count, time_unit, time_lower, time_upper, "
-                        + "database_members, enabled, remark, created_at, updated_at FROM ds_sharding_rule ORDER BY id",
+                        + "database_members, enabled, remark, version, created_at, updated_at FROM ds_sharding_rule ORDER BY id",
                 (rs, i) -> mapShardingRule(rs));
     }
 
@@ -193,7 +200,7 @@ public class DsRuntimeConfigStore {
     public List<DsShardingRule> findEnabledShardingRules() {
         return jdbcTemplate.query(
                 "SELECT id, logic_table, sharding_column, algorithm, shard_count, time_unit, time_lower, time_upper, "
-                        + "database_members, enabled, remark, created_at, updated_at FROM ds_sharding_rule WHERE enabled = 1 ORDER BY id",
+                        + "database_members, enabled, remark, version, created_at, updated_at FROM ds_sharding_rule WHERE enabled = 1 ORDER BY id",
                 (rs, i) -> mapShardingRule(rs));
     }
 
@@ -203,7 +210,7 @@ public class DsRuntimeConfigStore {
     public DsShardingRule findShardingRuleById(Long id) {
         List<DsShardingRule> list = jdbcTemplate.query(
                 "SELECT id, logic_table, sharding_column, algorithm, shard_count, time_unit, time_lower, time_upper, "
-                        + "database_members, enabled, remark, created_at, updated_at FROM ds_sharding_rule WHERE id = ?",
+                        + "database_members, enabled, remark, version, created_at, updated_at FROM ds_sharding_rule WHERE id = ?",
                 (rs, i) -> mapShardingRule(rs), id);
         return list.isEmpty() ? null : list.getFirst();
     }
@@ -214,7 +221,7 @@ public class DsRuntimeConfigStore {
     public DsShardingRule findShardingRuleByLogicTable(String logicTable) {
         List<DsShardingRule> list = jdbcTemplate.query(
                 "SELECT id, logic_table, sharding_column, algorithm, shard_count, time_unit, time_lower, time_upper, "
-                        + "database_members, enabled, remark, created_at, updated_at FROM ds_sharding_rule WHERE logic_table = ?",
+                        + "database_members, enabled, remark, version, created_at, updated_at FROM ds_sharding_rule WHERE logic_table = ?",
                 (rs, i) -> mapShardingRule(rs), logicTable);
         return list.isEmpty() ? null : list.getFirst();
     }
@@ -227,7 +234,7 @@ public class DsRuntimeConfigStore {
             int updated = jdbcTemplate.update(
                     "UPDATE ds_sharding_rule SET logic_table = ?, sharding_column = ?, algorithm = ?, shard_count = ?, "
                             + "time_unit = ?, time_lower = ?, time_upper = ?, database_members = ?, enabled = ?, remark = ?, "
-                            + "updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                            + "version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?",
                     ps -> {
                         ps.setString(1, r.getLogicTable());
                         ps.setString(2, r.getShardingColumn());
@@ -240,9 +247,14 @@ public class DsRuntimeConfigStore {
                         ps.setInt(9, r.getEnabled() == null ? 1 : r.getEnabled());
                         ps.setString(10, r.getRemark());
                         ps.setLong(11, r.getId());
+                        ps.setInt(12, r.getVersion() == null ? 0 : r.getVersion());
                     });
             if (updated > 0) {
                 return r.getId();
+            }
+            // 未命中：行已被删除则继续走插入；行仍在说明携带的版本已过期（并发修改冲突）
+            if (shardingRuleExists(r.getId())) {
+                throw new IllegalStateException("分片规则已被他人修改，请刷新后重试");
             }
         }
         jdbcTemplate.update(
@@ -271,6 +283,18 @@ public class DsRuntimeConfigStore {
         return jdbcTemplate.update("DELETE FROM ds_sharding_rule WHERE id = ?", id);
     }
 
+    private boolean federationExists(Long id) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ds_calcite_federation WHERE id = ?", Integer.class, id);
+        return count != null && count > 0;
+    }
+
+    private boolean shardingRuleExists(Long id) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ds_sharding_rule WHERE id = ?", Integer.class, id);
+        return count != null && count > 0;
+    }
+
     private DsShardingRule mapShardingRule(ResultSet rs) throws SQLException {
         DsShardingRule r = new DsShardingRule();
         r.setId(rs.getLong("id"));
@@ -284,6 +308,7 @@ public class DsRuntimeConfigStore {
         r.setDatabases(rs.getString("database_members"));
         r.setEnabled(rs.getInt("enabled"));
         r.setRemark(rs.getString("remark"));
+        r.setVersion(rs.getInt("version"));
         Timestamp created = rs.getTimestamp("created_at");
         Timestamp updated = rs.getTimestamp("updated_at");
         r.setCreatedAt(created == null ? null : created.getTime());

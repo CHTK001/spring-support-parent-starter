@@ -94,6 +94,11 @@ public class DsShardingRule {
     private Long updatedAt;
 
     /**
+     * 乐观锁版本号（更新成功时自增；保存须携带读取时的旧值，不匹配则拒绝写入）
+     */
+    private Integer version;
+
+    /**
      * 反序列化后的分库成员（不落库，便于服务层/页面透传）
      */
     private List<ShardingDbMember> dbMemberList;
