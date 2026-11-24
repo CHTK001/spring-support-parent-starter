@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -73,6 +74,10 @@ public class ServerManageServiceImpl implements ServerManageService {
      * 节点操作日志
      */
     private final ServerOperLogService serverOperLogService;
+    /**
+     * FRP 节点令牌随机源
+     */
+    private static final SecureRandom TOKEN_RANDOM = new SecureRandom();
 
     @Override
     public ReturnResult<List<ServerNodeView>> list() {
@@ -188,7 +193,7 @@ public class ServerManageServiceImpl implements ServerManageService {
              * @param request 请求
              * @param protocol 协议
              */
-            applyRequest(node, request, protocol);
+            applyRequest(node, request, protocol, null);
             nodeMapper.insert(node);
             return startIfEnabled(node);
         } catch (Exception e) {
@@ -219,7 +224,7 @@ public class ServerManageServiceImpl implements ServerManageService {
              * @param request 请求
              * @param protocol 协议
              */
-            applyRequest(node, request, protocol);
+            applyRequest(node, request, protocol, exists);
             node.setCreateName(exists.getCreateName());
             node.setCreateBy(exists.getCreateBy());
             node.setCreateTime(exists.getCreateTime());
@@ -301,7 +306,7 @@ public class ServerManageServiceImpl implements ServerManageService {
 
             MsServerNode node = new MsServerNode();
             node.setId(id);
-            applyRequest(node, request, protocol);
+            applyRequest(node, request, protocol, exists);
             node.setCreateName(exists.getCreateName());
             node.setCreateBy(exists.getCreateBy());
             node.setCreateTime(exists.getCreateTime());
@@ -1006,8 +1011,9 @@ public class ServerManageServiceImpl implements ServerManageService {
      * @param node     目标实体
      * @param request  请求体
      * @param protocol 协议枚举
+     * @param exists   更新/热更时的库中旧实体，新建传 null
      */
-    private void applyRequest(MsServerNode node, ServerNodeRequest request, ServerNodeProtocol protocol) {
+    private void applyRequest(MsServerNode node, ServerNodeRequest request, ServerNodeProtocol protocol, MsServerNode exists) {
         node.setName(request.getName().trim());
         node.setProtocol(request.getProtocol().trim().toLowerCase());
         String engine = request.getEngine() == null || request.getEngine().isBlank()
@@ -1019,13 +1025,80 @@ public class ServerManageServiceImpl implements ServerManageService {
         node.setEnabled(request.getEnabled() != null ? request.getEnabled() : 1);
         node.setRemark(request.getRemark());
         try {
-            node.setConfig(objectMapper.writeValueAsString(
-                    request.getConfig() == null ? Map.of() : request.getConfig()));
+            Map<String, Object> config = request.getConfig() == null
+                    ? new LinkedHashMap<>() : new LinkedHashMap<>(request.getConfig());
+            if (protocol == ServerNodeProtocol.FRP) {
+                applyFrpToken(config, exists);
+            }
+            node.setConfig(objectMapper.writeValueAsString(config));
             node.setFilters(objectMapper.writeValueAsString(
                     request.getFilters() == null ? List.of() : request.getFilters()));
         } catch (Exception e) {
             throw new IllegalArgumentException("config/filters JSON 序列化失败: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * FRP 节点认证令牌策略（落库前确保 config.token 恒有值）：
+     * <ol>
+     *   <li>请求显式携带非空 token → 尊重用户值；</li>
+     *   <li>更新/热更未携带 → 保留库中旧 token，避免编辑节点即轮换令牌、
+     *       断开已接入客户端；</li>
+     *   <li>新建未携带 → 生成 32 位随机 hex 令牌，落库后随节点视图下发前端展示，
+     *       客户端按该令牌接入，不再依赖框架默认令牌兜底。</li>
+     * </ol>
+     *
+     * @param config 请求配置（原地补齐 token）
+     * @param exists 库中旧实体，新建为 null
+     */
+    private void applyFrpToken(Map<String, Object> config, MsServerNode exists) {
+        Object token = config.get("token");
+        if (token != null && !String.valueOf(token).isBlank()) {
+            config.put("token", String.valueOf(token).trim());
+            return;
+        }
+        String old = readConfigToken(exists);
+        if (old != null && !old.isBlank()) {
+            config.put("token", old);
+            return;
+        }
+        config.put("token", randomToken());
+    }
+
+    /**
+     * 读取库中节点已保存的 FRP 令牌。
+     *
+     * @param node 节点实体（可为 null）
+     * @return token；无实体/无 config/解析失败返回 null
+     */
+    private String readConfigToken(MsServerNode node) {
+        if (node == null || node.getConfig() == null || node.getConfig().isBlank()) {
+            return null;
+        }
+        try {
+            Map<?, ?> raw = objectMapper.readValue(node.getConfig(), Map.class);
+            Object token = raw.get("token");
+            return token == null ? null : String.valueOf(token);
+        } catch (Exception e) {
+            log.warn("[ServerManage] 节点 [{}] 旧 config 解析失败, 按无 token 处理: {}", node.getName(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 生成 32 位随机 hex 令牌（16 字节，SecureRandom）。
+     *
+     * @return 随机令牌
+     */
+    private String randomToken() {
+        byte[] buf = new byte[16];
+        TOKEN_RANDOM.nextBytes(buf);
+        StringBuilder sb = new StringBuilder(32);
+        for (byte b : buf) {
+            sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+            sb.append(Character.forDigit(b & 0xF, 16));
+        }
+        return sb.toString();
     }
 
     /**
