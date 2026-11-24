@@ -113,9 +113,8 @@ public class AiModelController {
      */
     @Operation(summary = "批量删除模型")
     @DeleteMapping("/batch")
-    public ReturnResult<Map<String, Object>> batchDelete(@RequestBody Map<String, ?> body) {
-        @SuppressWarnings("unchecked")
-        List<Long> ids = body == null ? null : (List<Long>) body.get("ids");
+    public ReturnResult<Map<String, Object>> batchDelete(@RequestBody BatchDeleteRequest body) {
+        List<Long> ids = body == null ? null : body.ids();
         if (ids == null || ids.isEmpty()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
