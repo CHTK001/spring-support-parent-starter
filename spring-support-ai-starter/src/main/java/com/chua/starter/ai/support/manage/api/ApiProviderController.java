@@ -8305,8 +8305,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * Web 浏览器推理的内置模型清单（不发任何 HTTP 请求）。
      *
      * <p>Web 供应商与 ONNX 同构：没有上游地址，「从提供商获取」返回随前端
-     * 发布的演示模型（JS 路径指向前端静态资源目录 {@code /web-chat/}）。
-     * 用户导入后可在模型表单里把 JS 路径改成自己的推理脚本 —— 脚本以
+     * 发布的脚本模型（JS 路径指向前端静态资源目录 {@code /web-chat/}）。
+     * 其中聊天模型为真实 Hugging Face 仓库 id，经 {@code js_path} 的
+     * {@code ?model=} 查询参数指定权重；演示 / 工具脚本（回显、文生图、
+     * OCR、人脸检测、上色）保持内置脚本行。用户导入后可在模型表单里把
+     * JS 路径改成自己的推理脚本 —— 脚本以
      * ES Module 形式被前端动态 import，默认导出 {@code createClient(modelInfo)}
      * 工厂，返回 {@code load/chat/dispose} 客户端。</p>
      *
@@ -8349,14 +8352,25 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         faceDetect.put("description", "浏览器端人脸检测模型：基于 face-api.js（CDN 加载）检测上传图片中"
                 + "的人脸数量、置信度与位置，首次运行需下载 tiny 权重；可将 JS 路径替换为自定义推理脚本。");
 
-        Map<String, Object> chatLocal = new LinkedHashMap<>(8);
-        chatLocal.put("id", "web-chat-local");
-        chatLocal.put("name", "浏览器本地对话（Chat Local）");
-        chatLocal.put("tasks", List.of("chat"));
-        chatLocal.put("traits", List.of("streaming"));
-        chatLocal.put("js_path", "/web-chat/chat-local.js");
-        chatLocal.put("description", "浏览器端本地对话模型：基于 transformers.js（CDN 加载）在页面内推理，"
-                + "WebGPU 优先、WASM 兜底，权重按需从镜像下载；可将 JS 路径替换为自定义推理脚本。");
+        // 聊天模型：目录 id 直接用真实 Hugging Face 仓库 id（已逐个核对 onnx/ 目录有权重文件），
+        // 经 js_path 的 ?model= 查询参数落到 chat-local.js；导入后真实 id 落模型列（batchModelInput）。
+        List<Map<String, Object>> chatModels = List.of(
+                webChatModel("HuggingFaceTB/SmolLM2-135M-Instruct", "SmolLM2 135M Instruct（轻量默认）",
+                        "约 100MB（q4f16），体积最小、加载最快，适合首次体验与低配设备；中文能力有限。"),
+                webChatModel("onnx-community/Qwen2.5-0.5B-Instruct", "Qwen2.5 0.5B Instruct",
+                        "约 0.5B 参数，中文对话质量明显优于 135M 档，日常问答性价比首选。"),
+                webChatModel("onnx-community/Qwen2.5-1.5B-Instruct", "Qwen2.5 1.5B Instruct",
+                        "约 1.5B 参数，中文与指令跟随更强，首次运行需下载数百 MB 至 1GB+ 权重。"),
+                webChatModel("onnx-community/Qwen2.5-Coder-0.5B-Instruct", "Qwen2.5 Coder 0.5B Instruct",
+                        "代码补全与生成特化，适合代码片段编写、解释与改写。"),
+                webChatModel("onnx-community/Qwen3-0.6B-ONNX", "Qwen3 0.6B",
+                        "Qwen3 新一代小模型，支持思考模式，推理质量优于同体积 Qwen2.5。"),
+                webChatModel("onnx-community/Qwen3-1.7B-ONNX", "Qwen3 1.7B",
+                        "Qwen3 新一代 1.7B，质量与速度均衡，适合作为浏览器端主力对话模型。"),
+                webChatModel("onnx-community/Llama-3.2-1B-Instruct", "Llama 3.2 1B Instruct",
+                        "Meta Llama 3.2 1B，英文能力强，多语言对话可用。"),
+                webChatModel("onnx-community/Llama-3.2-3B-Instruct", "Llama 3.2 3B Instruct",
+                        "Meta Llama 3.2 3B，质量更高，首次运行需下载约 1GB+ 权重，建议 WebGPU 环境。"));
 
         Map<String, Object> colorize = new LinkedHashMap<>(8);
         colorize.put("id", "web-colorize");
@@ -8368,9 +8382,40 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 + "WebGPU 优先、WASM 兜底），黑白照片本地还原成彩色，结果以 Markdown 图片回显，"
                 + "首次运行需下载约 108MB 权重；可将 JS 路径替换为自定义推理脚本。");
 
+        List<Object> models = new ArrayList<>(12);
+        models.add(echo);
+        models.add(imageGen);
+        models.add(ocr);
+        models.add(faceDetect);
+        models.addAll(chatModels);
+        models.add(colorize);
         Map<String, Object> out = new LinkedHashMap<>(4);
-        out.put("models", List.of(echo, imageGen, ocr, faceDetect, chatLocal, colorize));
+        out.put("models", models);
         return out;
+    }
+
+    /**
+     * 构造一个 Web 浏览器本地对话模型目录行。
+     *
+     * <p>目录 id 即真实 Hugging Face 仓库 id；推理脚本固定为内置
+     * {@code chat-local.js}，模型经 {@code ?model=} 查询参数注入 ——
+     * 脚本按该参数从镜像拉取对应 ONNX 权重。</p>
+     *
+     * @param modelId     真实模型仓库 id（如 onnx-community/Qwen2.5-0.5B-Instruct）
+     * @param label       目录展示名（导入后退为模型别名）
+     * @param description 一句话说明（体积 / 能力定位）
+     * @return 与其它供应商目录行同形态的模型条目
+     */
+    private Map<String, Object> webChatModel(String modelId, String label, String description) {
+        Map<String, Object> row = new LinkedHashMap<>(8);
+        row.put("id", modelId);
+        row.put("name", label);
+        row.put("tasks", List.of("chat"));
+        row.put("traits", List.of("streaming"));
+        row.put("js_path", "/web-chat/chat-local.js?model=" + modelId);
+        row.put("description", "浏览器端本地对话（transformers.js，WebGPU 优先、WASM 兜底，权重按需从镜像下载）："
+                + description + "；可将 JS 路径替换为自定义推理脚本。");
+        return row;
     }
 
     /**

@@ -142,6 +142,7 @@ public class ScatterConfiguration {
 
         // 业务端点另行登记：protocol=http、port=业务端口；serverId 与组网 self 条目（serverId=nodeId）区分开，
         // 否则 updateService 按 serverId 去重会把组网条目覆盖掉。self-balance Filter 只按 http 协议选实例。
+        // weight 必须为正：weight 负载均衡在全零权重时（均值 NaN）恒选首个节点，会导致 self-balance 永不转发。
         Discovery business = Discovery.builder()
                 .id(spec.businessServerId())
                 .serverId(spec.businessServerId())
@@ -150,6 +151,7 @@ public class ScatterConfiguration {
                 .host(spec.announceHost())
                 .port(spec.serverPort())
                 .uriSpec(spec.servicePath())
+                .weight(1.0)
                 .metadata(Map.of(
                         "context-path", spec.contextPath() == null ? "" : spec.contextPath(),
                         "node-id", spec.nodeId(),
