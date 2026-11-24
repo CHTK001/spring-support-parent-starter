@@ -8,6 +8,7 @@ import com.chua.common.support.ai.feature.FeatureClient;
 import com.chua.common.support.ai.image.ImageClient;
 import com.chua.common.support.ai.video.VideoClient;
 import com.chua.deeplearning.support.capability.ModelCapabilities;
+import com.chua.deeplearning.support.engine.ModelHardwareFilter;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.model.AiModelDTO;
@@ -90,6 +91,10 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
         onnxExternalDirectoryService.applyModelRoot();
         // 1. 本地模型：按能力接口归类
         for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
+            // 硬件过滤：当前机器跑不动的模型（GPU/显存/内存不足）不进能力目录，防止选中后 OOM/崩溃
+            if (!ModelHardwareFilter.isSupported(entry)) {
+                continue;
+            }
             String label = ModelCapabilities.labelOf(entry.capabilityInterface());
             if (label != null) {
                 grouped.computeIfAbsent(label, k -> new LinkedHashSet<>()).add(entry.modelId());
@@ -329,6 +334,8 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
             item.put("modelId", entry.modelId());
             item.put("capability", ModelCapabilities.labelOf(entry.capabilityInterface()));
             item.put("recommended", entry.isRecommended());
+            // 硬件过滤判定：false 表示当前机器跑不动（显存/内存不足），前端据此置灰/拦截选择
+            item.put("supported", ModelHardwareFilter.isSupported(entry));
             item.put("relativePath", entry.relativePath());
             item.put("downloadUrl", entry.downloadUrl());
 

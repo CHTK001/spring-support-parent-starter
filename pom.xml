@@ -114,6 +114,8 @@
         -->
         <!-- <module>spring-support-spider-starter</module> -->
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
+        <!-- scatter 组网：去中心化服务发现 + self-balance 反向代理（谁用谁依赖） -->
+        <module>spring-support-scatter-starter</module>
         <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
         <!-- 数据检索服务化模块：把 utils 层 datasearch SPI 暴露成 /v2/weather、/v2/location、/v2/typhoon -->
         <module>spring-support-datasearch-starter</module>
@@ -666,6 +668,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-discovery-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- scatter 组网：去中心化服务发现 + self-balance 反向代理 Filter -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-scatter-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             

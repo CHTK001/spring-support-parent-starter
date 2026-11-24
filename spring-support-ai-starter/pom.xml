@@ -132,6 +132,12 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-deeplearning-starter</artifactId>
     </dependency>
+    <!-- JIT LLM（GGUF 本地大模型推理）：GGUF 模型注册（常用/最新/多类型）与本地推理实现（SPI provider=jitllm） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-deeplearning-jitllm-starter</artifactId>
+      <version>4.0.0.51</version>
+    </dependency>
     <!-- Agent 编排运行时（AgentScope：多 Agent 协作、子 Agent 路由/流水线/扇出） -->
     <dependency>
       <groupId>com.chua</groupId>

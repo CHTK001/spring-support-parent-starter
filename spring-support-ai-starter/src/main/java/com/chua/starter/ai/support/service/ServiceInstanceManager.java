@@ -15,16 +15,21 @@ import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.oauth.client.support.user.UserResume;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
+import com.chua.common.support.network.server.Server;
+import com.chua.common.support.network.server.ServerBuilder;
+import com.chua.common.support.network.server.handler.ServerHandler;
+import com.chua.common.support.network.server.request.ServerRequest;
+import com.chua.common.support.network.server.response.ServerResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,10 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * AI 服务实例管理器。
@@ -73,8 +74,7 @@ public class ServiceInstanceManager {
      */
     private final EffectiveChatModelResolver effectiveChatModelResolver;
 
-    private final Map<String, HttpServer> servers = new ConcurrentHashMap<>();
-    private final Map<String, ExecutorService> pools = new ConcurrentHashMap<>();
+    private final Map<String, Server> servers = new ConcurrentHashMap<>();
 
     /**
      * 创建服务实例管理器。
@@ -120,36 +120,30 @@ public class ServiceInstanceManager {
             return true;
         }
         try {
-            HttpServer server = HttpServer.create(new InetSocketAddress(inst.getPort()), 0);
-// [P3C C1 豁免] 场景化创建线程，需文档化
-            ExecutorService pool = new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
-                    new LinkedBlockingQueue<>());
-            server.setExecutor(pool);
-            registerContexts(server, inst);
+            Server server = registerContexts(ServerBuilder.create()
+                    .type("nio")
+                    .port(inst.getPort()), inst)
+                    .build();
             server.start();
             servers.put(id, server);
-            pools.put(id, pool);
             log.info("[ServiceInstance] 实例 {} 已启动，端口 {}", inst.getInstanceName(), inst.getPort());
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
+            // 框架绑定失败经 PortBindRetry 重试后抛 RuntimeException，统一按启动失败处理
             log.error("[ServiceInstance] 端口 {} 绑定失败: {}", inst.getPort(), e.getMessage());
             return false;
         }
     }
 
     /**
-     * 停止指定服务实例并释放线程池。
+     * 停止指定服务实例并释放监听端口。
      *
      * @param instanceId 服务实例标识
      */
     public synchronized void stopInstance(String instanceId) {
-        HttpServer server = servers.remove(instanceId);
+        Server server = servers.remove(instanceId);
         if (server != null) {
-            server.stop(2);
-        }
-        ExecutorService pool = pools.remove(instanceId);
-        if (pool != null) {
-            pool.shutdownNow();
+            server.stop();
         }
         log.info("[ServiceInstance] 实例 {} 已停止", instanceId);
     }
@@ -187,24 +181,39 @@ public class ServiceInstanceManager {
     // ==================== 协议上下文注册（按开关） ====================
 
     /**
-     * 按实例开关注册各协议端点上下文。
+     * 按实例开关注册各协议端点路由。
      *
-     * @param server JDK HttpServer 实例，不能为 null
-     * @param inst   服务实例配置，不能为 null，其协议开关决定注册哪些路径
+     * @param builder 框架 Server 构建器，不能为 null
+     * @param inst    服务实例配置，不能为 null，其协议开关决定注册哪些路径
+     * @return 原构建器，便于链式调用
      */
-    private void registerContexts(HttpServer server, SysAiServiceInstance inst) {
+    private ServerBuilder registerContexts(ServerBuilder builder, SysAiServiceInstance inst) {
         if (inst.getOpenaiEnabled() != null && inst.getOpenaiEnabled() == 1) {
-            server.createContext("/v1/chat/completions", ex -> safeHandle(inst, ex, "openai_chat"));
-            server.createContext("/v1/models", ex -> safeHandle(inst, ex, "openai_models"));
+            builder.mapping("/v1/chat/completions", handler(inst, "openai_chat"));
+            builder.mapping("/v1/models", handler(inst, "openai_models"));
         }
         if (inst.getCcEnabled() != null && inst.getCcEnabled() == 1) {
-            // JDK HttpServer 按最长前缀匹配：count_tokens 路径更长，注册后不会落到 /v1/messages
-            server.createContext("/v1/messages/count_tokens", ex -> safeHandle(inst, ex, "cc_count_tokens"));
-            server.createContext("/v1/messages", ex -> safeHandle(inst, ex, "cc_messages"));
+            // 框架路由按注册键精确匹配（支持 Ant 模式）：count_tokens 与 messages 精确键互不遮蔽
+            builder.mapping("/v1/messages/count_tokens", handler(inst, "cc_count_tokens"));
+            builder.mapping("/v1/messages", handler(inst, "cc_messages"));
         }
         if (inst.getGeminiEnabled() != null && inst.getGeminiEnabled() == 1) {
-            server.createContext("/v1beta/models", ex -> safeHandle(inst, ex, "gemini"));
+            // Ant 模式 ** 不匹配裸路径本身：/v1beta/models 列表接口需单独注册兜底
+            builder.mapping("/v1beta/models/**", handler(inst, "gemini"));
+            builder.mapping("/v1beta/models", handler(inst, "gemini"));
         }
+        return builder;
+    }
+
+    /**
+     * 构造协议端点处理器：把框架请求/响应包装成网关交换对象后走统一入口。
+     *
+     * @param inst 服务实例配置，不能为 null
+     * @param kind 端点类型标识，不能为 null 或空字符串
+     * @return 框架处理器
+     */
+    private ServerHandler handler(SysAiServiceInstance inst, String kind) {
+        return (req, resp) -> safeHandle(inst, new GatewayExchange(req, resp), kind);
     }
 
     /**
@@ -214,7 +223,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @param kind     端点类型标识，不能为 null 或空字符串
      */
-    private void safeHandle(SysAiServiceInstance inst, HttpExchange exchange, String kind) {
+    private void safeHandle(SysAiServiceInstance inst, GatewayExchange exchange, String kind) {
         try {
             route(inst, exchange, kind);
         } catch (Exception e) {
@@ -233,7 +242,7 @@ public class ServiceInstanceManager {
      * @param kind     端点类型标识，不能为 null 或空字符串
      * @throws IOException 回写响应体失败时抛出
      */
-    private void route(SysAiServiceInstance inst, HttpExchange exchange, String kind) throws IOException {
+    private void route(SysAiServiceInstance inst, GatewayExchange exchange, String kind) throws IOException {
         String method = exchange.getRequestMethod();
         String path = exchange.getRequestURI().getPath();
 
@@ -293,7 +302,7 @@ public class ServiceInstanceManager {
      * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
-    private void handleOpenAiChat(SysAiServiceInstance inst, HttpExchange exchange, Caller caller) throws IOException {
+    private void handleOpenAiChat(SysAiServiceInstance inst, GatewayExchange exchange, Caller caller) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));
         List<Map<String, Object>> messages = parseOpenAiMessages(body.get("messages"));
@@ -562,7 +571,7 @@ public class ServiceInstanceManager {
      * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
-    private void handleCcMessages(SysAiServiceInstance inst, HttpExchange exchange, Caller caller) throws IOException {
+    private void handleCcMessages(SysAiServiceInstance inst, GatewayExchange exchange, Caller caller) throws IOException {
         Map<String, Object> body = readJsonBody(exchange);
         boolean wantStream = Boolean.TRUE.equals(body.get("stream"));
         List<Map<String, Object>> messages = parseCcMessages(body);
@@ -824,7 +833,7 @@ public class ServiceInstanceManager {
      *
      * @param exchange 当前 HTTP 交换对象，不能为 null
      */
-    private void handleCcCountTokens(HttpExchange exchange) {
+    private void handleCcCountTokens(GatewayExchange exchange) {
         try {
             Map<String, Object> body = readJsonBody(exchange);
             int inputTokens = estimateCcInputTokens(body);
@@ -1147,7 +1156,7 @@ public class ServiceInstanceManager {
      * @param caller   已通过鉴权的调用方（appKey 优先），不能为 null
      * @throws IOException 读取请求体或回写响应失败时抛出
      */
-    private void handleGemini(SysAiServiceInstance inst, HttpExchange exchange, String method, String path,
+    private void handleGemini(SysAiServiceInstance inst, GatewayExchange exchange, String method, String path,
                               Caller caller)
             throws IOException {
         boolean stream = path.endsWith(":streamGenerateContent");
@@ -1294,7 +1303,7 @@ public class ServiceInstanceManager {
      * @param flavor   协议风味，取值为 {@code gemini} 或其他（按 OpenAI 结构输出）
      * @param caller   已鉴权的调用方，可为 null（视为不限制模型）
      */
-    private void handleModelsList(HttpExchange exchange, String flavor, Caller caller) {
+    private void handleModelsList(GatewayExchange exchange, String flavor, Caller caller) {
         try {
             // /models 必须与 /chat/completions 同一口径：实例放行哪个模型，清单就报哪个。
             // 真源是「允许范围」，注册表只是本机已装配的 ChatClient 目录 —— 实例按模型透传给
@@ -1484,7 +1493,7 @@ public class ServiceInstanceManager {
      * @param reqBody  原始请求体（供 OpenAI 流透传）
      * @param caller   调用方身份（鉴权通过后不为 null）
      */
-    private void runFacade(SysAiServiceInstance inst, AiChatRequest request, HttpExchange exchange,
+    private void runFacade(SysAiServiceInstance inst, AiChatRequest request, GatewayExchange exchange,
                            StreamState st, String mode, String id, String effModel,
                            Map<String, Object> reqBody, Caller caller) {
         long start = System.currentTimeMillis();
@@ -1703,7 +1712,7 @@ public class ServiceInstanceManager {
      * @param latency  调用耗时（毫秒）
      * @param caller   调用方身份，可为 null
      */
-    private void writeAccessLog(SysAiServiceInstance inst, HttpExchange exchange, String model,
+    private void writeAccessLog(SysAiServiceInstance inst, GatewayExchange exchange, String model,
                                 String protocol, int status, AiUsage usage, long latency, Caller caller) {
         try {
             SysAiServiceAccessLog logRow = new SysAiServiceAccessLog();
@@ -1779,7 +1788,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，用于提取凭证与回写错误
      * @return 校验通过的调用方；校验失败时已回写错误并返回 null
      */
-    private Caller authenticate(HttpExchange exchange) {
+    private Caller authenticate(GatewayExchange exchange) {
         String presented = extractPresentedToken(exchange);
         if (presented == null || presented.isBlank()) {
             tryWriteError(exchange, 401, "authentication_error", "无效或缺失的 AppKey");
@@ -1801,7 +1810,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象
      * @return 校验通过的调用方；失败时已回写错误并返回 null
      */
-    private Caller authenticateAppKey(SysAiAppKey row, HttpExchange exchange) {
+    private Caller authenticateAppKey(SysAiAppKey row, GatewayExchange exchange) {
         // 判定口径与网关同一份（AppKeyQuotaGate），这里只负责把它翻译成实例端口的错误体，
         // 不再各自维护一套「先判什么后判什么」——两套口径曾导致网关永不过期、实例已过期的鬼故事。
         AppKeyQuotaGate.Deny deny = AppKeyQuotaGate.check(row, clientIp(exchange));
@@ -1888,7 +1897,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，用于回写错误
      * @return 允许调用时返回 true；越权时已回写 403 并返回 false
      */
-    private boolean assertModelAllowed(Caller caller, String model, HttpExchange exchange) {
+    private boolean assertModelAllowed(Caller caller, String model, GatewayExchange exchange) {
         Set<String> scope = allowedModels(caller);
         if (AppKeyModelScope.allows(scope, model)) {
             return true;
@@ -1911,7 +1920,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @return 去除首尾空白的凭证；三个请求头都缺失时返回 null
      */
-    private String extractPresentedToken(HttpExchange exchange) {
+    private String extractPresentedToken(GatewayExchange exchange) {
         String auth = exchange.getRequestHeaders().getFirst("Authorization");
         if (auth != null && auth.startsWith("Bearer ")) {
             return auth.substring(7).trim();
@@ -1965,7 +1974,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @return 客户端 IP；无法解析时返回 {@code unknown}
      */
-    private String clientIp(HttpExchange exchange) {
+    private String clientIp(GatewayExchange exchange) {
         String fwd = exchange.getRequestHeaders().getFirst("X-Forwarded-For");
         if (fwd != null && !fwd.isBlank()) {
             int comma = fwd.indexOf(',');
@@ -2028,7 +2037,7 @@ public class ServiceInstanceManager {
      * @return 解析后的 Map，请求体为空时返回空 Map，不会为 null
      * @throws IOException 读取请求体失败时抛出
      */
-    private Map<String, Object> readJsonBody(HttpExchange exchange) throws IOException {
+    private Map<String, Object> readJsonBody(GatewayExchange exchange) throws IOException {
         byte[] bytes = exchange.getRequestBody().readAllBytes();
         if (bytes.length == 0) {
             return new LinkedHashMap<>();
@@ -2051,11 +2060,13 @@ public class ServiceInstanceManager {
      * @param contentType 响应的基础 Content-Type，不能为 null，方法内追加 UTF-8 字符集
      * @throws IOException 发送响应头失败时抛出
      */
-    private void openSse(HttpExchange exchange, String contentType) throws IOException {
+    private void openSse(GatewayExchange exchange, String contentType) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", contentType + "; charset=utf-8");
         exchange.getResponseHeaders().set("Cache-Control", "no-cache");
         exchange.getResponseHeaders().set("Connection", "keep-alive");
         exchange.sendResponseHeaders(200, 0);
+        // 切换框架响应为 SSE 模式：响应头按 chunked 立即写出，后续逐帧下发
+        exchange.openSseStream();
     }
 
     /**
@@ -2066,7 +2077,7 @@ public class ServiceInstanceManager {
      * @param payload  响应体对象，不能为 null
      * @throws IOException 序列化或写出响应失败时抛出
      */
-    private void writeJsonResponse(HttpExchange exchange, int status, Object payload) throws IOException {
+    private void writeJsonResponse(GatewayExchange exchange, int status, Object payload) throws IOException {
         if (exchange.getResponseHeaders().get("Content-Type") == null) {
             exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         }
@@ -2085,7 +2096,7 @@ public class ServiceInstanceManager {
      * @param type     错误类型标识，不能为 null
      * @param message 错误描述，可为 null
      */
-    private void tryWriteError(HttpExchange exchange, int status, String type, String message) {
+    private void tryWriteError(GatewayExchange exchange, int status, String type, String message) {
         try {
             if (exchange.getResponseCode() >= 0) {
                 // 响应头已发送，不能再写入新的错误响应
@@ -2109,7 +2120,7 @@ public class ServiceInstanceManager {
      * @param exchange 当前 HTTP 交换对象，不能为 null
      * @return 已发出返回 true；状态不可知时按未发出处理
      */
-    private boolean sseHeadersSent(HttpExchange exchange) {
+    private boolean sseHeadersSent(GatewayExchange exchange) {
         try {
             return exchange.getResponseCode() >= 0;
         } catch (Exception e) {
@@ -2129,7 +2140,7 @@ public class ServiceInstanceManager {
      * @param mode     流式协议模式，不能为 null
      * @param error    上游错误，可为 null
      */
-    private void abortOpenSse(HttpExchange exchange, StreamState st, String mode, Throwable error) {
+    private void abortOpenSse(GatewayExchange exchange, StreamState st, String mode, Throwable error) {
         String message = error != null && error.getMessage() != null ? error.getMessage() : "upstream error";
         try {
             Map<String, Object> err = Map.of("message", message, "type", "upstream_error");
@@ -2172,11 +2183,227 @@ public class ServiceInstanceManager {
         return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
     }
 
+    // ==================== 框架交换适配 ====================
+
+    /**
+     * 框架 Server 交换适配器。
+     *
+     * <p>把框架 {@link ServerRequest}/{@link ServerResponse} 包装成与原 JDK
+     * {@code HttpExchange} 兼容的最小 API 面，使各协议处理逻辑无需感知底层
+     * HTTP 实现差异。请求头经框架按小写归一存取；响应体由框架在
+     * {@code complete()} 阶段统一落盘；SSE 通过框架的 {@code sse()} 系列方法逐帧下发。</p>
+     */
+    private static final class GatewayExchange {
+        final ServerRequest request;
+        final ServerResponse response;
+        private final GatewayHeaders requestHeaders;
+        private final GatewayHeaders responseHeaders;
+        private int responseCode = -1;
+        private boolean sseOpened;
+
+        /**
+         * 创建交换适配器。
+         *
+         * @param request  框架请求对象，不能为 null
+         * @param response 框架响应对象，不能为 null
+         */
+        GatewayExchange(ServerRequest request, ServerResponse response) {
+            this.request = request;
+            this.response = response;
+            this.requestHeaders = new GatewayHeaders(request, null);
+            this.responseHeaders = new GatewayHeaders(null, response);
+        }
+
+        /**
+         * 获取请求 URI（含路径与查询参数）。
+         *
+         * @return 请求 URI，不会为 null
+         */
+        URI getRequestURI() {
+            return URI.create(request.getUri());
+        }
+
+        /**
+         * 获取请求方法名。
+         *
+         * @return 如 {@code GET}、{@code POST}
+         */
+        String getRequestMethod() {
+            return request.getMethod().name();
+        }
+
+        /**
+         * 获取请求头集合视图。
+         *
+         * @return 请求头集合，不会为 null
+         */
+        GatewayHeaders getRequestHeaders() {
+            return requestHeaders;
+        }
+
+        /**
+         * 获取响应头集合视图。
+         *
+         * @return 响应头集合，不会为 null
+         */
+        GatewayHeaders getResponseHeaders() {
+            return responseHeaders;
+        }
+
+        /**
+         * 获取请求体输入流。
+         *
+         * @return 请求体输入流，不会为 null
+         */
+        InputStream getRequestBody() {
+            return request.getInputStream();
+        }
+
+        /**
+         * 获取响应体输出流（框架缓冲流，complete 阶段统一落盘）。
+         *
+         * @return 响应体输出流，不会为 null
+         */
+        OutputStream getResponseBody() {
+            return response.getOutputStream();
+        }
+
+        /**
+         * 记录响应状态码并写入框架响应。
+         *
+         * @param code          HTTP 状态码
+         * @param contentLength 响应体长度；框架按缓冲体统一交付，该值仅保留兼容性
+         */
+        void sendResponseHeaders(int code, long contentLength) {
+            responseCode = code;
+            response.setStatus(code);
+        }
+
+        /**
+         * 获取已记录的响应状态码。
+         *
+         * @return 已调用 {@link #sendResponseHeaders(int, long)} 时返回该状态码，否则返回 -1
+         */
+        int getResponseCode() {
+            return responseCode;
+        }
+
+        /**
+         * 获取客户端远程地址。
+         *
+         * @return 客户端地址；无法解析时返回 null
+         */
+        InetSocketAddress getRemoteAddress() {
+            String ip = request.getRemoteAddress();
+            if (ip == null || ip.isBlank()) {
+                return null;
+            }
+            try {
+                InetSocketAddress addr = new InetSocketAddress(ip, request.getRemotePort());
+                return addr.getAddress() != null ? addr : null;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        /**
+         * 将框架响应切换为 SSE 流模式：响应头立即按 chunked 写出，后续逐帧下发。
+         */
+        void openSseStream() {
+            sseOpened = true;
+            response.sse();
+        }
+
+        /**
+         * 写出一条 SSE 事件帧。
+         *
+         * @param event 事件名，可为 null
+         * @param json  帧负载 JSON 文本，可为 null
+         */
+        void sseEvent(String event, String json) {
+            response.sseEvent(event, json);
+        }
+
+        /**
+         * 写出 SSE 关闭帧并断开连接。
+         */
+        void sseClose() {
+            response.sseClose();
+        }
+
+        /**
+         * 关闭交换：SSE 模式写关闭帧收流，普通模式终止响应并交付缓冲体。
+         */
+        void close() {
+            if (sseOpened) {
+                response.sseClose();
+            } else {
+                response.end();
+            }
+        }
+    }
+
+    /**
+     * 请求/响应头集合的兼容视图。
+     *
+     * <p>对齐 JDK {@code Headers} 的常用语义：{@code getFirst} 取首个值、
+     * {@code get} 返回单值列表或 null、{@code set} 覆盖写。请求头经框架
+     * 小写归一存取；响应头直接读写框架响应对象。</p>
+     */
+    private static final class GatewayHeaders {
+        private final ServerRequest request;
+        private final ServerResponse response;
+
+        /**
+         * 创建头集合视图（请求与响应二选一）。
+         *
+         * @param request  框架请求对象，请求头视图时不能为 null
+         * @param response 框架响应对象，响应头视图时不能为 null
+         */
+        GatewayHeaders(ServerRequest request, ServerResponse response) {
+            this.request = request;
+            this.response = response;
+        }
+
+        /**
+         * 获取指定头的第一个值。
+         *
+         * @param name 头名称，框架侧按小写归一匹配
+         * @return 头值，不存在时返回 null
+         */
+        String getFirst(String name) {
+            if (request != null) {
+                return request.getHeader(name);
+            }
+            return response.getHeader(name);
+        }
+
+        /**
+         * 获取指定头的值列表。
+         *
+         * @param name 头名称
+         * @return 单值列表；不存在时返回 null
+         */
+        List<String> get(String name) {
+            String value = getFirst(name);
+            return value == null ? null : List.of(value);
+        }
+
+        /**
+         * 覆盖写指定响应头。
+         *
+         * @param name  头名称
+         * @param value 头值
+         */
+        void set(String name, String value) {
+            response.setHeader(name, value);
+        }
+    }
+
     // ==================== 流式状态持有 ====================
 
     private static final class StreamState {
-        final HttpExchange exchange;
-        OutputStream os;
+        final GatewayExchange exchange;
         boolean committed;
         boolean closed;
         final StringBuilder buffer = new StringBuilder();
@@ -2194,22 +2421,8 @@ public class ServiceInstanceManager {
          * @param exchange HTTP 交换对象
          * @return 返回值
         */
-        StreamState(HttpExchange exchange) {
+        StreamState(GatewayExchange exchange) {
             this.exchange = exchange;
-        }
-
-        /**
-     * 获取响应输出流并标记已提交，首次调用时惰性初始化。
-     *
-     * @return 响应输出流，不会为 null
-     * @throws IOException 打开响应输出流失败时抛出
-     */
-    OutputStream out() throws IOException {
-            if (os == null) {
-                os = exchange.getResponseBody();
-                committed = true;
-            }
-            return os;
         }
 
         /**
@@ -2219,8 +2432,7 @@ public class ServiceInstanceManager {
      * @throws IOException 写出失败时抛出
      */
     void writeSseData(Object payload) throws IOException {
-            String json = JSON.writeValueAsString(payload);
-            write(("data: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
+            writeFrame(null, JSON.writeValueAsString(payload));
         }
 
         /**
@@ -2229,7 +2441,7 @@ public class ServiceInstanceManager {
      * @throws IOException 写出失败时抛出
      */
     void writeDone() throws IOException {
-            write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+            writeFrame(null, "[DONE]");
         }
 
         /**
@@ -2240,37 +2452,32 @@ public class ServiceInstanceManager {
      * @throws IOException 写出失败时抛出
      */
     void writeSseEvent(String event, Object payload) throws IOException {
-            String json = JSON.writeValueAsString(payload);
-            write(("event: " + event + "\ndata: " + json + "\n\n").getBytes(StandardCharsets.UTF_8));
+            writeFrame(event, JSON.writeValueAsString(payload));
         }
 
         /**
-     * 同步写出字节并立即 flush，保证 SSE 帧即时可见。
+     * 同步写出一帧 SSE 事件并标记已提交。
      *
-     * @param bytes 待写出的字节，不能为 null
-     * @throws IOException 写出或 flush 失败时抛出
+     * <p>框架 {@code sseEvent} 把整帧作为单次写入入队，写失败（如连接已断）时静默丢弃；
+     * 这里仍以 {@code committed} 记录「已产出过帧」，供错误收尾分支判定。</p>
+     *
+     * @param event 事件名，可为 null
+     * @param json  帧负载 JSON 文本，不能为 null
      */
-    private synchronized void write(byte[] bytes) throws IOException {
-            OutputStream o = out();
-            o.write(bytes);
-            o.flush();
+    private synchronized void writeFrame(String event, String json) {
+            exchange.sseEvent(event, json);
+            committed = true;
         }
 
         /**
-     * 幂等关闭响应流，关闭异常仅记日志。
+     * 幂等关闭 SSE 流：写 zero chunk 并断开连接。
      */
     synchronized void close() {
             if (closed) {
                 return;
             }
             closed = true;
-            try {
-                if (os != null) {
-                    os.close();
-                }
-            } catch (IOException e) {
-                log.debug("[ai] IO 操作失败，已忽略: {}", e.getMessage());
-            }
+            exchange.sseClose();
         }
     }
 }

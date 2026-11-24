@@ -13,6 +13,8 @@ import com.chua.common.support.ai.chat.indicator.HttpChatClientIndicator;
 import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.deeplearning.support.engine.ModelHardwareFilter;
+import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
 import com.chua.starter.common.support.service.MailService;
 import com.chua.starter.entity.service.SysMessage;
@@ -345,6 +347,15 @@ public class ApiProviderController {
     private static final String WEB_PROVIDER_ID = "web";
 
     /**
+     * GGUF 本地推理供应商标识：与 ONNX / Web 同构的「用户自添加」单行供应商，
+     * 平台固定为 {@code gguf}。模型目录来自本地模型注册表（{@link ModelRegistry}，
+     * 由 jitllm 的 GGUF 注册器集中登记常用/最新/多类型 GGUF 模型），权重文件由
+     * 用户下载/放置到本地；目录只返回当前硬件可运行的模型
+     * （{@link ModelHardwareFilter} 按显存/内存自动过滤，避免选中后 OOM/崩溃）。
+     */
+    private static final String GGUF_PROVIDER_ID = "gguf";
+
+    /**
      * 渠道管理为「内置模型渠道」物化出来的 provider 行前缀。
      *
      * <p>渠道标识形如 {@code chat-duckduckgo}，落库时统一大写成
@@ -391,6 +402,16 @@ public class ApiProviderController {
      */
     private static boolean isOnnxProvider(String providerId) {
         return providerId != null && ONNX_PROVIDER_ID.equalsIgnoreCase(providerId.trim());
+    }
+
+    /**
+     * 判断供应商标识是否为 GGUF 本地推理供应商。
+     *
+     * @param providerId 供应商标识
+     * @return true=GGUF 供应商
+     */
+    private static boolean isGgufProvider(String providerId) {
+        return providerId != null && GGUF_PROVIDER_ID.equalsIgnoreCase(providerId.trim());
     }
 
     /**
@@ -1852,7 +1873,11 @@ public class ApiProviderController {
             // ONNX 行由用户自己添加；万一库中没有该行（已删除 / 标识未落成 onnx），
             // 本地模型仍可直接从模型门面取，避免 requireProvider() 报「provider 不存在」
             if (isVirtualLocalProvider(providerId)) {
-                Map<String, Object> local = fetchLocalModelsFromFacade();
+                // GGUF 与 ONNX 同为「无远端目录」的本地供应商，但目录来源不同：
+                // GGUF 直接来自模型注册表（并按本机硬件过滤），ONNX 走本地模型门面
+                Map<String, Object> local = isGgufProvider(providerId)
+                        ? fetchGgufModelsFromFacade()
+                        : fetchLocalModelsFromFacade();
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> models = (List<Map<String, Object>>) local.get("models");
                 List<Map<String, Object>> items = new ArrayList<>();
@@ -9466,6 +9491,73 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
+     * 通过本地模型注册表拉取 GGUF 模型清单。
+     *
+     * <p>GGUF 提供商与 ONNX 一样没有可拉取的远程目录：模型元数据由 jitllm 的
+     * GGUF 注册器经 SPI 集中登记进 {@code ModelRegistry}，这里直接枚举注册表中
+     * {@code .gguf} 条目并按本机硬件过滤（{@code ModelHardwareFilter}），
+     * 只返回当前机器跑得动的模型，避免用户选中后运行即 OOM/崩溃。</p>
+     *
+     * @return 与上游一致的 models 结构（{@code name}/{@code modelName}）并附带 gguf 专有字段
+     */
+    private Map<String, Object> fetchGgufModelsFromFacade() {
+        Map<String, Object> out = new LinkedHashMap<>(4);
+        out.put("models", listGgufModels());
+        return out;
+    }
+
+    /**
+     * 列出当前硬件可运行的 GGUF 模型（gguf 提供商的模型目录）。
+     *
+     * <p>数据来源是 {@code ModelRegistry} SPI 注册表；权重是否已下载不影响目录展示
+     * （{@code available} 恒为 false，下载/放置动作由用户完成），但硬件跑不动的模型
+     * 直接不进目录（后端自动过滤，前端无需再判）。</p>
+     *
+     * @return 模型条目列表（含 id/name/modelName/capability/task/tasks/supported 等）
+     */
+    private List<Map<String, Object>> listGgufModels() {
+        try {
+            ModelRegistry.discoverAll();
+        } catch (Exception e) {
+            log.debug("[GGUF] 模型注册表发现失败: {}", e.getMessage());
+        }
+        // discoverAll 会把模型根重置为库默认值：与本地模型门面同口径，立即恢复持久化根目录
+        try {
+            onnxExternalDirectoryService.applyModelRoot();
+        } catch (Exception e) {
+            log.debug("[GGUF] 恢复模型根失败: {}", e.getMessage());
+        }
+        List<Map<String, Object>> models = new ArrayList<>();
+        for (ModelRegistry.Entry entry : ModelRegistry.getAll()) {
+            String file = entry.downloadFileName();
+            if (file == null || !file.toLowerCase(Locale.ROOT).endsWith(".gguf")) {
+                continue;
+            }
+            // 本机硬件跑不动的模型直接不进目录
+            if (!ModelHardwareFilter.isSupported(entry)) {
+                continue;
+            }
+            String modelId = entry.modelId();
+            Map<String, Object> item = new LinkedHashMap<>(12);
+            item.put("id", modelId);
+            item.put("name", modelId);
+            item.put("modelName", modelId);
+            item.put("capability", "chat");
+            item.put("external", false);
+            item.put("available", false);
+            item.put("supported", true);
+            item.put("recommended", entry.isRecommended());
+            item.put("task", "chat");
+            item.put("tasks", List.of("chat"));
+            item.put("file", file);
+            item.put("download_url", entry.downloadUrl());
+            item.put("description", modelId + "（GGUF · " + file + " · 本机硬件满足）");
+            models.add(item);
+        }
+        return models;
+    }
+
+    /**
      * 列出用户可见的本地模型（ONNX 提供商的模型目录）。
      *
      * <p>数据来源统一走本地模型门面 {@code AiModelCatalogService}（底层 {@code ModelRegistry} SPI），
@@ -9645,7 +9737,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-     * 判断是否为本地推理供应商（ONNX）。
+     * 判断是否为本地推理供应商（ONNX / GGUF）。
      *
      * <p>ONNX 与其它供应商同构，供应商行就落在 {@code sys_account_channel} 表里；
      * 但「从提供商获取」这一步不同：其它供应商是向远端地址发 HTTP 拉取模型目录，
@@ -9656,7 +9748,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @return true=本地推理供应商
      */
     private static boolean isVirtualLocalProvider(String providerId) {
-        return isOnnxProvider(providerId);
+        return isOnnxProvider(providerId) || isGgufProvider(providerId);
     }
 
     /**
