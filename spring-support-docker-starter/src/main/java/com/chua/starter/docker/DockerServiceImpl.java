@@ -1012,9 +1012,14 @@ public class DockerServiceImpl implements DockerService {
                 Map<String, Object> spec = new LinkedHashMap<>();
                 spec.put("Name", name);
                 spec.put("Driver", driver.isEmpty() ? "local" : driver);
-                Map<String, Object> options = optionMap(request.getOptions());
+                Map<String, Object> options = new LinkedHashMap<>();
+                Map<String, Object> labels = new LinkedHashMap<>();
+                splitVolumeOptions(request.getOptions(), options, labels);
                 if (!options.isEmpty()) {
                     spec.put("Options", options);
+                }
+                if (!labels.isEmpty()) {
+                    spec.put("Labels", labels);
                 }
                 DockerChannel.client(host).createVolume(spec);
                 return apiVolumeInspect(DockerChannel.client(host), name);
@@ -1028,7 +1033,11 @@ public class DockerServiceImpl implements DockerService {
             }
             if (request.getOptions() != null) {
                 for (String option : request.getOptions()) {
-                    cmd.append(" --opt ").append(shQuote(option));
+                    if (isVolumeLabelOption(option)) {
+                        cmd.append(" --label ").append(shQuote(option));
+                    } else {
+                        cmd.append(" --opt ").append(shQuote(option));
+                    }
                 }
             }
             RemoteExecResult result = execRemote(hostId, cmd.toString());
@@ -1455,6 +1464,50 @@ public class DockerServiceImpl implements DockerService {
             out.put(option.substring(0, idx).trim(), option.substring(idx + 1).trim());
         }
         return out;
+    }
+
+    /**
+     * 判断卷创建选项是否为卷标签（{@code label=...}）：标签必须走 {@code --label} / API 的 Labels，
+     * 不能作为驱动选项（{@code --opt} / Options）下发，local 驱动会拒绝未知驱动选项。
+     *
+     * @param option 选项原文
+     * @return 是否为标签选项
+     */
+    private boolean isVolumeLabelOption(String option) {
+        if (isBlank(option)) {
+            return false;
+        }
+        int idx = option.indexOf('=');
+        return idx > 0 && "label".equalsIgnoreCase(option.substring(0, idx).trim());
+    }
+
+    /**
+     * 把卷创建选项按语义拆分：{@code label=...} 进标签（Labels），其余 {@code KEY=VALUE} 进驱动选项（Options）。
+     *
+     * @param options    选项列表
+     * @param optionsOut 驱动选项输出
+     * @param labelsOut  标签输出
+     */
+    private void splitVolumeOptions(List<String> options, Map<String, Object> optionsOut, Map<String, Object> labelsOut) {
+        if (options == null) {
+            return;
+        }
+        for (String option : options) {
+            if (isBlank(option)) {
+                continue;
+            }
+            int idx = option.indexOf('=');
+            if (idx <= 0) {
+                continue;
+            }
+            String key = option.substring(0, idx).trim();
+            String value = option.substring(idx + 1).trim();
+            if ("label".equalsIgnoreCase(key)) {
+                labelsOut.put(key, value);
+            } else {
+                optionsOut.put(key, value);
+            }
+        }
     }
 
     /**

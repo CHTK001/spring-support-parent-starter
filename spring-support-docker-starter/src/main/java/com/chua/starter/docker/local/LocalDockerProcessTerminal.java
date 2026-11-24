@@ -137,9 +137,26 @@ public class LocalDockerProcessTerminal implements DockerTerminal {
             throw new IOException("终端已关闭");
         }
         synchronized (stdin) {
-            stdin.write((input == null ? "" : input).getBytes(StandardCharsets.UTF_8));
+            stdin.write(normalizeLineEndings(input).getBytes(StandardCharsets.UTF_8));
             stdin.flush();
         }
+    }
+
+    /**
+     * 行终止归一化：本机通道 {@code docker exec -i} 无 PTY，容器内 shell 只认 LF 作为行终止符；
+     * 终端客户端按终端惯例以 CR 提交回车（Enter）或以 CRLF 结尾。真实 PTY 由行规程（icrnl）完成
+     * CR→LF 转换，本机进程管道没有这层，必须在此模拟：CRLF 折叠为 LF、孤立 CR 归一为 LF。
+     * 否则输入永不构成完整行，容器内命令不会执行（表现为终端敲回车无任何回显）。
+     *
+     * @param input 原始输入
+     * @return 归一化后的输入
+     */
+    private String normalizeLineEndings(String input) {
+        String text = input == null ? "" : input;
+        if (text.indexOf('\r') < 0) {
+            return text;
+        }
+        return text.replace("\r\n", "\n").replace('\r', '\n');
     }
 
     @Override
