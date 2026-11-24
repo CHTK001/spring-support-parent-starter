@@ -215,6 +215,16 @@ CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
     `sys_ai_pricing_currency`           VARCHAR(8)   NULL COMMENT 'CNY / USD',
     `sys_ai_pricing_effective_date`     DATETIME     NULL COMMENT '',
     `sys_ai_pricing_source`             VARCHAR(32)  NULL COMMENT 'manual / sync',
+    `sys_ai_pricing_billing_mode`       VARCHAR(16)  NULL COMMENT '计费模式：token=按 token / image=按张（按次）',
+    `sys_ai_pricing_cache_read_per_1k`  DOUBLE       NULL COMMENT '缓存读单价（每 1k tokens，USD）',
+    `sys_ai_pricing_cache_write_per_1k` DOUBLE       NULL COMMENT '缓存写单价（每 1k tokens，USD）',
+    `sys_ai_pricing_per_request_price`  DOUBLE       NULL COMMENT '按次计价基准价（USD/次，图像等按张计费模型）',
+    `sys_ai_pricing_tiers`              TEXT         NULL COMMENT '分档计价 JSON：{billingMode,basis,tiers:[{label,minTokens,maxTokens,inputPer1k,outputPer1k,cacheReadPer1k,cacheWritePer1k,cacheWrite1hPer1k,perRequestPrice}]}（价格折算每 1k，USD）',
+    `sys_ai_pricing_peak`               VARCHAR(255) NULL COMMENT '峰值时段价 JSON：{enabled,start,end,multiplier}',
+    `sys_ai_pricing_group_name`         VARCHAR(128) NULL COMMENT '同步来源分组名（sub2api 分组成员价）',
+    `sys_ai_pricing_rate_multiplier`    DOUBLE       NULL COMMENT '分组倍率（分组价 = 官方价 × 倍率）',
+    `sys_ai_pricing_group_quotes`       TEXT         NULL COMMENT '同模型跨分组差异 JSON：[{group,rateMultiplier,inputPer1k,outputPer1k,perRequestPrice}]（价格折算每 1k，USD）',
+    `sys_ai_pricing_official`           TEXT         NULL COMMENT '官方价对照 JSON：{inputPer1k,outputPer1k,cacheReadPer1k,cacheWritePer1k,tiers:[{label,inputPer1k,outputPer1k,perRequestPrice}]}（折算每 1k，USD）',
     `create_name`                        VARCHAR(64)  NULL COMMENT '',
     `create_by`                          INT          NULL COMMENT '',
     `create_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
@@ -2249,3 +2259,114 @@ CREATE TABLE IF NOT EXISTS `sys_ai_news` (
     PRIMARY KEY (`sys_ai_news_id`),
     UNIQUE KEY `uk_ai_news_link` (`sys_ai_news_link`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AIHOT 精选资讯（RSS 同步，按 link 去重）';
+
+-- =============================================================================
+-- V7.6 — 模型价格分档计价：sys_ai_pricing 补档位/峰值/分组/官方价列
+-- 背景：sub2api 模型广场（data.groups[].models[].pricing）自带分档计价
+--       （intervals：长文本 >272K 加价、图像按分辨率按张）、峰值时段价、
+--       分组倍率与官方价对照；此前同步只落 input/output 两个拍平单价，
+--       档位信息全部丢弃，价格页无法展示分档。
+-- 列设计：档位/分组差异/官方价均为展示型结构化数据，不参与按档 join，
+--       一律 JSON 落列，不建子表。
+-- 幂等纪律：PREPARE/EXECUTE + information_schema.COLUMNS 判存在，可反复执行。
+-- =============================================================================
+
+SET @has_pricing_billing_mode := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_billing_mode'
+);
+SET @sql_pricing_billing_mode := IF(@has_pricing_billing_mode > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_billing_mode VARCHAR(16) NULL COMMENT ''计费模式：token=按 token / image=按张（按次）'' AFTER sys_ai_pricing_source');
+PREPARE stmt_pricing_billing_mode FROM @sql_pricing_billing_mode;
+EXECUTE stmt_pricing_billing_mode;
+DEALLOCATE PREPARE stmt_pricing_billing_mode;
+
+SET @has_pricing_cache_read := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_cache_read_per_1k'
+);
+SET @sql_pricing_cache_read := IF(@has_pricing_cache_read > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_cache_read_per_1k DOUBLE NULL COMMENT ''缓存读单价（每 1k tokens，USD）'' AFTER sys_ai_pricing_billing_mode');
+PREPARE stmt_pricing_cache_read FROM @sql_pricing_cache_read;
+EXECUTE stmt_pricing_cache_read;
+DEALLOCATE PREPARE stmt_pricing_cache_read;
+
+SET @has_pricing_cache_write := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_cache_write_per_1k'
+);
+SET @sql_pricing_cache_write := IF(@has_pricing_cache_write > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_cache_write_per_1k DOUBLE NULL COMMENT ''缓存写单价（每 1k tokens，USD）'' AFTER sys_ai_pricing_cache_read_per_1k');
+PREPARE stmt_pricing_cache_write FROM @sql_pricing_cache_write;
+EXECUTE stmt_pricing_cache_write;
+DEALLOCATE PREPARE stmt_pricing_cache_write;
+
+SET @has_pricing_per_request := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_per_request_price'
+);
+SET @sql_pricing_per_request := IF(@has_pricing_per_request > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_per_request_price DOUBLE NULL COMMENT ''按次计价基准价（USD/次，图像等按张计费模型）'' AFTER sys_ai_pricing_cache_write_per_1k');
+PREPARE stmt_pricing_per_request FROM @sql_pricing_per_request;
+EXECUTE stmt_pricing_per_request;
+DEALLOCATE PREPARE stmt_pricing_per_request;
+
+SET @has_pricing_tiers := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_tiers'
+);
+SET @sql_pricing_tiers := IF(@has_pricing_tiers > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_tiers TEXT NULL COMMENT ''分档计价 JSON：{billingMode,basis,tiers:[{label,minTokens,maxTokens,inputPer1k,outputPer1k,cacheReadPer1k,cacheWritePer1k,cacheWrite1hPer1k,perRequestPrice}]}（价格折算每 1k，USD）'' AFTER sys_ai_pricing_per_request_price');
+PREPARE stmt_pricing_tiers FROM @sql_pricing_tiers;
+EXECUTE stmt_pricing_tiers;
+DEALLOCATE PREPARE stmt_pricing_tiers;
+
+SET @has_pricing_peak := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_peak'
+);
+SET @sql_pricing_peak := IF(@has_pricing_peak > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_peak VARCHAR(255) NULL COMMENT ''峰值时段价 JSON：{enabled,start,end,multiplier}'' AFTER sys_ai_pricing_tiers');
+PREPARE stmt_pricing_peak FROM @sql_pricing_peak;
+EXECUTE stmt_pricing_peak;
+DEALLOCATE PREPARE stmt_pricing_peak;
+
+SET @has_pricing_group_name := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_group_name'
+);
+SET @sql_pricing_group_name := IF(@has_pricing_group_name > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_group_name VARCHAR(128) NULL COMMENT ''同步来源分组名（sub2api 分组成员价）'' AFTER sys_ai_pricing_peak');
+PREPARE stmt_pricing_group_name FROM @sql_pricing_group_name;
+EXECUTE stmt_pricing_group_name;
+DEALLOCATE PREPARE stmt_pricing_group_name;
+
+SET @has_pricing_rate_multiplier := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_rate_multiplier'
+);
+SET @sql_pricing_rate_multiplier := IF(@has_pricing_rate_multiplier > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_rate_multiplier DOUBLE NULL COMMENT ''分组倍率（分组价 = 官方价 × 倍率）'' AFTER sys_ai_pricing_group_name');
+PREPARE stmt_pricing_rate_multiplier FROM @sql_pricing_rate_multiplier;
+EXECUTE stmt_pricing_rate_multiplier;
+DEALLOCATE PREPARE stmt_pricing_rate_multiplier;
+
+SET @has_pricing_group_quotes := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_group_quotes'
+);
+SET @sql_pricing_group_quotes := IF(@has_pricing_group_quotes > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_group_quotes TEXT NULL COMMENT ''同模型跨分组差异 JSON：[{group,rateMultiplier,inputPer1k,outputPer1k,perRequestPrice}]（价格折算每 1k，USD）'' AFTER sys_ai_pricing_rate_multiplier');
+PREPARE stmt_pricing_group_quotes FROM @sql_pricing_group_quotes;
+EXECUTE stmt_pricing_group_quotes;
+DEALLOCATE PREPARE stmt_pricing_group_quotes;
+
+SET @has_pricing_official := (
+    SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_ai_pricing' AND COLUMN_NAME = 'sys_ai_pricing_official'
+);
+SET @sql_pricing_official := IF(@has_pricing_official > 0, 'SELECT 1',
+    'ALTER TABLE sys_ai_pricing ADD COLUMN sys_ai_pricing_official TEXT NULL COMMENT ''官方价对照 JSON：{inputPer1k,outputPer1k,cacheReadPer1k,cacheWritePer1k,tiers:[{label,inputPer1k,outputPer1k,perRequestPrice}]}（折算每 1k，USD）'' AFTER sys_ai_pricing_group_quotes');
+PREPARE stmt_pricing_official FROM @sql_pricing_official;
+EXECUTE stmt_pricing_official;
+DEALLOCATE PREPARE stmt_pricing_official;

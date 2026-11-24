@@ -3,6 +3,8 @@ package com.chua.starter.device.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.device.support.entity.DeviceSyncOutbox;
 import com.chua.starter.device.support.entity.DeviceSyncRecord;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryBatchRequest;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryResult;
 import com.chua.starter.device.support.model.SyncOutboxQuery;
 import com.chua.starter.device.support.model.SyncRecordQuery;
 import com.chua.starter.device.support.service.DeviceSyncRecordService;
@@ -11,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -90,5 +93,19 @@ public class DeviceSyncRecordController {
     @PostMapping("/outbox/{id}/retry")
     public ReturnResult<DeviceSyncOutbox> retryOutbox(@PathVariable String id) {
         return ReturnResult.ok(syncRecordService.retryOutbox(id));
+    }
+
+    /**
+     * 批量重试推送队列记录：逐条写回厂商，返回每条的执行结果。
+     *
+     * <p>单条失败不影响其余记录；单次上限 100 条，超出直接拒绝。</p>
+     *
+     * @param request 待重试的队列记录 ID 清单
+     * @return 每条记录的重试结果，顺序与入参一致
+     */
+    @PostMapping("/outbox/retry-batch")
+    public ReturnResult<List<DeviceSyncOutboxRetryResult>> retryOutboxBatch(
+            @RequestBody DeviceSyncOutboxRetryBatchRequest request) {
+        return ReturnResult.ok(syncRecordService.retryOutboxBatch(request));
     }
 }

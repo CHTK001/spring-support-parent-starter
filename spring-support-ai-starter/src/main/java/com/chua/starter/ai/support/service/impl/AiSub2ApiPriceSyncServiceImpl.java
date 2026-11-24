@@ -2,6 +2,7 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.entity.SysAiModelSetting;
@@ -13,6 +14,8 @@ import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.datasearch.credit.support.CreditHttp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,8 +32,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -247,10 +252,12 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
      * 解析模型广场响应。
      *
      * <p>信封 {@code code != 0} 视为上游错误；模型价取 {@code pricing}
-     * （分组成员价，USD / token），输入 / 输出价都缺的条目跳过。</p>
+     * （分组成员价，USD / token），输入 / 输出 / 按次价都缺的条目跳过。
+     * 除拍平单价外，同步保留分档（intervals，长文本 &gt;272K 加价 / 图像按分辨率按张）、
+     * 峰值时段价、分组倍率、官方价对照与同模型跨分组差异（结构化 JSON 落列）。</p>
      *
      * @param raw 原始响应
-     * @return 模型价格列表（保持分组顺序，同模型首个分组胜出）
+     * @return 模型价格列表（保持分组顺序，同模型首个分组胜出，其余分组记入差异 JSON）
      */
     private static List<Sub2ApiModelPrice> parseModelPlaza(String raw) {
         JsonNode root;
@@ -271,27 +278,227 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
             return List.of();
         }
         List<Sub2ApiModelPrice> models = new ArrayList<>();
+        Map<String, List<Sub2ApiModelPrice>> byModel = new LinkedHashMap<>();
         Set<String> seen = new HashSet<>();
         for (JsonNode group : groups) {
             JsonNode groupModels = group.path("models");
             if (!groupModels.isArray()) {
                 continue;
             }
+            String groupName = textOrNull(group.path("name"));
+            Double rateMultiplier = doubleOrNull(group.path("rate_multiplier"));
+            String peakJson = buildPeakJson(group);
             for (JsonNode entry : groupModels) {
                 String name = entry.path("name").asText("").trim();
-                if (name.isEmpty() || !seen.add(name)) {
+                if (name.isEmpty()) {
                     continue;
                 }
                 JsonNode pricing = entry.path("pricing");
                 Double input = per1k(pricing.path("input_price"));
                 Double output = per1k(pricing.path("output_price"));
-                if (input == null && output == null) {
+                Double cacheRead = per1k(pricing.path("cache_read_price"));
+                Double cacheWrite = per1k(pricing.path("cache_write_price"));
+                Double perRequest = decimalValue(pricing.path("per_request_price"));
+                String billingMode = textOrDefault(pricing.path("billing_mode"), "token");
+                // 基础价全空但带分档（如图像模型按张价全在 intervals）的条目要保留
+                boolean hasTiers = pricing.path("intervals").isArray() && !pricing.path("intervals").isEmpty();
+                if (input == null && output == null && perRequest == null && !hasTiers) {
                     continue;
                 }
-                models.add(new Sub2ApiModelPrice(name, input, output));
+                String tiersJson = buildTiersJson(pricing, billingMode, entry.path("long_context_basis"));
+                String officialJson = buildOfficialJson(entry.path("official_pricing"));
+                Sub2ApiModelPrice model = new Sub2ApiModelPrice(name, input, output, cacheRead, cacheWrite,
+                        billingMode, perRequest, rateMultiplier, groupName, peakJson, tiersJson, officialJson, null);
+                if (seen.add(name)) {
+                    models.add(model);
+                }
+                byModel.computeIfAbsent(name, k -> new ArrayList<>()).add(model);
+            }
+        }
+        // 分组差异：首个分组是入库基准，其余分组的同模型报价记入差异 JSON（展示用）
+        for (int i = 0; i < models.size(); i++) {
+            List<Sub2ApiModelPrice> variants = byModel.get(models.get(i).model());
+            if (variants != null && variants.size() > 1) {
+                models.set(i, models.get(i).withGroupQuotes(buildGroupQuotesJson(variants)));
             }
         }
         return models;
+    }
+
+    /**
+     * 构建分档计价 JSON（上游 intervals，逐档四价 + 按次价，折算每 1k）。
+     *
+     * @param pricing     模型 pricing 节点
+     * @param billingMode 计费模式
+     * @param basis       长文本计费口径（如 whole_request=超门槛整笔按高档计）
+     * @return 分档 JSON；无档位返回 null
+     */
+    private static String buildTiersJson(JsonNode pricing, String billingMode, JsonNode basis) {
+        JsonNode intervals = pricing.path("intervals");
+        if (!intervals.isArray() || intervals.isEmpty()) {
+            return null;
+        }
+        ArrayNode tiers = MAPPER.createArrayNode();
+        for (JsonNode interval : intervals) {
+            ObjectNode tier = tiers.addObject();
+            tier.put("label", textOrNull(interval.path("tier_label")));
+            tier.put("minTokens", longOrNull(interval.path("min_tokens")));
+            tier.put("maxTokens", longOrNull(interval.path("max_tokens")));
+            tier.put("inputPer1k", per1k(interval.path("input_price")));
+            tier.put("outputPer1k", per1k(interval.path("output_price")));
+            tier.put("cacheReadPer1k", per1k(interval.path("cache_read_price")));
+            tier.put("cacheWritePer1k", per1k(interval.path("cache_write_price")));
+            tier.put("cacheWrite1hPer1k", per1k(interval.path("cache_write_1h_price")));
+            tier.put("perRequestPrice", decimalValue(interval.path("per_request_price")));
+        }
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("billingMode", billingMode);
+        if (basis != null && !basis.isMissingNode() && !basis.isNull()) {
+            root.put("basis", basis.asText());
+        }
+        root.set("tiers", tiers);
+        return root.toString();
+    }
+
+    /**
+     * 构建峰值时段价 JSON（分组级 peak_* 字段）。
+     *
+     * @param group 分组节点
+     * @return 峰值 JSON；未启用峰值返回 null
+     */
+    private static String buildPeakJson(JsonNode group) {
+        if (!group.path("peak_rate_enabled").asBoolean(false)) {
+            return null;
+        }
+        ObjectNode peak = MAPPER.createObjectNode();
+        peak.put("enabled", true);
+        peak.put("start", textOrNull(group.path("peak_start")));
+        peak.put("end", textOrNull(group.path("peak_end")));
+        peak.put("multiplier", doubleOrNull(group.path("peak_rate_multiplier")));
+        return peak.toString();
+    }
+
+    /**
+     * 构建官方价对照 JSON（上游 official_pricing，折算每 1k，USD）。
+     *
+     * @param official 官方价节点
+     * @return 官方价 JSON；节点缺失返回 null
+     */
+    private static String buildOfficialJson(JsonNode official) {
+        if (official == null || official.isMissingNode() || official.isNull() || !official.isObject()) {
+            return null;
+        }
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("inputPer1k", per1k(official.path("input_price")));
+        root.put("outputPer1k", per1k(official.path("output_price")));
+        root.put("cacheReadPer1k", per1k(official.path("cache_read_price")));
+        root.put("cacheWritePer1k", per1k(official.path("cache_write_price")));
+        JsonNode intervals = official.path("intervals");
+        if (intervals.isArray() && !intervals.isEmpty()) {
+            ArrayNode tiers = MAPPER.createArrayNode();
+            for (JsonNode interval : intervals) {
+                ObjectNode tier = tiers.addObject();
+                tier.put("label", textOrNull(interval.path("tier_label")));
+                tier.put("inputPer1k", per1k(interval.path("input_price")));
+                tier.put("outputPer1k", per1k(interval.path("output_price")));
+                tier.put("perRequestPrice", decimalValue(interval.path("per_request_price")));
+            }
+            root.set("tiers", tiers);
+        }
+        return root.toString();
+    }
+
+    /**
+     * 构建同模型跨分组差异 JSON。
+     *
+     * @param variants 同一模型在各分组的解析结果（含基准分组）
+     * @return 差异数组 JSON
+     */
+    private static String buildGroupQuotesJson(List<Sub2ApiModelPrice> variants) {
+        ArrayNode arr = MAPPER.createArrayNode();
+        for (Sub2ApiModelPrice variant : variants) {
+            ObjectNode item = arr.addObject();
+            item.put("group", variant.groupName());
+            item.put("rateMultiplier", variant.rateMultiplier());
+            item.put("inputPer1k", variant.inputPer1k());
+            item.put("outputPer1k", variant.outputPer1k());
+            item.put("perRequestPrice", variant.perRequestPrice());
+        }
+        return arr.toString();
+    }
+
+    /**
+     * 数值取值（不折算，保留原口径，如按次价 / 倍率）。
+     *
+     * @param node 数值节点
+     * @return 数值；缺失或无法解析返回 null
+     */
+    private static Double decimalValue(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        if (node.isNumber()) {
+            return node.decimalValue().doubleValue();
+        }
+        if (node.isTextual()) {
+            String text = node.asText().trim();
+            if (text.isEmpty()) {
+                return null;
+            }
+            try {
+                return new BigDecimal(text).doubleValue();
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 整数取值（档位 token 门槛）。
+     *
+     * @param node 数值节点
+     * @return 整数；缺失返回 null
+     */
+    private static Long longOrNull(JsonNode node) {
+        Double value = decimalValue(node);
+        return value == null ? null : value.longValue();
+    }
+
+    /**
+     * 浮点取值（倍率等）。
+     *
+     * @param node 数值节点
+     * @return 浮点；缺失返回 null
+     */
+    private static Double doubleOrNull(JsonNode node) {
+        return decimalValue(node);
+    }
+
+    /**
+     * 文本取值（去空白，空串归 null）。
+     *
+     * @param node 文本节点
+     * @return 文本；缺失或空白返回 null
+     */
+    private static String textOrNull(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
+        }
+        String text = node.asText().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    /**
+     * 文本取值带缺省。
+     *
+     * @param node        文本节点
+     * @param defaultText 缺省文本
+     * @return 文本；缺失或空白返回缺省
+     */
+    private static String textOrDefault(JsonNode node, String defaultText) {
+        String text = textOrNull(node);
+        return text == null ? defaultText : text;
     }
 
     /**
@@ -369,10 +576,38 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
         pricing.setCurrency("USD");
         pricing.setEffectiveDate(now);
         pricing.setSource(SOURCE);
+        pricing.setBillingMode(model.billingMode());
+        pricing.setCacheReadPer1k(model.cacheReadPer1k());
+        pricing.setCacheWritePer1k(model.cacheWritePer1k());
+        pricing.setPerRequestPrice(model.perRequestPrice());
+        pricing.setTiers(model.tiersJson());
+        pricing.setPeak(model.peakJson());
+        pricing.setGroupName(model.groupName());
+        pricing.setRateMultiplier(model.rateMultiplier());
+        pricing.setGroupQuotes(model.groupQuotesJson());
+        pricing.setOfficial(model.officialJson());
         if (fresh) {
             pricingMapper.insert(pricing);
         } else {
-            pricingMapper.updateById(pricing);
+            // updateById 对 null 字段不更新（MyBatis-Plus 默认 NOT_NULL 策略）；
+            // 上游去掉档位/峰值时旧 JSON 会残留，这里按主键显式全列 set，保证与上游一致
+            pricingMapper.update(null, new LambdaUpdateWrapper<SysAiPricing>()
+                    .eq(SysAiPricing::getId, pricing.getId())
+                    .set(SysAiPricing::getInputPricePer1k, pricing.getInputPricePer1k())
+                    .set(SysAiPricing::getOutputPricePer1k, pricing.getOutputPricePer1k())
+                    .set(SysAiPricing::getCurrency, pricing.getCurrency())
+                    .set(SysAiPricing::getEffectiveDate, pricing.getEffectiveDate())
+                    .set(SysAiPricing::getSource, pricing.getSource())
+                    .set(SysAiPricing::getBillingMode, pricing.getBillingMode())
+                    .set(SysAiPricing::getCacheReadPer1k, pricing.getCacheReadPer1k())
+                    .set(SysAiPricing::getCacheWritePer1k, pricing.getCacheWritePer1k())
+                    .set(SysAiPricing::getPerRequestPrice, pricing.getPerRequestPrice())
+                    .set(SysAiPricing::getTiers, pricing.getTiers())
+                    .set(SysAiPricing::getPeak, pricing.getPeak())
+                    .set(SysAiPricing::getGroupName, pricing.getGroupName())
+                    .set(SysAiPricing::getRateMultiplier, pricing.getRateMultiplier())
+                    .set(SysAiPricing::getGroupQuotes, pricing.getGroupQuotes())
+                    .set(SysAiPricing::getOfficial, pricing.getOfficial()));
         }
     }
 
@@ -400,12 +635,39 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
     }
 
     /**
-     * 一个模型的解析结果。
+     * 一个模型的解析结果（价格均已折算每 1k，USD；按次价保留 USD/次原口径）。
      *
-     * @param model       模型名
-     * @param inputPer1k  输入侧每 1k 单价（USD）
-     * @param outputPer1k 输出侧每 1k 单价（USD）
+     * @param model           模型名
+     * @param inputPer1k      输入侧每 1k 单价
+     * @param outputPer1k     输出侧每 1k 单价
+     * @param cacheReadPer1k  缓存读每 1k 单价
+     * @param cacheWritePer1k 缓存写每 1k 单价
+     * @param billingMode     计费模式：token / image
+     * @param perRequestPrice 按次计价基准价（USD/次）
+     * @param rateMultiplier  分组倍率
+     * @param groupName       来源分组名
+     * @param peakJson        峰值时段价 JSON
+     * @param tiersJson       分档计价 JSON
+     * @param officialJson    官方价对照 JSON
+     * @param groupQuotesJson 同模型跨分组差异 JSON
      */
-    private record Sub2ApiModelPrice(String model, Double inputPer1k, Double outputPer1k) {
+    private record Sub2ApiModelPrice(String model, Double inputPer1k, Double outputPer1k,
+                                     Double cacheReadPer1k, Double cacheWritePer1k,
+                                     String billingMode, Double perRequestPrice,
+                                     Double rateMultiplier, String groupName,
+                                     String peakJson, String tiersJson, String officialJson,
+                                     String groupQuotesJson) {
+
+        /**
+         * 附加跨分组差异 JSON（record 不可变，返回带新字段的副本）。
+         *
+         * @param groupQuotesJson 跨分组差异 JSON
+         * @return 带差异 JSON 的新实例
+         */
+        private Sub2ApiModelPrice withGroupQuotes(String groupQuotesJson) {
+            return new Sub2ApiModelPrice(model, inputPer1k, outputPer1k, cacheReadPer1k, cacheWritePer1k,
+                    billingMode, perRequestPrice, rateMultiplier, groupName,
+                    peakJson, tiersJson, officialJson, groupQuotesJson);
+        }
     }
 }

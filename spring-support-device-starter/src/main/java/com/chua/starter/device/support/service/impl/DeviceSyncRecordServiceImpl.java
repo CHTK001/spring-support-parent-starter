@@ -7,6 +7,8 @@ import com.chua.starter.device.support.entity.DeviceSyncOutbox;
 import com.chua.starter.device.support.entity.DeviceSyncRecord;
 import com.chua.starter.device.support.mapper.DeviceSyncOutboxMapper;
 import com.chua.starter.device.support.mapper.DeviceSyncRecordMapper;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryBatchRequest;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryResult;
 import com.chua.starter.device.support.model.SyncOutboxQuery;
 import com.chua.starter.device.support.model.SyncRecordQuery;
 import com.chua.starter.device.support.service.DeviceService;
@@ -20,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +46,9 @@ public class DeviceSyncRecordServiceImpl implements DeviceSyncRecordService {
 
     /** 单条最大重试推迟（秒） */
     private static final long RETRY_BACKOFF_MAX_SECONDS = 3600L;
+
+    /** 单次批量重试上限：写回逐台调厂商接口，防止一次请求拖垮工作线程 */
+    private static final int RETRY_BATCH_LIMIT = 100;
 
     /** 同步记录映射器 */
     private final DeviceSyncRecordMapper recordMapper;
@@ -189,6 +195,26 @@ public class DeviceSyncRecordServiceImpl implements DeviceSyncRecordService {
         }
         outboxMapper.updateById(outbox);
         return outbox;
+    }
+
+    @Override
+    public List<DeviceSyncOutboxRetryResult> retryOutboxBatch(DeviceSyncOutboxRetryBatchRequest request) {
+        List<String> ids = request == null || request.ids() == null ? List.of() : request.ids();
+        if (ids.size() > RETRY_BATCH_LIMIT) {
+            throw new IllegalArgumentException("单次批量重试不能超过 " + RETRY_BATCH_LIMIT + " 条");
+        }
+        List<DeviceSyncOutboxRetryResult> results = new ArrayList<>(ids.size());
+        for (String id : ids) {
+            try {
+                DeviceSyncOutbox updated = retryOutbox(id);
+                results.add(new DeviceSyncOutboxRetryResult(id, updated.getDeviceSyncOutboxDeviceId(),
+                        updated.getDeviceSyncOutboxStatus(), updated.getDeviceSyncOutboxMessage()));
+            } catch (Exception e) {
+                // 单条失败（记录不存在 / 已推送无需重试等）不影响其余记录，结果原样回报
+                results.add(new DeviceSyncOutboxRetryResult(id, null, "failed", e.getMessage()));
+            }
+        }
+        return results;
     }
 
     /**

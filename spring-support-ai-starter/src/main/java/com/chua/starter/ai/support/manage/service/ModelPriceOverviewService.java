@@ -9,6 +9,10 @@ import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.datasearch.provider.model.ProviderDescriptor;
 import com.chua.starter.datasearch.provider.support.ProviderRegistries;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -110,6 +114,16 @@ public class ModelPriceOverviewService {
     private static final String CURRENCY_USD = "USD";
 
     /**
+     * 按张计费模式标记（sys_ai_pricing.billing_mode，图像等按次计价模型）
+     */
+    private static final String BILLING_MODE_IMAGE = "image";
+
+    /**
+     * JSON 解析/生成：档位、峰值、分组差异、官方价等结构化列的透出换算
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
      * 千 token → 百万 token 换算倍数
      */
     private static final BigDecimal PER_1K_TO_PER_1M = BigDecimal.valueOf(1000);
@@ -197,15 +211,17 @@ public class ModelPriceOverviewService {
             String source = SOURCE_PRICING_PREFIX + (pricing.getSource() == null ? "sync" : pricing.getSource());
             group.merge(blankToNull(pricing.getProvider()),
                     toPerMillion(pricing.getInputPricePer1k()), toPerMillion(pricing.getOutputPricePer1k()),
-                    null, null, source);
+                    toPerMillion(pricing.getCacheReadPer1k()), toPerMillion(pricing.getCacheWritePer1k()),
+                    source, toPricingDetail(pricing));
         }
 
         // 3) 无任何可用价格的组（如定价行两价皆空）不进比价页；
-        //    免费模型（基准价 0）整卡隐藏，不参与比价
+        //    免费模型（基准价 0）整卡隐藏，不参与比价；
+        //    按次计价模型（图像按张等，无 token 单价）凭按次价/按张计费模式保留
         List<ModelGroup> all = new ArrayList<>();
         for (ModelGroup group : groups.values()) {
             BigDecimal min = group.effectivePrice();
-            if (min != null && min.compareTo(BigDecimal.ZERO) > 0) {
+            if ((min != null && min.compareTo(BigDecimal.ZERO) > 0) || group.hasRequestPricing()) {
                 all.add(group);
             }
         }
@@ -309,6 +325,172 @@ public class ModelPriceOverviewService {
      */
     private static BigDecimal toPerMillion(Double pricePer1k) {
         return pricePer1k == null ? null : BigDecimal.valueOf(pricePer1k).multiply(PER_1K_TO_PER_1M);
+    }
+
+    /**
+     * 定价行的结构化扩展（档位/峰值/分组/官方价），价格已折算为页面口径（USD/百万 token，
+     * 按次价保留 USD/次），JSON 直接以结构化节点透出给前端。
+     *
+     * @param billingMode     计费模式：token / image
+     * @param perRequestPrice 按次计价基准价（USD/次）
+     * @param rateMultiplier  分组倍率
+     * @param groupName       来源分组名
+     * @param tiers           分档计价节点
+     * @param peak            峰值时段价节点
+     * @param groupQuotes     跨分组差异节点
+     * @param official        官方价对照节点
+     */
+    private record PricingDetail(String billingMode, BigDecimal perRequestPrice, BigDecimal rateMultiplier,
+                                 String groupName, JsonNode tiers, JsonNode peak,
+                                 JsonNode groupQuotes, JsonNode official) {
+    }
+
+    /**
+     * 定价行 → 页面口径的结构化扩展（JSON 内每 1k 价 ×1000 折算每百万；按次价与倍率不动）。
+     *
+     * @param pricing 定价行
+     * @return 结构化扩展（无任何结构化数据时字段为 null）
+     */
+    private static PricingDetail toPricingDetail(SysAiPricing pricing) {
+        return new PricingDetail(pricing.getBillingMode(),
+                toBigDecimal(pricing.getPerRequestPrice()),
+                toBigDecimal(pricing.getRateMultiplier()),
+                blankToNull(pricing.getGroupName()),
+                scaleTiersJson(pricing.getTiers()),
+                parseJson(pricing.getPeak()),
+                scaleGroupQuotesJson(pricing.getGroupQuotes()),
+                scaleOfficialJson(pricing.getOfficial()));
+    }
+
+    /**
+     * Double → BigDecimal（null 透传）。
+     *
+     * @param value 浮点值
+     * @return BigDecimal
+     */
+    private static BigDecimal toBigDecimal(Double value) {
+        return value == null ? null : BigDecimal.valueOf(value);
+    }
+
+    /**
+     * JSON 字符串 → 节点（空/非法返回 null）。
+     *
+     * @param json JSON 字符串
+     * @return 节点
+     */
+    private static JsonNode parseJson(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode node = MAPPER.readTree(json);
+            return node == null || node.isMissingNode() || node.isNull() ? null : node;
+        } catch (Exception e) {
+            log.warn("[PriceOverview] 结构化价格列解析失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 每 1k 价节点 → 每百万价（×1000；非数值返回 null）。
+     *
+     * @param node 数值节点
+     * @return 每百万价
+     */
+    private static BigDecimal scalePerMillion(JsonNode node) {
+        if (node == null || !node.isNumber()) {
+            return null;
+        }
+        return node.decimalValue().multiply(PER_1K_TO_PER_1M).stripTrailingZeros();
+    }
+
+    /**
+     * 分档计价 JSON 折算（每 1k → 每百万；按次价保留）。
+     *
+     * @param json 库内分档 JSON
+     * @return 折算后的分档节点
+     */
+    private static JsonNode scaleTiersJson(String json) {
+        JsonNode root = parseJson(json);
+        if (root == null || !root.isObject()) {
+            return null;
+        }
+        ObjectNode out = MAPPER.createObjectNode();
+        out.put("billingMode", root.path("billingMode").asText(null));
+        if (root.hasNonNull("basis")) {
+            out.put("basis", root.path("basis").asText());
+        }
+        ArrayNode tiers = out.putArray("tiers");
+        for (JsonNode tier : root.path("tiers")) {
+            ObjectNode item = tiers.addObject();
+            item.put("label", tier.path("label").asText(null));
+            item.put("minTokens", tier.path("minTokens").isNumber() ? tier.path("minTokens").longValue() : null);
+            item.put("maxTokens", tier.path("maxTokens").isNumber() ? tier.path("maxTokens").longValue() : null);
+            item.put("inputPerM", scalePerMillion(tier.path("inputPer1k")));
+            item.put("outputPerM", scalePerMillion(tier.path("outputPer1k")));
+            item.put("cacheReadPerM", scalePerMillion(tier.path("cacheReadPer1k")));
+            item.put("cacheWritePerM", scalePerMillion(tier.path("cacheWritePer1k")));
+            item.put("cacheWrite1hPerM", scalePerMillion(tier.path("cacheWrite1hPer1k")));
+            item.put("perRequestPrice",
+                    tier.path("perRequestPrice").isNumber() ? tier.path("perRequestPrice").decimalValue() : null);
+        }
+        return out;
+    }
+
+    /**
+     * 官方价对照 JSON 折算（每 1k → 每百万；按次价保留）。
+     *
+     * @param json 库内官方价 JSON
+     * @return 折算后的官方价节点
+     */
+    private static JsonNode scaleOfficialJson(String json) {
+        JsonNode root = parseJson(json);
+        if (root == null || !root.isObject()) {
+            return null;
+        }
+        ObjectNode out = MAPPER.createObjectNode();
+        out.put("inputPerM", scalePerMillion(root.path("inputPer1k")));
+        out.put("outputPerM", scalePerMillion(root.path("outputPer1k")));
+        out.put("cacheReadPerM", scalePerMillion(root.path("cacheReadPer1k")));
+        out.put("cacheWritePerM", scalePerMillion(root.path("cacheWritePer1k")));
+        JsonNode tiers = root.path("tiers");
+        if (tiers.isArray() && !tiers.isEmpty()) {
+            ArrayNode tierList = out.putArray("tiers");
+            for (JsonNode tier : tiers) {
+                ObjectNode item = tierList.addObject();
+                item.put("label", tier.path("label").asText(null));
+                item.put("inputPerM", scalePerMillion(tier.path("inputPer1k")));
+                item.put("outputPerM", scalePerMillion(tier.path("outputPer1k")));
+                item.put("perRequestPrice",
+                        tier.path("perRequestPrice").isNumber() ? tier.path("perRequestPrice").decimalValue() : null);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 跨分组差异 JSON 折算（每 1k → 每百万；按次价与倍率保留）。
+     *
+     * @param json 库内跨分组差异 JSON
+     * @return 折算后的差异节点
+     */
+    private static JsonNode scaleGroupQuotesJson(String json) {
+        JsonNode root = parseJson(json);
+        if (root == null || !root.isArray() || root.isEmpty()) {
+            return null;
+        }
+        ArrayNode out = MAPPER.createArrayNode();
+        for (JsonNode quote : root) {
+            ObjectNode item = out.addObject();
+            item.put("group", quote.path("group").asText(null));
+            item.put("rateMultiplier",
+                    quote.path("rateMultiplier").isNumber() ? quote.path("rateMultiplier").decimalValue() : null);
+            item.put("inputPerM", scalePerMillion(quote.path("inputPer1k")));
+            item.put("outputPerM", scalePerMillion(quote.path("outputPer1k")));
+            item.put("perRequestPrice",
+                    quote.path("perRequestPrice").isNumber() ? quote.path("perRequestPrice").decimalValue() : null);
+        }
+        return out;
     }
 
     /**
@@ -549,9 +731,39 @@ public class ModelPriceOverviewService {
          */
         private void merge(String provider, BigDecimal input, BigDecimal output,
                            BigDecimal cacheHit, BigDecimal cacheWrite, String source) {
+            merge(provider, input, output, cacheHit, cacheWrite, source, null);
+        }
+
+        /**
+         * 并入一条报价（带定价行结构化扩展：档位/峰值/分组/官方价）。
+         *
+         * @param provider  提供商（可空）
+         * @param input     输入价（USD/百万 token）
+         * @param output    输出价（USD/百万 token）
+         * @param cacheHit  缓存命中价
+         * @param cacheWrite 缓存写入价
+         * @param source    来源标记
+         * @param detail    定价行结构化扩展（指标行传 null）
+         */
+        private void merge(String provider, BigDecimal input, BigDecimal output,
+                           BigDecimal cacheHit, BigDecimal cacheWrite, String source, PricingDetail detail) {
             String key = provider == null ? "" : provider;
             Quote quote = quotes.computeIfAbsent(key, k -> new Quote(provider));
-            quote.merge(input, output, cacheHit, cacheWrite, source);
+            quote.merge(input, output, cacheHit, cacheWrite, source, detail);
+        }
+
+        /**
+         * 是否携带按次计价（图像按张等）：任一报价有按次价或按张计费模式。
+         *
+         * @return 是否按次计价
+         */
+        private boolean hasRequestPricing() {
+            for (Quote quote : quotes.values()) {
+                if (quote.perRequestPrice != null || BILLING_MODE_IMAGE.equals(quote.billingMode)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**
@@ -662,6 +874,14 @@ public class ModelPriceOverviewService {
                 item.put("source", quote.source);
                 item.put("cheapest", quote.price() != null && quote.price().compareTo(minPrice) == 0);
                 item.put("website", resolveWebsite(quote.provider));
+                item.put("billingMode", quote.billingMode);
+                item.put("perRequestPrice", quote.perRequestPrice);
+                item.put("rateMultiplier", quote.rateMultiplier);
+                item.put("groupName", quote.groupName);
+                item.put("peak", quote.peak);
+                item.put("tiers", quote.tiers);
+                item.put("groupQuotes", quote.groupQuotes);
+                item.put("official", quote.official);
                 providerList.add(item);
             }
             Map<String, Object> item = new LinkedHashMap<>();
@@ -714,6 +934,46 @@ public class ModelPriceOverviewService {
         private String source;
 
         /**
+         * 计费模式：token（按 token）/ image（按张/按次）
+         */
+        private String billingMode;
+
+        /**
+         * 按次计价基准价（USD/次，图像等按张计费模型）
+         */
+        private BigDecimal perRequestPrice;
+
+        /**
+         * 分组倍率（分组价 = 官方价 × 倍率）
+         */
+        private BigDecimal rateMultiplier;
+
+        /**
+         * 同步来源分组名（sub2api 分组成员价）
+         */
+        private String groupName;
+
+        /**
+         * 分档计价（已折算 USD/百万 token；按次价保留 USD/次）
+         */
+        private JsonNode tiers;
+
+        /**
+         * 峰值时段价：{enabled, start, end, multiplier}
+         */
+        private JsonNode peak;
+
+        /**
+         * 同模型跨分组差异：[{group, rateMultiplier, inputPerM, outputPerM, perRequestPrice}]
+         */
+        private JsonNode groupQuotes;
+
+        /**
+         * 官方价对照（已折算 USD/百万 token）
+         */
+        private JsonNode official;
+
+        /**
          * 构造报价。
          *
          * @param provider 提供商
@@ -732,6 +992,21 @@ public class ModelPriceOverviewService {
          * @param src  来源标记
          */
         private void merge(BigDecimal in, BigDecimal out, BigDecimal hit, BigDecimal write, String src) {
+            merge(in, out, hit, write, src, null);
+        }
+
+        /**
+         * 并入字段：定价行来源（pricing:*）覆盖非空字段；指标行只补空字段。
+         *
+         * @param in     输入价
+         * @param out    输出价
+         * @param hit    缓存命中价
+         * @param write  缓存写入价
+         * @param src    来源标记
+         * @param detail 定价行结构化扩展（指标行传 null）
+         */
+        private void merge(BigDecimal in, BigDecimal out, BigDecimal hit, BigDecimal write,
+                           String src, PricingDetail detail) {
             boolean override = src != null && src.startsWith(SOURCE_PRICING_PREFIX);
             if (override) {
                 if (in != null) {
@@ -747,6 +1022,32 @@ public class ModelPriceOverviewService {
                     this.cacheWrite = write;
                 }
                 this.source = src;
+                if (detail != null) {
+                    if (detail.billingMode() != null) {
+                        this.billingMode = detail.billingMode();
+                    }
+                    if (detail.perRequestPrice() != null) {
+                        this.perRequestPrice = detail.perRequestPrice();
+                    }
+                    if (detail.rateMultiplier() != null) {
+                        this.rateMultiplier = detail.rateMultiplier();
+                    }
+                    if (detail.groupName() != null) {
+                        this.groupName = detail.groupName();
+                    }
+                    if (detail.tiers() != null) {
+                        this.tiers = detail.tiers();
+                    }
+                    if (detail.peak() != null) {
+                        this.peak = detail.peak();
+                    }
+                    if (detail.groupQuotes() != null) {
+                        this.groupQuotes = detail.groupQuotes();
+                    }
+                    if (detail.official() != null) {
+                        this.official = detail.official();
+                    }
+                }
             } else {
                 if (this.input == null) {
                     this.input = in;

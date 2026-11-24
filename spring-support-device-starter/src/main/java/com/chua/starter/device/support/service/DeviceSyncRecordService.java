@@ -2,6 +2,8 @@ package com.chua.starter.device.support.service;
 
 import com.chua.starter.device.support.entity.DeviceSyncOutbox;
 import com.chua.starter.device.support.entity.DeviceSyncRecord;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryBatchRequest;
+import com.chua.starter.device.support.model.DeviceSyncOutboxRetryResult;
 import com.chua.starter.device.support.model.SyncOutboxQuery;
 import com.chua.starter.device.support.model.SyncRecordQuery;
 import com.chua.starter.mybatis.entity.PageResult;
@@ -58,4 +60,14 @@ public interface DeviceSyncRecordService {
      * @return 更新后的队列记录
      */
     DeviceSyncOutbox retryOutbox(String outboxId);
+
+    /**
+     * 批量重试推送队列记录：逐条复用单条重试编排，返回每条的执行结果。
+     *
+     * <p>单条失败（记录不存在 / 已推送等）不影响其余记录，结果按入参顺序逐条回报。</p>
+     *
+     * @param request 待重试的队列记录 ID 清单
+     * @return 每条记录的重试结果，顺序与入参一致
+     */
+    List<DeviceSyncOutboxRetryResult> retryOutboxBatch(DeviceSyncOutboxRetryBatchRequest request);
 }
