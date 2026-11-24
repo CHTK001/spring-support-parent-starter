@@ -449,6 +449,14 @@ public class DatabaseBackupService {
      */
     public BackupVerifier.VerificationResult verify(String target) {
         Path path = Paths.get(target);
+        if (!path.isAbsolute()) {
+            // 与 deleteBackup 同口径：相对路径按备份根目录解析并做白名单校验（页面只传备份根内相对路径）
+            Path root = backupDir().toAbsolutePath().normalize();
+            path = root.resolve(target).normalize();
+            if (!path.startsWith(root) || path.equals(root)) {
+                throw new IllegalArgumentException("校验目标必须在备份目录内: " + target);
+            }
+        }
         if (!Files.exists(path)) {
             throw new IllegalArgumentException("备份不存在: " + target);
         }

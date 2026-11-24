@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -116,6 +117,11 @@ public class SessionGoalService {
     private final ObjectMapper objectMapper;
 
     /**
+     * 会话事件广播器（goal_updated SSE，多标签页同步目标状态）
+     */
+    private final AiSessionEventBroadcaster eventBroadcaster;
+
+    /**
      * 目标响应视图（对齐前端 {@code GoalDto} 字段名）。
      *
      * @param id          目标标识
@@ -187,8 +193,10 @@ public class SessionGoalService {
 
         settings.put(SETTINGS_KEY, goal);
         persist(session, settings);
+        GoalView view = toView(goal, sessionId);
+        publishGoalUpdated(session, view);
         log.info("[SessionGoal] 目标已保存 sessionId={} goalId={} sameGoal={}", sessionId, goal.get("id"), sameGoal);
-        return toView(goal, sessionId);
+        return view;
     }
 
     /**
@@ -230,8 +238,10 @@ public class SessionGoalService {
         Map<String, Object> destroyed = new HashMap<>(existing);
         destroyed.put("state", STATE_CANCELED);
         destroyed.put("updatedAt", System.currentTimeMillis());
+        GoalView view = toView(destroyed, sessionId);
+        publishGoalUpdated(session, view);
         log.info("[SessionGoal] 目标已销毁 sessionId={} reason={}", sessionId, reason);
-        return toView(destroyed, sessionId);
+        return view;
     }
 
     /**
@@ -262,8 +272,10 @@ public class SessionGoalService {
         existing.put("updatedAt", System.currentTimeMillis());
         settings.put(SETTINGS_KEY, existing);
         persist(session, settings);
+        GoalView view = toView(existing, sessionId);
+        publishGoalUpdated(session, view);
         log.info("[SessionGoal] 目标{} sessionId={} {} -> {}", action, sessionId, current, target);
-        return toView(existing, sessionId);
+        return view;
     }
 
     /**
@@ -325,6 +337,35 @@ public class SessionGoalService {
         }
         session.setUpdateTime(LocalDateTime.now());
         sessionMapper.updateById(session);
+    }
+
+    /**
+     * 广播 {@code goal_updated} 事件（多标签页同步目标状态）。
+     *
+     * <p>payload 为 {@link GoalView} 全量字段（对齐前端 GoalDto）。广播失败只记日志，
+     * 不影响主流程；无归属人的会话由广播器侧静默跳过。</p>
+     *
+     * @param session 会话（取归属人）
+     * @param view    落库后的目标视图
+     */
+    private void publishGoalUpdated(SysAiSession session, GoalView view) {
+        try {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("id", view.id());
+            payload.put("sessionId", view.sessionId());
+            payload.put("title", view.title());
+            payload.put("detail", view.detail());
+            payload.put("state", view.state());
+            payload.put("tokensUsed", view.tokensUsed());
+            payload.put("rounds", view.rounds());
+            payload.put("tokenBudget", view.tokenBudget());
+            payload.put("tokensBase", view.tokensBase());
+            payload.put("updatedAt", view.updatedAt());
+            eventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_GOAL_UPDATED,
+                    session.getSysUserId(), view.sessionId(), payload);
+        } catch (Exception e) {
+            log.warn("[SessionGoal] 广播 goal_updated 失败 sessionId={}: {}", view.sessionId(), e.getMessage());
+        }
     }
 
     /**

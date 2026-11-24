@@ -12,6 +12,7 @@ import com.chua.starter.ai.support.entity.SysAiSessionSubAgent;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
+import com.chua.starter.ai.support.service.AgentRunService;
 import com.chua.starter.ai.support.service.AiSessionSubAgentService;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -76,6 +77,11 @@ public class AiSessionCapabilityController {
      * 会话子代理运行记录服务（invoke 生命周期持久化 + 事件广播，G4）
      */
     private final AiSessionSubAgentService sessionSubAgentService;
+
+    /**
+     * Agent 运行记录服务（Run/Step 落库与会话关联回填）
+     */
+    private final AgentRunService agentRunService;
 
     /**
      * 服务器信息（只读）。
@@ -229,6 +235,8 @@ public class AiSessionCapabilityController {
                     result.get("output") == null ? "" : String.valueOf(result.get("output")),
                     error == null ? null : String.valueOf(error));
             result.put("subSessionId", subSessionId);
+            // 运行记录在 Agent 服务内创建时无会话上下文，这里回填 sessionId / subSessionId
+            linkAgentRun(result, id, subSessionId);
             return ReturnResult.ok(result);
         } catch (IllegalArgumentException | IllegalStateException e) {
             // 前置校验失败（子 Agent 不存在 / 停用 / 无可用模型凭证）：记录失败现场后再抛
@@ -241,6 +249,30 @@ public class AiSessionCapabilityController {
                 throw new ApiException(ApiErrorCode.NOT_FOUND, e.getMessage());
             }
             throw new ApiException(ApiErrorCode.CONFLICT, e.getMessage());
+        }
+    }
+
+    /**
+     * 回填 Agent 运行记录与会话 / 子代理记录的关联。
+     *
+     * <p>运行记录在 {@code SysAiAgentServiceImpl#invokeSubAgent} 内创建，当时拿不到
+     * 会话上下文（sessionId 为空）；本方法在拿到调用结果后补齐关联，使运行可按会话
+     * 过滤并进入会话 SSE 通道。回填失败仅告警，不影响调用结果返回。</p>
+     *
+     * @param result       invokeSubAgent 返回结果（含 runId）
+     * @param sessionId    会话标识（路径变量）
+     * @param subSessionId 子代理运行记录标识（sys_ai_session_sub_agent）
+     */
+    private void linkAgentRun(Map<String, Object> result, String sessionId, String subSessionId) {
+        Object runId = result.get("runId");
+        if (runId == null || String.valueOf(runId).isBlank()) {
+            return;
+        }
+        try {
+            Long subId = subSessionId == null || subSessionId.isBlank() ? null : Long.parseLong(subSessionId);
+            agentRunService.linkSession(String.valueOf(runId), Long.parseLong(sessionId), subId);
+        } catch (Exception e) {
+            log.warn("[AgentRun] 运行会话关联回填失败 runId={}: {}", runId, e.getMessage());
         }
     }
 

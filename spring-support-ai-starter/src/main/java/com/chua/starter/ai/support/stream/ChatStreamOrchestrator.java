@@ -89,6 +89,11 @@ public class ChatStreamOrchestrator {
     private final com.chua.starter.ai.support.service.SysAiSessionTraceService sessionTraceService;
 
     /**
+     * Agent 工具审批单服务：确认转发点落库审批单并广播、resume 时回写决议（切片四审批闭环）
+     */
+    private final com.chua.starter.ai.support.service.AgentApprovalService agentApprovalService;
+
+    /**
      * 把前端带来的消息 id 解析为数据库自增主键。
      *
      * <p>前端在重答时只传既有用户消息的 id，形如 "13"（后端用 String.valueOf(msg.getId()) 产出）。
@@ -843,6 +848,15 @@ public class ChatStreamOrchestrator {
                         cEvent.put("replyId", confirmation.getReplyId());
                         cEvent.put("confirmations", confirmation.getItems());
                         sink.sendEvent(cEvent);
+                        // 切片四：待确认项落库为审批单并广播 agent_approval_required。
+                        // 本 lambda 运行在 reactor 线程（无请求上下文），广播内部用显式 source
+                        // 的 5 参 publish；落库/广播失败只记日志，不阻断确认卡主链路。
+                        try {
+                            agentApprovalService.createForConfirmation(dialogId, sid, memoryUser, confirmation);
+                        } catch (Exception e) {
+                            log.warn("[ChatStream] 审批单落库失败（不影响确认卡）sessionId={} replyId={}: {}",
+                                    sid, confirmation.getReplyId(), e.getMessage());
+                        }
                     }
             );
     }
@@ -1223,6 +1237,18 @@ public class ChatStreamOrchestrator {
         Long resumeParentDbId = null;
         if (resumeParentId != null && resumeParentId.matches("\\d+")) {
             resumeParentDbId = Long.parseLong(resumeParentId);
+        }
+
+        // 切片四：用户经 /v2/chat/resume 决议时，按 replyId+toolCallId CAS 回写匹配的
+        // PENDING 审批单。失败只记日志，不阻断 resume 主链路（确认卡恢复不依赖审批单）。
+        if (resumeReplyId != null && !resumeReplyId.isBlank() && !decisions.isEmpty()) {
+            try {
+                agentApprovalService.resolveByReplyId(dialogId, resumeReplyId, decisions,
+                        AiUserContext.currentUserId());
+            } catch (Exception e) {
+                log.warn("[ChatStream] 审批单随 resume 回写失败（不影响恢复）replyId={}: {}",
+                        resumeReplyId, e.getMessage());
+            }
         }
 
         // create 帧携带 DB 父消息作为兜底；前端会按当前渲染的用户消息 id 覆盖

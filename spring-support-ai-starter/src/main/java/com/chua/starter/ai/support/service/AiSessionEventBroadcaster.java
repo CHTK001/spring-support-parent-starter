@@ -95,9 +95,30 @@ public class AiSessionEventBroadcaster {
     public static final String TYPE_SUB_AGENT_STATUS = "sub_agent_status";
 
     /**
+     * Agent 运行状态 / 步骤更新（payload: {runId, sessionId, agentId, triggerType, mode,
+     * status, tokensUsed, rounds, toolCalls, error?, lastStep?}）
+     */
+    public static final String TYPE_AGENT_RUN_UPDATE = "agent_run_update";
+
+    /**
      * 会话待办已变更
      */
     public static final String TYPE_TODO_UPDATED = "todo_updated";
+
+    /**
+     * 会话目标已变更（新建 / 暂停 / 恢复 / 取消销毁；payload: {@code GoalView} 全量字段）
+     */
+    public static final String TYPE_GOAL_UPDATED = "goal_updated";
+
+    /**
+     * 待人工审批已创建（payload: 审批单全量字段，见 {@code AgentApprovalService#toPayload}）
+     */
+    public static final String TYPE_AGENT_APPROVAL_REQUIRED = "agent_approval_required";
+
+    /**
+     * 待人工审批已决议（批准 / 拒绝 / 过期；payload: 审批单全量字段 + decisionReason）
+     */
+    public static final String TYPE_AGENT_APPROVAL_RESOLVED = "agent_approval_resolved";
 
     /**
      * 心跳间隔：无业务事件时保活，同时探测死连接

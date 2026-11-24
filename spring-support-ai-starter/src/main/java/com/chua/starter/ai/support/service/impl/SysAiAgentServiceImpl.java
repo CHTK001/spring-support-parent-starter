@@ -3,8 +3,12 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.agent.Agent;
+import com.chua.common.support.ai.agent.AgentApprovalGate;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
+import com.chua.common.support.ai.agent.run.AgentRunRecord;
+import com.chua.common.support.ai.agent.run.AgentStepStatus;
+import com.chua.common.support.ai.agent.run.AgentStepType;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.starter.ai.support.chat.AgentChatClient;
@@ -18,6 +22,7 @@ import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.service.AgentRunService;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.common.support.ai.chat.route.RouteTarget;
@@ -60,6 +65,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
     private final com.chua.starter.ai.support.service.SysAiGlobalSettingService globalSettingService; // 全局设置（持久化编排图）
     private final AgentProviderFactory agentProviderFactory;
+    private final AgentRunService agentRunService; // Agent 运行记录（Run/Step 落库 + 会话 SSE）
+    private final AgentApprovalGate agentApprovalGate; // Agent 工具风险裁决门（切片四审批闭环）
 
     private static final String STRATEGY_KEY_MODE = "mode"; // strategyKeymode
     private static final String STRATEGY_KEY_PLANNING = "planning"; // strategyKeyplanning
@@ -383,6 +390,34 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     public Map<String, Object> runOrchestration(String agentId, String input) {
         SysAiAgent master = requireAgent(agentId);
         String mode = strategyStr(master, STRATEGY_KEY_MODE, "ROUTER").toUpperCase();
+        // 运行记录（Run）落库：编排属后台运行，无会话上下文，sessionId 置空
+        AgentRunRecord run = agentRunService.startRun(null, agentId, "orchestration", mode, input);
+        long runStartAt = System.currentTimeMillis();
+        try {
+            Map<String, Object> result = doRunOrchestration(run, master, mode, agentId, input, runStartAt);
+            agentRunService.completeRun(run == null ? null : run.runId(),
+                    result.get("finalOutput") == null ? null : String.valueOf(result.get("finalOutput")));
+            return result;
+        } catch (Exception e) {
+            agentRunService.failRun(run == null ? null : run.runId(), e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 编排执行主体（串行管线）：按拓扑序逐个调用子 Agent，并为每个子 Agent 落一条
+     * {@code SUB_AGENT} 步骤（成功 / 失败 / 跳过）；运行收尾由 {@link #runOrchestration} 负责。
+     *
+     * @param run        运行记录（可能为 null：运行记录落库失败不影响主链路）
+     * @param master     主 Agent
+     * @param mode       执行模式（ROUTER / PIPELINE / FAN_OUT 等）
+     * @param agentId    主 Agent 标识
+     * @param input      输入
+     * @param runStartAt 运行开始时间（epoch 毫秒）
+     * @return 编排结果（含 runId）
+     */
+    private Map<String, Object> doRunOrchestration(AgentRunRecord run, SysAiAgent master, String mode,
+                                                   String agentId, String input, long runStartAt) {
         List<SysAiAgent> subs = subAgentsOf(agentId).stream()
                 .filter(s -> Boolean.TRUE.equals(s.getEnabled()))
                 .toList();
@@ -422,8 +457,11 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             ChatClient client = buildChatClient(sub);
             if (client == null) {
                 log.warn("[Agent] 编排跳过子 Agent（无可用模型/凭证）: {}", subId);
+                agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, subId,
+                        null, "跳过：无可用模型/凭证", AgentStepStatus.SKIPPED, runStartAt, System.currentTimeMillis());
                 continue;
             }
+            long stepStartAt = System.currentTimeMillis();
             try {
                 String prompt = current;
                 if (sub.getSystemPrompt() != null && !sub.getSystemPrompt().isBlank()) {
@@ -433,9 +471,13 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 outputs.put(subId, out);
                 // 简单串行模式：上一个子 Agent 的输出作为下一个子 Agent 的输入
                 current = out != null ? out : "";
+                agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, subId,
+                        prompt, out, AgentStepStatus.OK, stepStartAt, System.currentTimeMillis());
             } catch (Exception e) {
                 log.warn("[Agent] 编排子 Agent 调用失败 subId={}: {}", subId, e.getMessage());
                 outputs.put(subId, "ERROR: " + e.getMessage());
+                agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, subId,
+                        null, e.getMessage(), AgentStepStatus.FAILED, stepStartAt, System.currentTimeMillis());
             }
         }
 
@@ -445,6 +487,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         result.put("nodes", order.size());
         result.put("outputs", outputs);
         result.put("finalOutput", current);
+        if (run != null) {
+            result.put("runId", run.runId());
+        }
         return result;
     }
 
@@ -462,20 +507,32 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             throw new IllegalStateException("子 Agent 无可用模型/凭证: " + sub.getName());
         }
         String prompt = input != null ? input : "";
+        // 运行记录（Run）落库：手动调用，无会话上下文（会话侧入口拿到结果后回填 sessionId/subSessionId）
+        AgentRunRecord run = agentRunService.startRun(null, subAgentId, "manual", "SINGLE", prompt);
+        long startedAt = System.currentTimeMillis();
         try {
             if (sub.getSystemPrompt() != null && !sub.getSystemPrompt().isBlank()) {
                 client = client.system(sub.getSystemPrompt());
             }
             String output = client.chatSync(prompt);
+            agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, sub.getName(),
+                    prompt, output, AgentStepStatus.OK, startedAt, System.currentTimeMillis());
+            agentRunService.completeRun(run == null ? null : run.runId(), output);
             Map<String, Object> result = new LinkedHashMap<>(8);
             result.put("agentId", subAgentId);
             result.put("name", sub.getName());
             result.put("masterId", sub.getParentId());
             result.put("input", prompt);
             result.put("output", output != null ? output : "");
+            if (run != null) {
+                result.put("runId", run.runId());
+            }
             return result;
         } catch (Exception e) {
             log.warn("[Agent] 子 Agent 调用失败 subId={}: {}", subAgentId, e.getMessage());
+            agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, sub.getName(),
+                    prompt, e.getMessage(), AgentStepStatus.FAILED, startedAt, System.currentTimeMillis());
+            agentRunService.failRun(run == null ? null : run.runId(), e.getMessage());
             Map<String, Object> result = new LinkedHashMap<>(8);
             result.put("agentId", subAgentId);
             result.put("name", sub.getName());
@@ -483,6 +540,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             result.put("input", prompt);
             result.put("output", "");
             result.put("error", e.getMessage());
+            if (run != null) {
+                result.put("runId", run.runId());
+            }
             return result;
         }
     }
@@ -691,6 +751,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 return;
             }
             agentInstance.definition(definition);
+            // 切片四：挂上无状态风险裁决门——低风险放行、高危转人工确认、
+            // 非管理员 shell 类工具拒绝；裁决异常 fail-close 转确认。
+            agentInstance.riskAdjudicator(agentApprovalGate);
             if (masterClient != null) {
                 agentInstance.chatClient(masterClient);
             }

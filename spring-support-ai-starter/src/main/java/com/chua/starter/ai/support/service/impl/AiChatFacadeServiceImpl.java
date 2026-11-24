@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.ai.agent.Agent;
+import com.chua.common.support.ai.agent.AgentApprovalGate;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.skill.SkillDefinition;
@@ -112,6 +113,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
     private final ChatSkillSupport chatSkillSupport; // 已安装技能注入
     private final AgentMcpRuntimeService agentMcpRuntimeService; // 管理员 Agent 运行时 MCP 构建
+    private final AgentApprovalGate agentApprovalGate; // Agent 工具风险裁决门（切片四审批闭环）
     private final SysAiGlobalSettingService globalSettingService; // 全局设置（工作目录基路径等）
     private final SessionWorkspaceResolver sessionWorkspaceResolver; // 会话绑定的项目目录（settings.workspacePath）
     private final WorkspacePathResolver workspacePathResolver; // 账号工作目录唯一口径（空配置兜底 ~/ai-workspace）
@@ -1449,7 +1451,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .definition(definition)
                 // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）
                 .mode(subAgentOn ? AgentMode.AUTO : AgentMode.SINGLE)
-                .mcp(mcpOn);
+                .mcp(mcpOn)
+                // 切片四：无状态风险裁决门——低风险放行、高危转人工确认、
+                // 非管理员 shell 类拒绝；裁决异常 fail-close 转确认。
+                .riskAdjudicator(agentApprovalGate);
         // 业务会话标识作为 defaultSessionId：进入 Plan / 读取 AgentState 必需，缺失会抛 NPE
         if (request.getSessionId() != null && !request.getSessionId().isBlank()) {
             agent.sessionId(request.getSessionId());
