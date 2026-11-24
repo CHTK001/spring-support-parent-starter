@@ -179,33 +179,50 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
     static List<Map<String, Object>> summarizeTraces(List<LoggerEvent> events, String app, int limit) {
         Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
         for (LoggerEvent e : events) {
-            String traceId = e.getTraceId();
-            if (traceId == null || traceId.isBlank()) {
-                continue;
-            }
-            if (app != null && !app.isBlank() && !app.equals(e.getApp())) {
-                continue;
-            }
-            Map<String, Object> row = grouped.computeIfAbsent(traceId, k -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("traceId", traceId);
-                m.put("count", 0L);
-                m.put("errorCount", 0L);
-                m.put("firstTs", Long.MAX_VALUE);
-                m.put("lastTs", 0L);
-                m.put("apps", new LinkedHashSet<String>());
-                m.put("instances", new LinkedHashSet<String>());
-                return m;
-            });
-            row.put("count", (Long) row.get("count") + 1);
-            if ("ERROR".equalsIgnoreCase(e.getLevel())) {
-                row.put("errorCount", (Long) row.get("errorCount") + 1);
-            }
-            row.put("firstTs", Math.min((Long) row.get("firstTs"), e.getTs()));
-            row.put("lastTs", Math.max((Long) row.get("lastTs"), e.getTs()));
-            ((Set<String>) row.get("apps")).add(String.valueOf(e.getApp()));
-            ((Set<String>) row.get("instances")).add(String.valueOf(e.getInstance()));
+            accumulateTrace(grouped, e, app);
         }
+        return finishTraces(grouped, limit);
+    }
+
+    /**
+     * 单事件累积进链路聚合视图（内存/KV 两个存储共用）：
+     * 无 traceId 的事件跳过；app 非空时只聚合该应用的事件。
+     * 供全量列表聚合与 KV 存储的流式降序聚合复用，避免两套聚合逻辑。
+     */
+    static void accumulateTrace(Map<String, Map<String, Object>> grouped, LoggerEvent e, String app) {
+        String traceId = e.getTraceId();
+        if (traceId == null || traceId.isBlank()) {
+            return;
+        }
+        if (app != null && !app.isBlank() && !app.equals(e.getApp())) {
+            return;
+        }
+        Map<String, Object> row = grouped.computeIfAbsent(traceId, k -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("traceId", traceId);
+            m.put("count", 0L);
+            m.put("errorCount", 0L);
+            m.put("firstTs", Long.MAX_VALUE);
+            m.put("lastTs", 0L);
+            m.put("apps", new LinkedHashSet<String>());
+            m.put("instances", new LinkedHashSet<String>());
+            return m;
+        });
+        row.put("count", (Long) row.get("count") + 1);
+        if ("ERROR".equalsIgnoreCase(e.getLevel())) {
+            row.put("errorCount", (Long) row.get("errorCount") + 1);
+        }
+        row.put("firstTs", Math.min((Long) row.get("firstTs"), e.getTs()));
+        row.put("lastTs", Math.max((Long) row.get("lastTs"), e.getTs()));
+        ((Set<String>) row.get("apps")).add(String.valueOf(e.getApp()));
+        ((Set<String>) row.get("instances")).add(String.valueOf(e.getInstance()));
+    }
+
+    /**
+     * 收口链路聚合视图（内存/KV 两个存储共用）：补齐 durationMs、
+     * 清理占位空值、按最近活动时间倒序排序并截取前 limit 条。
+     */
+    static List<Map<String, Object>> finishTraces(Map<String, Map<String, Object>> grouped, int limit) {
         List<Map<String, Object>> result = new ArrayList<>(grouped.values());
         for (Map<String, Object> row : result) {
             long firstTs = (Long) row.get("firstTs");

@@ -61,6 +61,13 @@ public class KvLoggerEventStore implements LoggerEventStore {
      */
     private static final int SCAN_BATCH = 500;
 
+    /**
+     * 单次链路聚合最多扫描的事件条数：与旧「5 万窗口」同量级的防 OOM / 有界延迟硬顶。
+     * 降序扫描 + 凑满 limit 个链路早停后，通常远早于该上限即返回；
+     * 极端大库且链路极度稀疏时以本值为最终兜底
+     */
+    private static final int TRACE_SCAN_MAX = 50000;
+
     private final KvEngine kv;
     private final SeriesEngine series;
     private final long retentionHours;
@@ -203,7 +210,46 @@ public class KvLoggerEventStore implements LoggerEventStore {
 
     @Override
     public List<Map<String, Object>> traces(String app, int limit) {
-        return MemoryLoggerEventStore.summarizeTraces(scanEvents(app, 50000), app, limit);
+        return traceSummariesNewestFirst(app, limit);
+    }
+
+    /**
+     * 链路摘要：降序（新→旧）流式扫描 + 增量聚合，不物化全量事件。
+     *
+     * <p>修复点：旧实现升序扫描取「最旧 5 万条」后聚合，大库下新链路落在窗口外，
+     * 全局口径永远查不到；现改为从最新事件向旧扫描。降序扫描下，后发现的链路
+     * lastTs 必不大于已发现链路的 lastTs，故聚合视图凑满 {@code limit} 个链路即可
+     * 早停（top-N 已定局，继续扫描只会给已有链路补充更旧事件）。</p>
+     *
+     * <p>内存有界：每批至多 {@link #SCAN_BATCH} 条事件，聚合态只保留链路摘要
+     * （不保留事件本体）；延迟有界：受早停与 {@link #TRACE_SCAN_MAX} 双重约束。</p>
+     *
+     * <p>语义说明：早停意味着若某链路的事件跨度极大、且更旧事件落在停止点之后，
+     * 其 count/firstTs 按已扫描的最新部分统计——对常规秒级链路无影响，
+     * 换取的是任意库容下的有界延迟与新链路必现。</p>
+     */
+    private List<Map<String, Object>> traceSummariesNewestFirst(String app, int limit) {
+        String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
+        int safeLimit = Math.max(1, Math.min(limit, 200));
+        Map<String, Map<String, Object>> grouped = new LinkedHashMap<>();
+        String beforeKey = "";
+        int scanned = 0;
+        while (scanned < TRACE_SCAN_MAX && grouped.size() < safeLimit) {
+            Map<String, String> batch = kv.findAllByPrefixDesc(prefix, beforeKey, SCAN_BATCH);
+            if (batch.isEmpty()) {
+                break;
+            }
+            for (Map.Entry<String, String> en : batch.entrySet()) {
+                beforeKey = en.getKey();
+                LoggerEvent event = parseEvent(en.getValue());
+                if (event == null) {
+                    continue;
+                }
+                MemoryLoggerEventStore.accumulateTrace(grouped, event, app);
+                scanned++;
+            }
+        }
+        return MemoryLoggerEventStore.finishTraces(grouped, safeLimit);
     }
 
     @Override
@@ -416,15 +462,16 @@ public class KvLoggerEventStore implements LoggerEventStore {
     private List<LoggerEvent> scanEvents(String app, int max) {
         List<LoggerEvent> events = new ArrayList<>();
         String prefix = "logger:" + (app == null || app.isBlank() ? "" : app.trim() + ":");
-        // 流式分批扫描：取满 max 条即收口，避免全量物化大前缀数据把堆打爆
-        String afterKey = "";
+        // 流式分批倒序扫描（新→旧）：取满 max 条即收口，避免全量物化大前缀数据把堆打爆；
+        // 大库下保证统计窗口落在最新数据上（升序取最旧 max 条会让新日志永远进不了窗口）
+        String beforeKey = "";
         while (events.size() < max) {
-            Map<String, String> batch = kv.findAllByPrefix(prefix, afterKey, SCAN_BATCH);
+            Map<String, String> batch = kv.findAllByPrefixDesc(prefix, beforeKey, SCAN_BATCH);
             if (batch.isEmpty()) {
                 break;
             }
             for (Map.Entry<String, String> en : batch.entrySet()) {
-                afterKey = en.getKey();
+                beforeKey = en.getKey();
                 LoggerEvent event = parseEvent(en.getValue());
                 if (event != null) {
                     events.add(event);
