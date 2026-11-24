@@ -9,6 +9,7 @@ import com.chua.starter.ai.support.service.AiManufacturerFacadeService;
 import com.chua.starter.ai.support.service.AiDeepSeekPriceSyncService;
 import com.chua.starter.ai.support.service.AiMossPriceSyncService;
 import com.chua.starter.ai.support.service.AiSub2ApiPriceSyncService;
+import com.chua.starter.ai.support.service.AiNewApiPriceSyncService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -77,6 +78,11 @@ public class AiManufacturerController {
     private final AiSub2ApiPriceSyncService aiSub2ApiPriceSyncService;
 
     /**
+     * new-api 模型价格同步服务（站点公开定价接口口径）
+     */
+    private final AiNewApiPriceSyncService aiNewApiPriceSyncService;
+
+    /**
      * 运行目录（用于 Logo 文件存储）
      */
     @Value("${user.dir:.}")
@@ -124,10 +130,12 @@ public class AiManufacturerController {
     @PutMapping("update-model-prices")
     public ReturnResult<?> updateModelPrices(
             @Parameter(description = "厂商编码") @RequestParam String code,
-            @Parameter(description = "sub2api 站点根地址（可空）")
+            @Parameter(description = "中转站点根地址（sub2api / newapi 专属同步用，可空）")
             @RequestParam(value = "base_url", required = false) String baseUrl) {
         if (isSub2ApiCode(code)) {
             aiSub2ApiPriceSyncService.syncPrices(code, baseUrl);
+        } else if (isNewApiCode(code)) {
+            aiNewApiPriceSyncService.syncPrices(code, baseUrl);
         } else if (isDeepSeekCode(code)) {
             aiDeepSeekPriceSyncService.syncPrices(code);
         } else {
@@ -148,10 +156,12 @@ public class AiManufacturerController {
     @PutMapping("replace-models")
     public ReturnResult<?> replaceModels(
             @Parameter(description = "厂商编码") @RequestParam String code,
-            @Parameter(description = "sub2api 站点根地址（可空）")
+            @Parameter(description = "中转站点根地址（sub2api / newapi 专属同步用，可空）")
             @RequestParam(value = "base_url", required = false) String baseUrl) {
         if (isSub2ApiCode(code)) {
             aiSub2ApiPriceSyncService.replaceModels(code, baseUrl);
+        } else if (isNewApiCode(code)) {
+            aiNewApiPriceSyncService.replaceModels(code, baseUrl);
         } else if (isDeepSeekCode(code)) {
             aiDeepSeekPriceSyncService.replaceModels(code);
         } else {
@@ -179,6 +189,20 @@ public class AiManufacturerController {
      */
     private static boolean isSub2ApiCode(String code) {
         return code != null && "sub2api".equalsIgnoreCase(code.trim());
+    }
+
+    /**
+     * 是否走 new-api 专属价格同步：编码命中 newapi / new-api 时从该站点的公开定价接口取数。
+     *
+     * @param code 厂商编码
+     * @return new-api 专属同步为 true
+     */
+    private static boolean isNewApiCode(String code) {
+        if (code == null) {
+            return false;
+        }
+        String normalized = code.trim().toLowerCase(Locale.ROOT);
+        return "newapi".equals(normalized) || "new-api".equals(normalized);
     }
 
     /**
