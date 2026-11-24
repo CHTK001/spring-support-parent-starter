@@ -242,10 +242,59 @@ public class CalciteFederationManager {
         if (federation.getMemberList() == null || federation.getMemberList().isEmpty()) {
             throw new IllegalArgumentException("联邦至少需要一个成员数据源");
         }
+        keepBlankPasswords(federation);
         federation.setMembers(store.writeFederationMembers(federation.getMemberList()));
         long id = store.saveFederation(federation);
         refresh();
         return store.findFederationById(id);
+    }
+
+    /**
+     * 编辑保存时成员密码留空 = 保持原密码（新增成员留空 = 无密码）。
+     *
+     * <p>成员密码不回显，编辑弹窗里已有成员的密码框默认留空；若原样落库会把原密码
+     * 清空导致连接失败。按 schema 名（回退 JDBC URL）匹配旧成员后回填。</p>
+     */
+    private void keepBlankPasswords(DsCalciteFederation federation) {
+        if (federation.getId() == null) {
+            return;
+        }
+        DsCalciteFederation old = store.findFederationById(federation.getId());
+        if (old == null || old.getMemberList() == null) {
+            return;
+        }
+        for (FederationMember member : federation.getMemberList()) {
+            if (member == null) {
+                continue;
+            }
+            String password = member.getPassword();
+            if (password != null && "-".equals(password.trim())) {
+                member.setPassword(null); // 显式清空标记：传「-」表示清除原密码
+                continue;
+            }
+            if (password != null && !password.isBlank()) {
+                continue; // 传入了新密码，原样保存
+            }
+            old.getMemberList().stream()
+                    .filter(prev -> sameMember(prev, member))
+                    .map(FederationMember::getPassword)
+                    .filter(prev -> prev != null && !prev.isBlank())
+                    .findFirst()
+                    .ifPresent(member::setPassword);
+        }
+    }
+
+    /**
+     * 判断是否为同一个成员：优先按 schema 名，其次按 JDBC URL。
+     */
+    private static boolean sameMember(FederationMember prev, FederationMember member) {
+        if (prev == null) {
+            return false;
+        }
+        if (prev.getSchemaName() != null && prev.getSchemaName().equals(member.getSchemaName())) {
+            return true;
+        }
+        return prev.getUrl() != null && prev.getUrl().equals(member.getUrl());
     }
 
     /**

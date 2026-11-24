@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasource.runtime.calcite.CalciteFederationManager;
 import com.chua.starter.datasource.runtime.model.DsCalciteFederation;
 import com.chua.starter.datasource.runtime.model.DsShardingRule;
+import com.chua.starter.datasource.runtime.model.FederationMember;
 import com.chua.starter.datasource.runtime.sharding.ShardingPhysicalTableService;
 import com.chua.starter.datasource.runtime.sharding.ShardingRuleManager;
 import com.chua.starter.datasource.runtime.store.DsRuntimeConfigStore;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 数据源运行时管理接口（/ms/ds-runtime/**）。
@@ -67,6 +70,20 @@ public class DsRuntimeController {
             result.put("shardingLastRefreshResult", shardingRuleManager.lastRefreshResult());
             result.put("activeCalciteMembers", federationManager.activeMemberCount());
             result.put("activeShardingTables", shardingRuleManager.activeRules().size());
+            // 概览下钻明细：生效联邦成员 schema 与生效分片逻辑表（去重）
+            result.put("activeFederationSchemas", federationManager.activeFederations().stream()
+                    .map(DsCalciteFederation::getMemberList)
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .map(FederationMember::getSchemaName)
+                    .filter(name -> name != null && !name.isBlank())
+                    .distinct()
+                    .collect(Collectors.toList()));
+            result.put("activeRuleTables", shardingRuleManager.activeRules().stream()
+                    .map(DsShardingRule::getLogicTable)
+                    .filter(name -> name != null && !name.isBlank())
+                    .distinct()
+                    .collect(Collectors.toList()));
             return ReturnResult.ok(result);
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());

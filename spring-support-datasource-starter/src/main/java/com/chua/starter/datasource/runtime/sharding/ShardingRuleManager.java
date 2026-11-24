@@ -438,10 +438,59 @@ public class ShardingRuleManager {
         if (rule.getDbMemberList() == null || rule.getDbMemberList().isEmpty()) {
             throw new IllegalArgumentException("分片规则至少需要一个分库成员");
         }
+        keepBlankPasswords(rule);
         rule.setDatabases(store.writeShardingMembers(rule.getDbMemberList()));
         long id = store.saveShardingRule(rule);
         refresh();
         return store.findShardingRuleById(id);
+    }
+
+    /**
+     * 编辑保存时分库成员密码留空 = 保持原密码（新增成员留空 = 无密码）。
+     *
+     * <p>成员密码不回显，编辑弹窗里已有成员的密码框默认留空；若原样落库会把原密码
+     * 清空导致连接失败。按分库名（回退 JDBC URL）匹配旧成员后回填。</p>
+     */
+    private void keepBlankPasswords(DsShardingRule rule) {
+        if (rule.getId() == null) {
+            return;
+        }
+        DsShardingRule old = store.findShardingRuleById(rule.getId());
+        if (old == null || old.getDbMemberList() == null) {
+            return;
+        }
+        for (ShardingDbMember member : rule.getDbMemberList()) {
+            if (member == null) {
+                continue;
+            }
+            String password = member.getPassword();
+            if (password != null && "-".equals(password.trim())) {
+                member.setPassword(null); // 显式清空标记：传「-」表示清除原密码
+                continue;
+            }
+            if (password != null && !password.isBlank()) {
+                continue; // 传入了新密码，原样保存
+            }
+            old.getDbMemberList().stream()
+                    .filter(prev -> sameMember(prev, member))
+                    .map(ShardingDbMember::getPassword)
+                    .filter(prev -> prev != null && !prev.isBlank())
+                    .findFirst()
+                    .ifPresent(member::setPassword);
+        }
+    }
+
+    /**
+     * 判断是否为同一个分库成员：优先按分库名，其次按 JDBC URL。
+     */
+    private static boolean sameMember(ShardingDbMember prev, ShardingDbMember member) {
+        if (prev == null) {
+            return false;
+        }
+        if (prev.getName() != null && prev.getName().equals(member.getName())) {
+            return true;
+        }
+        return prev.getUrl() != null && prev.getUrl().equals(member.getUrl());
     }
 
     /**
