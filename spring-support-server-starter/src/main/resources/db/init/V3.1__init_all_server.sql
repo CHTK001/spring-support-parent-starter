@@ -151,6 +151,8 @@ CREATE TABLE IF NOT EXISTS server_host (
     server_host_os_hostname     VARCHAR(128) NULL                      COMMENT '系统主机名',
     server_host_java_version    VARCHAR(64) NULL                       COMMENT 'Java版本',
     server_host_uptime_sec      BIGINT NULL                            COMMENT '运行时间秒',
+    server_host_docker_mode     VARCHAR(8)  NULL DEFAULT 'CMD'         COMMENT 'Docker操作通道: CMD=SSH+docker CLI / API=Docker Engine HTTP API',
+    server_host_docker_api_url  VARCHAR(255) NULL DEFAULT NULL         COMMENT 'Docker Engine API地址(docker_mode=API时生效, 如 http://host:2375)',
     create_by                   INT          NULL                      COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                      COMMENT '创建人名称',
     create_time                 DATETIME     NULL                      COMMENT '创建时间',

@@ -9,6 +9,8 @@ import com.chua.starter.docker.model.DockerVolumeRequest;
 import com.chua.starter.docker.service.RegistryService;
 import com.chua.starter.docker.service.TemplateService;
 import com.chua.starter.docker.spi.RegistryConfig;
+import com.chua.starter.server.support.client.DockerChannel;
+import com.chua.starter.server.support.client.DockerEngineClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -24,14 +26,23 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Docker 管理服务实现 —— 全部经 SSH 在受控主机上执行 {@code docker} CLI。
@@ -82,6 +93,12 @@ public class DockerServiceImpl implements DockerService {
     private static final String LOGIN_EOF = "CHUA_DOCKER_LOGIN_EOF";
 
     /**
+     * API 通道时间格式（与 CMD 路径 {@code toIso} 同构的秒级 UTC 时间）
+     */
+    private static final DateTimeFormatter API_ISO_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneId.of("UTC"));
+
+    /**
      * JSON 解析器
      */
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -121,6 +138,17 @@ public class DockerServiceImpl implements DockerService {
         out.put("compose", false);
         out.put("runtime", "docker");
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                try {
+                    String version = DockerChannel.client(host).version();
+                    out.put("installed", version != null && !version.isBlank());
+                    out.put("version", version);
+                } catch (Exception e) {
+                    log.warn("[docker] API 通道能力探测失败 hostId={}: {}", hostId, e.getMessage());
+                }
+                return ReturnResult.ok(out);
+            }
             ensurePosix(hostId);
             RemoteExecResult probe = execRemote(hostId, "docker version --format '{{.Server.Version}}' 2>/dev/null");
             String version = probe.exitCode() == 0 ? probe.stdout().trim() : "";
@@ -143,6 +171,11 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<List<Map<String, Object>>> containers(Long hostId, Boolean all) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                return ReturnResult.ok(apiContainers(
+                        DockerChannel.client(host).listContainersRaw(!Boolean.FALSE.equals(all))));
+            }
             ensurePosix(hostId);
             String flag = Boolean.FALSE.equals(all) ? "" : " -a";
             RemoteExecResult result = execRemote(hostId, "docker ps" + flag + " --format '{{json .}}'");
@@ -181,6 +214,11 @@ public class DockerServiceImpl implements DockerService {
             return ReturnResult.error("容器标识不能为空");
         }
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                // Docker API inspect 结构与 docker inspect 同构，直接复用同一解析器
+                return ReturnResult.ok(parseInspect(DockerChannel.client(host).inspectContainerRaw(id)));
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker inspect " + shellSafe(id) + " 2>&1");
             if (result.exitCode() != 0) {
@@ -202,10 +240,15 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Boolean> containerAction(Long hostId, String id, String action) {
         try {
-            ensurePosix(hostId);
             if (!List.of("start", "stop", "restart", "pause", "unpause", "kill").contains(action)) {
                 return ReturnResult.error("不支持的操作: " + action);
             }
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                DockerChannel.client(host).containerAction(id, action);
+                return ReturnResult.ok(true);
+            }
+            ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker " + action + " " + shellSafe(id) + " 2>&1");
             if (result.exitCode() != 0) {
                 return dockerFail(result);
@@ -222,6 +265,11 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Boolean> removeContainer(Long hostId, String id, Boolean force) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                DockerChannel.client(host).removeContainer(id, Boolean.TRUE.equals(force));
+                return ReturnResult.ok(true);
+            }
             ensurePosix(hostId);
             String flag = Boolean.TRUE.equals(force) ? " -f" : "";
             RemoteExecResult result = execRemote(hostId, "docker rm" + flag + " " + shellSafe(id) + " 2>&1");
@@ -243,6 +291,21 @@ public class DockerServiceImpl implements DockerService {
         CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             if (isBlank(id)) {
                 sendEvent(emitter, "error", "容器标识不能为空");
+                emitter.complete();
+                return;
+            }
+            try {
+                MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    sendEvent(emitter, "step", "卸载容器 " + id);
+                    DockerChannel.client(host).removeContainer(id, Boolean.TRUE.equals(force));
+                    sendEvent(emitter, "done", id);
+                    emitter.complete();
+                    return;
+                }
+            } catch (Exception e) {
+                log.warn("[docker] 删除容器失败 hostId={} {}: {}", hostId, id, e.getMessage());
+                sendEvent(emitter, "error", "删除容器失败: " + e.getMessage());
                 emitter.complete();
                 return;
             }
@@ -280,6 +343,11 @@ public class DockerServiceImpl implements DockerService {
                 String pullRef = registryService.pullRef(request.getRegistryId(), image);
                 String run = buildRunCommand(request, pullRef);
                 MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    // buildRunCommand 已完成全量字段校验（两通道同一套规则），API 通道另拼 JSON spec
+                    runContainerViaApi(DockerChannel.client(host), emitter, request, pullRef);
+                    return;
+                }
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -341,6 +409,11 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<String> containerLogs(Long hostId, String id, Integer tail) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                int lines = tail == null || tail < 1 ? 200 : tail;
+                return ReturnResult.ok(truncate(DockerChannel.client(host).containerLogs(id, lines)));
+            }
             ensurePosix(hostId);
             int lines = tail == null || tail < 1 ? 200 : tail;
             RemoteExecResult result = execRemote(hostId, "docker logs --tail " + lines + " " + shellSafe(id) + " 2>&1");
@@ -363,8 +436,14 @@ public class DockerServiceImpl implements DockerService {
         CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
-                ensurePosix(hostId);
                 MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    // API 通道：经 Docker Engine API 多路复用日志流跟随（DockerChannel 内自发 session 事件并 complete）
+                    DockerChannel.streamLogsViaApi(DockerChannel.client(host), emitter, sessionId, id, tail,
+                            msg -> log.warn("[docker] 日志流失败 hostId={} {}: {}", hostId, id, msg));
+                    return;
+                }
+                ensurePosix(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -424,8 +503,14 @@ public class DockerServiceImpl implements DockerService {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
             try {
-                ensurePosix(hostId);
                 MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    // API 通道不走 SSH，无 PTY（hijack+tty），交互式终端仅 CMD 通道支持
+                    sendEvent(emitter, "error", DockerChannel.EXEC_UNSUPPORTED_MESSAGE);
+                    emitter.complete();
+                    return;
+                }
+                ensurePosix(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -522,6 +607,10 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<List<Map<String, Object>>> images(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                return ReturnResult.ok(apiImages(DockerChannel.client(host).listImagesRaw()));
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker images --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -555,7 +644,6 @@ public class DockerServiceImpl implements DockerService {
         CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
-                ensurePosix(hostId);
                 if (isBlank(image) || !image.trim().matches(IMAGE_PATTERN)) {
                     sendEvent(emitter, "error", "镜像名不合法: " + image);
                     emitter.complete();
@@ -563,6 +651,19 @@ public class DockerServiceImpl implements DockerService {
                 }
                 String pullRef = registryService.pullRef(registryId, image.trim());
                 MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    try {
+                        if (pullImageViaApi(DockerChannel.client(host), emitter, pullRef, registryId)) {
+                            sendEvent(emitter, "done", pullRef);
+                        }
+                    } catch (Exception e) {
+                        log.warn("[docker] 拉取镜像失败 hostId={} {}: {}", hostId, image, e.getMessage());
+                        sendEvent(emitter, "error", "拉取失败: " + e.getMessage());
+                    }
+                    emitter.complete();
+                    return;
+                }
+                ensurePosix(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -606,10 +707,15 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Boolean> removeImage(Long hostId, String imageId, Boolean force) {
         try {
-            ensurePosix(hostId);
             if (isBlank(imageId)) {
                 return ReturnResult.error("镜像标识不能为空");
             }
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                DockerChannel.client(host).removeImage(imageId.trim(), Boolean.TRUE.equals(force));
+                return ReturnResult.ok(true);
+            }
+            ensurePosix(hostId);
             String flag = Boolean.TRUE.equals(force) ? " -f" : "";
             RemoteExecResult result = execRemote(hostId, "docker rmi" + flag + " " + shQuote(imageId.trim()) + " 2>&1");
             if (result.exitCode() != 0) {
@@ -633,6 +739,21 @@ public class DockerServiceImpl implements DockerService {
                 emitter.complete();
                 return;
             }
+            try {
+                MsServerHost host = requireHost(hostId);
+                if (DockerChannel.isApiMode(host)) {
+                    sendEvent(emitter, "step", "卸载镜像 " + imageId);
+                    DockerChannel.client(host).removeImage(imageId.trim(), Boolean.TRUE.equals(force));
+                    sendEvent(emitter, "done", imageId);
+                    emitter.complete();
+                    return;
+                }
+            } catch (Exception e) {
+                log.warn("[docker] 删除镜像失败 hostId={} {}: {}", hostId, imageId, e.getMessage());
+                sendEvent(emitter, "error", "删除镜像失败: " + e.getMessage());
+                emitter.complete();
+                return;
+            }
             String flag = Boolean.TRUE.equals(force) ? " -f" : "";
             execStream(hostId, emitter, "卸载镜像 " + imageId,
                     "docker rmi" + flag + " " + shQuote(imageId.trim()) + " 2>&1", imageId);
@@ -643,6 +764,10 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<List<Map<String, Object>>> networks(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                return ReturnResult.ok(apiNetworks(DockerChannel.client(host).listNetworksRaw()));
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker network ls --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -670,6 +795,10 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<List<Map<String, Object>>> volumes(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                return ReturnResult.ok(apiVolumes(DockerChannel.client(host).listVolumesRaw()));
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker volume ls --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -696,6 +825,10 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Map<String, Object>> prune(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                return ReturnResult.ok(DockerChannel.client(host).prune());
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker system prune -af --volumes 2>&1");
             if (result.exitCode() != 0) {
@@ -722,7 +855,6 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Map<String, Object>> createNetwork(Long hostId, DockerNetworkRequest request) {
         try {
-            ensurePosix(hostId);
             String name = request == null || isBlank(request.getName()) ? "" : request.getName().trim();
             if (isBlank(name)) {
                 return ReturnResult.error("请填写网络名称");
@@ -730,6 +862,20 @@ public class DockerServiceImpl implements DockerService {
             if (!name.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")) {
                 return ReturnResult.error("网络名只允许字母、数字、下划线、点与连字符: " + name);
             }
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                String driver = request.getDriver() == null ? "" : request.getDriver().trim();
+                Map<String, Object> spec = new LinkedHashMap<>();
+                spec.put("Name", name);
+                spec.put("Driver", driver.isEmpty() ? "bridge" : driver);
+                Map<String, Object> options = optionMap(request.getOptions());
+                if (!options.isEmpty()) {
+                    spec.put("Options", options);
+                }
+                DockerChannel.client(host).createNetwork(spec);
+                return apiNetworkInspect(DockerChannel.client(host), name);
+            }
+            ensurePosix(hostId);
             StringBuilder cmd = new StringBuilder("docker network create --driver bridge ")
                     .append(shQuote(name));
             String driver = request.getDriver() == null ? "" : request.getDriver().trim();
@@ -764,6 +910,11 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Boolean> removeNetwork(Long hostId, String id) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                DockerChannel.client(host).removeNetwork(id);
+                return ReturnResult.ok(true);
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker network rm " + shellSafe(id));
             return result.exitCode() == 0 ? ReturnResult.ok(true) : dockerFail(result);
@@ -785,7 +936,6 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Map<String, Object>> createVolume(Long hostId, DockerVolumeRequest request) {
         try {
-            ensurePosix(hostId);
             String name = request == null || isBlank(request.getName()) ? "" : request.getName().trim();
             if (isBlank(name)) {
                 return ReturnResult.error("请填写卷名称");
@@ -793,6 +943,20 @@ public class DockerServiceImpl implements DockerService {
             if (!name.matches("[A-Za-z0-9][A-Za-z0-9_.-]*")) {
                 return ReturnResult.error("卷名只允许字母、数字、下划线、点与连字符: " + name);
             }
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                String driver = request.getDriver() == null ? "" : request.getDriver().trim();
+                Map<String, Object> spec = new LinkedHashMap<>();
+                spec.put("Name", name);
+                spec.put("Driver", driver.isEmpty() ? "local" : driver);
+                Map<String, Object> options = optionMap(request.getOptions());
+                if (!options.isEmpty()) {
+                    spec.put("Options", options);
+                }
+                DockerChannel.client(host).createVolume(spec);
+                return apiVolumeInspect(DockerChannel.client(host), name);
+            }
+            ensurePosix(hostId);
             StringBuilder cmd = new StringBuilder("docker volume create --driver local --name ")
                     .append(shQuote(name));
             String driver = request.getDriver() == null ? "" : request.getDriver().trim();
@@ -827,6 +991,11 @@ public class DockerServiceImpl implements DockerService {
     @Override
     public ReturnResult<Boolean> removeVolume(Long hostId, String name) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (DockerChannel.isApiMode(host)) {
+                DockerChannel.client(host).removeVolume(name);
+                return ReturnResult.ok(true);
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker volume rm " + shellSafe(name));
             return result.exitCode() == 0 ? ReturnResult.ok(true) : dockerFail(result);
@@ -836,6 +1005,494 @@ public class DockerServiceImpl implements DockerService {
             log.warn("[docker] 删除卷失败 hostId={}: {}", hostId, e.getMessage());
             return ReturnResult.error("删除卷失败: " + e.getMessage());
         }
+    }
+
+    /* ==================== Docker API 通道辅助 ==================== */
+
+    /**
+     * 容器列表：Docker API {@code /containers/json} → {@code docker ps --format json} 同构视图。
+     *
+     * @param root API 原始响应
+     * @return 容器视图列表
+     */
+    private List<Map<String, Object>> apiContainers(JsonNode root) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (root == null || !root.isArray()) {
+            return list;
+        }
+        for (JsonNode node : root) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            String id = node.path("Id").asText("");
+            item.put("id", id);
+            item.put("shortId", id.length() > 12 ? id.substring(0, 12) : id);
+            JsonNode names = node.path("Names");
+            String name = names.isArray() && names.size() > 0 ? names.get(0).asText("") : "";
+            item.put("name", stripSlash(name));
+            item.put("image", node.path("Image").asText(""));
+            item.put("state", node.path("State").asText(""));
+            item.put("status", node.path("Status").asText(""));
+            item.put("ports", apiPortSummary(node.path("Ports")));
+            item.put("network", String.join(",", fieldNames(node.path("NetworkSettings").path("Networks"))));
+            long created = node.path("Created").asLong(0L);
+            item.put("runningFor", relativeTime(created));
+            item.put("createdAt", epochToIso(created));
+            list.add(item);
+        }
+        return list;
+    }
+
+    /**
+     * 镜像列表：Docker API {@code /images/json} → {@code docker images --format json} 同构视图。
+     *
+     * @param root API 原始响应
+     * @return 镜像视图列表
+     */
+    private List<Map<String, Object>> apiImages(JsonNode root) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (root == null || !root.isArray()) {
+            return list;
+        }
+        for (JsonNode node : root) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            String id = node.path("Id").asText("");
+            item.put("id", id);
+            item.put("shortId", id.length() > 19 ? id.substring(7, 19) : id);
+            String repository = "";
+            String tag = "";
+            JsonNode repoTags = node.path("RepoTags");
+            if (repoTags.isArray() && repoTags.size() > 0) {
+                String repoTag = repoTags.get(0).asText("");
+                int idx = repoTag.lastIndexOf(':');
+                if (idx > 0) {
+                    repository = repoTag.substring(0, idx);
+                    tag = repoTag.substring(idx + 1);
+                } else {
+                    repository = repoTag;
+                }
+            }
+            item.put("repository", repository);
+            item.put("tag", tag);
+            item.put("size", humanSize(node.path("Size").asLong(0L)));
+            item.put("createdAt", epochToIso(node.path("Created").asLong(0L)));
+            list.add(item);
+        }
+        return list;
+    }
+
+    /**
+     * 网络列表：Docker API {@code /networks} → {@code docker network ls --format json} 同构视图。
+     *
+     * @param root API 原始响应
+     * @return 网络视图列表
+     */
+    private List<Map<String, Object>> apiNetworks(JsonNode root) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (root == null || !root.isArray()) {
+            return list;
+        }
+        for (JsonNode node : root) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", node.path("Id").asText(""));
+            item.put("name", node.path("Name").asText(""));
+            item.put("driver", node.path("Driver").asText(""));
+            item.put("scope", node.path("Scope").asText(""));
+            list.add(item);
+        }
+        return list;
+    }
+
+    /**
+     * 卷列表：Docker API {@code /volumes} → {@code docker volume ls --format json} 同构视图。
+     *
+     * @param root API 原始响应
+     * @return 卷视图列表
+     */
+    private List<Map<String, Object>> apiVolumes(JsonNode root) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (root == null || !root.isObject()) {
+            return list;
+        }
+        for (JsonNode node : root.path("Volumes")) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", node.path("Name").asText(""));
+            item.put("driver", node.path("Driver").asText(""));
+            item.put("mountpoint", node.path("Mountpoint").asText(""));
+            list.add(item);
+        }
+        return list;
+    }
+
+    /**
+     * 网络创建结果查询（API 通道，对应 CMD 路径的 {@link #parseNetworkInspect}）。
+     *
+     * @param client Docker API 客户端
+     * @param name   网络名
+     * @return 网络视图
+     * @throws IOException 网络/协议异常
+     * @throws InterruptedException 请求被中断
+     */
+    private ReturnResult<Map<String, Object>> apiNetworkInspect(DockerEngineClient client, String name)
+            throws IOException, InterruptedException {
+        JsonNode node = client.inspectNetworkRaw(name);
+        if (node == null || !node.isObject()) {
+            return ReturnResult.error("网络创建结果无法解析");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", node.path("Id").asText(""));
+        out.put("name", node.path("Name").asText(""));
+        out.put("driver", node.path("Driver").asText(""));
+        out.put("scope", node.path("Scope").asText(""));
+        out.put("labels", toLabelMap(node.path("Labels")));
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * 卷创建结果查询（API 通道，对应 CMD 路径的 {@link #parseVolumeInspect}）。
+     *
+     * @param client Docker API 客户端
+     * @param name   卷名
+     * @return 卷视图
+     * @throws IOException 网络/协议异常
+     * @throws InterruptedException 请求被中断
+     */
+    private ReturnResult<Map<String, Object>> apiVolumeInspect(DockerEngineClient client, String name)
+            throws IOException, InterruptedException {
+        JsonNode node = client.inspectVolumeRaw(name);
+        if (node == null || !node.isObject()) {
+            return ReturnResult.error("卷创建结果无法解析");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("name", node.path("Name").asText(""));
+        out.put("driver", node.path("Driver").asText(""));
+        out.put("mountpoint", node.path("Mountpoint").asText(""));
+        out.put("labels", toLabelMap(node.path("Labels")));
+        return ReturnResult.ok(out);
+    }
+
+    /**
+     * API 通道创建并启动容器：pull（可选）→ create → start → done(容器 ID)。
+     * 事件协议与 CMD 路径一致（step / log / error / done）。
+     *
+     * @param client  Docker API 客户端
+     * @param emitter SSE 发射器
+     * @param request 创建请求（已经 {@code buildRunCommand} 全量校验）
+     * @param pullRef 已解析的镜像引用
+     */
+    private void runContainerViaApi(DockerEngineClient client, SseEmitter emitter,
+                                    DockerCreateRequest request, String pullRef) {
+        try {
+            if (!Boolean.FALSE.equals(request.getPull())) {
+                sendEvent(emitter, "step", "拉取镜像 " + pullRef);
+                if (!pullImageViaApi(client, emitter, pullRef, request.getRegistryId())) {
+                    emitter.complete();
+                    return;
+                }
+            }
+            sendEvent(emitter, "step", "创建并启动容器");
+            String containerId = client.createContainer(safe(request.getName()).trim(), buildRunSpec(request, pullRef));
+            client.startContainer(containerId);
+            sendEvent(emitter, "done", containerId);
+        } catch (Exception e) {
+            log.warn("[docker] 创建容器失败(API): {}", e.getMessage());
+            sendEvent(emitter, "error", "创建容器失败: " + e.getMessage());
+        }
+        emitter.complete();
+    }
+
+    /**
+     * API 通道拉取镜像：逐行消费 {@code POST /images/create} 的 JSON 进度流。
+     * 事件协议与 CMD 路径一致（log / error），成功返回 true。
+     *
+     * @param client     Docker API 客户端
+     * @param emitter    SSE 发射器
+     * @param pullRef    镜像引用（可含 tag / registry host）
+     * @param registryId 镜像库标识，可空
+     * @return 是否拉取成功
+     * @throws IOException 网络/协议异常
+     * @throws InterruptedException 请求被中断
+     */
+    private boolean pullImageViaApi(DockerEngineClient client, SseEmitter emitter, String pullRef, String registryId)
+            throws IOException, InterruptedException {
+        String fromImage = pullRef;
+        String tag = null;
+        if (!pullRef.contains("@")) {
+            int idx = pullRef.lastIndexOf(':');
+            if (idx > 0 && !pullRef.substring(idx + 1).contains("/")) {
+                fromImage = pullRef.substring(0, idx);
+                tag = pullRef.substring(idx + 1);
+            } else {
+                tag = "latest";
+            }
+        }
+        try (InputStream stream = client.pullImageStream(fromImage, tag, registryAuthHeader(registryId))) {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) {
+                    continue;
+                }
+                JsonNode node;
+                try {
+                    node = objectMapper.readTree(line);
+                } catch (Exception e) {
+                    continue;
+                }
+                JsonNode errorDetail = node.path("errorDetail");
+                if (errorDetail.isObject() && !errorDetail.path("message").asText("").isEmpty()) {
+                    sendEvent(emitter, "error", "拉取失败: " + errorDetail.path("message").asText(""));
+                    return false;
+                }
+                if (!node.path("error").asText("").isEmpty()) {
+                    sendEvent(emitter, "error", "拉取失败: " + node.path("error").asText(""));
+                    return false;
+                }
+                String status = node.path("status").asText("");
+                String progress = node.path("progress").asText("");
+                String text = status.isEmpty() ? progress : (progress.isEmpty() ? status : status + " " + progress);
+                if (!text.isBlank()) {
+                    sendEvent(emitter, "log", text);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 组装 {@code X-Registry-Auth} 头（base64 凭据 JSON），未配置账号密码时返回 null。
+     *
+     * @param registryId 镜像库标识
+     * @return base64 凭据，或 null
+     */
+    private String registryAuthHeader(String registryId) {
+        if (isBlank(registryId)) {
+            return null;
+        }
+        try {
+            RegistryConfig config = registryService.config(registryId);
+            if (isBlank(config.getUsername()) || isBlank(config.getPassword())) {
+                return null;
+            }
+            Map<String, Object> auth = new LinkedHashMap<>();
+            auth.put("username", config.getUsername().trim());
+            auth.put("password", config.getPassword());
+            auth.put("serveraddress", registryService.loginHost(config));
+            return Base64.getEncoder().encodeToString(objectMapper.writeValueAsBytes(auth));
+        } catch (Exception e) {
+            log.warn("[docker] 组装镜像库凭据失败 id={}: {}", registryId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 把创建表单拼成 Docker API ContainerCreate 请求体
+     * （字段口径与 {@code buildRunCommand} 一一对应；格式校验已由前者完成）。
+     *
+     * @param request 创建请求
+     * @param image   已解析的镜像引用
+     * @return ContainerCreate 请求体
+     */
+    private Map<String, Object> buildRunSpec(DockerCreateRequest request, String image) {
+        Map<String, Object> spec = new LinkedHashMap<>();
+        spec.put("Image", image);
+        if (!isBlank(request.getCommand())) {
+            List<String> cmd = new ArrayList<>();
+            for (String part : request.getCommand().trim().split("\\s+")) {
+                cmd.add(part);
+            }
+            spec.put("Cmd", cmd);
+        }
+        if (request.getEnv() != null) {
+            List<String> env = new ArrayList<>();
+            for (String item : request.getEnv()) {
+                if (!isBlank(item)) {
+                    env.add(item.trim());
+                }
+            }
+            if (!env.isEmpty()) {
+                spec.put("Env", env);
+            }
+        }
+        Map<String, Object> hostConfig = new LinkedHashMap<>();
+        if (request.getVolumes() != null) {
+            List<String> binds = new ArrayList<>();
+            for (String item : request.getVolumes()) {
+                if (!isBlank(item)) {
+                    binds.add(item.trim());
+                }
+            }
+            if (!binds.isEmpty()) {
+                hostConfig.put("Binds", binds);
+            }
+        }
+        if (!isBlank(request.getNetwork())) {
+            hostConfig.put("NetworkMode", request.getNetwork().trim());
+        }
+        if (!isBlank(request.getRestartPolicy())) {
+            Map<String, Object> restartPolicy = new LinkedHashMap<>();
+            restartPolicy.put("Name", request.getRestartPolicy().trim());
+            hostConfig.put("RestartPolicy", restartPolicy);
+        }
+        if (request.getPorts() != null) {
+            Map<String, Object> exposed = new LinkedHashMap<>();
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            for (String item : request.getPorts()) {
+                if (isBlank(item)) {
+                    continue;
+                }
+                String value = item.trim();
+                String proto = "tcp";
+                int slash = value.indexOf('/');
+                if (slash > 0) {
+                    proto = value.substring(slash + 1);
+                    value = value.substring(0, slash);
+                }
+                String[] pair = value.split(":");
+                if (pair.length != 2) {
+                    continue;
+                }
+                String key = pair[1] + "/" + proto;
+                exposed.put(key, new LinkedHashMap<>());
+                Map<String, Object> binding = new LinkedHashMap<>();
+                binding.put("HostIp", "");
+                binding.put("HostPort", pair[0]);
+                List<Map<String, Object>> list = new ArrayList<>();
+                list.add(binding);
+                bindings.put(key, list);
+            }
+            if (!exposed.isEmpty()) {
+                spec.put("ExposedPorts", exposed);
+                hostConfig.put("PortBindings", bindings);
+            }
+        }
+        if (!hostConfig.isEmpty()) {
+            spec.put("HostConfig", hostConfig);
+        }
+        return spec;
+    }
+
+    /**
+     * 把 {@code --opt key=value} 参数列表转成 API 的 Options 映射。
+     *
+     * @param options 参数列表
+     * @return 选项映射（无 '=' 的项跳过）
+     */
+    private Map<String, Object> optionMap(List<String> options) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (options == null) {
+            return out;
+        }
+        for (String option : options) {
+            if (isBlank(option)) {
+                continue;
+            }
+            int idx = option.indexOf('=');
+            if (idx <= 0) {
+                continue;
+            }
+            out.put(option.substring(0, idx).trim(), option.substring(idx + 1).trim());
+        }
+        return out;
+    }
+
+    /**
+     * 拼接容器端口摘要（形如 {@code 0.0.0.0:8080->80/tcp}，与 docker ps 输出同构）。
+     *
+     * @param ports API Ports 数组
+     * @return 摘要串
+     */
+    private String apiPortSummary(JsonNode ports) {
+        if (ports == null || !ports.isArray() || ports.isEmpty()) {
+            return "";
+        }
+        List<String> parts = new ArrayList<>();
+        for (JsonNode port : ports) {
+            String ip = port.path("IP").asText("");
+            long publicPort = port.path("PublicPort").asLong(0L);
+            long privatePort = port.path("PrivatePort").asLong(0L);
+            String type = port.path("Type").asText("tcp");
+            if (publicPort > 0) {
+                parts.add(ip + ":" + publicPort + "->" + privatePort + "/" + type);
+            } else {
+                parts.add(privatePort + "/" + type);
+            }
+        }
+        return String.join(", ", parts);
+    }
+
+    /**
+     * 取 JSON 对象的全部键名（保持原顺序）。
+     *
+     * @param objectNode 对象节点
+     * @return 键名列表
+     */
+    private List<String> fieldNames(JsonNode objectNode) {
+        List<String> names = new ArrayList<>();
+        if (objectNode != null && objectNode.isObject()) {
+            objectNode.fields().forEachRemaining(entry -> names.add(entry.getKey()));
+        }
+        return names;
+    }
+
+    /**
+     * epoch 秒 → docker 风格相对时间（如 {@code 3 hours ago}）。
+     *
+     * @param epochSeconds epoch 秒
+     * @return 相对时间
+     */
+    private String relativeTime(long epochSeconds) {
+        if (epochSeconds <= 0) {
+            return "";
+        }
+        long seconds = Math.max(0, Instant.now().getEpochSecond() - epochSeconds);
+        if (seconds < 60) {
+            return seconds + (seconds == 1 ? " second ago" : " seconds ago");
+        }
+        long minutes = seconds / 60;
+        if (minutes < 60) {
+            return minutes + (minutes == 1 ? " minute ago" : " minutes ago");
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + (hours == 1 ? " hour ago" : " hours ago");
+        }
+        long days = hours / 24;
+        return days + (days == 1 ? " day ago" : " days ago");
+    }
+
+    /**
+     * epoch 秒 → 与 CMD 路径 {@code toIso} 同构的秒级 UTC 时间（{@code yyyy-MM-dd'T'HH:mm:ss}）。
+     *
+     * @param epochSeconds epoch 秒
+     * @return ISO 时间
+     */
+    private String epochToIso(long epochSeconds) {
+        if (epochSeconds <= 0) {
+            return "";
+        }
+        return API_ISO_FORMAT.format(Instant.ofEpochSecond(epochSeconds));
+    }
+
+    /**
+     * 字节数 → docker 风格人类可读大小（如 {@code 45.2MB}）。
+     *
+     * @param bytes 字节数
+     * @return 大小串
+     */
+    private String humanSize(long bytes) {
+        if (bytes <= 0) {
+            return "0B";
+        }
+        String[] units = {"B", "kB", "MB", "GB", "TB", "PB"};
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1000 && unit < units.length - 1) {
+            value /= 1000;
+            unit++;
+        }
+        if (unit == 0) {
+            return (long) value + units[0];
+        }
+        return String.format(java.util.Locale.ROOT, "%.1f%s", value, units[unit]);
     }
 
     /**

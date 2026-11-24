@@ -453,6 +453,20 @@ public class MsServerHost extends SysBase {
     private java.time.LocalDateTime serverHostLastDelayTime; // 服务端主机最后一个延迟时间
 
     /**
+     * Docker 操作通道：CMD = SSH + docker CLI（默认）；API = Docker Engine HTTP API
+     */
+    @TableField("server_host_docker_mode")
+    @Schema(description = "Docker操作通道(CMD/API)")
+    private String serverHostDockerMode; // 服务端主机Docker操作通道
+
+    /**
+     * Docker Engine API 地址（docker_mode=API 时生效，如 http://172.16.9.194:2375）
+     */
+    @TableField("server_host_docker_api_url")
+    @Schema(description = "Docker Engine API地址")
+    private String serverHostDockerApiUrl; // 服务端主机Docker Engine API地址
+
+    /**
      * 登录账号（瞬态，新增表单直接提交，不落库）
      */
     @TableField(exist = false)

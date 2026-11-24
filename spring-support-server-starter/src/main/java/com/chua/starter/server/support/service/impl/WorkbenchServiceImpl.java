@@ -6,6 +6,8 @@ package com.chua.starter.server.support.service.impl;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.common.support.log.MdcWrap;
+import com.chua.starter.server.support.client.DockerChannel;
+import com.chua.starter.server.support.client.DockerEngineClient;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.connection.WindowsSshShell;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -25,7 +27,11 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -38,12 +44,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 主机工作台服务实现 —— Docker / Kubernetes 经 SSH 执行 CLI 落地
+ * 主机工作台服务实现 —— Docker / Kubernetes 双通道落地
  *
- * <p>受控主机凭据来自 {@link ServerHostService#resolveCredential}，连接复用
- * {@link ConnectionManager} 缓存；命令经 SSH exec 通道执行，输出解析为契约
- * {@code workbench-api-contract.md} 定义的结构。全部操作对 Windows 主机返回
- * 「暂不支持」提示（Windows 无 POSIX shell，docker/kubectl 场景罕见）。</p>
+ * <p>Docker 操作按主机配置 {@code server_host_docker_mode} 分流：
+ * <b>CMD 通道</b>（默认）经 SSH 执行 docker CLI，凭据来自
+ * {@link ServerHostService#resolveCredential}，连接复用 {@link ConnectionManager} 缓存；
+ * <b>API 通道</b>经 {@link DockerEngineClient} 直连目标机 Docker Engine HTTP API，
+ * 免 SSH 依赖。两通道输出同构（{@code workbench-api-contract.md}）。
+ * 交互式进入容器（PTY）仅 CMD 通道支持。K8s 操作走 SSH + kubectl CLI。
+ * 全部操作对 Windows 主机的 cmd 通道返回「暂不支持」提示。</p>
  *
  * @author CH
  * @since 4.0.0.44
@@ -93,28 +102,43 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<WorkbenchDockerCapabilityVO> dockerCapability(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                // API 通道：GET /version 可达即视为已安装；compose 无法经 API 探测，按不可用处理
+                try {
+                    String version = apiClient(host).version();
+                    return ReturnResult.ok(WorkbenchDockerCapabilityVO.installed(version, false, "API"));
+                } catch (Exception e) {
+                    log.warn("[workbench] Docker API 探测失败 hostId={}: {}", hostId, e.getMessage());
+                    return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker", "API"));
+                }
+            }
             ensurePosix(hostId);
             RemoteExecResult probe = execRemote(hostId, "command -v docker >/dev/null 2>&1 && "
                     + "docker version --format '{{.Server.Version}}' 2>/dev/null && echo __OK__ || echo __NO_DOCKER__");
             String stdout = probe.stdout().trim();
             if (!stdout.contains("__OK__")) {
-                return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker"));
+                return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker", "CMD"));
             }
             String version = firstNonEmptyLine(stdout);
             RemoteExecResult compose = execRemote(hostId, "docker compose version >/dev/null 2>&1 && echo yes || echo no");
             boolean hasCompose = "yes".equalsIgnoreCase(compose.stdout().trim());
-            return ReturnResult.ok(WorkbenchDockerCapabilityVO.installed(version, hasCompose));
+            return ReturnResult.ok(WorkbenchDockerCapabilityVO.installed(version, hasCompose, "CMD"));
         } catch (UnsupportedOperationException e) {
-            return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker"));
+            return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker", "CMD"));
         } catch (Exception e) {
             log.warn("[workbench] Docker 能力探测失败 hostId={}: {}", hostId, e.getMessage());
-            return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker"));
+            return ReturnResult.ok(WorkbenchDockerCapabilityVO.notInstalled("docker", "CMD"));
         }
     }
 
     @Override
     public ReturnResult<List<Map<String, Object>>> listDockerContainers(Long hostId, Boolean all) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                return ReturnResult.ok(apiClient(host).listContainers(!Boolean.FALSE.equals(all)));
+            }
             ensurePosix(hostId);
             String flag = Boolean.FALSE.equals(all) ? "" : " -a";
             RemoteExecResult result = execRemote(hostId, "docker ps" + flag + " --format '{{json .}}'");
@@ -148,10 +172,15 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<Boolean> dockerContainerAction(Long hostId, String containerId, String action) {
         try {
-            ensurePosix(hostId);
+            MsServerHost host = requireHost(hostId);
             if (!List.of("start", "stop", "restart").contains(action)) {
                 return ReturnResult.error("不支持的操作: " + action);
             }
+            if (isApiMode(host)) {
+                apiClient(host).containerAction(containerId, action);
+                return ReturnResult.ok(true);
+            }
+            ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker " + action + " " + shellSafe(containerId));
             if (result.exitCode() != 0) {
                 return dockerUnavailable(result);
@@ -168,8 +197,12 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<String> dockerContainerLogs(Long hostId, String containerId, Integer tail) {
         try {
-            ensurePosix(hostId);
+            MsServerHost host = requireHost(hostId);
             int lines = tail == null || tail < 1 ? 200 : tail;
+            if (isApiMode(host)) {
+                return ReturnResult.ok(truncate(apiClient(host).containerLogs(containerId, lines)));
+            }
+            ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker logs --tail " + lines + " " + shellSafe(containerId) + " 2>&1");
             if (result.exitCode() != 0) {
                 return dockerUnavailable(result);
@@ -191,8 +224,12 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         CompletableFuture.runAsync(MdcWrap.wrap(() -> {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             try {
+                MsServerHost host = requireHost(hostId);
+                if (isApiMode(host)) {
+                    streamLogsViaApi(emitter, sessionId, host, containerId, tail);
+                    return;
+                }
                 ensurePosix(hostId);
-                MsServerHost host = hostMapper.selectById(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     emitter.send(SseEmitter.event().name("error").data(resolved.getMsg(), MediaType.TEXT_PLAIN));
@@ -254,6 +291,50 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         return emitter;
     }
 
+    /**
+     * API 通道容器日志跟随流：经 Docker Engine API 拉取多路复用日志流，
+     * 解包后按行推送到 SSE（等价 cmd 通道的 {@code docker logs -f}）。
+     *
+     * @param emitter     SSE 发射器
+     * @param sessionId   会话标识
+     * @param host        主机实体
+     * @param containerId 容器 ID 或名称
+     * @param tail        起始尾部行数
+     */
+    private void streamLogsViaApi(SseEmitter emitter, String sessionId, MsServerHost host,
+                                  String containerId, Integer tail) {
+        int lines = tail == null || tail < 1 ? 100 : tail;
+        try {
+            InputStream in = apiClient(host).streamLogs(containerId, lines);
+            emitter.send(SseEmitter.event().name("session").data(sessionId, MediaType.TEXT_PLAIN));
+            Runnable cleanup = () -> {
+                try {
+                    in.close();
+                } catch (Exception ignored) {
+                    // 忽略：关闭失败（流已关闭或客户端已断开）
+                }
+            };
+            emitter.onCompletion(cleanup);
+            emitter.onTimeout(cleanup);
+            emitter.onError(e -> cleanup.run());
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    emitter.send(SseEmitter.event().name("log").data(line, MediaType.TEXT_PLAIN));
+                }
+            }
+            emitter.complete();
+        } catch (Exception e) {
+            log.warn("[workbench] Docker API 日志流失败 hostId={} {}: {}", host.getId(), containerId, e.getMessage());
+            try {
+                emitter.send(SseEmitter.event().name("error").data("日志流启动失败: " + e.getMessage(), MediaType.TEXT_PLAIN));
+            } catch (Exception ignored) {
+                // 忽略：发送失败（客户端已断开，无法推送错误事件）
+            }
+            emitter.complete();
+        }
+    }
+
     @Override
     public SseEmitter dockerContainerExec(Long hostId, String containerId, String command) {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
@@ -263,8 +344,16 @@ public class WorkbenchServiceImpl implements WorkbenchService {
             SshClients.Handle[] handleRef = new SshClients.Handle[1];
             SshClient.TerminalOperation[] terminalRef = new SshClient.TerminalOperation[1];
             try {
+                MsServerHost host = requireHost(hostId);
+                if (isApiMode(host)) {
+                    // API 通道不支持交互式 exec（hijack+tty），进入容器请走 CMD 通道
+                    emitter.send(SseEmitter.event().name("error").data(
+                            "当前主机 Docker 为 API 通道，暂不支持进入容器；请将该主机 Docker 通道切换为 CMD 后重试",
+                            MediaType.TEXT_PLAIN));
+                    emitter.complete();
+                    return;
+                }
                 ensurePosix(hostId);
-                MsServerHost host = hostMapper.selectById(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     emitter.send(SseEmitter.event().name("error").data(resolved.getMsg(), MediaType.TEXT_PLAIN));
@@ -416,6 +505,10 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<List<Map<String, Object>>> listDockerImages(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                return ReturnResult.ok(apiClient(host).listImages());
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker images --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -445,6 +538,10 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<List<Map<String, Object>>> listDockerNetworks(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                return ReturnResult.ok(apiClient(host).listNetworks());
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker network ls --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -472,6 +569,10 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<List<Map<String, Object>>> listDockerVolumes(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                return ReturnResult.ok(apiClient(host).listVolumes());
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker volume ls --format '{{json .}}'");
             if (result.exitCode() != 0) {
@@ -498,6 +599,10 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     @Override
     public ReturnResult<Map<String, Object>> dockerPrune(Long hostId) {
         try {
+            MsServerHost host = requireHost(hostId);
+            if (isApiMode(host)) {
+                return ReturnResult.ok(apiClient(host).prune());
+            }
             ensurePosix(hostId);
             RemoteExecResult result = execRemote(hostId, "docker system prune -af --volumes 2>&1");
             if (result.exitCode() != 0) {
@@ -696,6 +801,40 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         if (WindowsSshShell.isWindows(host)) {
             throw new UnsupportedOperationException("该主机为 Windows，暂不支持 Docker/K8s 工作台");
         }
+    }
+
+    /**
+     * 加载主机，不存在时抛出异常
+     *
+     * @param hostId 主机 标识
+     * @return 主机实体
+     */
+    private MsServerHost requireHost(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            throw new IllegalStateException("主机不存在: " + hostId);
+        }
+        return host;
+    }
+
+    /**
+     * 判断主机 Docker 操作通道是否为 API（Docker Engine HTTP API）
+     *
+     * @param host 主机实体
+     * @return true 表示 API 通道
+     */
+    private static boolean isApiMode(MsServerHost host) {
+        return DockerChannel.isApiMode(host);
+    }
+
+    /**
+     * 创建主机对应的 Docker Engine API 客户端
+     *
+     * @param host 主机实体
+     * @return API 客户端
+     */
+    private static DockerEngineClient apiClient(MsServerHost host) {
+        return DockerChannel.client(host);
     }
 
     /**
