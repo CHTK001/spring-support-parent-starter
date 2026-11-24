@@ -247,6 +247,13 @@ public class AiProtocolController extends BaseAiController {
             AiChatRequest chatRequest = adapter.request(servletRequest, body);
             log.info("[ai] {} 协议调用对话,model={}", adapter.family(), model);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
+            String facadeError = facadeErrorMessage(result);
+            if (facadeError != null) {
+                // 门面对「无可用客户端 / 上游失败」返回 {error:{message:...}} 结构而不抛异常，
+                // 这里转交协议适配器输出错误信封，避免把失败包装成 200 成功响应
+                log.warn("[ai] {} 协议对话失败: {}", adapter.family(), facadeError);
+                return ResponseEntity.ok(adapter.failure(model, facadeError));
+            }
             return ResponseEntity.ok(adapter.success(result, model));
         } catch (IllegalStateException ex) {
             // 解析失败时透传错误信息（模型配置缺失/冲突由门面的 IllegalStateException 表达）
@@ -1210,6 +1217,23 @@ public class AiProtocolController extends BaseAiController {
             return null;
         }
         return String.valueOf(value);
+    }
+
+    /**
+     * 从 {@link AiChatFacadeService#call} 的返回结果中提取门面错误信息。
+     *
+     * <p>门面对「无可用客户端 / 上游调用失败」返回 {@code {error:{message:...}}} 结构而不抛异常，
+     * 这里识别该结构并交由协议适配器输出错误信封，避免把失败包装成 200 成功响应。</p>
+     *
+     * @param result call 返回结果，可为 null
+     * @return 错误信息；结果成功（不含 error 键）时返回 null
+     */
+    private static String facadeErrorMessage(Map<String, Object> result) {
+        if (result == null || !(result.get("error") instanceof Map<?, ?> error)) {
+            return null;
+        }
+        Object msg = error.get("message");
+        return msg != null ? toString(msg) : "模型调用失败";
     }
 
     /**

@@ -1602,11 +1602,17 @@ public class ServiceInstanceManager {
                         error -> {
                             log.error("[ServiceInstance] 上游调用失败: {}", error.getMessage(), error);
                             try {
-                                if (st.committed && !st.closed) {
-                                    st.close();
-                                } else if (!st.committed) {
-                                    writeJsonResponse(exchange, 502, Map.of(
-                                            "error", Map.of("message", error.getMessage(), "type", "upstream_error")));
+                                if (!st.closed) {
+                                    if (st.committed) {
+                                        st.close();
+                                    } else if (sseHeadersSent(exchange)) {
+                                        // SSE 响应头已发出但尚未写过任何帧（gemini 流式在首帧前出错）：
+                                        // 此时不能再改写 502，补一条错误帧并关闭响应流，避免连接无限期挂起
+                                        abortOpenSse(exchange, st, mode, error);
+                                    } else {
+                                        writeJsonResponse(exchange, 502, Map.of(
+                                                "error", Map.of("message", error.getMessage(), "type", "upstream_error")));
+                                    }
                                 }
                                 writeAccessLog(inst, exchange, effModel, modeToProtocol(mode),
                                         502, null, System.currentTimeMillis() - start, caller);
@@ -2094,6 +2100,56 @@ public class ServiceInstanceManager {
             writeJsonResponse(exchange, status, err);
         } catch (Exception e) {
             log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 判断响应头是否已发出（已调用过 sendResponseHeaders）。
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @return 已发出返回 true；状态不可知时按未发出处理
+     */
+    private boolean sseHeadersSent(HttpExchange exchange) {
+        try {
+            return exchange.getResponseCode() >= 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * SSE 响应头已发出但尚未写过任何帧时的错误收尾：补写一条协议内错误帧并关闭响应流。
+     *
+     * <p>gemini 流式在 {@code runFacade} 前只调用了 {@code openSse}（响应头已发出），
+     * 若门面在首个分片到达前报错，原逻辑会尝试改写 502 而触发「响应头已发送」异常并被吞掉，
+     * 导致交换既不写也不关、客户端连接无限期挂起。这里改为按协议补一条错误帧后立即收流。</p>
+     *
+     * @param exchange 当前 HTTP 交换对象，不能为 null
+     * @param st       流式状态，不能为 null
+     * @param mode     流式协议模式，不能为 null
+     * @param error    上游错误，可为 null
+     */
+    private void abortOpenSse(HttpExchange exchange, StreamState st, String mode, Throwable error) {
+        String message = error != null && error.getMessage() != null ? error.getMessage() : "upstream error";
+        try {
+            Map<String, Object> err = Map.of("message", message, "type", "upstream_error");
+            if ("gemini".equals(mode)) {
+                st.writeSseData(Map.of("error", err));
+            } else {
+                st.writeSseEvent("error", Map.of("error", err));
+            }
+        } catch (Exception e) {
+            log.debug("[ai] SSE 错误帧写出失败，已忽略: {}", e.getMessage());
+        } finally {
+            st.close();
+            if (!st.committed) {
+                // 错误帧未能写出（如客户端已断开）时输出流尚未打开，显式关闭交换确保连接收尾
+                try {
+                    exchange.close();
+                } catch (Exception e) {
+                    log.debug("[ai] 交换关闭失败，已忽略: {}", e.getMessage());
+                }
+            }
         }
     }
 
