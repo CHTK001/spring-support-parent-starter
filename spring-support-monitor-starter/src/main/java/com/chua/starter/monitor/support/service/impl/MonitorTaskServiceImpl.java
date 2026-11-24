@@ -3,6 +3,7 @@ package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.mapper.MsMonitorTaskMapper;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
@@ -48,6 +49,9 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
             if (task.getMonitorTaskTimeout() == null) {
                 task.setMonitorTaskTimeout(5000);
             }
+            if (StringUtils.isBlank(task.getProvider())) {
+                task.setProvider("LOCAL");
+            }
             taskMapper.insert(task);
             return ReturnResult.ok(task);
         } catch (Exception e) {
@@ -65,7 +69,10 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
      */
     public ReturnResult<MsMonitorTask> update(MsMonitorTask task) {
         try {
-            taskMapper.updateById(task);
+            int rows = taskMapper.updateById(task);
+            if (rows <= 0) {
+                return ReturnResult.error("任务不存在或已被删除");
+            }
             return ReturnResult.ok(task);
         } catch (Exception e) {
             return ReturnResult.error(e.getMessage());

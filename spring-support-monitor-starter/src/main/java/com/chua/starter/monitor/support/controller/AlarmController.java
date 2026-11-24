@@ -179,6 +179,44 @@ public class AlarmController {
     }
 
     /**
+     * 批量处理事件
+     *
+     * <p>逐条复用 {@link AlarmEngineService#handleEvent(Long, String, boolean)}
+     * 的既有事务边界，不扩大为整体事务；部分失败不影响已成功条目。</p>
+     *
+     * @param request 批量处理请求
+     * @return 成功处理的条数
+     */
+    @Operation(summary = "批量处理事件", description = "逐条处理，返回成功条数；部分失败不影响已成功条目")
+    @PostMapping("/event/batch-handle")
+    public ReturnResult<Integer> batchHandleEvents(@RequestBody BatchHandleRequest request) {
+        if (request == null || request.ids() == null || request.ids().isEmpty()) {
+            return ReturnResult.illegal("ids 不能为空");
+        }
+        boolean falseAlarm = Boolean.TRUE.equals(request.falseAlarm());
+        int success = 0;
+        for (Long id : request.ids()) {
+            if (alarmEngineService.handleEvent(id, request.remark(), falseAlarm).isOk()) {
+                success++;
+            }
+        }
+        if (success == 0) {
+            return ReturnResult.error("批量处理失败：无一条事件处理成功");
+        }
+        return ReturnResult.ok(success);
+    }
+
+    /**
+     * 批量处理事件请求体
+     *
+     * @param ids        事件标识集合
+     * @param remark     处理备注
+     * @param falseAlarm 是否误报（null 视为 false）
+     */
+    record BatchHandleRequest(List<Long> ids, String remark, Boolean falseAlarm) {
+    }
+
+    /**
      * 测试告警规则
      *
      * @param ruleId    规则 标识
