@@ -8,20 +8,20 @@ import com.chua.starter.collect.engine.spi.CollectParamMeta;
 import com.chua.starter.collect.engine.spi.CollectShapeExecutor;
 import com.chua.starter.collect.engine.spi.CollectShapeMeta;
 import com.chua.starter.collect.engine.spi.CollectShapeMetas;
+import com.chua.starter.common.support.collect.CollectAiInvoker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
  * AI 节点：调用同机 ai-starter 的同步对话门面，把模型回答写入出参变量。
  *
- * <p>本执行器不直接依赖 ai-starter 的编译期类；运行时通过反射调用
- * {@code AiChatFacadeService.callForResult(AiChatRequest)}。
+ * <p>本执行器不直接依赖 ai-starter 的编译期类：对话能力经 common-starter 的
+ * {@link CollectAiInvoker} 契约注入，由 ai-starter 提供适配实现。
  * 只有 classpath 上实际集成了 ai-starter 时 Spring 才会装配本节点，
  * 设计器工具箱里也只会在这时出现「AI」节点。</p>
  *
@@ -64,15 +64,15 @@ public class CollectAiExecutor implements CollectShapeExecutor {
      */
     public static final String DEFAULT_OUTPUT = "aiResult";
 
-    private final ObjectProvider<Object> aiServiceProvider;
+    private final ObjectProvider<CollectAiInvoker> aiInvokerProvider;
 
     /**
      * 构造 AI 执行器。
      *
-     * @param aiServiceProvider AI 服务提供者（懒加载，未集成 ai-starter 时为 null）
+     * @param aiInvokerProvider AI 调用契约提供者（懒加载，未集成 ai-starter 时为空）
      */
-    public CollectAiExecutor(ObjectProvider<Object> aiServiceProvider) {
-        this.aiServiceProvider = aiServiceProvider;
+    public CollectAiExecutor(ObjectProvider<CollectAiInvoker> aiInvokerProvider) {
+        this.aiInvokerProvider = aiInvokerProvider;
     }
 
     @Override
@@ -103,30 +103,20 @@ public class CollectAiExecutor implements CollectShapeExecutor {
         if (prompt == null || prompt.isBlank()) {
             throw new IllegalStateException("AI 节点没有填写提示词");
         }
-        Object service = aiServiceProvider.getIfAvailable();
-        if (service == null) {
+        CollectAiInvoker invoker = aiInvokerProvider.getIfAvailable();
+        if (invoker == null) {
             throw new IllegalStateException("AI 节点需要集成 ai-starter，当前运行部署未加载 AI 服务");
         }
 
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        Class<?> requestType = Class.forName("com.chua.starter.ai.support.model.AiChatRequest", true, loader);
-        Object request = requestType.getDeclaredConstructor().newInstance();
-        setString(request, "setPrompt", prompt);
-        setString(request, "setModel", CollectExpression.evalText(node.param(MODEL), variables));
-        setString(request, "setSystemPrompt", CollectExpression.evalText(node.param(SYSTEM_PROMPT), variables));
-        setString(request, "setCallType", "collect_ai_node");
-        setString(request, "setUsageSource", "service");
-
-        Method call = service.getClass().getMethod("callForResult", requestType);
-        Object result = call.invoke(service, request);
-        if (result == null) {
-            throw new IllegalStateException("AI 服务未返回结果");
+        CollectAiInvoker.CollectAiRequest request = new CollectAiInvoker.CollectAiRequest(
+                prompt,
+                CollectExpression.evalText(node.param(MODEL), variables),
+                CollectExpression.evalText(node.param(SYSTEM_PROMPT), variables));
+        CollectAiInvoker.CollectAiResult result = invoker.invoke(request);
+        if (result.errorMessage() != null && !result.errorMessage().isBlank()) {
+            throw new IllegalStateException("AI 调用失败: " + result.errorMessage());
         }
-        String text = (String) result.getClass().getMethod("text").invoke(result);
-        String error = (String) result.getClass().getMethod("errorMessage").invoke(result);
-        if (error != null && !error.isBlank()) {
-            throw new IllegalStateException("AI 调用失败: " + error);
-        }
+        String text = result.text();
 
         String output = node.param(OUTPUT).isBlank() ? DEFAULT_OUTPUT : node.param(OUTPUT).trim();
         variables.put(output, text == null ? "" : text);
@@ -146,19 +136,4 @@ public class CollectAiExecutor implements CollectShapeExecutor {
     @Override
     public String defaultOutput(CollectNode node) {
         return node.param(OUTPUT).isBlank() ? DEFAULT_OUTPUT : node.param(OUTPUT).trim();
-    }
-
-    /**
-     * 反射调用 setter 设值（空白值跳过）。
-     *
-     * @param target     目标对象
-     * @param methodName setter 方法名
-     * @param value      要设置的值
-     * @throws Exception 反射调用失败时抛出
-     */
-    private void setString(Object target, String methodName, String value) throws Exception {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-        target.getClass().getMethod(methodName, String.class).invoke(target, value);
     }}
