@@ -73,7 +73,7 @@ flowchart LR
 | 文件资产/网关 | `FileAssetServiceImpl`、`MonitorFileStorageConfig`、`MonitorFileStorageGatewayConfig` | `/ms/monitor/file-assets`、`/fs/default` |
 | 实时推送 | `MonitorPushService` → `SocketQueueBridge` | socket.io `29181`，`subscribe("monitor", ...)` |
 
-核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.1__init_all_monitor.sql`，另含告警、抓包、同步任务、维护计划、节点与操作日志表。
+核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、同步任务、维护计划、节点与操作日志、数据库备份历史表。
 
 ## 4. Bean 能力矩阵
 

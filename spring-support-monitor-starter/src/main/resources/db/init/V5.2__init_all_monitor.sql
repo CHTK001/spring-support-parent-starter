@@ -1,5 +1,5 @@
 -- =====================================================================
--- V5.1__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
+-- V5.2__init_all_monitor.sql - spring-support-monitor-starter 全量表结构
 -- 模块: spring-support-monitor-starter
 -- 通道: INIT 同步建表（表结构先于种子数据就位）
 -- 说明: 本文件是该模块唯一的建表入口；本目录 INIT 通道只保留本文件，
@@ -7,9 +7,9 @@
 --   V1.0__init_all_monitor.sql、V1.5__init_tshark.sql 已在历史收敛中并入，
 --   V4.0.0.44 / 45 / 52 / 53 / 54 / 55 / 56 / 57 / 58 九个增量也已并入
 --   （V4.0.0.59 为 device 模块表补列，已由 device 模块 init 全量承载）。
--- 版本递进原因: V5.0 -> V5.1。FlywayLike 按「脚本名 + 版本」记账，命中成功
---   记录即跳过，故本次「动态 DDL 全部移除、列定义内联」的清理必须递进版本号，
---   存量库与新库才会以新版本重跑本文件。
+-- 版本递进原因: V5.1 -> V5.2。FlywayLike 按「脚本名 + 版本」记账，命中成功
+--   记录即跳过，故本次新增数据库备份历史表 ms_backup_history 必须递进版本号，
+--   存量库与新库才会以新版本重跑本文件（CREATE TABLE IF NOT EXISTS 幂等，重跑安全）。
 -- 迁移口径: 动态 DDL 全部移除、列/索引定义全部内联进 CREATE TABLE——
 --   原文件尾部「查系统表判存 + 会话变量拼 SQL + 预编译执行」的动态补列段
 --   （涉及 ms_tshark_session / ms_tshark_packet /
@@ -765,3 +765,24 @@ CREATE TABLE IF NOT EXISTS `monitor_acme_order` (
 --   —— 该表归 server 模块所有，列由 server 模块 init 承载
 --   （server_host_net_rx_kbs / server_host_net_tx_kbs），不再跨模块补列。
 -- ============================================================
+
+-- ----------------------------------------------------------
+-- 20. 数据库备份历史（备份中心）
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ms_backup_history` (
+    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `record_id`        VARCHAR(64)  DEFAULT NULL            COMMENT '备份记录ID(批次标识)',
+    `db_name`          VARCHAR(128) DEFAULT NULL            COMMENT '数据库名',
+    `success`          TINYINT      DEFAULT NULL            COMMENT '结果: 1 成功 / 0 失败',
+    `backup_path`      VARCHAR(512) DEFAULT NULL            COMMENT '备份产物路径',
+    `manifest_path`    VARCHAR(512) DEFAULT NULL            COMMENT '备份清单路径',
+    `file_count`       INT          DEFAULT 0               COMMENT '产物文件数',
+    `total_size_bytes` BIGINT       DEFAULT 0               COMMENT '产物总大小(字节)',
+    `duration_millis`  BIGINT       DEFAULT 0               COMMENT '耗时(毫秒)',
+    `start_time`       VARCHAR(48)  DEFAULT NULL            COMMENT '开始时间(ISO-8601)',
+    `end_time`         VARCHAR(48)  DEFAULT NULL            COMMENT '结束时间(ISO-8601)',
+    `error_message`    TEXT         DEFAULT NULL            COMMENT '错误信息',
+    `create_time`      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '落库时间',
+    PRIMARY KEY (`id`),
+    KEY `ms_backup_history_idx_create_time` (`create_time`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据库备份历史';

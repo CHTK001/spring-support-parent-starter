@@ -19,9 +19,10 @@ import java.util.Map;
  * 鉴权不走 {@code Authorization}，而是浏览器 Cookie：
  * {@code moss_studio_prod_access_token=<令牌>}，令牌即「余额密钥」里填的值。</p>
  *
- * <p>响应为扁平结构（无 data 包裹），已实测验证：{@code display_available_points}
- * 即门户展示余额（如 "44.00"，元），{@code available_points} 为积分原始值
- * （100 积分 = 1 元）；同源还有冻结、本月消费、日均消费、预计可用天数等读数，
+ * <p>响应为扁平结构（无 data 包裹），已实测验证（2026-11）：{@code display_available_points}
+ * 即门户展示余额（元），{@code available_points} 为积分原始值；定价页各模型
+ * 「人民币价格 / 实际扣除积分」恒为 1 元 = 20 积分（如 ¥0.48 = 9.60 积分），
+ * 积分兜底换算按 / 20 折算。同源还有冻结、本月消费、日均消费等读数，
  * 默认探测一次性全部带出，前端按字段展示。仍保留常见字段名兜底试探，
  * 都不中时提示改走「自定义映射」，把真实字段映射出来。</p>
  *
@@ -61,8 +62,8 @@ public class MossCreditQueryProvider implements CreditQueryProvider {
                     + " ¥display_average_daily_charged_points; estimated_available_days",
             "¥display_available_points",
             "¥display_total_remaining_points",
-            "available_points / 100",
-            "total_remaining_points / 100",
+            "available_points / 20",
+            "total_remaining_points / 20",
             "data.total_credits; data.used_credits",
             "data.available_credits; data.used_credits",
             "data.remaining_credits; data.used_credits",

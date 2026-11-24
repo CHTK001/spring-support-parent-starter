@@ -37,8 +37,9 @@ import java.util.regex.Pattern;
  * Moss 模型价格同步服务实现。
  *
  * <p>免密钥抓取 Moss 公开模型页（{@value #MODELS_PAGE_URL}），把每个模型卡片的
- * 官方计费口径解析成 {@code sys_ai_pricing} 行：限时免费记 0；「¥X / 万字符」折算成
- * 每 1k（÷10）；「¥X / 小时」「¥X / 张」按原生计量单位记入单价列（币种 CNY，
+ * 官方计费口径解析成 {@code sys_ai_pricing} 行：限时免费记 0；「¥X / 百万 Tokens」
+ * 折算成每 1k（÷1000，输入取未命中缓存档）；「¥X / 万字符」折算成每 1k（÷10）；
+ * 「¥X / 小时」「¥X / 分钟」「¥X / 张」按原生计量单位记入单价列（币种 CNY，
  * 来源 {@value #SOURCE}）。解析成功后按同一批数据刷新 Moss 的厂商指标系数
  * （中位数 ×1000 折算成百万口径；Moss 只公布人民币牌价，该系数为 CNY 口径的兜底预估值）。</p>
  *
@@ -81,9 +82,10 @@ public class AiMossPriceSyncServiceImpl implements AiMossPriceSyncService {
     private static final Duration TIMEOUT = Duration.ofSeconds(25);
 
     /**
-     * 模型 id：nex-* / moss-*（贪婪匹配会带上的 snapshot 日期后缀由 canonicalId 剥掉）
+     * 模型 id：nex-* / moss-*（贪婪匹配会带上的 snapshot 日期后缀由 canonicalId 剥掉；
+     * 版本里的点号也要吃进 id，如 nex-n2.6，否则会截断成 nex-n2）
      */
-    private static final Pattern MODEL_ID = Pattern.compile("(?:nex|moss)-[a-z0-9]+(?:-[a-z0-9.]+)*");
+    private static final Pattern MODEL_ID = Pattern.compile("(?:nex|moss)-[a-z0-9]+(?:[.-][a-z0-9]+)*");
 
     /**
      * snapshot 日期后缀（如 -2026-11-05）
@@ -96,9 +98,24 @@ public class AiMossPriceSyncServiceImpl implements AiMossPriceSyncService {
     private static final Pattern PRICE_PER_10K_CHARS = Pattern.compile("¥\\s*([0-9]+(?:\\.[0-9]+)?)\\s*/\\s*万字符");
 
     /**
+     * 「¥X / 百万 Tokens」计费（语言模型，折算每 1k = ÷1000）
+     */
+    private static final Pattern PRICE_PER_MILLION_TOKENS = Pattern.compile("¥\\s*([0-9]+(?:\\.[0-9]+)?)\\s*/\\s*百万\\s*Tokens?");
+
+    /**
      * 「¥X / 小时」计费（转写按音频时长）
      */
     private static final Pattern PRICE_PER_HOUR = Pattern.compile("¥\\s*([0-9]+(?:\\.[0-9]+)?)\\s*/\\s*小时");
+
+    /**
+     * 「¥X / 分钟」计费（实时交互按连接时长）
+     */
+    private static final Pattern PRICE_PER_MINUTE = Pattern.compile("¥\\s*([0-9]+(?:\\.[0-9]+)?)\\s*/\\s*分钟");
+
+    /**
+     * 百万 Tokens → 每 1k 的折算因子
+     */
+    private static final BigDecimal MILLION_TO_1K = BigDecimal.valueOf(1000);
 
     /**
      * 「¥X / 张」计费（图像按张，取第一个档位即低分辨率价）
@@ -280,17 +297,26 @@ public class AiMossPriceSyncServiceImpl implements AiMossPriceSyncService {
      * 解析模型卡片的输入侧单价。
      *
      * @param segment 模型卡片文本段
-     * @return 每 1k 单价（万字符口径 ÷10；小时 / 张口径记原生单价）；限时免费为 0；未识别为 null
+     * @return 每 1k 单价（百万 Tokens ÷1000、万字符 ÷10；小时 / 分钟 / 张口径记原生单价）；
+     *         限时免费为 0；未识别为 null
      */
     private static Double inputPriceOf(String segment) {
         if (segment.contains("限时免费")) {
             return 0D;
         }
-        BigDecimal price = priceOf(segment, PRICE_PER_10K_CHARS);
+        BigDecimal price = priceOf(segment, PRICE_PER_MILLION_TOKENS);
+        if (price != null) {
+            return price.divide(MILLION_TO_1K, 8, RoundingMode.HALF_UP).doubleValue();
+        }
+        price = priceOf(segment, PRICE_PER_10K_CHARS);
         if (price != null) {
             return price.divide(BigDecimal.TEN, 4, RoundingMode.HALF_UP).doubleValue();
         }
         price = priceOf(segment, PRICE_PER_HOUR);
+        if (price != null) {
+            return price.doubleValue();
+        }
+        price = priceOf(segment, PRICE_PER_MINUTE);
         if (price != null) {
             return price.doubleValue();
         }
@@ -299,13 +325,23 @@ public class AiMossPriceSyncServiceImpl implements AiMossPriceSyncService {
     }
 
     /**
-     * 解析模型卡片的输出侧单价（当前模型页只有语言模型按 token 计费且限时免费）。
+     * 解析模型卡片的输出侧单价（语言模型在「输出」段公布 ¥X / 百万 Tokens，其余模型无输出单价）。
      *
      * @param segment 模型卡片文本段
-     * @return 每 1k 输出单价；未识别为 null
+     * @return 每 1k 输出单价；限时免费为 0；未识别为 null
      */
     private static Double outputPriceOf(String segment) {
-        return segment.contains("限时免费") ? 0D : null;
+        if (segment.contains("限时免费")) {
+            return 0D;
+        }
+        int output = segment.indexOf("输出");
+        if (output < 0) {
+            return null;
+        }
+        Matcher matcher = PRICE_PER_MILLION_TOKENS.matcher(segment);
+        return matcher.find(output)
+                ? new BigDecimal(matcher.group(1)).divide(MILLION_TO_1K, 8, RoundingMode.HALF_UP).doubleValue()
+                : null;
     }
 
     /**

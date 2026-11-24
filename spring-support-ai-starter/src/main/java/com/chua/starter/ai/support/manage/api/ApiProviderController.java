@@ -3872,13 +3872,14 @@ public class ApiProviderController {
         SysAccountChannel entity = requireProvider(providerId);
         Map<String, Object> extra = entity.getExtra() == null ? new HashMap<>(4) : entity.getExtra();
         ProviderCreditLoginService.LiveLoginHandle handle =
-                providerCreditLoginService.startLiveLogin(entity, loginSpiFor(entity, extra));
+                providerCreditLoginService.startLiveLogin(entity, loginSpiFor(entity, extra),
+                        request.getRemoteAddr(), clientIp(request));
         String liveUrl = null;
         if (handle.ok() && handle.livePath() != null && handle.livePort() > 0) {
             liveUrl = "http://" + requestHost(request) + ":" + handle.livePort() + handle.livePath();
         }
         return ApiResult.ok(new CreditLiveLoginPayload(handle.ok(), handle.message(),
-                handle.sessionToken(), liveUrl, handle.loginUrl()));
+                handle.sessionToken(), liveUrl, handle.loginUrl(), handle.mode()));
     }
 
     /**
@@ -3887,14 +3888,16 @@ public class ApiProviderController {
      * @param ok           是否成功打开登录画面
      * @param message      结果说明（失败时为原因）
      * @param sessionToken 会话标识（轮询状态 / 取消时回传）
-     * @param liveUrl      登录画面直连地址（iframe.src；失败时为 null）
+     * @param liveUrl      登录画面直连地址（iframe.src；失败时或本机弹窗模式下为 null）
      * @param loginUrl     实际打开的登录页地址
+     * @param mode         登录窗口形态：proxy 反向代理 / stream CDP 推流 / local 本机弹窗（失败时为 null）
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record CreditLiveLoginPayload(boolean ok, String message,
                                   @JsonProperty("session_token") String sessionToken,
                                   @JsonProperty("live_url") String liveUrl,
-                                  @JsonProperty("login_url") String loginUrl) {
+                                  @JsonProperty("login_url") String loginUrl,
+                                  @JsonProperty("mode") String mode) {
     }
 
     /**
@@ -3960,6 +3963,25 @@ public class ApiProviderController {
             host = host.substring(0, host.indexOf(':'));
         }
         return host == null || host.isBlank() ? "127.0.0.1" : host;
+    }
+
+    /**
+     * 取本次请求的客户端 IP：优先 {@code X-Forwarded-For} 首跳（经 dev 代理 /
+     * 反向代理转发时还原原始客户端），否则取远端地址。须与 TCP 对端地址
+     * （{@code getRemoteAddr()}）配合做「本机 / 远程」分流判定，防止转发头伪造。
+     *
+     * @param request 当前请求
+     * @return 客户端 IP（取不到时为 null）
+     */
+    private static String clientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            int comma = forwarded.indexOf(',');
+            String first = comma > 0 ? forwarded.substring(0, comma) : forwarded;
+            String ip = first.trim();
+            return ip.isBlank() ? null : ip;
+        }
+        return request.getRemoteAddr();
     }
 
     /**

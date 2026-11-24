@@ -16,13 +16,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -840,12 +845,22 @@ public class ProviderCreditLoginService {
      * @param ok           是否成功打开登录窗口
      * @param message      结果说明（失败时为原因）
      * @param sessionToken 会话标识（轮询状态 / 取消时回传）
-     * @param livePath     画面嵌入路径（{@code /live/s/<token>}）
-     * @param livePort     画面服务监听端口（失败时为 0；前端拼 {@code http://<后端主机>:<livePort><livePath>} 放进 iframe）
+     * @param livePath     画面嵌入路径（{@code /live/s/<token>}；本机弹窗模式为 null）
+     * @param livePort     画面服务监听端口（失败时为 0；前端拼 {@code http://<后端主机>:<livePort><livePath>} 放进 iframe；本机弹窗模式为 0）
      * @param loginUrl     实际打开的登录页地址
+     * @param mode         登录窗口形态：{@link #MODE_PROXY} 反向代理 / {@link #MODE_STREAM} CDP 推流 / {@link #MODE_LOCAL} 本机弹窗（失败时为 null）
      */
     public record LiveLoginHandle(boolean ok, String message, String sessionToken,
-                                  String livePath, int livePort, String loginUrl) {
+                                  String livePath, int livePort, String loginUrl, String mode) {
+
+        /** 反向代理模式：前端 iframe 原生加载上游登录页（远程访问的默认链路） */
+        public static final String MODE_PROXY = "proxy";
+
+        /** CDP 推流模式：服务端浏览器画面经 MJPEG 推流到前端，操作经坐标转发 */
+        public static final String MODE_STREAM = "stream";
+
+        /** 本机弹窗模式：后端与用户浏览器同机，直接弹出有头浏览器窗口完成登录 */
+        public static final String MODE_LOCAL = "local";
     }
 
     /**
@@ -871,29 +886,47 @@ public class ProviderCreditLoginService {
     }
 
     /**
-     * 开启一局「实时登录」：在服务端起无头浏览器打开上游登录页，把画面经
-     * {@link CdpLiveServer} 推成 MJPEG 流、把用户操作经 CDP Input 派发回去，
-     * 前端用 iframe 嵌入即可在管理页里直接操作；后台线程持续按截获钩子嗅探
-     * 令牌，截获即追加为余额密钥。与 {@link #login} 的区别：浏览器不再弹在
-     * 服务端桌面（部署在远端机时用户根本看不到那个窗口），而是画面直达用户浏览器。
+     * 开启一局「实时登录」：在服务端起浏览器打开上游登录页，后台线程持续按截获钩子
+     * 嗅探令牌，截获即追加为余额密钥。窗口形态按「本机 / 远程」自动选择：
+     * <ul>
+     *   <li>本机（客户端与后端同机）：直接弹出有头浏览器窗口（真实浏览器原生交互，
+     *       零推流零延迟），见 {@link #openLocalPopupLiveLogin}；</li>
+     *   <li>远程：优先反向代理（画面原生加载进前端 iframe），代理不可用或上游
+     *       Turnstile 质询不兼容时回落 {@link CdpLiveServer} MJPEG 推流 + CDP 坐标转发。</li>
+     * </ul>
+     * 扩展配置 {@code credit_login_mode} 可强制指定：{@code cdp} 强制推流（跳过代理），
+     * {@code popup} / {@code local} 强制本机弹窗；留空按本机判定自动选择。
      *
-     * @param entity 供应商
-     * @param spi    余额 SPI 实现（提供登录页与截获钩子；可为 null——按 extra 的通用截获配置执行）
-     * @return 会话创建结果（含嵌入路径；失败带原因）
+     * @param entity     供应商
+     * @param spi        余额 SPI 实现（提供登录页与截获钩子；可为 null——按 extra 的通用截获配置执行）
+     * @param remoteAddr 本次请求的 TCP 对端地址（{@code request.getRemoteAddr()}）
+     * @param clientIp   转发链路还原的客户端 IP（{@code X-Forwarded-For} 首跳；无代理时与 remoteAddr 相同）
+     * @return 会话创建结果（含嵌入路径与形态；失败带原因）
      */
-    public LiveLoginHandle startLiveLogin(SysAccountChannel entity, CreditQueryProvider spi) {
+    public LiveLoginHandle startLiveLogin(SysAccountChannel entity, CreditQueryProvider spi,
+                                          String remoteAddr, String clientIp) {
         Map<String, Object> extra = entity.getExtra() == null ? Map.of() : entity.getExtra();
         LoginHooks hooks = hooksFor(entity, spi, extra);
         String loginUrl = hooks.loginUrl();
         if (!nonBlank(loginUrl)) {
             return new LiveLoginHandle(false,
-                    "该供应商没有可用的登录页（未收录登录入口，可在扩展配置 credit_login_url 里指定）", null, null, 0, null);
+                    "该供应商没有可用的登录页（未收录登录入口，可在扩展配置 credit_login_url 里指定）", null, null, 0, null, null);
         }
         if (!hooks.hasCaptureHook()) {
             return new LiveLoginHandle(false,
                     "该供应商未配置令牌截获规则：请补 credit_capture_pattern"
                             + "（令牌接口地址特征）或 credit_cookie_name / credit_storage_key",
-                    null, null, 0, loginUrl);
+                    null, null, 0, loginUrl, null);
+        }
+        String loginMode = text(extra.get("credit_login_mode")).toLowerCase(Locale.ROOT);
+        boolean forceCdp = "cdp".equals(loginMode);
+        // 本机判定：客户端与后端同机（含本机 dev 代理转发到本机后端）时，直接弹出有头
+        // 浏览器窗口——真实浏览器原生渲染与交互，零推流、零坐标转发；远程访问保持
+        // 反向代理 / CDP 推流链路。credit_login_mode=cdp 仍强制推流（兼容既有配置）。
+        if ("popup".equals(loginMode) || "local".equals(loginMode) || (!forceCdp && isLocalClient(remoteAddr, clientIp))) {
+            log.info("[credit-live-login] 供应商 {} 走本机弹窗登录（remoteAddr={}, clientIp={}）",
+                    entity.getProviderId(), remoteAddr, clientIp);
+            return openLocalPopupLiveLogin(entity, hooks, loginUrl);
         }
         // 优先走反向代理：用户浏览器原生加载上游登录页（无截屏推流，卡顿/延迟从根上消除）；
         // 代理不可用或打开失败时回落 CDP 推流链路。
@@ -901,7 +934,6 @@ public class ProviderCreditLoginService {
         // 质询组件在代理页面上直接拒绝工作（widget 报「无法连接到网站」），用户永远无法完成登录。
         // 此时可用扩展配置 credit_login_mode=cdp 跳过代理，直接走服务端正式浏览器 + CDP 推流：
         // 无头浏览器打开的仍是上游真实 origin，质询可正常交互，操作经画面坐标转发。
-        boolean forceCdp = "cdp".equalsIgnoreCase(text(extra.get("credit_login_mode")));
         LiveProxyServer proxy = null;
         if (forceCdp) {
             log.info("[credit-live-login] 供应商 {} 指定 credit_login_mode=cdp，跳过反向代理直接走 CDP 推流",
@@ -927,18 +959,20 @@ public class ProviderCreditLoginService {
             server = liveServer();
         } catch (RuntimeException e) {
             log.warn("[credit-live-login] 供应商 {} 启动内嵌画面服务失败: {}", entity.getProviderId(), e.getMessage());
-            return new LiveLoginHandle(false, "无法启动登录画面服务：" + e.getMessage(), null, null, 0, loginUrl);
+            return new LiveLoginHandle(false, "无法启动登录画面服务：" + e.getMessage(), null, null, 0, loginUrl, null);
         }
         // 无头引擎：画面经 CDP screencast 推流，不依赖服务端桌面（部署在远端机也能登录）
         // 复用常驻浏览器 + 独立上下文：每次登录不再冷启动 Chromium（实测 1.3~3.3s），
         // 开窗只付上下文/标签页创建（实测 0.4~1.4s）；不同供应商的 Cookie / 存储靠 incognito 上下文隔离
-        BrowserOptions browserOptions = new BrowserOptions().setHeadless(true).setWidth(1280).setHeight(900);
+        // 视口取 1600x1000：与管理页弹层画面区的常见窗口尺寸 1:1，帧不被放大发虚；
+        // 配合 CdpPage 默认不限制帧尺寸，帧按视口原始分辨率输出（不再降到 960x675）
+        BrowserOptions browserOptions = new BrowserOptions().setHeadless(true).setWidth(1600).setHeight(1000);
         CdpBrowserEngine engine;
         try {
             engine = liveEngine(browserOptions);
         } catch (RuntimeException e) {
             log.warn("[credit-live-login] 供应商 {} 启动登录浏览器失败: {}", entity.getProviderId(), e.getMessage());
-            return new LiveLoginHandle(false, "无法启动登录浏览器：" + e.getMessage(), null, null, 0, loginUrl);
+            return new LiveLoginHandle(false, "无法启动登录浏览器：" + e.getMessage(), null, null, 0, loginUrl, null);
         }
         String sessionToken = UUID.randomUUID().toString().replace("-", "");
         String origin = originOf(loginUrl);
@@ -981,11 +1015,11 @@ public class ProviderCreditLoginService {
             });
             log.info("[credit-live-login] 供应商 {} 实时登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
             return new LiveLoginHandle(true, "登录窗口已就绪，请在画面中完成上游门户登录",
-                    sessionToken, "/live/s/" + sessionToken, server.port(), loginUrl);
+                    sessionToken, "/live/s/" + sessionToken, server.port(), loginUrl, LiveLoginHandle.MODE_STREAM);
         } catch (RuntimeException e) {
             closeLiveEngineQuietly();
             log.warn("[credit-live-login] 供应商 {} 打开登录页失败: {}", entity.getProviderId(), e.getMessage());
-            return new LiveLoginHandle(false, "打开登录页失败：" + e.getMessage(), null, null, 0, loginUrl);
+            return new LiveLoginHandle(false, "打开登录页失败：" + e.getMessage(), null, null, 0, loginUrl, null);
         }
     }
 
@@ -1026,6 +1060,122 @@ public class ProviderCreditLoginService {
     }
 
     /**
+     * 本机弹窗版实时登录：客户端与后端同机时，直接在服务器桌面弹出有头浏览器窗口，
+     * 用户在真实窗口里完成上游登录，服务端照常按截获钩子轮询令牌。
+     *
+     * <p>与 {@link #login} 的区别：会话登记进 {@link #liveSessions}，前端用同一套
+     * status / cancel 接口轮询与取消；与推流版（{@link #startLiveLogin} 远程分支）的
+     * 区别：不启动画面服务、不做坐标转发——窗口就弹在用户眼前的桌面上，所见即所操作。
+     * 引擎为本会话独占（每次冷启动），出终态 / 取消时整个关闭，窗口随之消失。</p>
+     *
+     * @param entity   供应商
+     * @param hooks    截获钩子集
+     * @param loginUrl 上游登录页地址
+     * @return 会话创建结果（mode=local，无画面地址；失败带原因）
+     */
+    private LiveLoginHandle openLocalPopupLiveLogin(SysAccountChannel entity, LoginHooks hooks, String loginUrl) {
+        // 独立有头引擎：窗口弹在本机桌面，进程级参数以本引擎为准；会话结束整体关闭
+        CdpBrowserEngine engine = new CdpBrowserEngine();
+        BrowserOptions browserOptions = new BrowserOptions().setHeadless(false).setWidth(1280).setHeight(900);
+        try {
+            engine.start(browserOptions);
+        } catch (RuntimeException e) {
+            engine.close();
+            log.warn("[credit-live-login] 供应商 {} 启动本机弹窗浏览器失败: {}", entity.getProviderId(), e.getMessage());
+            return new LiveLoginHandle(false, "无法启动登录浏览器：" + e.getMessage(), null, null, 0, loginUrl,
+                    LiveLoginHandle.MODE_LOCAL);
+        }
+        try {
+            // 先注册截获脚本再导航：登录页首屏发出的令牌交换请求也要被截获（与 login 同序）
+            BrowserPage page = engine.openPage(browserOptions);
+            String capturePattern = hooks.capturePattern();
+            if (nonBlank(capturePattern)) {
+                page.addInitScript(captureScript(capturePattern));
+            }
+            page.navigate(loginUrl);
+            String sessionToken = UUID.randomUUID().toString().replace("-", "");
+            LiveSession session = new LiveSession(sessionToken, entity.getProviderId(),
+                    engine, page, hooks, capturePattern);
+            session.localWindow = true;
+            liveSessions.put(sessionToken, session);
+            startLiveReaperIfAbsent();
+            Thread worker = new Thread(() -> awaitLiveToken(session),
+                    "credit-live-local-" + sessionToken.substring(0, 8));
+            worker.setDaemon(true);
+            worker.start();
+            log.info("[credit-live-login] 供应商 {} 本机弹窗登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
+            return new LiveLoginHandle(true, "已在服务器本机弹出浏览器窗口，请直接在该窗口完成上游门户登录",
+                    sessionToken, null, 0, loginUrl, LiveLoginHandle.MODE_LOCAL);
+        } catch (RuntimeException e) {
+            try {
+                engine.close();
+            } catch (Exception ignored) {
+                // 引擎未起或已退出，忽略
+            }
+            log.warn("[credit-live-login] 供应商 {} 本机弹窗打开登录页失败: {}", entity.getProviderId(), e.getMessage());
+            return new LiveLoginHandle(false, "打开登录页失败：" + e.getMessage(), null, null, 0, loginUrl,
+                    LiveLoginHandle.MODE_LOCAL);
+        }
+    }
+
+    /**
+     * 判定发起请求的客户端是否与后端同机（本机）。先看 TCP 对端：对端不是本机
+     * 一律按远程处理——{@code X-Forwarded-For} 首跳是「代理视角」的客户端地址，
+     * 代理不在本机时该值（哪怕是 127.0.0.1）不代表本机访问，且可被客户端伪造；
+     * 对端是本机（直连，或经与本机同进程的 dev 代理转发）时，再按转发还原的
+     * 客户端 IP 判定，命中即可走「本机弹窗」链路——直接在服务器桌面弹出有头
+     * 浏览器窗口，无需推流。
+     *
+     * @param remoteAddr  本次请求的 TCP 对端地址（{@code request.getRemoteAddr()}）
+     * @param forwardedIp 转发链路还原的客户端 IP（{@code X-Forwarded-For} 首跳；无代理时为 null）
+     * @return 是否本机访问
+     */
+    private boolean isLocalClient(String remoteAddr, String forwardedIp) {
+        if (!isLocalAddress(remoteAddr)) {
+            return false;
+        }
+        return isLocalAddress(nonBlank(forwardedIp) ? forwardedIp : remoteAddr);
+    }
+
+    /**
+     * 判定 IP 是否本机地址：命中回环地址，或落在本机任一网卡的地址上。
+     *
+     * @param clientIp 待判定的 IP
+     * @return 是否本机地址
+     */
+    private boolean isLocalAddress(String clientIp) {
+        if (!nonBlank(clientIp)) {
+            return false;
+        }
+        String ip = clientIp.trim();
+        if ("localhost".equalsIgnoreCase(ip)) {
+            return true;
+        }
+        try {
+            InetAddress requested = InetAddress.getByName(ip);
+            if (requested.isLoopbackAddress() || requested.isAnyLocalAddress()) {
+                return true;
+            }
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (!networkInterface.isUp()) {
+                    continue;
+                }
+                Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    if (requested.equals(addresses.nextElement())) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[credit-live-login] 本机判定失败（按远程处理）: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    /**
      * 反向代理版实时登录：建立代理会话（注入截获脚本）并挂后台令牌嗅探线程。
      *
      * <p>前端拿到的仍是 {@code livePort + livePath}，拼进 iframe 的地址变成
@@ -1063,7 +1213,7 @@ public class ProviderCreditLoginService {
         });
         log.info("[credit-live-login] 供应商 {} 反向代理登录窗口已就绪: {}", entity.getProviderId(), sessionToken);
         return new LiveLoginHandle(true, "登录窗口已就绪，请在页面中完成上游门户登录",
-                sessionToken, publicPath, proxy.port(), loginUrl);
+                sessionToken, publicPath, proxy.port(), loginUrl, LiveLoginHandle.MODE_PROXY);
     }
 
     /**
@@ -1315,6 +1465,21 @@ public class ProviderCreditLoginService {
             }
             return;
         }
+        if (session.localWindow) {
+            // 本机弹窗会话：引擎为该会话独占（未挂共享 liveEngine / 画面服务），
+            // 整体关闭——弹出的浏览器窗口随之消失
+            CdpBrowserEngine localEngine = session.engine;
+            session.engine = null;
+            session.page = null;
+            if (localEngine != null) {
+                try {
+                    localEngine.close();
+                } catch (Exception e) {
+                    log.debug("[credit-live-login] 关闭本机弹窗浏览器失败: {}", e.getMessage());
+                }
+            }
+            return;
+        }
         if (liveServer != null) {
             try {
                 liveServer.close(session.token);
@@ -1541,6 +1706,9 @@ public class ProviderCreditLoginService {
 
         /** 反向代理会话（代理模式非空；出终态或取消时关闭对应代理会话） */
         volatile LiveProxyServer proxy;
+
+        /** 本机弹窗会话：引擎为该会话独占，结束时整体关闭（浏览器窗口随之消失） */
+        volatile boolean localWindow;
 
         /** 代理注入脚本截获的候选令牌（capture 端点投递，后台嗅探线程消费） */
         final LinkedBlockingQueue<String> capturedTokens = new LinkedBlockingQueue<>();
