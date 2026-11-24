@@ -1594,6 +1594,105 @@ public class ApiKnowledgeController {
     }
 
     /**
+     * 召回测试：只做向量检索，不调用大模型，供人工评审某知识库的召回效果。
+     *
+     * <p>与 {@link #ask} 的区别：本端点走 {@link RagClient#search(String, int, double)}
+     * 纯检索链路（嵌入 → 向量检索 → 阈值过滤 → 收集），不消耗对话模型 token，
+     * 也不受 LLM 可用性影响；与 {@code POST /search} 的区别：那个是关键字匹配（词频打分），
+     * 这里才是语义向量召回。</p>
+     *
+     * <p>向量库按账号全局共享（docId = {@code <knowledge_base_id>/<相对路径>}），
+     * 为避免「本库 TopK」被其它库的高分片段挤掉，先以放大窗口
+     * {@code overFetch = min(topK * 4 + 20, 100)} 检索，再按本库前缀过滤、截取 topK；
+     * {@code scanned} 返回过滤前的候选总数，供判断窗口是否需要再放大。</p>
+     *
+     * <p>注意：{@code RagClient.search} 的接口默认实现会退化为 {@code query()}（仍会调 LLM），
+     * 真正免 LLM 依赖实现覆写（默认引擎 RagPipeline 已覆写）；若改配 SPI 引擎，
+     * 是否免 LLM 以其实现为准。命中排序与 {@code /ask} 的引用同源（按相似度降序）。</p>
+     *
+     * @param knowledge_base_id 知识库ID
+     * @param body 请求体：query（必填）、top_k（1~20，缺省 6）、similarity（0~1，缺省 0.35）
+     * @return query / top_k / similarity / scanned / elapsed_ms / hits（含来源文件名、分数与全文）
+     */
+    @PostMapping("/bases/{knowledge_base_id}/recall-test")
+    public ApiResult<Map<String, Object>> recallTest(@PathVariable String knowledge_base_id,
+                                                     @RequestBody Map<String, Object> body) {
+        String query = body == null || body.get("query") == null ? "" : String.valueOf(body.get("query"));
+        if (StringUtils.isBlank(query)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "query 不能为空");
+        }
+        requireBase(knowledge_base_id, false);
+        int topK = clampInt(toIntSafe(body.get("top_k"), 6), 1, 20);
+        double similarity = body.get("similarity") instanceof Number num
+                ? Math.max(0.0D, Math.min(1.0D, num.doubleValue()))
+                : 0.35D;
+
+        long start = System.currentTimeMillis();
+        RagClient client = ragClientManager.current();
+        if (client == null) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR,
+                    "RAG 不可用：请先在「设置中心 → 模型设置 → RAG」配置 Embedding / RAG 模型",
+                    ragUnavailableDetail());
+        }
+        int overFetch = Math.min(topK * 4 + 20, 100);
+        RagResponse response;
+        try {
+            response = client.search(query, overFetch, similarity);
+        } catch (RuntimeException e) {
+            // 失败归因映射与 /ask 一致：让前端能分辨余额不足/密钥无效/限流/维度不符。
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, friendlyRagError(e), ragErrorDetail(e));
+        }
+
+        String prefix = knowledge_base_id + "/";
+        List<Map<String, Object>> hits = new ArrayList<>();
+        int scanned = 0;
+        if (response != null && response.sources() != null) {
+            for (RagResponse.Source source : response.sources()) {
+                if (source == null) {
+                    continue;
+                }
+                scanned++;
+                String docId = source.documentId() == null ? "" : source.documentId();
+                if (!docId.startsWith(prefix)) {
+                    continue; // 其它库的命中只计入候选数，不进入本库召回结果
+                }
+                if (hits.size() >= topK) {
+                    continue; // 本库 TopK 已取满（检索结果按分数降序，后面只会更低）
+                }
+                Map<String, Object> meta = source.metadata();
+                String docPath = docId.substring(prefix.length());
+                String fileName = meta == null ? null : String.valueOf(meta.getOrDefault("fileName", ""));
+                String content = source.content();
+                String fullContent = content == null ? ""
+                        : (content.length() <= 4000 ? content : content.substring(0, 4000) + "…");
+                Map<String, Object> hit = new LinkedHashMap<>(10);
+                hit.put("index", hits.size() + 1);
+                hit.put("kb_id", knowledge_base_id);
+                hit.put("doc_id", docId);
+                hit.put("doc_path", docPath);
+                hit.put("file_name", fileName == null || fileName.isBlank()
+                        ? fileNameOf(docPath) : fileName);
+                hit.put("score", round4(source.score()));
+                hit.put("snippet", snippet(content, 400));
+                hit.put("content", fullContent);
+                hit.put("is_image", source.isImage());
+                hits.add(hit);
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>(8);
+        result.put("knowledge_base_id", knowledge_base_id);
+        result.put("query", query);
+        result.put("top_k", topK);
+        result.put("similarity", similarity);
+        result.put("scanned", scanned);
+        result.put("elapsed_ms", System.currentTimeMillis() - start);
+        result.put("hits", hits);
+        log.info("[Knowledge] 召回测试 kb={} topK={} similarity={} 候选={} 本库命中={} 耗时={}ms",
+                knowledge_base_id, topK, similarity, scanned, hits.size(), result.get("elapsed_ms"));
+        return ApiResult.ok(result);
+    }
+
+    /**
      * 把整数夹到区间内。
      *
      * @param value 原始值
