@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 余额定时刷新任务：每 5 分钟在后台把「已启用且有 Key」的供应商余额真查一遍，
+ * 余额定时刷新任务：按配置周期（{@code credit_refresh_interval}，默认 5 分钟、
+ * 最小 60 秒）在后台把「已启用且有 Key」的供应商余额真查一遍，
  * 并把读数按 Key 落库（sys_ai_provider_credit，先删后增）。
  *
  * <p>与面板 {@code /credit} 的关系：面板读数优先走进程内 5 分钟缓存，缓存未命中
@@ -52,9 +53,19 @@ public class CreditRefreshScheduler {
     private static final String FIELD_ENABLED = "credit_refresh_enabled";
 
     /**
-     * 刷新周期：5 分钟。
+     * 刷新周期键：credit_refresh_interval（秒）。
      */
-    private static final long INTERVAL_SECONDS = 300;
+    private static final String FIELD_INTERVAL = "credit_refresh_interval";
+
+    /**
+     * 刷新周期缺省值：5 分钟。
+     */
+    private static final long DEFAULT_INTERVAL_SECONDS = 300;
+
+    /**
+     * 刷新周期下限：60 秒（与定时聚合间隔同一底线）。
+     */
+    private static final long MIN_INTERVAL_SECONDS = 60;
 
     /**
      * 启动后首个 tick 的延迟：避开迁移、缓存预热等启动期工作。
@@ -146,8 +157,18 @@ public class CreditRefreshScheduler {
      */
     public SampleStatus status() {
         return new SampleStatus(settingReader.getBool(GROUP, FIELD_ENABLED, true), refreshing.get(),
-                (int) INTERVAL_SECONDS, lastRunAt, lastDurationMs, nextRunAt,
+                (int) intervalSeconds(), lastRunAt, lastDurationMs, nextRunAt,
                 lastProviders, lastTouched, lastSucceeded);
+    }
+
+    /**
+     * 当前刷新周期（秒）：每轮实时读设置，缺省 / 非法回落 300 秒，下限 60 秒。
+     *
+     * @return 刷新周期（秒）
+     */
+    private long intervalSeconds() {
+        int configured = settingReader.getInt(GROUP, FIELD_INTERVAL, (int) DEFAULT_INTERVAL_SECONDS);
+        return Math.max(MIN_INTERVAL_SECONDS, configured);
     }
 
     /**
@@ -157,8 +178,8 @@ public class CreditRefreshScheduler {
     public void start() {
         timeWheel = Timer.newTimer(512, 100, TimeUnit.MILLISECONDS);
         timeWheel.schedule(this::tick, INITIAL_DELAY_SECONDS, TimeUnit.SECONDS);
-        log.info("[CreditRefresh] 余额定时刷新已启动：首刷 {} 秒后执行，周期 {} 秒",
-                INITIAL_DELAY_SECONDS, INTERVAL_SECONDS);
+        log.info("[CreditRefresh] 余额定时刷新已启动：首刷 {} 秒后执行，默认周期 {} 秒（可在用量配置中调整）",
+                INITIAL_DELAY_SECONDS, DEFAULT_INTERVAL_SECONDS);
     }
 
     /**
@@ -196,8 +217,9 @@ public class CreditRefreshScheduler {
             Timer wheel = timeWheel;
             if (wheel != null && wheel.isRunning()) {
                 try {
-                    wheel.schedule(this::tick, INTERVAL_SECONDS, TimeUnit.SECONDS);
-                    nextRunAt = System.currentTimeMillis() + INTERVAL_SECONDS * 1000L;
+                    long interval = intervalSeconds();
+                    wheel.schedule(this::tick, interval, TimeUnit.SECONDS);
+                    nextRunAt = System.currentTimeMillis() + interval * 1000L;
                 } catch (Exception e) {
                     log.debug("[CreditRefresh] 时间轮注册失败: {}", e.getMessage());
                 }

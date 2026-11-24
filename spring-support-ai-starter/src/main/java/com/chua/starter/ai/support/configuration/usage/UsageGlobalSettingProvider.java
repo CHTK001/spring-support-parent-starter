@@ -20,8 +20,10 @@ import java.util.List;
  *   <li>{@code usage_sync_providers} —— Provider SPI 配置开关（逗号分隔白名单，留空 = 全部启用）</li>
  *   <li>{@code usage_timewheel_enabled} —— 后台时间轮开关，开启后改用时间轮调度</li>
  *   <li>{@code credit_refresh_enabled} —— 余额定时刷新开关，驱动
- *       {@link com.chua.starter.ai.support.schedule.CreditRefreshScheduler} 每 5 分钟
+ *       {@link com.chua.starter.ai.support.schedule.CreditRefreshScheduler} 按周期
  *       刷新已启用供应商的余额快照</li>
+ *   <li>{@code credit_refresh_interval} —— 余额定时刷新周期（秒），最小 60 秒，
+ *       默认 300（5 分钟），调度器每轮 tick 实时读取</li>
  *   <li>{@code alert_evaluate_enabled} / {@code alert_evaluate_interval} —— 告警规则定时评估
  *       开关与周期（秒），驱动 {@link com.chua.starter.ai.support.schedule.AlertEvaluateScheduler}</li>
  *   <li>{@code alert_notify_emails} / {@code alert_notify_webhook} —— 告警推送的
@@ -79,9 +81,11 @@ public class UsageGlobalSettingProvider implements GlobalSettingProvider {
                 // 本地工具用量解析根目录：逗号分隔的附加用户主目录；
                 // 当前用户主目录始终参与解析，无需配置。留空 = 仅解析当前用户。
                 new SettingItem("usage_parse_dirs", "", "STRING", "用量解析目录：逗号/分号分隔的附加用户主目录，支持 ~（当前用户）与 ~账号 简写（始终包含当前用户主目录，无需重复填写），用于解析其它 Windows/Linux 账号下的本地工具用量", 19),
-                // 余额定时刷新（CreditRefreshScheduler）：每 5 分钟把有 Key 的已启用供应商
-                // 余额真查一遍并按 Key 落库。默认开启；关闭后只在打开余额面板或手动「同步」时查询。
-                new SettingItem("credit_refresh_enabled", "true", "BOOLEAN", "余额定时刷新：开启后每 5 分钟自动刷新已启用供应商的余额快照", 12),
+                // 余额定时刷新（CreditRefreshScheduler）：按 credit_refresh_interval 周期把
+                // 有 Key 的已启用供应商余额真查一遍并按 Key 落库。默认开启；关闭后只在打开
+                // 余额面板或手动「同步」时查询。周期最小 60 秒，默认 300（5 分钟）。
+                new SettingItem("credit_refresh_enabled", "true", "BOOLEAN", "余额定时刷新：开启后按「余额刷新间隔」自动刷新已启用供应商的余额快照", 12),
+                new SettingItem("credit_refresh_interval", "300", "NUMBER", "余额刷新间隔（秒）：余额定时刷新的执行周期，最小 60 秒，默认 300（5 分钟）", 20),
                 // 下面 5 项是**前端消费**配置：后端不读，由用量看板直接调设置接口取值
                 // （UsageConfigSettings.vue / useUsageBoard.ts / usage/format.ts）。
                 // 它们是真实生效的，只是生效点在浏览器侧，后端 grep 不到读取点。
