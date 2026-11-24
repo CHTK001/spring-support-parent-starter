@@ -6,6 +6,9 @@ import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.ssh.support.client.SshClient;
 import com.chua.starter.docker.model.DockerNetworkRequest;
 import com.chua.starter.docker.model.DockerVolumeRequest;
+import com.chua.starter.docker.local.DockerTerminal;
+import com.chua.starter.docker.local.LocalDockerExecutor;
+import com.chua.starter.docker.local.SshDockerTerminal;
 import com.chua.starter.docker.service.RegistryService;
 import com.chua.starter.docker.service.TemplateService;
 import com.chua.starter.docker.spi.RegistryConfig;
@@ -42,14 +45,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 /**
- * Docker 管理服务实现 —— 全部经 SSH 在受控主机上执行 {@code docker} CLI。
+ * Docker 管理服务实现 —— 按主机通道分流执行 {@code docker}：API 通道走 Docker Engine HTTP，
+ * CMD 通道远程主机经 SSH 执行，本机（地址指向部署本服务的机器）经本地进程直启 docker CLI。
  *
- * <p>与主机工作台共用同一套连接设施（{@link ConnectionManager} 缓存 +
+ * <p>远程 CMD 与主机工作台共用同一套连接设施（{@link ConnectionManager} 缓存 +
  * {@link ServerHostService#resolveCredential} 解析凭据），但协议与页面结构完全独立：
- * 本类只回答「容器 / 镜像 / 网络 / 卷」的问题，不掺 K8s 与隧道。</p>
+ * 本类只回答「容器 / 镜像 / 网络 / 卷」的问题，不掺 K8s 与隧道。本机通道不占用
+ * SSH 连接池，交互终端用本地进程包裹 {@code docker exec -i}。</p>
  *
  * <p><strong>命令安全</strong>：创建容器时不允许透传任意 shell 片段。镜像名、容器名、
  * 端口、环境变量、卷、网络、重启策略逐项按固定格式校验，命令文本按空白切分后
@@ -76,6 +84,17 @@ public class DockerServiceImpl implements DockerService {
      * 一次性命令超时（秒）
      */
     private static final int EXEC_TIMEOUT_SECONDS = 30;
+
+    /**
+     * 本机流式命令总超时（秒）：卸载容器/镜像等 SSE 命令的本地进程上限；
+     * 远程 SSH 路径沿用客户端读取超时，此处仅约束本机执行器。
+     */
+    private static final int LOCAL_STREAM_TIMEOUT_SECONDS = 300;
+
+    /**
+     * 本机拉取镜像总超时（秒）：大镜像拉取耗时长，放宽到与 SSE 会话同量级
+     */
+    private static final int LOCAL_PULL_TIMEOUT_SECONDS = 1800;
 
     /**
      * SSE 会话存活时长（30 分钟）
@@ -112,6 +131,11 @@ public class DockerServiceImpl implements DockerService {
      * 连接缓存管理器
      */
     private final ConnectionManager connectionManager;
+
+    /**
+     * 本机 Docker 执行器：主机即本机时命令经本地进程直启 docker CLI，不经 SSH
+     */
+    private final LocalDockerExecutor localExecutor;
 
     /**
      * 镜像库服务
@@ -155,10 +179,11 @@ public class DockerServiceImpl implements DockerService {
             if (version.isEmpty()) {
                 return ReturnResult.ok(out);
             }
-            RemoteExecResult compose = execRemote(hostId, "docker compose version >/dev/null 2>&1 && echo yes || echo no");
+            // compose 探测按退出码判定（兼容本机 Windows 通道：无 && / || 依赖）
+            RemoteExecResult compose = execRemote(hostId, "docker compose version >/dev/null 2>&1");
             out.put("installed", true);
             out.put("version", version);
-            out.put("compose", "yes".equalsIgnoreCase(compose.stdout().trim()));
+            out.put("compose", compose.exitCode() == 0);
             return ReturnResult.ok(out);
         } catch (UnsupportedOperationException e) {
             return ReturnResult.ok(out);
@@ -348,6 +373,11 @@ public class DockerServiceImpl implements DockerService {
                     runContainerViaApi(DockerChannel.client(host), emitter, request, pullRef);
                     return;
                 }
+                if (isLocalHost(host)) {
+                    // 本机通道：命令经本地进程直启 docker CLI，不占用 SSH 连接
+                    runContainerLocal(hostId, emitter, request, pullRef, run);
+                    return;
+                }
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
                     sendEvent(emitter, "error", resolved.getMsg());
@@ -443,6 +473,10 @@ public class DockerServiceImpl implements DockerService {
                             msg -> log.warn("[docker] 日志流失败 hostId={} {}: {}", hostId, id, msg));
                     return;
                 }
+                if (isLocalHost(host)) {
+                    streamContainerLogsLocal(hostId, emitter, sessionId, id, tail);
+                    return;
+                }
                 ensurePosix(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
@@ -510,6 +544,31 @@ public class DockerServiceImpl implements DockerService {
                     emitter.complete();
                     return;
                 }
+                if (isLocalHost(host)) {
+                    // 本机通道：本地进程 docker exec -i（无 TTY）；shell 即进程参数，无需再注入启动命令
+                    String shell = isBlank(command) ? "/bin/sh" : command.trim();
+                    DockerTerminal[] localTerminalRef = new DockerTerminal[1];
+                    DockerTerminal localTerminal = localExecutor.openTerminal(shellSafe(id), shell,
+                            data -> {
+                                if (!sendEvent(emitter, "output", data) && localTerminalRef[0] != null) {
+                                    // 客户端已断开，终止容器 exec 进程
+                                    localTerminalRef[0].close();
+                                }
+                            },
+                            () -> {
+                                sendEvent(emitter, "closed", "Session closed");
+                                emitter.complete();
+                                execSessions.remove(sessionId);
+                            });
+                    localTerminalRef[0] = localTerminal;
+                    execSessions.put(sessionId, new ExecSession(sessionId, localTerminal, null, hostId));
+                    Runnable localCleanup = () -> closeExecSession(sessionId);
+                    emitter.onCompletion(localCleanup);
+                    emitter.onTimeout(localCleanup);
+                    emitter.onError(e -> localCleanup.run());
+                    sendEvent(emitter, "session", sessionId);
+                    return;
+                }
                 ensurePosix(hostId);
                 ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
                 if (!resolved.isOk()) {
@@ -542,8 +601,9 @@ public class DockerServiceImpl implements DockerService {
                         })
                         .connect();
                 terminalRef[0] = terminal;
-                terminal.send(execCmd);
-                execSessions.put(sessionId, new ExecSession(sessionId, terminal, handle, hostId));
+                DockerTerminal dockerTerminal = new SshDockerTerminal(terminal);
+                dockerTerminal.send(execCmd);
+                execSessions.put(sessionId, new ExecSession(sessionId, dockerTerminal, handle, hostId));
 
                 Runnable cleanup = () -> closeExecSession(sessionId);
                 emitter.onCompletion(cleanup);
@@ -598,7 +658,10 @@ public class DockerServiceImpl implements DockerService {
             } catch (Exception e) {
                 log.debug("[docker] 关闭终端异常: {}", e.getMessage());
             }
-            connectionManager.release(session.hostId);
+            if (session.handle != null) {
+                // 本机会话无 SSH 句柄，不参与连接池借还
+                connectionManager.release(session.hostId);
+            }
         }
     }
 
@@ -1647,8 +1710,12 @@ public class DockerServiceImpl implements DockerService {
     private void execStream(Long hostId, SseEmitter emitter, String step, String command, String done) {
         SshClients.Handle[] handleRef = new SshClients.Handle[1];
         try {
-            ensurePosix(hostId);
             MsServerHost host = requireHost(hostId);
+            if (isLocalHost(host)) {
+                execStreamLocal(hostId, emitter, step, command, done);
+                return;
+            }
+            ensurePosix(hostId);
             ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
             if (!resolved.isOk()) {
                 sendEvent(emitter, "error", resolved.getMsg());
@@ -1680,6 +1747,210 @@ public class DockerServiceImpl implements DockerService {
             if (handleRef[0] != null) {
                 connectionManager.release(hostId);
             }
+        }
+    }
+
+    /**
+     * 本机 SSE 命令执行（卸载容器 / 卸载镜像）：本地进程跟随输出，带总超时兜底。
+     *
+     * @param hostId  主机标识
+     * @param emitter SSE 发射器
+     * @param step    阶段说明
+     * @param command 受控命令
+     * @param done    成功事件数据
+     */
+    private void execStreamLocal(Long hostId, SseEmitter emitter, String step, String command, String done) {
+        LocalDockerExecutor.FollowHandle[] followRef = new LocalDockerExecutor.FollowHandle[1];
+        try {
+            sendEvent(emitter, "step", step);
+            String[] lastLine = new String[1];
+            LocalDockerExecutor.FollowHandle follow = localExecutor.follow(command, line -> {
+                lastLine[0] = line;
+                sendEvent(emitter, "log", line);
+            });
+            followRef[0] = follow;
+            Integer code = awaitFollow(follow, LOCAL_STREAM_TIMEOUT_SECONDS);
+            if (code == null) {
+                sendEvent(emitter, "error", "执行超时（" + LOCAL_STREAM_TIMEOUT_SECONDS + "s）: " + step);
+            } else if (code == 0) {
+                sendEvent(emitter, "done", done);
+            } else {
+                sendEvent(emitter, "error", "执行失败（退出码 " + code + "）: " + safe(lastLine[0]));
+            }
+            emitter.complete();
+        } catch (Exception e) {
+            log.warn("[docker] 流式命令失败 hostId={} {}: {}", hostId, step, e.getMessage());
+            sendEvent(emitter, "error", "执行失败: " + e.getMessage());
+            emitter.complete();
+        } finally {
+            if (followRef[0] != null) {
+                // 正常退出后 close 为空操作；异常/超时路径兜底终止进程
+                followRef[0].close();
+            }
+        }
+    }
+
+    /**
+     * 等待本机跟随进程退出（带超时；超时或中断返回 null 并终止进程）
+     *
+     * @param follow         跟随句柄
+     * @param timeoutSeconds 超时秒数
+     * @return 退出码，超时返回 {@code null}
+     */
+    private Integer awaitFollow(LocalDockerExecutor.FollowHandle follow, int timeoutSeconds) {
+        try {
+            return CompletableFuture.supplyAsync(follow::await)
+                    .get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            follow.close();
+            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            follow.close();
+            return null;
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            throw new IllegalStateException("本机命令等待失败: " + cause.getMessage(), cause);
+        }
+    }
+
+    /**
+     * 本机创建并启动容器：本地进程执行 docker login/pull/run（SSE 推送进度）。
+     *
+     * @param hostId  主机标识
+     * @param emitter SSE 发射器
+     * @param request 创建请求
+     * @param pullRef 已解析的镜像引用
+     * @param run     已拼装的 {@code docker run} 命令
+     */
+    private void runContainerLocal(Long hostId, SseEmitter emitter, DockerCreateRequest request,
+                                   String pullRef, String run) {
+        try {
+            if (!Boolean.FALSE.equals(request.getPull())) {
+                if (!loginRegistryLocal(emitter, request.getRegistryId())) {
+                    emitter.complete();
+                    return;
+                }
+                sendEvent(emitter, "step", "拉取镜像 " + pullRef);
+                String[] pullLast = new String[1];
+                LocalDockerExecutor.FollowHandle pull = localExecutor.follow(
+                        "docker pull " + shQuote(pullRef) + " 2>&1", line -> {
+                            pullLast[0] = line;
+                            sendEvent(emitter, "log", line);
+                        });
+                Integer pullCode = awaitFollow(pull, LOCAL_PULL_TIMEOUT_SECONDS);
+                if (pullCode == null) {
+                    sendEvent(emitter, "error", "拉取镜像超时（" + LOCAL_PULL_TIMEOUT_SECONDS + "s），请确认镜像名与网络");
+                    emitter.complete();
+                    return;
+                }
+                if (pullCode != 0) {
+                    sendEvent(emitter, "error", "拉取镜像失败（退出码 " + pullCode + "），请确认镜像名与网络");
+                    emitter.complete();
+                    return;
+                }
+            }
+            sendEvent(emitter, "step", "创建并启动容器");
+            String[] lastLine = new String[1];
+            LocalDockerExecutor.FollowHandle follow = localExecutor.follow(run + " 2>&1", line -> {
+                lastLine[0] = line;
+                sendEvent(emitter, "log", line);
+            });
+            Integer runCode = awaitFollow(follow, LOCAL_STREAM_TIMEOUT_SECONDS);
+            if (runCode == null) {
+                sendEvent(emitter, "error", "创建容器超时（" + LOCAL_STREAM_TIMEOUT_SECONDS + "s）");
+                emitter.complete();
+                return;
+            }
+            if (runCode != 0) {
+                sendEvent(emitter, "error", "创建容器失败（退出码 " + runCode + "）: " + safe(lastLine[0]));
+                emitter.complete();
+                return;
+            }
+            sendEvent(emitter, "done", safe(lastLine[0]).trim());
+            emitter.complete();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            sendEvent(emitter, "error", e.getMessage());
+            emitter.complete();
+        } catch (Exception e) {
+            log.warn("[docker] 本机创建容器失败 hostId={}: {}", hostId, e.getMessage());
+            sendEvent(emitter, "error", "创建容器失败: " + e.getMessage());
+            emitter.complete();
+        }
+    }
+
+    /**
+     * 本机容器日志流跟随：本地进程 {@code docker logs -f}，客户端断开即终止进程。
+     *
+     * @param hostId    主机标识
+     * @param emitter   SSE 发射器
+     * @param sessionId 会话标识
+     * @param id        容器标识（已白名单校验）
+     * @param tail      尾随行数
+     */
+    private void streamContainerLogsLocal(Long hostId, SseEmitter emitter, String sessionId, String id, Integer tail) {
+        LocalDockerExecutor.FollowHandle[] followRef = new LocalDockerExecutor.FollowHandle[1];
+        try {
+            int lines = tail == null || tail < 1 ? 100 : tail;
+            String cmd = "docker logs -f --tail " + lines + " " + shellSafe(id) + " 2>&1";
+            LocalDockerExecutor.FollowHandle follow = localExecutor.follow(cmd, line -> {
+                if (!sendEvent(emitter, "log", line) && followRef[0] != null) {
+                    // 客户端已断开，终止日志进程
+                    followRef[0].close();
+                }
+            });
+            followRef[0] = follow;
+            Thread watcher = new Thread(follow::await, "docker-local-logs-" + sessionId);
+            watcher.setDaemon(true);
+            watcher.start();
+            Runnable cleanup = follow::close;
+            emitter.onCompletion(cleanup);
+            emitter.onTimeout(cleanup);
+            emitter.onError(e -> cleanup.run());
+            sendEvent(emitter, "session", sessionId);
+        } catch (Exception e) {
+            log.warn("[docker] 日志流失败 hostId={} {}: {}", hostId, id, e.getMessage());
+            sendEvent(emitter, "error", "日志流启动失败: " + e.getMessage());
+            emitter.complete();
+            if (followRef[0] != null) {
+                followRef[0].close();
+            }
+        }
+    }
+
+    /**
+     * 本机登录镜像库：密码经标准输入喂给 {@code docker login --password-stdin}，
+     * 不落命令行、不经 shell。
+     *
+     * @param emitter    SSE 发射器
+     * @param registryId 镜像库标识，可空
+     * @return true 表示可继续（未配置凭据或登录成功）
+     */
+    private boolean loginRegistryLocal(SseEmitter emitter, String registryId) {
+        if (isBlank(registryId)) {
+            return true;
+        }
+        RegistryConfig config = registryService.config(registryId);
+        if (isBlank(config.getUsername()) || isBlank(config.getPassword())) {
+            return true;
+        }
+        String host = registryService.loginHost(config);
+        sendEvent(emitter, "step", "登录镜像库 " + safe(config.getName()));
+        try {
+            RemoteExecResult result = localExecutor.login(config.getUsername().trim(), host,
+                    config.getPassword(), line -> sendEvent(emitter, "log", line));
+            if (result.exitCode() != 0) {
+                String detail = (result.stderr() == null || result.stderr().isBlank())
+                        ? result.stdout() : result.stderr();
+                String extra = detail == null || detail.isBlank() ? "" : " — " + truncate(detail.trim());
+                sendEvent(emitter, "error", "登录镜像库失败（退出码 " + result.exitCode() + "）: " + host + extra);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("[docker] 登录镜像库失败 id={}: {}", registryId, e.getMessage());
+            sendEvent(emitter, "error", "登录镜像库失败: " + e.getMessage());
+            return false;
         }
     }
 
@@ -1874,19 +2145,33 @@ public class DockerServiceImpl implements DockerService {
     }
 
     /**
-     * 校验主机为 POSIX 平台（Windows 无 POSIX shell）
+     * 校验主机可执行 Docker 命令：本机通道直接放行（本机进程直启 docker CLI，
+     * 不经 SSH/POSIX shell）；远程主机仍要求 POSIX 平台（Windows 无 POSIX shell）。
      *
      * @param hostId 主机标识
      */
     private void ensurePosix(Long hostId) {
         MsServerHost host = requireHost(hostId);
+        if (isLocalHost(host)) {
+            return;
+        }
         if (WindowsSshShell.isWindows(host)) {
             throw new UnsupportedOperationException("该主机为 Windows，暂不支持 Docker 管理");
         }
     }
 
     /**
-     * 执行远程命令并返回结构化结果
+     * 判断主机是否为本机（地址指向部署本服务的这台机器）
+     *
+     * @param host 主机
+     * @return true 表示本机通道
+     */
+    private boolean isLocalHost(MsServerHost host) {
+        return host != null && serverHostService.isLocalHostAddress(host.getServerHostAddress());
+    }
+
+    /**
+     * 执行远程命令并返回结构化结果（本机通道走本地进程，远程走 SSH）
      *
      * @param hostId  主机标识
      * @param command 命令
@@ -1897,6 +2182,9 @@ public class DockerServiceImpl implements DockerService {
         MsServerHost host = requireHost(hostId);
         if (host == null) {
             throw new IllegalStateException("主机不存在: " + hostId);
+        }
+        if (isLocalHost(host)) {
+            return localExecutor.exec(command, EXEC_TIMEOUT_SECONDS, null);
         }
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, null);
         if (!resolved.isOk()) {
@@ -2094,7 +2382,7 @@ public class DockerServiceImpl implements DockerService {
     }
 
     /**
-     * 容器 exec 会话上下文
+     * 容器 exec 会话上下文（本机通道 handle 为 null，不参与 SSH 连接借还）
      */
     private static final class ExecSession {
         /**
@@ -2102,11 +2390,11 @@ public class DockerServiceImpl implements DockerService {
          */
         private final String sessionId;
         /**
-         * PTY 终端
+         * 交互终端（SSH PTY 或本机进程）
          */
-        private final SshClient.TerminalOperation terminal;
+        private final DockerTerminal terminal;
         /**
-         * SSH 句柄
+         * SSH 句柄（本机通道为 null）
          */
         private final SshClients.Handle handle;
         /**
@@ -2118,11 +2406,11 @@ public class DockerServiceImpl implements DockerService {
          * 构造会话
          *
          * @param sessionId 会话标识
-         * @param terminal  PTY 终端
-         * @param handle    SSH 句柄
+         * @param terminal  交互终端
+         * @param handle    SSH 句柄（本机通道为 null）
          * @param hostId    主机标识
          */
-        private ExecSession(String sessionId, SshClient.TerminalOperation terminal,
+        private ExecSession(String sessionId, DockerTerminal terminal,
                             SshClients.Handle handle, Long hostId) {
             this.sessionId = sessionId;
             this.terminal = terminal;
