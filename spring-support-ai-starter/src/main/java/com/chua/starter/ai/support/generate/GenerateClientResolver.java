@@ -135,6 +135,7 @@ public class GenerateClientResolver {
             ImageClientSetting setting = ImageClientSetting.builder()
                     .provider(spi)
                     .appKey(keyAt(provider, keyIndex))
+                    .secretKey(ProviderCredentials.secretKey(provider.getCredentials()))
                     .baseUrl(provider.getBaseUrl())
                     .build();
             ImageClient client = ImageClient.create(setting);

@@ -70,6 +70,9 @@ public final class GenerateSpiRouter {
             // 且默认 readTimeout 只有 30s，而出图官方建议 ≥900s。
             Map.entry("moss", "mosi"),
             Map.entry("mosi", "mosi"),
+            // LiblibAI（星流）自有异步任务协议（LiblibImageClient，utils-support-liblib-starter），
+            // 签名 query 鉴权 + generateUuid 轮询，不走 openai 兜底
+            Map.entry("liblib", "liblib"),
             Map.entry("deepseek", "openai"),
             Map.entry("moonshot", "openai"),
             Map.entry("kimi", "openai"),
@@ -135,6 +138,8 @@ public final class GenerateSpiRouter {
             "onnx", "pytorch", "safetensors", "mage", "ollama",
             // Moss 自有实现（MossImageClient，utils-support-mosi-starter）
             "mosi",
+            // LiblibAI 自有实现（LiblibImageClient，utils-support-liblib-starter）
+            "liblib",
             // 免费渠道聚合：FreeChannelImageClient（account）按模型转交内置免登录出图渠道，
             // 目录里的 flux / turbo 等图片模型必须在这里登记才会进入「可选生成模型」
             "free-channel"

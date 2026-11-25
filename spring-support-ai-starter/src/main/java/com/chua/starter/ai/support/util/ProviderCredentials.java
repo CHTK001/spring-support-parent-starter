@@ -44,6 +44,16 @@ public final class ProviderCredentials {
     private static final String KEY_ACCESS_TOKEN = "access_token";
 
     /**
+     * 签名密钥蛇形键
+     */
+    private static final String KEY_SECRET_KEY = "secret_key";
+
+    /**
+     * 签名密钥驼峰键
+     */
+    private static final String KEY_SECRET_KEY_CAMEL = "secretKey";
+
+    /**
      * 工具类不允许实例化
      */
     private ProviderCredentials() {
@@ -76,6 +86,29 @@ public final class ProviderCredentials {
     public static String firstApiKey(Map<String, Object> credentials) {
         List<String> keys = apiKeys(credentials);
         return keys.isEmpty() ? null : keys.getFirst();
+    }
+
+    /**
+     * 取凭证中的 SecretKey（签名密钥）。
+     *
+     * <p>部分供应商（如 LiblibAI）除 AccessKey 外还需要独立的 SecretKey 做请求签名。
+     * 该键<b>不并入</b> {@link #apiKeys(Map)}：apiKeys 面向「可轮换的 API Key 列表」，
+     * SecretKey 是签名密钥，混进去会导致限流换 Key 逻辑误把签名密钥当普通 Key 轮换。</p>
+     *
+     * @param credentials 提供者 凭证，可为空
+     * @return SecretKey，无则返回 null
+     */
+    public static String secretKey(Map<String, Object> credentials) {
+        if (credentials == null) {
+            return null;
+        }
+        Object value = credentials.containsKey(KEY_SECRET_KEY)
+                ? credentials.get(KEY_SECRET_KEY) : credentials.get(KEY_SECRET_KEY_CAMEL);
+        if (value == null) {
+            return null;
+        }
+        String key = value.toString().trim();
+        return key.isEmpty() ? null : key;
     }
 
     /**
