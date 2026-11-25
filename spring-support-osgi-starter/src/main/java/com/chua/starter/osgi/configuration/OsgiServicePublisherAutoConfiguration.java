@@ -1,11 +1,14 @@
 package com.chua.starter.osgi.configuration;
 
 import com.chua.osgi.support.FelixOsgiLauncher;
+import com.chua.starter.osgi.properties.OsgiProperties;
+import com.chua.starter.osgi.support.publish.BundleSpiAutoPublisher;
 import com.chua.starter.osgi.support.publish.DefaultOsgiServicePublisher;
 import com.chua.starter.osgi.support.publish.OsgiServicePublisher;
 import com.chua.starter.osgi.support.publish.OsgiSpiBeanPublisher;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
@@ -53,5 +56,26 @@ public class OsgiServicePublisherAutoConfiguration {
     public OsgiSpiBeanPublisher osgiSpiBeanPublisher(OsgiServicePublisher publisher,
                                                      ApplicationContext applicationContext) {
         return new OsgiSpiBeanPublisher(publisher, applicationContext);
+    }
+
+    /**
+     * 外部 bundle SPI 自动发布器（仅服务器设施启用时装配）。
+     *
+     * <p>监听 bundle 启动 / 停止 / 卸载 / 更新，把外部 jar 中的 {@code @Spi}
+     * 实现自动发布为 OSGi 服务并在 bundle 下线时反注册。</p>
+     *
+     * @param launcher   Felix 启动器
+     * @param publisher  服务发布门面
+     * @param properties osgi 配置属性
+     * @return 外部 bundle SPI 自动发布器
+     */
+    @Bean(destroyMethod = "destroy")
+    @ConditionalOnExpression("${plugin.osgi.enabled:true} and ${plugin.osgi.server.enabled:false}")
+    public BundleSpiAutoPublisher bundleSpiAutoPublisher(FelixOsgiLauncher launcher,
+                                                         OsgiServicePublisher publisher,
+                                                         OsgiProperties properties) {
+        BundleSpiAutoPublisher autoPublisher = new BundleSpiAutoPublisher(launcher, publisher, properties.getSpi());
+        autoPublisher.init();
+        return autoPublisher;
     }
 }

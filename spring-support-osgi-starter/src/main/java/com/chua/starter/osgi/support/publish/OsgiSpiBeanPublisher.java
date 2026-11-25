@@ -7,11 +7,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @Spi Bean 自动发布器（P4：服务发布带 @Spi 约束）。
@@ -60,7 +56,7 @@ public class OsgiSpiBeanPublisher implements ApplicationListener<ApplicationRead
         Map<String, Object> beans = applicationContext.getBeansWithAnnotation(Spi.class);
         int published = 0;
         for (Object bean : beans.values()) {
-            for (Class<?> type : publishableInterfaces(bean.getClass())) {
+            for (Class<?> type : SpiPublishSupport.publishableInterfaces(bean.getClass())) {
                 if (publishSafely(type, bean)) {
                     published++;
                 }
@@ -81,49 +77,4 @@ public class OsgiSpiBeanPublisher implements ApplicationListener<ApplicationRead
         return publisher.publish(type, type.cast(bean));
     }
 
-    /**
-     * 收集 Bean 类可发布给 OSGi 的业务接口（跨类层级、去重、排除框架接口）。
-     *
-     * @param beanClass Bean 类型
-     * @return 可发布接口列表
-     */
-    private List<Class<?>> publishableInterfaces(Class<?> beanClass) {
-        Set<Class<?>> result = new LinkedHashSet<>();
-        for (Class<?> current = beanClass; current != null && current != Object.class; current = current.getSuperclass()) {
-            for (Class<?> iface : current.getInterfaces()) {
-                collectInterfaces(iface, result);
-            }
-        }
-        result.removeIf(this::isExcluded);
-        return new ArrayList<>(result);
-    }
-
-    /**
-     * 递归收集接口及其父接口。
-     *
-     * @param iface  接口
-     * @param result 收集结果
-     */
-    private void collectInterfaces(Class<?> iface, Set<Class<?>> result) {
-        if (isExcluded(iface)) {
-            return;
-        }
-        result.add(iface);
-        for (Class<?> parent : iface.getInterfaces()) {
-            collectInterfaces(parent, result);
-        }
-    }
-
-    /**
-     * 是否为不应发布的框架接口。
-     *
-     * @param type 接口类型
-     * @return 应排除返回 {@code true}
-     */
-    private boolean isExcluded(Class<?> type) {
-        String name = type.getName();
-        return name.startsWith("java.") || name.startsWith("javax.") || name.startsWith("jakarta.")
-                || name.startsWith("org.springframework.") || name.startsWith("org.osgi.")
-                || name.startsWith("lombok.");
-    }
 }

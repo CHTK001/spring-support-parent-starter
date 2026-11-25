@@ -34,7 +34,14 @@ public enum SocketProtocol {
      * @param "sse-server" "sse-server"
      * @return 独立 SSE 的结果
      */
-    SSE_SERVER("sse-server");
+    SSE_SERVER("sse-server"),
+
+    /**
+     * NDJSON（Newline-Delimited JSON，别名 jsonl）：HTTP 长连接，每行一个 JSON 帧
+     * @param "ndjson" "ndjson"
+     * @return NDJSON 的结果
+     */
+    NDJSON("ndjson");
 
     /**
      * 值
@@ -66,6 +73,9 @@ public enum SocketProtocol {
      * @return 协议类型
      */
     public static SocketProtocol of(String value) {
+        if (value != null && "jsonl".equalsIgnoreCase(value.trim())) {
+            return NDJSON;
+        }
         for (SocketProtocol protocol : values()) {
             if (protocol.value.equalsIgnoreCase(value)) {
                 return protocol;

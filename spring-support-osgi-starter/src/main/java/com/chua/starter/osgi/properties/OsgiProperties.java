@@ -109,6 +109,11 @@ public class OsgiProperties {
     private Recycle recycle = new Recycle();
 
     /**
+     * 外部 bundle SPI 自动发布配置。
+     */
+    private Spi spi = new Spi();
+
+    /**
      * Bean 桥接配置。
      *
      * <p>控制 OSGi 服务投影为容器 Bean 时的验收与切换行为。</p>
@@ -515,5 +520,42 @@ public class OsgiProperties {
          * {@code .jar} 文件，回收站子目录天然不会被当作插件加载。</p>
          */
         private String dirName = ".recycle";
+    }
+
+    /**
+     * 外部 bundle SPI 自动发布配置。
+     *
+     * <p>控制外部 jar（无 Spring 容器参与）中的 {@code @Spi} 实现如何自动发布为
+     * OSGi 服务：bundle 启动时发布、停止 / 卸载时反注册。发现顺序：优先读
+     * {@code META-INF/extensions/<接口全限定名>} 索引，无索引退回
+     * {@code @Spi} 注解类扫描。</p>
+     *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     spi:
+     *       enabled: true          # 是否启用（默认 true）
+     *       max-scan-classes: 2000 # 无索引兜底扫描的最大 class 数
+     * </pre>
+     *
+     * @author CH
+     * @since 4.0.0.51
+     */
+    @Data
+    public static class Spi {
+
+        /**
+         * 是否启用外部 bundle SPI 自动发布（默认开启）。
+         */
+        private boolean enabled = true;
+
+        /**
+         * 无 SPI 索引时兜底扫描的最大 class 数。
+         *
+         * <p>扫描发生在框架 bundle 事件线程上，超大 jar 全量扫描会拖慢
+         * 事件派发；达到上限即停止并告警。仅对「没有 META-INF/extensions
+         * 索引」的 jar 生效。</p>
+         */
+        private int maxScanClasses = 2000;
     }
 }

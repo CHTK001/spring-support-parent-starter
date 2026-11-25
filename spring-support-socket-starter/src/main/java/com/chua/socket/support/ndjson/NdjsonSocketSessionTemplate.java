@@ -1,0 +1,389 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
+package com.chua.socket.support.ndjson;
+
+import com.chua.socket.support.session.SocketSession;
+import com.chua.socket.support.session.SocketSessionTemplate;
+import com.chua.socket.support.session.SocketUser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
+/**
+ * NDJSON Socket 会话模板实现
+ * 实现 Socket会话template 接口，提供统一的消息发送能力。
+ * 与 {@link com.chua.starter.sse.support.socket.SseSocketSessionTemplate} 行为对齐：
+ * 广播、定向、用户绑定、心跳清理逻辑一致，仅传输编码不同（每行一个 JSON）。
+ *
+ * @since 2026-11-25
+ * @author CH
+ */
+@Slf4j
+public class NdjsonSocketSessionTemplate implements SocketSessionTemplate {
+
+    /**
+     * 对象_映射器
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * NDJSON 连接超时时间（毫秒），默认30分钟
+     */
+    private final long timeout;
+
+    /**
+     * 心跳间隔（秒）：发 {"event":"ping"} 行，避免 nginx/网关按空闲关闭连接
+     */
+    private static final long HEARTBEAT_SECONDS = 15L;
+
+    /**
+     * 心跳执行器（start 时创建，stop 时关闭）
+     */
+    private ScheduledExecutorService heartbeatExecutor;
+
+    /**
+     * 客户端连接映射
+     * Key: 客户端标识, 值: ndjsonSocket会话
+     */
+    private final Map<String, NdjsonSocketSession> sessions = new ConcurrentHashMap<>();
+
+    /**
+     * 用户到会话的映射
+     * Key: 用户标识, 值: 客户端标识
+     */
+    private final Map<String, String> userSessionMap = new ConcurrentHashMap<>();
+
+    /**
+     * 创建 ndjsonSocket会话template 实例
+     */
+    public NdjsonSocketSessionTemplate() {
+        /**
+         * this。
+         * @param 1800000L 1800000L
+         */
+        this(30 * 60 * 1000L);
+    }
+
+    /**
+     * 创建 ndjsonSocket会话template 实例
+     * @param timeout 超时
+     */
+    public NdjsonSocketSessionTemplate(long timeout) {
+        this.timeout = timeout;
+    }
+
+    /**
+     * 创建新的 NDJSON 连接
+     *
+     * @param clientId 客户端标识，如果为空则自动生成
+     * @return ResponseBodyEmitter
+     */
+    public ResponseBodyEmitter createConnection(String clientId) {
+        if (clientId == null || clientId.isEmpty()) {
+            clientId = UUID.randomUUID().toString().replace("-", "");
+        }
+
+        // 如果已存在连接，先关闭旧连接
+        if (sessions.containsKey(clientId)) {
+            /**
+             * 移除。
+             * @param clientId 客户端标识
+             * @param sessions.get(clientId 会话.获取(客户端标识
+             */
+            remove(clientId, sessions.get(clientId));
+        }
+
+        ResponseBodyEmitter emitter = new ResponseBodyEmitter(timeout);
+        NdjsonSocketSession session = new NdjsonSocketSession(clientId, emitter);
+
+        String finalClientId = clientId;
+        emitter.onCompletion(() -> {
+            log.debug("[NDJSON] 连接完成: clientId={}", finalClientId);
+            sessions.remove(finalClientId);
+        });
+        emitter.onTimeout(() -> {
+            log.debug("[NDJSON] 连接超时: clientId={}", finalClientId);
+            sessions.remove(finalClientId);
+        });
+        emitter.onError(e -> {
+            log.debug("[NDJSON] 连接错误: clientId={}", finalClientId, e);
+            sessions.remove(finalClientId);
+        });
+
+        sessions.put(clientId, session);
+        log.info("[NDJSON] 新连接创建: clientId={}", clientId);
+
+        // 发送连接成功消息（与 SSE 的 connected 事件数据结构一致）
+        try {
+            ObjectNode node = OBJECT_MAPPER.createObjectNode();
+            node.put("event", "connected");
+            ObjectNode data = node.putObject("data");
+            data.put("clientId", clientId);
+            data.put("timestamp", System.currentTimeMillis());
+            data.put("message", "连接成功");
+            emitter.send(OBJECT_MAPPER.writeValueAsBytes(node));
+            emitter.send("\n".getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.error("[NDJSON] 发送连接消息失败: clientId={}", clientId, e);
+        }
+
+        return emitter;
+    }
+
+    @Override
+    /**
+     * 保存
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
+     */
+    public SocketSession save(String clientId, SocketSession session) {
+        if (session instanceof NdjsonSocketSession ndjsonSession) {
+            sessions.put(clientId, ndjsonSession);
+            return session;
+        }
+        return null;
+    }
+
+    @Override
+    /**
+     * 移除
+     * @param clientId 字符串
+     * @param session 参数
+     * @return 返回值
+     */
+    public void remove(String clientId, SocketSession session) {
+        NdjsonSocketSession removed = sessions.remove(clientId);
+        if (removed != null) {
+            removed.disconnect();
+        }
+    }
+
+    @Override
+    /**
+     * 获取会话
+     * @param sessionId 字符串
+     * @return 返回值
+     */
+    public SocketSession getSession(String sessionId) {
+        return sessions.get(sessionId);
+    }
+
+    @Override
+    /**
+     * 发送
+     * @param event 字符串
+     * @param msg 字符串
+     * @param sessionId 字符串
+     * @return 返回值
+     */
+    public void send(String sessionId, String event, String msg) {
+        NdjsonSocketSession session = sessions.get(sessionId);
+        if (session != null && session.isConnected()) {
+            session.send(event, msg);
+        }
+    }
+
+    @Override
+    /**
+     * Broadcast
+     * @param event 字符串
+     * @param msg 字符串
+     * @return 返回值
+     */
+    public void broadcast(String event, String msg) {
+        List<String> failedClients = new ArrayList<>();
+
+        for (Map.Entry<String, NdjsonSocketSession> entry : sessions.entrySet()) {
+            NdjsonSocketSession session = entry.getValue();
+            if (session.isConnected()) {
+                try {
+                    session.send(event, msg);
+                } catch (Exception e) {
+                    failedClients.add(entry.getKey());
+                }
+            } else {
+                failedClients.add(entry.getKey());
+            }
+        }
+
+        // 清理失效连接
+        failedClients.forEach(sessions::remove);
+
+        log.debug("[NDJSON] 广播消息: event={}, 成功={}, 失败={}",
+                event, sessions.size(), failedClients.size());
+    }
+
+    @Override
+    /**
+     * 发送转为用户
+     * @param event 字符串
+     * @param msg 字符串
+     * @param userId 字符串
+     * @return 返回值
+     */
+    public void sendToUser(String userId, String event, String msg) {
+        String clientId = userSessionMap.get(userId);
+        if (clientId != null) {
+            /**
+             * 发送。
+             * @param clientId 客户端标识
+             * @param event 事件
+             * @param msg msg
+             */
+            send(clientId, event, msg);
+        }
+    }
+
+    @Override
+    /**
+     * 获取online会话
+     * @return 返回值
+     */
+    public List<SocketSession> getOnlineSessions() {
+        return sessions.values().stream()
+                .filter(SocketSession::isConnected)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    /**
+     * 获取online会话
+     * @param roomId 字符串
+     * @param type 字符串
+     * @return 返回值
+     */
+    public List<SocketSession> getOnlineSession(String type, String roomId) {
+        // NDJSON 不支持房间概念，返回所有在线会话
+        return getOnlineSessions();
+    }
+
+    @Override
+    /**
+     * 获取online用户
+     * @param type 字符串
+     * @return 返回值
+     */
+    public List<SocketUser> getOnlineUsers(String type) {
+        return sessions.values().stream()
+                .filter(SocketSession::isConnected)
+                .map(SocketSession::getUser)
+                .filter(user -> user != null)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    /**
+     * 获取Online计算数量
+     * @return 返回值
+     */
+    public int getOnlineCount() {
+        return (int) sessions.values().stream()
+                .filter(SocketSession::isConnected)
+                .count();
+    }
+
+    @Override
+    /**
+     * 当前模板实际使用的协议名
+     * @return 协议名
+     */
+    public String protocol() {
+        return "ndjson";
+    }
+
+    @Override
+    /**
+     * 开始
+     */
+    public void start() {
+        if (heartbeatExecutor == null || heartbeatExecutor.isShutdown()) {
+            // [P3C C1 豁免]
+            heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+                // [P3C C1 豁免]
+                Thread thread = new Thread(r, "ndjson-heartbeat");
+                thread.setDaemon(true);
+                return thread;
+            });
+            heartbeatExecutor.scheduleAtFixedRate(
+                    this::heartbeat, HEARTBEAT_SECONDS, HEARTBEAT_SECONDS, TimeUnit.SECONDS);
+        }
+        log.info("[NDJSON] Socket 服务启动");
+    }
+
+    /**
+     * 心跳：给所有在线连接发一条 {"event":"ping"} 行，顺手清理已断开的会话。
+     */
+    private void heartbeat() {
+        sessions.forEach((clientId, session) -> {
+            if (!session.ping()) {
+                sessions.remove(clientId, session);
+            }
+        });
+    }
+
+    @Override
+    /**
+     * 停止
+     */
+    public void stop() {
+        log.info("[NDJSON] Socket 服务停止");
+        if (heartbeatExecutor != null) {
+            heartbeatExecutor.shutdownNow();
+            heartbeatExecutor = null;
+        }
+        sessions.values().forEach(NdjsonSocketSession::disconnect);
+        sessions.clear();
+        userSessionMap.clear();
+    }
+
+    /**
+     * 绑定用户到会话
+     *
+     * @param userId   用户标识
+     * @param clientId 客户端标识
+     */
+    public void bindUser(String userId, String clientId) {
+        userSessionMap.put(userId, clientId);
+        NdjsonSocketSession session = sessions.get(clientId);
+        if (session != null) {
+            SocketUser user = new SocketUser();
+            user.setUserId(userId);
+            session.setUser(user);
+        }
+    }
+
+    /**
+     * 解绑用户
+     *
+     * @param userId 用户标识
+     */
+    public void unbindUser(String userId) {
+        userSessionMap.remove(userId);
+    }
+
+    /**
+     * 获取所有连接状态
+     *
+     * @return 连接状态信息
+     */
+    public Map<String, Object> getConnectionStatus() {
+        return Map.of(
+                "totalConnections", sessions.size(),
+                "onlineCount", getOnlineCount(),
+                "timestamp", System.currentTimeMillis()
+        );
+    }
+}

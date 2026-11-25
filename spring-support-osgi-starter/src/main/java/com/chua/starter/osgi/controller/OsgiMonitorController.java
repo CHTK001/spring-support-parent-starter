@@ -55,7 +55,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
+import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -362,13 +366,15 @@ public class OsgiMonitorController {
         try {
             requireUploadSizeOk(file);
             BundleHeaders headers = readBundleHeaders(file);
+            String declaredName = headers.symbolicName() == null || headers.symbolicName().isBlank()
+                    ? deriveBundleSymbolicName(fileName) : headers.symbolicName();
             Path target = targetPath(file);
             String url = target.toUri().toString();
             OsgiBundle sameLocation = findBundleByLocation(url);
             if (sameLocation == null) {
-                OsgiBundle sameName = findBundleBySymbolicName(headers.symbolicName());
+                OsgiBundle sameName = findBundleBySymbolicName(declaredName);
                 if (sameName != null) {
-                    throw new IllegalStateException("插件已存在: " + headers.symbolicName() + ":"
+                    throw new IllegalStateException("插件已存在: " + declaredName + ":"
                             + sameName.getVersion() + "，请使用升级操作");
                 }
             }
@@ -378,8 +384,9 @@ public class OsgiMonitorController {
             } else {
                 save(file, target);
                 try {
+                    ensureBundleManifest(target, declaredName);
                     installed = launcher.installBundle(url, start);
-                } catch (RuntimeException ex) {
+                } catch (IOException | RuntimeException ex) {
                     Files.deleteIfExists(target);
                     throw new IllegalArgumentException("插件安装失败: " + rootMessage(ex), ex);
                 }
@@ -441,9 +448,11 @@ public class OsgiMonitorController {
             requireUploadSizeOk(file);
             OsgiBundle existing = requireBundle(symbolicName);
             BundleHeaders headers = readBundleHeaders(file);
-            if (!symbolicName.equals(headers.symbolicName())) {
+            String declaredName = headers.symbolicName() == null || headers.symbolicName().isBlank()
+                    ? symbolicName : headers.symbolicName();
+            if (!symbolicName.equals(declaredName)) {
                 throw new IllegalArgumentException("jar 的 Bundle-SymbolicName 与目标不一致: "
-                        + headers.symbolicName() + " -> " + symbolicName);
+                        + declaredName + " -> " + symbolicName);
             }
             Path target = resolveLocalJar(existing.getLocation());
             if (target == null) {
@@ -1430,6 +1439,7 @@ public class OsgiMonitorController {
             Files.copy(target, backup, StandardCopyOption.REPLACE_EXISTING);
             backupCreated = true;
             save(file, target);
+            ensureBundleManifest(target, existing.getSymbolicName());
             OsgiBundle updated = launcher.updateBundle(existing.getSymbolicName(), target.toUri().toString());
             if (updated != null && existing.isActive() && !updated.isActive()) {
                 runLifecycleWithTimeout("start", updated.getSymbolicName(), updated::start);
@@ -1452,29 +1462,128 @@ public class OsgiMonitorController {
     }
 
     /**
-     * 解析上传 jar 的 OSGi 符号名和版本，拒绝非 OSGi jar。
+     * 解析上传 jar 的 OSGi 符号名和版本。
+     *
+     * <p>缺少 {@code Bundle-SymbolicName} 的普通 jar 不再直接拒绝：
+     * 返回空符号名，由安装流程自动补齐 bundle manifest（见
+     * {@link #ensureBundleManifest}），实现「普通 SPI jar 免 OSGi 头上传」。</p>
      *
      * @param file 上传文件
-     * @return manifest 头信息
+     * @return manifest 头信息（符号名可能为空串）
      */
     private BundleHeaders readBundleHeaders(MultipartFile file) {
         String name = jarName(file);
         try (InputStream input = file.getInputStream(); JarInputStream jar = new JarInputStream(input)) {
             Manifest manifest = jar.getManifest();
             if (manifest == null) {
-                throw new IllegalArgumentException("不是有效的 OSGi bundle: 缺少 META-INF/MANIFEST.MF - " + name);
+                return new BundleHeaders("", DEFAULT_BUNDLE_VERSION);
             }
             String symbolicName = manifest.getMainAttributes().getValue(BUNDLE_SYMBOLIC_NAME);
-            if (symbolicName == null || symbolicName.isBlank()) {
-                throw new IllegalArgumentException("不是有效的 OSGi bundle: 缺少 Bundle-SymbolicName - " + name);
-            }
-            symbolicName = symbolicName.split(";", 2)[0].trim();
+            symbolicName = symbolicName == null ? "" : symbolicName.split(";", 2)[0].trim();
             String version = manifest.getMainAttributes().getValue(BUNDLE_VERSION);
             version = version == null || version.isBlank() ? DEFAULT_BUNDLE_VERSION : version.trim();
             return new BundleHeaders(symbolicName, version);
         } catch (IOException ex) {
             throw new IllegalArgumentException("不是有效的 jar 文件: " + name, ex);
         }
+    }
+
+    /**
+     * 为缺少 OSGi 头的 jar 补齐 bundle manifest。
+     *
+     * <p>普通 SPI jar（无 {@code Bundle-SymbolicName}）经 HTTP 上传时自动补齐
+     * {@code Bundle-SymbolicName}（由文件名派生或沿用既有 bundle 符号名）、
+     * {@code Bundle-Version}（缺省 0.0.0）与 {@code DynamicImport-Package: *}，
+     * 使其无需预先编写 OSGi manifest 即可安装进 Felix。已带符号名的 jar
+     * 原样保留，不做任何改写。</p>
+     *
+     * @param jarFile              部署目录中的 jar 文件
+     * @param fallbackSymbolicName 兜底符号名（空则不处理）
+     * @throws IOException jar 读写失败
+     */
+    private void ensureBundleManifest(Path jarFile, String fallbackSymbolicName) throws IOException {
+        if (fallbackSymbolicName == null || fallbackSymbolicName.isBlank()) {
+            return;
+        }
+        Manifest manifest;
+        try (JarFile jar = new JarFile(jarFile.toFile())) {
+            manifest = jar.getManifest();
+        } catch (IOException ex) {
+            throw new IOException("读取 jar manifest 失败: " + jarFile.getFileName(), ex);
+        }
+        if (manifest == null) {
+            manifest = new Manifest();
+        }
+        Attributes attributes = manifest.getMainAttributes();
+        String existingName = attributes.getValue(BUNDLE_SYMBOLIC_NAME);
+        if (existingName != null && !existingName.isBlank()) {
+            return;
+        }
+        attributes.putValue(BUNDLE_SYMBOLIC_NAME, fallbackSymbolicName);
+        String version = attributes.getValue(BUNDLE_VERSION);
+        if (version == null || version.isBlank()) {
+            attributes.putValue(BUNDLE_VERSION, DEFAULT_BUNDLE_VERSION);
+        }
+        attributes.putValue("DynamicImport-Package", "*");
+        rewriteJarWithManifest(jarFile, manifest);
+        log.info("[OSGi] 已为 jar {} 补齐 bundle manifest: {}:{}, DynamicImport-Package=*",
+                jarFile.getFileName(), fallbackSymbolicName, attributes.getValue(BUNDLE_VERSION));
+    }
+
+    /**
+     * 用给定 manifest 重写 jar（保留其余条目内容）。
+     *
+     * @param jarFile  jar 文件
+     * @param manifest 新 manifest
+     * @throws IOException 写入失败
+     */
+    private void rewriteJarWithManifest(Path jarFile, Manifest manifest) throws IOException {
+        Path tmp = jarFile.resolveSibling(jarFile.getFileName() + ".manifest-tmp");
+        try (JarInputStream input = new JarInputStream(Files.newInputStream(jarFile));
+             JarOutputStream output = new JarOutputStream(Files.newOutputStream(tmp), manifest)) {
+            JarEntry entry;
+            while ((entry = input.getNextJarEntry()) != null) {
+                if (JarFile.MANIFEST_NAME.equals(entry.getName())) {
+                    continue;
+                }
+                output.putNextEntry(new JarEntry(entry.getName()));
+                input.transferTo(output);
+                output.closeEntry();
+            }
+        } catch (IOException ex) {
+            Files.deleteIfExists(tmp);
+            throw ex;
+        }
+        Files.move(tmp, jarFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * 由上传文件名派生 bundle 符号名（缺 OSGi 头的 jar 使用）。
+     *
+     * <p>取文件名去掉路径与 {@code .jar} 后缀，非法字符替换为 {@code -}；
+     * 结果为空或全为 {@code -} 时退回 {@code external-spi}。</p>
+     *
+     * @param fileName 上传文件名
+     * @return 派生的符号名
+     */
+    private String deriveBundleSymbolicName(String fileName) {
+        String name = fileName == null ? "" : fileName.trim();
+        int separator = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        if (separator >= 0) {
+            name = name.substring(separator + 1);
+        }
+        if (name.toLowerCase(Locale.ROOT).endsWith(".jar")) {
+            name = name.substring(0, name.length() - 4);
+        }
+        StringBuilder symbolic = new StringBuilder(name.length());
+        for (char c : name.toCharArray()) {
+            symbolic.append(Character.isLetterOrDigit(c) || c == '.' || c == '-' || c == '_' ? c : '-');
+        }
+        String result = symbolic.toString();
+        if (result.isBlank() || result.chars().allMatch(c -> c == '-')) {
+            return "external-spi";
+        }
+        return result;
     }
 
     /**
