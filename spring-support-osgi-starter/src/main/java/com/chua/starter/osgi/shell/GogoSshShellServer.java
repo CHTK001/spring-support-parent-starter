@@ -1105,4 +1105,12 @@ public class GogoSshShellServer {
             return switch (state) {
                 case Bundle.UNINSTALLED -> "UNINSTALLED";
                 case Bundle.INSTALLED -> "INSTALLED";
-                case Bundle.RESOLVED -> "
+                case Bundle.RESOLVED -> "RESOLVED";
+                case Bundle.STARTING -> "STARTING";
+                case Bundle.STOPPING -> "STOPPING";
+                case Bundle.ACTIVE -> "ACTIVE";
+                default -> String.valueOf(state);
+            };
+        }
+    }
+}
