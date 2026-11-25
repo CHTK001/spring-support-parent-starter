@@ -6146,7 +6146,7 @@ public class ApiProviderController {
             // Authorization: Bearer 发出去，上游回 401，界面误报「API Key 无效」。
             String platformLower = platform == null ? "" : platform.toLowerCase();
             boolean googleProtocol = platformLower.contains("gemini") || platformLower.contains("google");
-            List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth);
+            List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth, platform);
             r.put("latency_ms", System.currentTimeMillis() - latencyStart);
             if (models == null) {
                 // 404 / 网络失败：只说明「读不到模型列表」，不能断言 Key 无效
@@ -8271,12 +8271,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         boolean ollamaProtocol = platformLower.contains("ollama");
 
         // 首次按原始地址拉取
-        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth);
+        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy, auth, platform);
         String fixedBaseUrl = null;
         // 404 且允许修正时，尝试补全 /v1 再拉一次（用户常见漏填 /v1 的场景）
         if (models == null && tryFix && !googleProtocol) {
             String fixed = baseUrl.endsWith("/") ? baseUrl + "v1" : baseUrl + "/v1";
-            models = requestUpstreamModels(fixed, apiKey, false, proxy, auth);
+            models = requestUpstreamModels(fixed, apiKey, false, proxy, auth, platform);
             if (models != null) {
                 fixedBaseUrl = fixed;
             }
@@ -8976,9 +8976,10 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * <p><b>只放上游真实给过的值</b>：解析不到的键不写入，前端按「未知」处理。
      * 后续指标库快照只在字段仍为空时兜底，不会覆盖上游真实元数据。</p>
      *
-     * @param id   模型标识
-     * @param name 模型展示名
-     * @param item 上游条目 JSON
+     * @param id       模型标识
+     * @param name     模型展示名
+     * @param item     上游条目 JSON
+     * @param platform 供应商平台标识（价格口径换算用，可为空）
      * @return 列表行
      */
     private Map<String, Object> upstreamModelRow(String id, String name,
