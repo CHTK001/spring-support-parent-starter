@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentApprovalGate;
+import com.chua.common.support.ai.agent.AgentBudget;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.skill.SkillDefinition;
@@ -44,8 +45,10 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.service.AgentEvalRecorderProvider;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.AiSessionTodoService;
+import com.chua.starter.ai.support.service.SessionGoalService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiGroupRoleResolver;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
@@ -126,6 +129,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiRoleMapper sysAiRoleMapper; // 角色表：把子代理白名单（settings.agents）解析成可路由子 Agent
     private final DecisionClientRegistry decisionClientRegistry; // 决策能力入口：按会话配置取 DecisionsClient 挂到 Agent
     private final AiSessionTodoService sessionTodoService; // 会话待办镜像（opencode todowrite → sys_ai_session_todo）
+    private final SessionGoalService sessionGoalService; // 会话目标（settings.goal.tokenBudget = 会话令牌预算）
+    private final AgentEvalRecorderProvider agentEvalRecorderProvider; // Agent 评测记录器（懒加载单例）
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -1496,6 +1501,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 这里给规划模式独立的迭代预算（10），确保能走到 plan_exit 等待用户批准。
             agent.maxToolIterations(10);
         }
+        // B1/B2/B4：会话预算熔断 + 评测落库。预算来源 = 会话目标 settings.goal.tokenBudget；
+        // 未设目标 / 未设预算的会话不熔断。evalHook 把每次运行结果落 agent_eval_record。
+        // 两者在 Agent 接口上都是 default no-op：opencode/langchain4j 运行时自动忽略，
+        // agentscope 运行时覆写后全量生效。
+        applySessionBudgetAndEval(agent, request.getSessionId());
         AgentChatClient wrapper = new AgentChatClient(agent)
                 .withCloseHook(runtime != null ? runtime::close : null);
         // 会话待办镜像（G2）：Agent 运行时（opencode）调用 todowrite 时，工具入参
@@ -1545,6 +1555,52 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return Long.parseLong(sessionId);
         }
         return AiSessionController.SESSION_DIALOG_MAP.get(sessionId);
+    }
+
+    /**
+     * 为本次会话 Agent 挂载预算熔断与评测落库（B1/B2/B4 装配点）。
+     *
+     * <p>预算来源：会话目标 {@code settings.goal.tokenBudget}（目标面板设置的令牌预算），
+     * 仅约束 Token 总量，其余维度不限；目标不存在或未设预算时不熔断。
+     * 评测：把每次运行结果落 {@code agent_eval_record}（进程内单例记录器）。</p>
+     *
+     * <p>两类能力在 {@link Agent} 接口上都是 default no-op：opencode / langchain4j
+     * 运行时调用即忽略；agentscope 运行时覆写后全量生效。任何装配异常只告警，
+     * 不阻断对话主流程。</p>
+     *
+     * @param agent     待装配的 Agent 实例
+     * @param sessionId 会话标识（可空）
+     */
+    private void applySessionBudgetAndEval(Agent agent, String sessionId) {
+        try {
+            Long budgetTokens = sessionTokenBudget(sessionId);
+            if (budgetTokens != null && budgetTokens > 0) {
+                agent.budget(new AgentBudget(budgetTokens, 0L, 0L, 0L, 0L, 0L));
+                log.info("[AiChat] 会话预算已挂载 sessionId={} maxTotalTokens={}", sessionId, budgetTokens);
+            }
+        } catch (Exception e) {
+            log.warn("[AiChat] 会话预算解析失败，本次不设预算 sessionId={}", sessionId, e);
+        }
+        try {
+            agent.evalHook(agentEvalRecorderProvider.recorder());
+        } catch (Exception e) {
+            log.warn("[AiChat] 评测记录器不可用，本次不落评测 sessionId={}", sessionId, e);
+        }
+    }
+
+    /**
+     * 读取会话目标的令牌预算。
+     *
+     * @param sessionId 会话标识
+     * @return 预算值；会话无目标 / 未设预算 / 会话不可解析时 {@code null}
+     */
+    private Long sessionTokenBudget(String sessionId) {
+        Long id = resolveMirrorableSessionId(sessionId);
+        if (id == null) {
+            return null;
+        }
+        SessionGoalService.GoalView goal = sessionGoalService.getGoal(id);
+        return goal == null ? null : goal.tokenBudget();
     }
 
     /**

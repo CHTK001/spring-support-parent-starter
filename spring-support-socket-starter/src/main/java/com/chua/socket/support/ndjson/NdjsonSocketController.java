@@ -60,6 +60,9 @@ public class NdjsonSocketController {
         // nginx 等代理默认会缓冲响应；不关掉会“攒一批才吐”，看起来像不推送。
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader("X-Accel-Buffering", "no");
+        // produces 只参与请求匹配，ResponseBodyEmitterReturnValueHandler 不会把它写成响应 Content-Type；
+        // 必须显式声明，客户端才能按 NDJSON 流识别（与 SseEmitter 自带 text/event-stream 的行为对齐）。
+        response.setContentType(MediaType.APPLICATION_NDJSON_VALUE);
         log.info("[NDJSON] 连接请求: clientId={}", clientId);
         return ndjsonSocketSessionTemplate.createConnection(clientId);
     }

@@ -17,6 +17,7 @@ import java.util.Map;
  *       enabled: true
  *       max-pool-size: 10
  *       bean-name: calciteDataSource
+ *       register-mode: replace
  *       data-sources:
  *         - master
  *         - slave_1
@@ -52,6 +53,20 @@ public class CalciteDataSourceProperties {
      * 两个名字都能注入同一聚合数据源。
      */
     private String beanName = "calciteDataSource";
+
+    /**
+     * 聚合数据源注册模式。
+     * <p>
+     * {@code replace}（默认）：聚合数据源（规范名 {@code calciteDataSource}）标记为
+     * 主数据源（primary），其余被标记 primary 的 {@code DataSource} Bean 让位；
+     * 宿主按类型注入 {@code DataSource} 时命中聚合数据源，原动态路由数据源仍可按
+     * 名称或 {@code @Qualifier} 注入。此模式下无可聚合数据源或创建失败时直接抛异常
+     * （fail-fast）。
+     * {@code derive}：保持历史行为，聚合数据源作为额外 Bean 派生注册，主数据源仍是
+     * 动态路由数据源；此模式必须同时配置 {@code bean-name}。
+     * </p>
+     */
+    private String registerMode = "replace";
 
     /**
      * 参与聚合的数据源名称数组。

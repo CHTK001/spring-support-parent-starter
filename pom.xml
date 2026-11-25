@@ -129,9 +129,8 @@
         <module>spring-support-ssh-starter</module>
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
-        <!-- 支付模块 -->
-        <!-- spring-support-payment-starter: 已下线(预先就 broken: 依赖 spring-support-strategy-starter, SB 4 升级失败), 暂不加入主构建 -->
-        <!-- <module>spring-support-payment-starter</module> -->
+        <!-- 支付模块（2026-11-25 复活挂载：strategy-starter 依赖已由 utils-support-springboot-starter 替代，SB4 下编译通过） -->
+        <module>spring-support-payment-starter</module>
         <!-- 内网穿透标准 starter（SPI + 统一入口 /ms/tunnel），
              下列 ngrok / cloudflared / tailscale 模块均为其提供方实现 -->
         <module>spring-support-tunnel-starter</module>

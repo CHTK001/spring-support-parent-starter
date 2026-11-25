@@ -123,7 +123,7 @@ sequenceDiagram
 | `scatter.group` | `String` | `default` | 组网范围（scatterId）；同组节点互相同步成员与负载 |
 | `scatter.context-path` | `String` | 无 → `server.servlet.context-path` | 业务上下文路径，登记进业务端点 metadata，便于对端拼转发地址 |
 | `scatter.seeds` | `List<String>` | `[]` | 种子地址列表（`host:port`，指向**组网端口**）；seed 模式下用于首次入网 |
-| `scatter.subnet` | `String` | 无 | 子网过滤（CIDR），仅发现同网段节点；缺省不过滤 |
+| `scatter.subnet` | `String` | 无 → 本机同网段（如 `192.168.1.0/24`） | 子网过滤（CIDR），仅 tcp 自动发现使用；网段推断失败时告警并跳过扫描 |
 | `scatter.auto-discovery` | `boolean` | `true` | 自动发现（组播 / gossip）开关 |
 | `scatter.auto-discovery-interval` | `long` | `0` | 自动发现周期（毫秒）；≤0 用 utils 层缺省值 |
 | `scatter.heartbeat-interval` | `long` | `0` | 心跳周期（毫秒）；≤0 用 utils 层缺省值 |

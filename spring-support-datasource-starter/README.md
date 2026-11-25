@@ -95,7 +95,7 @@ flowchart TD
 | `dataSourceDocumentService` 等 5 Bean | 文档服务/图谱/控制器/注册器 | Web 环境 + `RequestMappingHandlerMapping`/`DocumentParser` 在类路径 + `document.enable=true`（缺省 `true`） | ⚠️ 无 `@ConditionalOnMissingBean` | `GET /plugin/datasource/document` |
 | `h2Engine` / `h2Flyway` / `h2CleanupPlugin` / `h2DataSource` | H2 引擎与数据源 | `@ConditionalOnClass(H2Engine)` + `plugin.h2.enable=true` + `@ConditionalOnMissingBean`；`h2DataSource` 另要求容器无 `DataSource` | ✅ 宿主已有数据源时让位 | Lambda 链式查询/迁移/注入 `DataSource` |
 | `sqliteEngine` / `sqliteDataSource` / `sqliteEngineEndpoint` | SQLite 引擎/数据源/端点 | `@ConditionalOnClass(SqliteEngine)` + `plugin.sqlite.enable=true` + `@ConditionalOnMissingBean` | ✅ | 注入 `SqliteEngine`/`DataSource`；`GET /actuator/sqlite` |
-| `calciteDataSourceConversion` / `calciteDataSource` | `DataSourceConversion` / 聚合数据源 | `@ConditionalOnClass(CalciteDataSourceConversion)` + `calcite.enabled=true` + `@ConditionalOnMissingBean(name=...)`；无已注册数据源时返回 null | ✅ 同名覆盖 | 跨库联邦查询 |
+| `calciteDataSourceConversion` / `calciteDataSource` | `DataSourceConversion` / 聚合数据源 | `@ConditionalOnClass(CalciteDataSourceConversion)` + `calcite.enabled=true` + `@ConditionalOnMissingBean(name=...)`；`register-mode=replace`（默认）时无已注册数据源或创建失败直接抛异常；`derive` 时返回 null | ✅ 同名覆盖 | 跨库联邦查询 |
 | `shardingV5Conversion` / `shardingDataSource` | `DataSourceConversion` / 分片数据源 | `@ConditionalOnClass(ShardingV5Conversion)` + `sharding.enabled=true` + `@ConditionalOnMissingBean(name=...)`；无已注册数据源时返回 null | ✅ 同名覆盖 | 分库分表 |
 | `materializedRouteProperties` / `defaultAdvisorAutoProxyCreator` / `materializedRouteAdvisor` / `materializedRefreshAdvisor` / `materializedSqlRouter` | 物化路由组件 | 自定义 `Condition`：`materialized.enabled=true`（默认 `false`，兼容 `spring.datasource.materialized`）+ `@ConditionalOnMissingBean` | ✅ | `@MaterializedRoute` / `@MaterializedRefresh` |
 | `concurrentEndpoint` | `ConcurrentEndpoint` | 自动装配；`@ConditionalOnClass` 6 个类（3 Flow + 3 Repository） | ⚠️ 不建议覆盖 | `/actuator/concurrent` |
@@ -138,6 +138,7 @@ flowchart TD
 | `plugin.datasource.document.include-tables / exclude-tables / include-schemas / options` | `String`/`Map` | — / `flyway_schema_history,sys_database_version` / — / — | 表/schema 黑白名单（逗号分隔，`*` 通配）/ 透传 `DocumentParser` 参数 |
 | `plugin.datasource.calcite.enabled / max-pool-size` | `Boolean`/`Integer` | `false` / `10` | 聚合已注册普通数据源为 Calcite 数据源 / 聚合连接池上限 |
 | `plugin.datasource.calcite.bean-name` | `String` | `calciteDataSource` | 聚合数据源 Bean 名；规范名固定为 `calciteDataSource`（联邦管理器/热替换注册表依赖），配置为其它名时以**别名**注册到同一 Bean，两个名字均可注入 |
+| `plugin.datasource.calcite.register-mode` | `String` | `replace` | 注册模式：`replace`（默认）＝聚合数据源升为 primary 主数据源，其余 primary 的 `DataSource` Bean 让位（按类型注入命中聚合数据源，原数据源仍可按名称/`@Qualifier` 注入），无可聚合成员或创建失败直接抛异常；`derive`＝历史行为，作为额外 Bean 派生注册，主数据源不变，**必须同时配置 `bean-name`**；其它取值启动期抛 `IllegalStateException` |
 | `plugin.datasource.calcite.data-sources` | `List<String>` | —（聚合全部） | 参与聚合的数据源名单；未配置时聚合全部普通数据源，名单中未注册的名称告警跳过，全部未命中则不创建聚合数据源 |
 | `plugin.datasource.calcite.schema-mapping / default-schema` | `Map`/`String` | — | 数据源→模式名映射 / 默认模式名 |
 | `plugin.datasource.sharding.enabled / show-sql` | `Boolean` | `false` / `false` | 分片开关 / 打印改写后 SQL |
@@ -260,6 +261,7 @@ plugin:
     calcite:
       enabled: true
       max-pool-size: 10              # 聚合连接池上限
+      register-mode: replace         # replace(默认)=升为主数据源 / derive=额外派生 Bean
       bean-name: calciteDataSource   # 聚合数据源 Bean 名（见下方说明）
       data-sources:                  # 参与聚合的数据源名单（缺省聚合全部普通数据源）
         - master
@@ -271,6 +273,10 @@ plugin:
 ```
 
 - `bean-name`：聚合数据源的 Bean 名。规范名固定为 `calciteDataSource`（联邦管理器、热替换注册表与 `@ConditionalOnMissingBean` 均挂在该名上），**建议保持默认**；配置为其它名（如 `myCalciteDs`）时，模块会以该名作为**别名**注册到同一个聚合数据源 Bean，`@Qualifier("myCalciteDs")` 与规范名 `calciteDataSource` 均可注入。
+- `register-mode`：聚合数据源的注册模式。
+  - `replace`（**默认**）：把聚合数据源 Bean 标记为 primary，同时把其它被标记 primary 的 `DataSource` Bean 定义降级——宿主按类型注入 `DataSource` 时命中聚合数据源，原动态路由数据源仍可按名称或 `@Qualifier` 注入；此模式下无可聚合数据源或创建失败会**直接抛异常**（fail-fast），避免主数据源静默缺失。
+  - `derive`：保持历史行为，聚合数据源作为**额外 Bean** 派生注册，不改动任何 primary 标记，主数据源仍是动态路由数据源；此模式**必须**同时配置 `bean-name`，否则启动期抛 `IllegalStateException`。
+  - ⚠️ **迁移提示**：本参数引入前，模块的行为等价于 `derive`（聚合数据源是额外 Bean，按类型注入 `DataSource` 拿到的是动态路由数据源）；默认值改为 `replace` 后，按类型注入将命中聚合数据源。升级后若希望保持旧行为，请显式配置 `register-mode: derive` 并按需保留 `bean-name`。
 - `data-sources`：参与聚合的数据源名单。未配置时聚合全部已注册普通数据源（排除动态路由/分片/聚合数据源自身）；名单中未注册的名称告警跳过；若名单全部未命中，则不创建聚合数据源。
 
 **方式二：运行期联邦（`ds_calcite_federation` 表）**

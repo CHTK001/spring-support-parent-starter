@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentApprovalGate;
+import com.chua.common.support.ai.agent.AgentBudget;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
 import com.chua.common.support.ai.agent.run.AgentRunRecord;
@@ -22,6 +23,7 @@ import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.service.AgentEvalRecorderProvider;
 import com.chua.starter.ai.support.service.AgentRunService;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.util.ProviderCredentials;
@@ -67,6 +69,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final AgentProviderFactory agentProviderFactory;
     private final AgentRunService agentRunService; // Agent 运行记录（Run/Step 落库 + 会话 SSE）
     private final AgentApprovalGate agentApprovalGate; // Agent 工具风险裁决门（切片四审批闭环）
+    private final AgentEvalRecorderProvider agentEvalRecorderProvider; // Agent 评测记录器（懒加载单例）
 
     private static final String STRATEGY_KEY_MODE = "mode"; // strategyKeymode
     private static final String STRATEGY_KEY_PLANNING = "planning"; // strategyKeyplanning
@@ -754,6 +757,17 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             // 切片四：挂上无状态风险裁决门——低风险放行、高危转人工确认、
             // 非管理员 shell 类工具拒绝；裁决异常 fail-close 转确认。
             agentInstance.riskAdjudicator(agentApprovalGate);
+            // B1/B2：管理页 Agent 预算（strategy.max_tokens = Token 总量上限，0/未配不限）
+            // 与评测落库。default no-op 能力：agentscope 全量生效，其它运行时自动忽略。
+            long budgetTokens = strategyInt(agent, STRATEGY_KEY_MAX_TOKENS, 0);
+            if (budgetTokens > 0) {
+                agentInstance.budget(new AgentBudget(budgetTokens, 0L, 0L, 0L, 0L, 0L));
+            }
+            try {
+                agentInstance.evalHook(agentEvalRecorderProvider.recorder());
+            } catch (Exception e) {
+                log.warn("[Agent] 评测记录器不可用，本实例不落评测 name={}", agentName, e);
+            }
             if (masterClient != null) {
                 agentInstance.chatClient(masterClient);
             }
