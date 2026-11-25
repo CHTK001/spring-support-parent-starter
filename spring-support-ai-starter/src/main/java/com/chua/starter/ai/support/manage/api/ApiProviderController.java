@@ -8167,10 +8167,16 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("minimax", new ProtocolPreset("minimax", "https://api.minimaxi.com/v1"));
         m.put("minimax-code", new ProtocolPreset("minimax-code", "https://api.minimaxi.com/v1"));
         m.put("minimax-coding-plan", new ProtocolPreset("minimax-coding-plan", "https://api.minimaxi.com/v1"));
-        m.put("mimo", new ProtocolPreset("mimo", "https://api.mimo.xiaomi.com/v1"));
-        m.put("mimo-token-plan-cn", new ProtocolPreset("mimo-token-plan-cn", "https://api.mimo.xiaomi.com/v1"));
-        m.put("mimo-token-plan-sgp", new ProtocolPreset("mimo-token-plan-sgp", "https://api.mimo.xiaomi.com/v1"));
-        m.put("mimo-token-plan-ams", new ProtocolPreset("mimo-token-plan-ams", "https://api.mimo.xiaomi.com/v1"));
+        // 小米 MiMo：官方 OpenAI 兼容端点是 api.xiaomimimo.com（旧预设里的 api.mimo.xiaomi.com 不可达，一并修正）；
+        // 前端模板 id 是 xiaomi / xiaomi-token-plan-{cn,sgp,ams}，Token Plan 各区域子域名实测存活
+        m.put("mimo", new ProtocolPreset("mimo", "https://api.xiaomimimo.com/v1"));
+        m.put("mimo-token-plan-cn", new ProtocolPreset("mimo-token-plan-cn", "https://api.xiaomimimo.com/v1"));
+        m.put("mimo-token-plan-sgp", new ProtocolPreset("mimo-token-plan-sgp", "https://api.xiaomimimo.com/v1"));
+        m.put("mimo-token-plan-ams", new ProtocolPreset("mimo-token-plan-ams", "https://api.xiaomimimo.com/v1"));
+        m.put("xiaomi", new ProtocolPreset("xiaomi", "https://api.xiaomimimo.com/v1"));
+        m.put("xiaomi-token-plan-cn", new ProtocolPreset("xiaomi-token-plan-cn", "https://token-plan-cn.xiaomimimo.com/v1"));
+        m.put("xiaomi-token-plan-sgp", new ProtocolPreset("xiaomi-token-plan-sgp", "https://token-plan-sgp.xiaomimimo.com/v1"));
+        m.put("xiaomi-token-plan-ams", new ProtocolPreset("xiaomi-token-plan-ams", "https://token-plan-ams.xiaomimimo.com/v1"));
         // Moss 开放平台：自有一组端点（/audio/speech、/audio/transcriptions、/responses、/images/generations）
         m.put("moss", new ProtocolPreset("moss", "https://api.mosi.cn/v1"));
         m.put("mosi", new ProtocolPreset("mosi", "https://api.mosi.cn/v1"));

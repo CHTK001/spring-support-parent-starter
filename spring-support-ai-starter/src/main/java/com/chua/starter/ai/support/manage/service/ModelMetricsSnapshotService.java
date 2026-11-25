@@ -122,6 +122,11 @@ public class ModelMetricsSnapshotService {
         m.put("mimo-token-plan-cn", "mimo");
         m.put("mimo-token-plan-sgp", "mimo");
         m.put("mimo-token-plan-ams", "mimo");
+        // 小米 MiMo：前端模板 id 是 xiaomi*，与前端图标 xiaomi.png 同名对齐
+        m.put("xiaomi", "xiaomi");
+        m.put("xiaomi-token-plan-cn", "xiaomi");
+        m.put("xiaomi-token-plan-sgp", "xiaomi");
+        m.put("xiaomi-token-plan-ams", "xiaomi");
         m.put("novita", "novita");
         m.put("openrouter", "openrouter");
         m.put("poe", "poe");
