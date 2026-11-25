@@ -114,6 +114,83 @@ plugin:
 
 `options` 可透传 agent 侧全部参数（见 `RuntimeAgent`）：`plugins`、`enabled`、`port`、`storage.type`（inmemory/sqlite/noop）、`storage.retention.ms`（默认 7 天）、`storage.capacity`（默认 100000）、`storage.path`。POM 未引入 `spring-boot-configuration-processor`，IDE 无 `plugin.agent.*` 自动补全元数据，以本表和 `AgentAttachProperties` 源码为准。
 
+### 5.1 逐项配置示例
+
+**总开关 `plugin.agent.enabled`**
+
+- 含义：是否启用 Agent 自注入；`false` 时 `AgentAutoConfiguration` 整体不装配，模块不注册任何 Bean。
+- 默认值：`true`（`matchIfMissing=true`，不配置等价于开启）。
+
+```yaml
+plugin:
+  agent:
+    enabled: true   # 改为 false 彻底关闭自注入
+```
+
+**注入参数 `plugin.agent.options`**
+
+- 含义：透传给 Runtime Agent 的参数，逗号分隔 `key=value`（可用键见 `RuntimeAgent`：`plugins`、`enabled`、`port`、`storage.type`、`storage.retention.ms`、`storage.capacity`、`storage.path`）；非空时优先于 `shell-port`。
+- 默认值：空串 `""`；为空白时注入侧自动回落为 `port=<shell-port>`。
+
+```yaml
+plugin:
+  agent:
+    options: port=4567,storage.type=sqlite,storage.retention.ms=604800000
+```
+
+**Shell 端口 `plugin.agent.shell-port`**
+
+- 含义：Runtime Shell 监听端口；仅当 `options` 为空白时生效，此时自动拼成 `port=<shell-port>` 传入 agent。
+- 默认值：`4567`；本模块未对 ≤0 配置做回落，≤0 会按原值拼入 `port=` 透传，实际行为由下游 `RuntimeBoot` 决定。
+
+```yaml
+plugin:
+  agent:
+    shell-port: 4567
+```
+
+**异步注入 `plugin.agent.async`**
+
+- 含义：`true` 在虚拟线程 `agent-attach` 中异步注入（不阻塞启动）；`false` 在 `afterSingletonsInstantiated()` 中同步注入。
+- 默认值：`true`。注意异步模式下「自注入完成」日志出现前 `isAgentActive()` 仍为 `false`。
+
+```yaml
+plugin:
+  agent:
+    async: true
+```
+
+### 5.2 完整 application.yml 示例
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  application:
+    name: my-app
+
+plugin:
+  agent:
+    enabled: true        # 总开关，默认 true，可不配
+    async: true          # 虚拟线程异步注入，默认 true，可不配
+    shell-port: 4567     # options 为空时的默认 Shell 端口
+    # options 与 shell-port 二选一即可；options 非空时优先：
+    # options: port=4567,storage.type=sqlite,storage.path=/data/apm,storage.retention.ms=604800000,storage.capacity=100000
+```
+
+只引入依赖、接受全部默认值时，以上 `plugin.agent` 整段都可省略。
+
+### 5.3 生产注意事项
+
+- **fail-open 语义**：注入失败只 `log.warn` 并记录 `lastAttachError`，不阻断应用启动；生产环境应对 `getStatus()` 的 `attachAttempts` / `lastAttachError` 做监控告警，避免「以为有 APM 实际没注入」。
+- **Shell 无鉴权**：Runtime Shell 无鉴权，`RuntimeBoot.BootConfig` 默认只绑 `127.0.0.1`；如需跨机访问必须自行做网络隔离，并注意 4567 端口冲突。
+- **options 与 shell-port 别重复配置**：`options` 非空时 `shell-port` 不生效，两处都配容易误判实际端口。
+- **就绪时序**：`async=true`（默认）时注入在虚拟线程中进行，「自注入完成」日志出现前 `isAgentActive()` 为 `false`；依赖 agent 的探活应处理「未就绪」，不要直接判故障。
+- **JDK 25 retransform 风险**：注入后会对已加载类 `retransformLoadedClasses`，部分环境可能使 JVM 直接退出；遇此显式 `plugin.agent.enabled=false` 并自行兜底 `AgentAttachService` Bean。
+- **状态字段可信度**：`getStatus()` 中 `version` 硬编码、`lastHeartbeat`/`heartbeatLostMs` 非真实心跳（见第 9 节），监控只取 `agentActive` / `agentEnabled` / `attachAttempts` / `lastAttachError` / `startedAt`。
+- **彻底关闭**：`plugin.agent.enabled=false` 后模块整体不装配；下游（如 hotsport）若依赖 `AgentAttachService`，需自行注册兜底 Bean（见第 4 节）。
+
 ## 6. 使用方式
 
 ```xml

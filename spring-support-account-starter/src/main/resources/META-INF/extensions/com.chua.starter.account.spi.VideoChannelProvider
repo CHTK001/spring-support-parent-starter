@@ -1,2 +1,3 @@
 com.chua.starter.account.spi.impl.DoubaoVideoChannel
 com.chua.starter.account.spi.impl.QwenVideoChannel
+com.chua.starter.account.spi.impl.ViduVideoChannel

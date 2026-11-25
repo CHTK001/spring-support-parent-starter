@@ -157,9 +157,142 @@ flowchart TD
 | `plugin.apm.settings-file` | `String` | `config/apm-settings.properties` | 运行期可改设置落盘位置（UTF-8 properties，临时文件 + 原子 move）；相对路径按进程工作目录解析；需重启 |
 | `plugin.apm.register-service-info` | `boolean` | `true` | 是否登记到统一服务信息面板（`ServiceInfoRegistry`） |
 
+### 逐项配置示例
+
+按功能分组，逐项给出含义、默认值与 YAML 示例（均可直接粘贴到 `application.yml`）。
+
+#### 总开关与引擎选择（支持运行期热改）
+
+- `plugin.apm.enabled`：模块总开关，`false` 时整个自动配置不装配。默认 `true`。
+
+```yaml
+plugin:
+  apm:
+    enabled: true
+```
+
+- `plugin.apm.type`：引擎名（`skywalking` / `opentelemetry` / `hotspot`），留空按 `ApmProvider#order()` 自动探测取第一个可用者。默认 `""`（空）。
+
+```yaml
+plugin:
+  apm:
+    type: skywalking
+```
+
+- `plugin.apm.detect-interval`：探测结果缓存毫秒数，实际 TTL = `Math.max(1000, detectInterval)`；热改时低于 1000 会被拒绝。默认 `10000`。
+
+```yaml
+plugin:
+  apm:
+    detect-interval: 10000
+```
+
+#### 启动方式与访问入口（改后需重启）
+
+- `plugin.apm.mode`：`embedded` = 注册 `ApmServlet` 随宿主启动；`standalone` = 独立 HTTP 服务。默认 `embedded`。
+
+```yaml
+plugin:
+  apm:
+    mode: embedded
+```
+
+- `plugin.apm.path`：统一 REST 前缀，装配时规范化（以 `/` 开头、去尾部 `/`）。默认 `/api/apm/v1`。
+
+```yaml
+plugin:
+  apm:
+    path: /api/apm/v1
+```
+
+- `plugin.apm.host`：独立模式监听地址。默认 `0.0.0.0`（独立进程入口 `ApmServerMain` 命令行缺省是 `127.0.0.1`）。
+
+```yaml
+plugin:
+  apm:
+    host: 0.0.0.0
+```
+
+- `plugin.apm.port`：独立模式监听端口，嵌入模式不使用（接口随宿主端口暴露）。默认 `12801`。
+
+```yaml
+plugin:
+  apm:
+    port: 12801
+```
+
+- `plugin.apm.server-type`：独立模式底层 `Server` SPI 类型（utils 层 `ServerBuilder#type`）。默认 `jdk`。
+
+```yaml
+plugin:
+  apm:
+    server-type: jdk
+```
+
+#### 设置落盘与服务信息面板
+
+- `plugin.apm.settings-file`：运行期可改设置（UTF-8 properties，临时文件 + 原子 move）的落盘位置，相对路径按进程工作目录解析，留空回落默认值。默认 `config/apm-settings.properties`。
+
+```yaml
+plugin:
+  apm:
+    settings-file: config/apm-settings.properties
+```
+
+- `plugin.apm.register-service-info`：是否登记到统一服务信息面板（`ServiceInfoRegistry`）。默认 `true`。
+
+```yaml
+plugin:
+  apm:
+    register-service-info: true
+```
+
+### 完整 YAML 示例
+
+嵌入模式（最常见，随宿主服务一起启动）：
+
+```yaml
+plugin:
+  apm:
+    enabled: true                                 # 模块总开关
+    type: skywalking                              # 引擎名；留空自动探测
+    mode: embedded                                # 随宿主 Servlet 启动
+    path: /api/apm/v1                             # 统一 REST 前缀
+    detect-interval: 10000                        # 探测缓存毫秒数（下限 1000）
+    settings-file: config/apm-settings.properties # 热改设置落盘文件
+    register-service-info: true                   # 登记到服务信息面板
+```
+
+独立观测网关（单独进程，或用 `ApmServerMain` 启动）：
+
+```yaml
+plugin:
+  apm:
+    enabled: true
+    type: skywalking
+    mode: standalone                              # 独立 HTTP 服务
+    host: 0.0.0.0                                 # 监听地址
+    port: 12801                                   # 监听端口
+    server-type: jdk                              # 底层 Server SPI 类型
+    path: /api/apm/v1
+    detect-interval: 10000
+    settings-file: config/apm-settings.properties
+    register-service-info: true
+```
+
 部署侧系统属性（不是 `ApmProperties` 字段）：`-Dplugin.apm.enabled.locked=true` 锁定界面开关；`-Dplugin.apm.type=xxx` 固定引擎（设置文件里的 `type` 被忽略）；`-Dskywalking.url` / `-Dplugin.apm.skywalking.url` / 环境变量 `SW_OAP_ADDRESS` 固定 OAP 地址（设置文件里的 `oapUrl` 不再覆盖）。
 
 热改边界（`ApmRuntimeConfig`）：可热改键为 `enabled`、`type`、`detectInterval` 与引擎自声明项（如 `oapUrl`），`POST /config` 立即生效并落盘、改完自动重新探测；`mode`、`path`、`port`、`serverType`、`host`、`settingsFile` 属于 `RESTART_KEYS`，携带保存会抛「不支持热改」，必须改启动参数并重启。
+
+### 生产注意事项
+
+- **访问控制**：嵌入模式接口是独立 `Servlet`，不经过 Spring MVC 的鉴权拦截器、`@ControllerAdvice` 与 `@SysLog` 切面；对外暴露时请在网关或服务器层做访问控制，写操作留痕请提供 `ApmOperLogSink` Bean。
+- **重启项不要热改**：`mode`、`path`、`host`、`port`、`server-type`、`settings-file` 改了必须重启；`POST /config` 携带这些键会直接报「不支持热改」。
+- **探测频率**：`detect-interval` 不要低于 1000ms，否则等于每次请求都探活，可能把 OAP 打穿；热改低于该值会被拒绝。
+- **监听面**：独立模式 `host=0.0.0.0` 监听所有网卡，注意与网络隔离策略配合；嵌入模式接口路径为 `path + "/*"`，随宿主端口暴露。
+- **设置文件权限**：`settings-file` 所在目录需要写权限；写入失败时设置仅本次运行内生效（`POST /config` 响应 `persisted=false`），进程重启后丢失。
+- **部署侧固定口径优先**：`-Dplugin.apm.enabled.locked=true` 锁定界面开关；`-Dplugin.apm.type=xxx` 固定引擎后设置文件里的 `type` 被忽略；`-Dskywalking.url` / `-Dplugin.apm.skywalking.url` / 环境变量 `SW_OAP_ADDRESS` 指定 OAP 地址时优先级高于设置文件里的 `oapUrl`。
+- **无引擎兜底**：未引入任何扩展模块时模块照常装配，但除 `/status`、`/config` 外的接口都会返回失败；用 `/status` 的 `present` 与 `candidates` 区分「没装」与「装了连不上」。
 
 ## 6. 使用方式
 

@@ -184,6 +184,7 @@ public class BarrierGateController {
      * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
+     * @param plateNo   车牌号，可选（模糊匹配）
      * @param start     起始时间，可选
      * @param end       结束时间，可选
      * @return 过车记录
@@ -193,9 +194,10 @@ public class BarrierGateController {
             @RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String gateId,
             @RequestParam(required = false) String direction,
+            @RequestParam(required = false) String plateNo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return ReturnResult.ok(passService.listPasses(deviceId, gateId, direction, start, end));
+        return ReturnResult.ok(passService.listPasses(deviceId, gateId, direction, plateNo, start, end));
     }
 
     /**
@@ -206,6 +208,7 @@ public class BarrierGateController {
      * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
+     * @param plateNo   车牌号，可选（模糊匹配）
      * @param start     起始时间，可选
      * @param end       结束时间，可选
      * @return 分页结果
@@ -217,8 +220,9 @@ public class BarrierGateController {
             @RequestParam(required = false) String deviceId,
             @RequestParam(required = false) String gateId,
             @RequestParam(required = false) String direction,
+            @RequestParam(required = false) String plateNo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return passService.pagePasses(page, size, deviceId, gateId, direction, start, end);
+        return passService.pagePasses(page, size, deviceId, gateId, direction, plateNo, start, end);
     }
 }

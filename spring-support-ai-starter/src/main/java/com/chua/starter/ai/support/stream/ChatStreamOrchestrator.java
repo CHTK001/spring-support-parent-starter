@@ -4,7 +4,10 @@ package com.chua.starter.ai.support.stream;
 import com.chua.starter.ai.support.chat.ChatMemorySupport;
 import com.chua.starter.ai.support.chat.ChatMessage;
 import com.chua.starter.ai.support.entity.AIDialog;
+import com.chua.starter.ai.support.entity.SysAiMessage;
+import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.entity.SysAiRole;
+import com.chua.starter.ai.support.mapper.SysAiMessageMapper;
 import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import com.chua.starter.ai.support.model.AiChatRequest;
@@ -12,8 +15,11 @@ import com.chua.starter.ai.support.search.WebResult;
 import com.chua.starter.ai.support.search.WebSearchService;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.AppKeyBilling;
 import com.chua.starter.ai.support.service.ModelAliasService;
+import com.chua.starter.ai.support.service.SessionGoalService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiRolePromptResolver;
 import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
 import com.chua.starter.account.channel.service.AccountChannelModelService;
@@ -77,6 +83,15 @@ public class ChatStreamOrchestrator {
     private final ModelAliasService modelAliasService;
     private final ChatMemorySupport chatMemorySupport;
     private final ChatStreamRegistry registry;
+
+    /** 定价服务：按 sys_ai_pricing 单价把每轮 token 用量折算成成本（展示口径） */
+    private final SysAiPricingService sysAiPricingService;
+
+    /** 会话目标服务：读取会话级 token 预算（settings.goal.tokenBudget） */
+    private final SessionGoalService sessionGoalService;
+
+    /** 消息 mapper：预算「已用」按会话全部消息的 prompt+completion 累计（与 token-stats 同口径） */
+    private final SysAiMessageMapper messageMapper;
 
     /**
      * 全局设置读取器：读取会话分组里的重试/超时策略（按用户覆盖生效）
@@ -751,6 +766,8 @@ public class ChatStreamOrchestrator {
                         // 放在 turn_end 是因为前端在 turn_end 处理器里落库（saveSessionTokenStats），
                         // 刷新后由 GET /token-stats 读回；放 finish 会早于落库、白丢一份。
                         turnEndEvent.put("contextStats", contextStatsOf(request, usage, p.contextWindow()));
+                        // 每轮成本 + 会话预算余量/熔断态：B1/B4 展示数据随 turn_end 一次带齐
+                        attachTurnAccounting(turnEndEvent, p, usage);
                         sink.sendEvent(turnEndEvent);
                         sink.sendDone();
                         registry.remove(sid);
@@ -1082,6 +1099,8 @@ public class ChatStreamOrchestrator {
                         turnEndEvent.put("error", msg);
                         turnEndEvent.put("messageId", p.messageId());
                         turnEndEvent.put("contentId", p.contentId());
+                        // 超时轮拿不到模型用量，只带预算余量/熔断态，不虚报成本
+                        attachTurnAccounting(turnEndEvent, p, null);
                         sink.sendEvent(turnEndEvent);
                         sink.sendDone();
                     } catch (Exception e) {
@@ -1125,6 +1144,8 @@ public class ChatStreamOrchestrator {
             turnEndEvent.put("error", message);
             turnEndEvent.put("messageId", p.messageId());
             turnEndEvent.put("contentId", p.contentId());
+            // 失败轮拿不到模型用量，只带预算余量/熔断态，不虚报成本
+            attachTurnAccounting(turnEndEvent, p, null);
             sink.sendEvent(turnEndEvent);
             sink.sendDone();
         } catch (Exception e) {
@@ -1420,6 +1441,8 @@ public class ChatStreamOrchestrator {
                             // 恢复轮（审批续跑）同样下发：否则「批准」之后占用率会从有值跌回 0
                             turnEndEvent.put("contextStats",
                                     contextStatsOf(request, usageHolder[0], p.contextWindow()));
+                            // 恢复轮同样带每轮成本与预算余量（审批续跑也是一轮真实消耗）
+                            attachTurnAccounting(turnEndEvent, p, usageHolder[0]);
                             sink.sendEvent(turnEndEvent);
                             sink.sendDone();
                             registry.remove(sid);
@@ -1439,6 +1462,8 @@ public class ChatStreamOrchestrator {
                             turnEndEvent.put("error", msg);
                             turnEndEvent.put("messageId", messageId);
                             turnEndEvent.put("contentId", contentId);
+                            // 恢复失败轮同样只带预算，不带成本
+                            attachTurnAccounting(turnEndEvent, p, null);
                             sink.sendEvent(turnEndEvent);
                             sink.sendDone();
                             registry.remove(sid);
@@ -1604,6 +1629,128 @@ public class ChatStreamOrchestrator {
 
         stats.put("breakdown", breakdown);
         return stats;
+    }
+
+    /**
+     * 收口记账：把每轮成本与会话预算余量并入 turn_end 事件（B1 预算熔断展示 / B4 每轮用量成本）。
+     *
+     * <p>成本口径与用量台账一致：{@code AiUsage} 自带的权威金额优先，缺失时按
+     * {@code sys_ai_pricing} 单价折算（见 {@link AppKeyBilling#chargeOf}）。供应商未回传
+     * 用量（usage 为空）时不虚报成本；超时/失败轮拿不到 usage，只带预算不带成本。</p>
+     *
+     * <p>预算取会话目标（{@code settings.goal.tokenBudget}），「已用」按会话全部消息的
+     * prompt+completion 累计（与 {@code GET /token-stats} 同一口径）。两项计算只服务
+     * 展示，任何异常都降级为「事件里不带该字段」，绝不影响收帧。</p>
+     *
+     * @param turnEndEvent turn_end 事件
+     * @param p            准备结果
+     * @param usage        本轮模型用量（可为空）
+     */
+    private void attachTurnAccounting(Map<String, Object> turnEndEvent, PreparedChat p,
+                                      com.chua.common.support.ai.AiUsage usage) {
+        attachTurnCost(turnEndEvent, p, usage);
+        attachSessionBudget(turnEndEvent, p);
+    }
+
+    /**
+     * 折算本轮成本并并入 turn_end 事件：{@code cost = {amount, currency}}。
+     *
+     * <p>供应商标识优先取用量自带的 {@code usage.getProvider()}（与用量台账同源），
+     * 缺失再回落路由信息里的供应商名/ID。查不到定价或金额为零时不带 cost 字段，
+     * 前端据此显示「—」而不是 0。</p>
+     *
+     * @param turnEndEvent turn_end 事件
+     * @param p            准备结果
+     * @param usage        本轮模型用量（可为空）
+     */
+    private void attachTurnCost(Map<String, Object> turnEndEvent, PreparedChat p,
+                                com.chua.common.support.ai.AiUsage usage) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            String provider = usage.getProvider();
+            if (provider == null || provider.isBlank()) {
+                Map<String, Object> route = effectiveRoute(p);
+                provider = route == null ? null : str(route.get("providerName"));
+                if (provider == null || provider.isBlank()) {
+                    provider = route == null ? null : str(route.get("providerId"));
+                }
+            }
+            SysAiPricing pricing = sysAiPricingService.getLatestPricing(provider, p.modelToUse());
+            AppKeyBilling.Charge charge = AppKeyBilling.chargeOf(usage, pricing);
+            if (charge == null || !charge.positive()) {
+                return;
+            }
+            Map<String, Object> cost = new LinkedHashMap<>(2);
+            cost.put("amount", charge.amount().toPlainString());
+            cost.put("currency", charge.currency());
+            turnEndEvent.put("cost", cost);
+        } catch (Exception e) {
+            log.debug("[ChatStream] 本轮成本折算失败 sessionId={}: {}", p.sessionId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 结算会话预算余量并并入 turn_end 事件：
+     * {@code budget = {limitTokens, usedTokens, remainingTokens, exceeded}}。
+     *
+     * <p>无目标或未设预算（tokenBudget 缺失/非正）时不带 budget 字段——「没设预算」
+     * 与「预算刚好为 0」是两种状态，前者不该被展示成限额 0。exceeded 为派生口径：
+     * 累计已用达到上限即视为熔断态，与执行侧 {@code AgentBudgetTracker} 的闩锁语义
+     * 一致（达到即停）。</p>
+     *
+     * @param turnEndEvent turn_end 事件
+     * @param p            准备结果
+     */
+    private void attachSessionBudget(Map<String, Object> turnEndEvent, PreparedChat p) {
+        Long dialogId = p.dialogId();
+        if (dialogId == null) {
+            return;
+        }
+        try {
+            SessionGoalService.GoalView goal = sessionGoalService.getGoal(dialogId);
+            Long limit = goal == null ? null : goal.tokenBudget();
+            if (limit == null || limit <= 0) {
+                return;
+            }
+            long used = sumSessionTokens(dialogId);
+            Map<String, Object> budget = new LinkedHashMap<>(4);
+            budget.put("limitTokens", limit);
+            budget.put("usedTokens", used);
+            budget.put("remainingTokens", Math.max(limit - used, 0L));
+            budget.put("exceeded", used >= limit);
+            turnEndEvent.put("budget", budget);
+        } catch (Exception e) {
+            log.debug("[ChatStream] 会话预算结算失败 sessionId={}: {}", p.sessionId(), e.getMessage());
+        }
+    }
+
+    /**
+     * 会话累计 token：全部消息的 prompt+completion 之和。
+     *
+     * <p>与 {@code GET /token-stats} 的累计口径一致（该接口同样按消息行求和）。
+     * turn_end 时本轮助手消息已落库，天然计入本轮用量。查询失败按 0 处理，
+     * 只影响展示不影响收帧。</p>
+     *
+     * @param dialogId 后端会话主键
+     * @return 累计 token 数；统计失败返回 0
+     */
+    private long sumSessionTokens(Long dialogId) {
+        try {
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysAiMessage> w =
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+            w.eq(SysAiMessage::getSysAiSessionId, dialogId);
+            long total = 0L;
+            for (SysAiMessage m : messageMapper.selectList(w)) {
+                total += m.getPromptTokens() == null ? 0L : m.getPromptTokens();
+                total += m.getCompletionTokens() == null ? 0L : m.getCompletionTokens();
+            }
+            return total;
+        } catch (Exception e) {
+            log.debug("[ChatStream] 会话累计 token 统计失败 dialogId={}: {}", dialogId, e.getMessage());
+            return 0L;
+        }
     }
 
     /**

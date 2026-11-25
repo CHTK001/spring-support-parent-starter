@@ -31,11 +31,12 @@ public interface DeviceVehiclePassService {
      * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
+     * @param plateNo   车牌号，可选（模糊匹配）
      * @param start     起始时间，可选
      * @param end       结束时间，可选
      * @return 过车记录
      */
-    List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction,
+    List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction, String plateNo,
                                        LocalDateTime start, LocalDateTime end);
 
     /**
@@ -46,12 +47,13 @@ public interface DeviceVehiclePassService {
      * @param deviceId  设备标识，可选
      * @param gateId    车闸标识，可选
      * @param direction 方向，可选
+     * @param plateNo   车牌号，可选（模糊匹配）
      * @param start     起始时间，可选
      * @param end       结束时间，可选
      * @return 分页结果
      */
     PageResult<DeviceVehiclePass> pagePasses(int page, int size, String deviceId, String gateId, String direction,
-                                             LocalDateTime start, LocalDateTime end);
+                                             String plateNo, LocalDateTime start, LocalDateTime end);
 
     /**
      * 从平台会话拉取过车记录并落库（按 车闸+车牌+时间 去重）。

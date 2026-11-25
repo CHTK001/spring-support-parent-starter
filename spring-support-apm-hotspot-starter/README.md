@@ -128,6 +128,133 @@ agent 侧参数（utils 层读取，决定本引擎有无数据；本模块不�
 
 **运行期可改项：无。** `HotspotApmProvider` 未覆盖 `runtimeSettings()` / `applyRuntimeSettings(Map)`（保持默认空表/空实现），`POST /config` 携带引擎级键会被 `ApmRuntimeConfig` 拒绝；`mode`/`path`/`port` 属重启项，同样不可热改。
 
+### 5.1 逐项配置示例（按功能分组）
+
+以下 `plugin.apm.*` 键均来自基座 `ApmProperties`（前缀 `plugin.apm`），写入 `application.yml` 即生效。本模块自身不读取任何键，只随基座装配被探测、被选中。
+
+**A. 启用与引擎选择**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.apm.enabled` | 是否启用 APM 模块；`false` 时 `/status` 直接降级（`present=false`） | `true` |
+| `plugin.apm.type` | 引擎类型（`skywalking`/`hotspot`…）；留空按 `order()` 自动探测（skywalking=0 优先于 hotspot=100），显式填 `hotspot` 可强制选中本模块 | `""`（空） |
+
+```yaml
+plugin:
+  apm:
+    enabled: true
+    type: hotspot        # 留空（""）则按 order 自动探测
+```
+
+**B. 接入模式与端点**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.apm.mode` | `embedded`=随宿主 Servlet 容器注册 `ApmServlet`；`standalone`=用 `ServerBuilder` 独立起 HTTP 服务 | `embedded` |
+| `plugin.apm.path` | 统一 REST 前缀（嵌入=Servlet 映射，独立=Server 路由） | `/api/apm/v1` |
+| `plugin.apm.host` | standalone 监听地址 | `0.0.0.0` |
+| `plugin.apm.port` | standalone 监听端口 | `12801` |
+| `plugin.apm.server-type` | standalone 底层 Server SPI 类型 | `jdk` |
+
+```yaml
+plugin:
+  apm:
+    mode: embedded         # 或 standalone
+    path: /api/apm/v1
+    host: 0.0.0.0          # 以下三项仅 standalone 生效
+    port: 12801
+    server-type: jdk
+```
+
+**C. 探测与运行期状态**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.apm.detect-interval` | 探测结果缓存毫秒数，避免前端轮询状态时反复探活 | `10000` |
+| `plugin.apm.register-service-info` | 是否登记到服务信息面板（`ServiceInfoRegistry`） | `true` |
+| `plugin.apm.settings-file` | 运行期可改配置落盘文件；只存可热改键（`enabled`/`type`/`detect-interval` 与各引擎运行期设置），`mode`/`path`/`port` 不落盘 | `config/apm-settings.properties` |
+
+```yaml
+plugin:
+  apm:
+    detect-interval: 10000
+    register-service-info: true
+    settings-file: config/apm-settings.properties   # 相对路径按进程工作目录解析
+```
+
+**D. agent 侧参数（JVM 系统属性，不是 `application.yml` 键）**
+
+下表 4 个键由 `utils-support-runtime-apm` 在 agent 进程内通过**系统属性**读取（`-D` 或 agent 参数）；本模块与基座都不读取它们，写在 `application.yml` 中**无效**。它们决定本引擎有无数据可看。
+
+| key | 含义 | 默认值 |
+| --- | --- | --- |
+| `trace.enabled` | `TraceHandler` 是否启用 | `true` |
+| `apm.storage.type` | 存储实现：`noop`/`inmemory`/`sqlite`/`jdbc`/`otlp` | `inmemory` |
+| `apm.storage.retention.ms` | 数据保留时长（毫秒） | `604800000`（7 天） |
+| `apm.storage.capacity` | 存储容量上限（条） | `100000` |
+
+```bash
+java -javaagent:/path/to/utils-support-runtime-agent.jar \
+     -Dtrace.enabled=true \
+     -Dapm.storage.type=inmemory \
+     -Dapm.storage.retention.ms=604800000 \
+     -Dapm.storage.capacity=100000 \
+     -jar your-app.jar
+```
+
+注意区分：`TraceHandler` 进程内 Span 列表另有硬上限 `MAX_SPANS = 10000`（超出按插入顺序淘汰最旧），与 `apm.storage.capacity` 是两回事。
+
+### 5.2 完整 YAML 示例
+
+嵌入模式（默认推荐，接口随宿主 Servlet 容器暴露）：
+
+```yaml
+plugin:
+  apm:
+    enabled: true
+    type: hotspot                    # 不装 SkyWalking 时可显式指定；留空则自动探测
+    mode: embedded
+    path: /api/apm/v1
+    detect-interval: 10000
+    register-service-info: true
+    settings-file: config/apm-settings.properties
+
+spring:
+  application:
+    name: my-service
+server:
+  port: 8080
+```
+
+standalone 模式（APM 接口独立端口，适合不想占用宿主路由的场景）：
+
+```yaml
+plugin:
+  apm:
+    enabled: true
+    type: hotspot
+    mode: standalone
+    host: 0.0.0.0
+    port: 12801
+    server-type: jdk
+    path: /api/apm/v1
+```
+
+agent 侧参数与 YAML 无关，仍以 `-D` 系统属性 / agent 参数传入（见 5.1-D）。
+
+### 5.3 生产注意事项
+
+1. **必须挂载 agent**：不以 `-javaagent` 挂载 `utils-support-runtime-agent.jar` 时，本实现在注册表中永远 `available=false`，接口只返回降级信息（`candidates[].message` 会给出确切原因）。
+2. **能力边界要清楚**：本引擎只声明 `services`/`instances`/`endpoints`/`traces` 四项能力；`metrics`/`alarms`/`logs`/`profiles`/`topology` 未声明，请求会得到「引擎 hotspot 不支持 xxx」的失败结果（不是空数据）。需要这些能力请改用 `spring-support-apm-skywalking-starter`。
+3. **数据是进程内的、易失的**：Span 存于内存（`MAX_SPANS=10000`、默认 `apm.storage.capacity=100000`），进程重启即清空；需要跨重启留存时把 `apm.storage.type` 换成 `sqlite`/`jdbc`/`otlp`，或改用 SkyWalking。
+4. **单进程视角**：`services()` 固定返回当前进程 1 个服务，无法串联多机调用；分布式链路追踪不是本模块的目标。
+5. **与 SkyWalking 并存的优先级**：`plugin.apm.type` 留空时按 `order()` 探测，SkyWalking（`order=0`）优先于本模块（`order=100`），两者都可用时默认选 SkyWalking；若意图明确使用 hotspot，显式配置 `plugin.apm.type: hotspot`。
+6. **热改边界**：`POST {path}/config` 只接受可热改键（`enabled`/`type`/`detect-interval` 与各引擎运行期设置）；`mode`/`path`/`port` 属重启项，热改会被拒绝。本引擎 `runtimeSettings()` 为空表，没有引擎级可热改参数（参数来自 `-javaagent`）。
+7. **路径与端口规划**：嵌入模式接口挂在宿主端口下 `plugin.apm.path + "/*"`，注意与网关路由、鉴权放行规则协同；standalone 模式注意 `plugin.apm.port`（默认 12801）的端口占用与防火墙放行。
+8. **settings-file 落盘位置**：相对路径按进程工作目录解析，容器化部署时确认工作目录可写（或挂载卷），避免运行期保存的 APM 设置丢失。
+9. **detect-interval 不宜过小**：它控制探测结果缓存时长，设得过小会放大探活开销；默认 10s 已足够前端轮询使用。
+10. **运行环境**：宿主为 Spring Boot 4.x / jakarta Servlet 体系；嵌入模式要求宿主带 Servlet 容器，纯 WebFlux 环境请改用 standalone 模式或 SkyWalking 方案。
+
 ## 6. 使用方式
 
 Maven 坐标：

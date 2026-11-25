@@ -122,6 +122,7 @@ sequenceDiagram
 | `plugin.account.mail-notify.interval.ms` | long | `60000` | 新邮件轮询周期（毫秒），经 Socket 与 SSE 双通道广播 `new-mail` |
 | `plugin.account.channel-health-log.cleaner-enable` | boolean | `true`（`matchIfMissing=true`） | 渠道健康历史每日 03:30 清理开关（属性默认开；但该类未列入 `AccountAutoConfiguration` 白名单，宿主默认不装配，见第 4 / 9 节） |
 | `plugin.account.channel-health-log.retention-days` | int | `7` | 健康历史保留天数（配置非法时兜底 7） |
+| `plugin.account.temp-phone-pool.numbers` | String | 空 | 号码池临时手机号清单（逗号分隔，去空格、去重、保序）；为空时领取接口报「号码池未配置」。见 `TempPhonePoolService` |
 
 最小配置示例（`application.yml`）：
 
@@ -138,6 +139,115 @@ plugin:
     channel-health-log:
       cleaner-enable: true  # 默认即开，可显式关闭
 ```
+
+### 5.1 逐项配置示例（按功能分组）
+
+**凭据加密（`AccountSecretCodec`）**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `account.security.secret-key` | Secret / AppKey / Cookie / 余额令牌的 AES-GCM 加密密钥，密文带 `enc:` 前缀 | 空（明文落库 + 启动告警） |
+
+```yaml
+account:
+  security:
+    secret-key: "change-me-to-a-long-random-key"
+```
+
+**短信目录轮询（`SmsDirectoryPoller`，开关不开 Bean 不装配）**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.account.sms-directory.enable` | 短信目录轮询总开关 | `false` |
+| `plugin.account.sms-directory.dir` | 短信 JSON 文件目录（命中后写内存暂存库并 SSE 广播 `new-sms`，文件归档 `done/` / `error/`） | `./sms-inbox` |
+| `plugin.account.sms-directory.interval.ms` | 轮询周期（毫秒，`fixedDelay`） | `5000` |
+
+```yaml
+plugin:
+  account:
+    sms-directory:
+      enable: true
+      dir: "./sms-inbox"
+      interval:
+        ms: 5000
+```
+
+**新邮件推送（`MailNewMessagePoller`，还需 classpath 有 socket-starter）**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.account.mail-notify.enable` | 新邮件轮询开关（经 Socket 与 SSE 双通道广播 `new-mail`） | `false` |
+| `plugin.account.mail-notify.interval.ms` | 轮询周期（毫秒，`fixedDelay`；首次轮询只记基线不推历史） | `60000` |
+
+```yaml
+plugin:
+  account:
+    mail-notify:
+      enable: true
+      interval:
+        ms: 60000
+```
+
+**渠道健康日志清理（`ChannelHealthLogCleaner`，每日 03:30；属性缺省开，但该类未列入装配白名单，见第 4 / 9 节）**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.account.channel-health-log.cleaner-enable` | 健康历史每日清理开关（`matchIfMissing=true`） | `true` |
+| `plugin.account.channel-health-log.retention-days` | 健康历史保留天数（配置非法时兜底 7） | `7` |
+
+```yaml
+plugin:
+  account:
+    channel-health-log:
+      cleaner-enable: true
+      retention-days: 7
+```
+
+**临时手机号号码池（`TempPhonePoolService`）**
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `plugin.account.temp-phone-pool.numbers` | 号码池清单（逗号分隔，去空格、去重、保序）；收信走短信目录轮询，向目录投递 `to=池内号码` 的 JSON 即到账 | 空（为空时 `claim` 报「号码池未配置」） |
+
+```yaml
+plugin:
+  account:
+    temp-phone-pool:
+      numbers: "13800000001,13800000002"
+```
+
+### 5.2 完整 YAML 使用示例
+
+```yaml
+account:
+  security:
+    secret-key: "${ACCOUNT_SECRET_KEY:change-me-to-a-long-random-key}"  # 生产用环境变量注入
+
+plugin:
+  account:
+    sms-directory:
+      enable: true
+      dir: "./sms-inbox"
+      interval:
+        ms: 5000
+    mail-notify:
+      enable: true
+      interval:
+        ms: 60000
+    channel-health-log:
+      cleaner-enable: true
+      retention-days: 7
+    temp-phone-pool:
+      numbers: "13800000001,13800000002"
+```
+
+### 5.3 生产注意事项
+
+- **`account.security.secret-key` 生产必配**：不配则 Secret / Cookie / 令牌明文落库；应使用足够长的随机值并经环境变量 / 配置中心注入，不要把真实密钥提交进仓库。**密钥一经使用不可随意更换**——库内 `enc:` 密文由旧密钥加密，换钥前必须先完成存量数据重加密或清空重录。
+- **定时任务按需开启**：`sms-directory` 与 `mail-notify` 默认关闭，显式打开才装配（R5 副作用控制）；`mail-notify` 还要求 classpath 上有 `spring-support-socket-starter`，缺失时自动只走 SSE 通道，不报错。
+- **`channel-health-log.cleaner-enable` 的「默认开」只到属性层**：该清理器未列入 `AccountAutoConfiguration` 装配白名单，宿主默认不装配、不会跑；要真正启用需在宿主侧补扫 `com.chua.starter.account.schedule`（见 Q1），不需要时建议显式置 `false`，避免「看似开了其实没跑」的误解。
+- **号码池与短信目录轮询配合使用**：只配 `temp-phone-pool.numbers` 而不开 `sms-directory.enable`，投递到目录的验证码 JSON 不会被消费。
+- **配置键均来自源码 `@Value` / `@Scheduled` / `@ConditionalOnProperty`**：本模块无 `@ConfigurationProperties` 前缀树，键拼写错误不会启动报错，只会静默走默认值——上线前建议对照本表逐键核对。
 
 ## 6. 使用方式
 

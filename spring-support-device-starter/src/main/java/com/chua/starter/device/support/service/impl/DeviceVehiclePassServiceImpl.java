@@ -68,17 +68,17 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
     }
 
     @Override
-    public List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction,
+    public List<DeviceVehiclePass> listPasses(String deviceId, String gateId, String direction, String plateNo,
                                               LocalDateTime start, LocalDateTime end) {
-        return passMapper.selectList(buildQuery(deviceId, gateId, direction, start, end));
+        return passMapper.selectList(buildQuery(deviceId, gateId, direction, plateNo, start, end));
     }
 
     @Override
     public PageResult<DeviceVehiclePass> pagePasses(int page, int size, String deviceId, String gateId, String direction,
-                                                    LocalDateTime start, LocalDateTime end) {
+                                                    String plateNo, LocalDateTime start, LocalDateTime end) {
         Page<DeviceVehiclePass> query = new Page<>(Math.max(page, 1), Math.max(size, 1));
         return PageResult.copy(passMapper.selectPage(query,
-                buildQuery(deviceId, gateId, direction, start, end)));
+                buildQuery(deviceId, gateId, direction, plateNo, start, end)));
     }
 
     @Override
@@ -146,12 +146,13 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
      * @param deviceId  设备标识（可空；传时按设备下所有车闸过滤）
      * @param gateId    车闸标识
      * @param direction 方向
+     * @param plateNo   车牌号（可空；非空时模糊匹配）
      * @param start     起始时间
      * @param end       结束时间
      * @return 查询条件
      */
     private LambdaQueryWrapper<DeviceVehiclePass> buildQuery(String deviceId, String gateId, String direction,
-                                                            LocalDateTime start, LocalDateTime end) {
+                                                            String plateNo, LocalDateTime start, LocalDateTime end) {
         LambdaQueryWrapper<DeviceVehiclePass> wrapper = new LambdaQueryWrapper<>();
         if (deviceId != null && !deviceId.isBlank()) {
             List<DeviceBarrierGate> gates = gateMapper.selectList(new LambdaQueryWrapper<DeviceBarrierGate>()
@@ -170,6 +171,9 @@ public class DeviceVehiclePassServiceImpl implements DeviceVehiclePassService {
         }
         if (direction != null && !direction.isBlank()) {
             wrapper.eq(DeviceVehiclePass::getDeviceVehiclePassDirection, direction);
+        }
+        if (plateNo != null && !plateNo.isBlank()) {
+            wrapper.like(DeviceVehiclePass::getDeviceVehiclePassPlateNo, plateNo.trim());
         }
         if (start != null) {
             wrapper.ge(DeviceVehiclePass::getDeviceVehiclePassTime, start);
