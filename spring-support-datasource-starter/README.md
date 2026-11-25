@@ -136,11 +136,16 @@ flowchart TD
 | `plugin.datasource.document.base-path / title / version` | `String` | `/plugin/datasource/document` / `数据库设计文档` / `1.0.0` | 接口根路径 / 标题 / 版本 |
 | `plugin.datasource.document.template` | `String` | `DEFAULT` | `DEFAULT`/`AURORA`/`SWAGGER`；SPI 缺失回退 `DEFAULT` |
 | `plugin.datasource.document.include-tables / exclude-tables / include-schemas / options` | `String`/`Map` | — / `flyway_schema_history,sys_database_version` / — / — | 表/schema 黑白名单（逗号分隔，`*` 通配）/ 透传 `DocumentParser` 参数 |
-| `plugin.datasource.calcite.enabled / max-pool-size` | `Boolean`/`Integer` | `false` / `10` | 聚合所有已注册数据源为 Calcite 数据源 / 聚合连接池上限 |
+| `plugin.datasource.calcite.enabled / max-pool-size` | `Boolean`/`Integer` | `false` / `10` | 聚合已注册普通数据源为 Calcite 数据源 / 聚合连接池上限 |
+| `plugin.datasource.calcite.bean-name` | `String` | `calciteDataSource` | 聚合数据源 Bean 名；规范名固定为 `calciteDataSource`（联邦管理器/热替换注册表依赖），配置为其它名时以**别名**注册到同一 Bean，两个名字均可注入 |
+| `plugin.datasource.calcite.data-sources` | `List<String>` | —（聚合全部） | 参与聚合的数据源名单；未配置时聚合全部普通数据源，名单中未注册的名称告警跳过，全部未命中则不创建聚合数据源 |
 | `plugin.datasource.calcite.schema-mapping / default-schema` | `Map`/`String` | — | 数据源→模式名映射 / 默认模式名 |
 | `plugin.datasource.sharding.enabled / show-sql` | `Boolean` | `false` / `false` | 分片开关 / 打印改写后 SQL |
 | `plugin.datasource.sharding.tables[*].logic-table / sharding-column / time-unit / strategy` | `String` | — / — / — / `TABLE` | 逻辑表（同时为物理表前缀）/ 分片列 / 时间单位 `YEAR`·`QUARTER`·`MONTH`·`WEEK`·`DAY`·`HOUR`（配置后走 `INTERVAL` 固定 12 片，物理表 `逻辑表_yyyy…`；缺省走 `MOD` 固定 16 片，物理表 `逻辑表_0..15`）/ 策略（`TABLE`/`DB`，当前仅解析、不参与路由） |
 | `plugin.datasource.sharding.databases` | `List<String>` | — | 分库列表；数量 > 1 时启用分库（每表按分片列对库数取模 `db_mod`） |
+| `plugin.datasource.partition.auto-create-enabled` | `Boolean` | `false` | 分区表自动创建开关（启动预热 + 周期检查；服务自管守护线程，不开启全局 `@EnableScheduling`）；关闭时仍可 `POST /ms/ds-runtime/partition/create-current` 手动触发 |
+| `plugin.datasource.partition.check-interval-minutes` | `Long` | `60` | 自动检查间隔（分钟，最小 1）；每次只为「当前周期」补建缺失的分区表 |
+| `plugin.datasource.partition.tables[*].source-table / prefix / granularity` | `String` | — / — / `MONTH` | yaml 分区配置（推荐）：源表 / 分区表前缀（表名 `prefix_yyyyMM` 或 `prefix_yyyyMMdd`，经 `SqlName` 白名单校验）/ 粒度 `MONTH`·`DAY`；未配置时只读回退 `pay_partition_config` 中 `auto_create_enabled=true` 的行 |
 | `plugin.datasource.materialized.enabled` | `Boolean` | `false` | 物化路由总开关（legacy：`spring.datasource.materialized`） |
 | `plugin.datasource.materialized.default-threshold / refresh-interval-seconds` | `Long` | `1000` / `0` | 表行数阈值（超过才走内存副本）/ 自动刷新间隔（`<=0` 关闭） |
 | `plugin.datasource.materialized.skip-query-in-transaction / cache-data-source-prefix` | `Boolean`/`String` | `true` / `materialized#` | 事务内跳过物化路由（读己之写）/ 副本数据源名前缀 |
@@ -230,15 +235,18 @@ plugin:
 
 `ds_sharding_rule` 一条记录 = 一个逻辑表的规则（算法 MOD/INTERVAL、分片列、分片数、分库成员 JSON——支持 url 直连或引用已注册数据源名）。`ShardingRuleManager` 在启动（`loadOnStartup`）或 `POST /ms/ds-runtime/sharding/refresh` 时构建/替换分片数据源，**不重启生效**。管理端点：`GET/POST /ms/ds-runtime/sharding`、`DELETE /ms/ds-runtime/sharding/{id}`、`POST /ms/ds-runtime/sharding/route-preview`（SQL 落点预览）、`POST /ms/ds-runtime/sharding/query`；全量配置可经 `GET /ms/ds-runtime/config/export` / `POST /ms/ds-runtime/config/import` 导入导出。
 
-### 6.2 分区路由（pay_partition_config，独立于分库分表）
+### 6.2 分区路由与分区表自动创建（独立于分库分表）
 
 分区（partition）是另一套**按时间切表**的机制，与 ShardingSphere 分库分表相互独立：
 
-- 配置存于 `pay_partition_config`（DDL 见 payment-starter `db/init/V2.0__init_all_payment.sql`），关键字段：业务类型、源表、分表前缀、粒度（仅 `MONTH`/`DAY`）、`auto_create_enabled`、`create_ahead_days`、`migrate_before_days` 等。
-- 分区表命名：`<分表前缀>_part_yyyyMM`（MONTH）/ `<分表前缀>_part_yyyyMMdd`（DAY）。
-- `PartitionAwareTableFactory` 只把 `auto_create_enabled=true` 的配置注册为 Calcite `PartitionRoutingTable`（热表 + `%_part_%` 分区表 UNION 的路由视图）；`auto_create_enabled=false` 的行不参与路由。
-- **datasource-starter 不建分区表**：本模块内没有任何创建分区表的 DDL/调度；`/ms/ds-runtime/partition/**` 为只读端点（配置盘点、实际分区表、日期范围预览均为静态推算 + 元数据核对，不执行 DDL/DML）。
-- 分区表的**自动创建与数据迁移由 payment-starter 承担**：`OrderPartitionConfigServiceImpl#executeAutoCreate / executeAutoMigrate` + 定时任务（`PaymentOrderPartitionCreateTask` / `TransactionPartitionCreateTask` 及对应 Migrate 任务，默认 cron `0 0 2 * * ?`，`plugin.payment.scheduler.enabled` 控制）。即 `auto_create_enabled=true` 时，定时任务按 `create_ahead_days` 预建 `CREATE TABLE IF NOT EXISTS <分区表> LIKE <源表>`，并按 `migrate_before_days` 迁移/清理历史数据；datasource-starter 只消费该配置做查询路由。
+- **配置来源（yaml 优先）**：
+  - yaml：`plugin.datasource.partition.tables[*]`（`source-table` / `prefix` / `granularity`，见 §5）；
+  - 回退：yaml 未配置时只读 `pay_partition_config`（DDL 见 payment-starter `db/init/V2.0__init_all_payment.sql`）中 `auto_create_enabled=true` 的行。
+- 分区表命名（`PartitionRoutingService` 口径）：`<prefix>_yyyyMM`（MONTH）/ `<prefix>_yyyyMMdd`（DAY）。
+- **路由注册**：`PartitionAwareTableFactory` 把 yaml 配置与 `auto_create_enabled=true` 的配置表行合并（按源表去重，yaml 优先），注册为 Calcite `PartitionRoutingTable`（热表 + 已发现分区表 UNION 的路由视图）。
+- **分区表自动创建（本模块内建）**：`plugin.datasource.partition.auto-create-enabled=true`（默认 `false`）时，`DsPartitionAutoCreateService` 在启动预热后按 `check-interval-minutes`（默认 60 分钟）为**当前周期**幂等补建 `CREATE TABLE IF NOT EXISTS <分区表> LIKE <源表>`（H2 库降级为 `CREATE TABLE IF NOT EXISTS <分区表> AS SELECT * FROM <源表> WHERE 1=0`）。DDL 经 `Engine` 执行（共享数据源适配接入，不拥有连接池），表名一律过 `SqlName` 白名单校验；调度用服务自管守护线程，**不开启宿主全局 `@EnableScheduling`**。
+- **与 payment-starter 定时任务共存**：payment 侧 `PaymentOrderPartitionCreateTask` 等任务（默认 cron `0 0 2 * * ?`，`plugin.payment.scheduler.enabled` 控制）按 `create_ahead_days` 预建未来分区、按 `migrate_before_days` 迁移/清理历史数据。两边建表均为 `CREATE TABLE IF NOT EXISTS` 幂等语句，可共存互不冲突；本模块只补「当前周期」缺失表，**不做数据迁移**。
+- **管理端点 `/ms/ds-runtime/partition/**`**：`GET /tables`（配置与实际分区表盘点）、`POST /preview`（日期范围表名推算 + 存在性核对，只读）、`POST /create-current`（幂等触发当前周期建表，定时关闭时可用）。
 
 ### 6.3 Calcite 联邦查询（跨库聚合）
 
@@ -251,12 +259,19 @@ plugin:
   datasource:
     calcite:
       enabled: true
-      max-pool-size: 10         # 聚合连接池上限
-      schema-mapping:           # 数据源名 → Calcite 模式名
+      max-pool-size: 10              # 聚合连接池上限
+      bean-name: calciteDataSource   # 聚合数据源 Bean 名（见下方说明）
+      data-sources:                  # 参与聚合的数据源名单（缺省聚合全部普通数据源）
+        - master
+        - slave_1
+      schema-mapping:                # 数据源名 → Calcite 模式名
         master: db_main
         slave_1: db_slave
-      default-schema: db_main   # SQL 不带模式前缀时落在这里
+      default-schema: db_main        # SQL 不带模式前缀时落在这里
 ```
+
+- `bean-name`：聚合数据源的 Bean 名。规范名固定为 `calciteDataSource`（联邦管理器、热替换注册表与 `@ConditionalOnMissingBean` 均挂在该名上），**建议保持默认**；配置为其它名（如 `myCalciteDs`）时，模块会以该名作为**别名**注册到同一个聚合数据源 Bean，`@Qualifier("myCalciteDs")` 与规范名 `calciteDataSource` 均可注入。
+- `data-sources`：参与聚合的数据源名单。未配置时聚合全部已注册普通数据源（排除动态路由/分片/聚合数据源自身）；名单中未注册的名称告警跳过；若名单全部未命中，则不创建聚合数据源。
 
 **方式二：运行期联邦（`ds_calcite_federation` 表）**
 

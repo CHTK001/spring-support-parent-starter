@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,25 +38,53 @@ public class PartitionAwareTableFactory {
     }
 
     /**
-     * 读取支付分表配置并创建对应的路由表。
+     * 读取分区配置（pay_partition_config 优先）并创建对应的路由表。
      *
      * @return 路由表 映射，Key 为源表名（如 薪酬_订单），值 为路由表实例
      */
     public Map<String, PartitionRoutingTable> buildAllRoutingTables() {
+        return buildAllRoutingTables(Collections.emptyMap());
+    }
+
+    /**
+     * 读取分区配置（pay_partition_config / 系统表扫描 + yaml 追加）并创建对应的路由表。
+     *
+     * @param yamlSpecs yaml 配置（plugin.datasource.partition.tables）的
+     *                  「源表 -> 分区前缀」追加项；仅对配置表未覆盖的源表生效
+     * @return 路由表 映射，Key 为源表名（如 薪酬_订单），值 为路由表实例
+     */
+    public Map<String, PartitionRoutingTable> buildAllRoutingTables(Map<String, String> yamlSpecs) {
         Map<String, PartitionRoutingTable> result = new java.util.LinkedHashMap<>();
-        List<Map<String, Object>> configs = queryPartitionConfigs();
-        for (Map<String, Object> config : configs) {
+        // 合并配置：yaml 追加项在前（优先），pay_partition_config / 系统表扫描兜底，按源表去重
+        Map<String, String> merged = new java.util.LinkedHashMap<>();
+        if (yamlSpecs != null) {
+            yamlSpecs.forEach((sourceTable, partitionPrefix) -> {
+                if (sourceTable != null && partitionPrefix != null
+                        && !sourceTable.isBlank() && !partitionPrefix.isBlank()) {
+                    merged.putIfAbsent(sourceTable.trim(), partitionPrefix.trim());
+                }
+            });
+        }
+        for (Map<String, Object> config : queryPartitionConfigs()) {
             String sourceTable = str(config.get("pay_partition_config_source_table"));
             String partitionPrefix = str(config.get("pay_partition_config_partition_prefix"));
+            if (sourceTable == null && config.containsKey("source_table_pattern")) {
+                // 系统表扫描回退行：源表模式 + 「_part」前缀推定（与 DsPartitionManagementService 同口径）
+                sourceTable = str(config.get("source_table_pattern"));
+                partitionPrefix = sourceTable == null ? null : sourceTable + "_part";
+            }
             if (sourceTable == null || partitionPrefix == null) {
                 continue;
             }
+            merged.putIfAbsent(sourceTable.trim(), partitionPrefix.trim());
+        }
+        for (Map.Entry<String, String> entry : merged.entrySet()) {
             try {
-                PartitionRoutingTable table = buildRoutingTable(sourceTable, partitionPrefix);
-                result.put(sourceTable, table);
-                log.info("[分区工厂] 注册路由表: {} -> {} (前缀={})", sourceTable, table.getTableNames(), partitionPrefix);
+                PartitionRoutingTable table = buildRoutingTable(entry.getKey(), entry.getValue());
+                result.put(entry.getKey(), table);
+                log.info("[分区工厂] 注册路由表: {} -> {} (前缀={})", entry.getKey(), table.getTableNames(), entry.getValue());
             } catch (Exception e) {
-                log.warn("[分区工厂] 创建路由表失败: source={}, err={}", sourceTable, e.getMessage());
+                log.warn("[分区工厂] 创建路由表失败: source={}, err={}", entry.getKey(), e.getMessage());
             }
         }
         return result;

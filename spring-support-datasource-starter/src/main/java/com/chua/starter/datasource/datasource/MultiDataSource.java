@@ -3,6 +3,7 @@ package com.chua.starter.datasource.datasource;
 
 import com.chua.datasource.support.partition.PartitionAwareTableFactory;
 import com.chua.datasource.support.partition.PartitionRoutingTable;
+import com.chua.starter.datasource.properties.DsPartitionProperties;
 import com.chua.starter.datasource.support.DynamicDataSource;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -157,7 +158,7 @@ public class MultiDataSource implements DataSource {
             }
             DataSource primaryDs = dataSources.getFirst();
             PartitionAwareTableFactory factory = new PartitionAwareTableFactory(primaryDs);
-            Map<String, PartitionRoutingTable> routingTables = factory.buildAllRoutingTables();
+            Map<String, PartitionRoutingTable> routingTables = factory.buildAllRoutingTables(yamlPartitionSpecs());
             if (routingTables.isEmpty()) {
                 return;
             }
@@ -179,6 +180,30 @@ public class MultiDataSource implements DataSource {
         } catch (Exception e) {
             log.warn("[分区路由] 初始化跳过 ({}), 不影响正常运行", e.getMessage());
         }
+    }
+
+    /**
+     * 读取 yaml 分区配置（plugin.datasource.partition.tables）的「源表 -> 分区前缀」映射。
+     *
+     * <p>属性 Bean 未装配（如非 Web 宿主、运行时管理关闭）时返回空 Map，
+     * 不影响既有 pay_partition_config 配置链路。</p>
+     */
+    private Map<String, String> yamlPartitionSpecs() {
+        Map<String, String> specs = new java.util.LinkedHashMap<>();
+        if (applicationContext == null) {
+            return specs;
+        }
+        DsPartitionProperties properties = applicationContext.getBeanProvider(DsPartitionProperties.class)
+                .getIfAvailable();
+        if (properties == null || properties.getTables() == null) {
+            return specs;
+        }
+        for (DsPartitionProperties.PartitionTableSpec spec : properties.getTables()) {
+            if (spec != null && spec.getSourceTable() != null && spec.getPrefix() != null) {
+                specs.putIfAbsent(spec.getSourceTable().trim(), spec.getPrefix().trim());
+            }
+        }
+        return specs;
     }
 
     /**
