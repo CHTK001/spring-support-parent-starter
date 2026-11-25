@@ -136,6 +136,212 @@ sequenceDiagram
 | `scatter.max-forward-body-bytes` | `long` | `10485760`（10MB） | 转发请求体大小上限（字节），超限放弃转发、本地放行；≤0 不限制 |
 | `scatter.filter-order` | `int` | `0` | self-balance Filter 注册顺序（值越小越靠前） |
 
+### 5.2 逐项详解与示例
+
+#### 开关与协议
+
+**`scatter.enabled`**（boolean，缺省 `false`）——总开关。`false` 时本 starter 零装配、零副作用：不监听组网端口、不注册 Filter、不建任何 Bean。只有显式 `true` 才启用。
+
+```yaml
+scatter:
+  enabled: true
+```
+
+**`scatter.protocol`**（String，缺省 `tcp`）——组网协议，二选一：
+
+- `tcp`：帧协议承载（4 字节长度头 + ScatterFrame，短连接一请求一响应，单帧上限 16MB），可靠有序，**生产建议**；
+- `udp`：数据报承载（无连接、不保证送达），自动发现走多播 + 广播宣告，适合局域网零配置组网。
+
+```yaml
+scatter:
+  protocol: udp   # 或 tcp（默认）
+```
+
+#### 节点身份
+
+**`scatter.node-id`**（String，缺省 `{spring.application.name}@{announceHost}:{port}`）——节点唯一标识；组网 self 条目 `serverId` 同值，业务端点 `serverId` 为 `nodeId+":http"`。集群内必须唯一，重名会互相覆盖成员表。
+
+```yaml
+scatter:
+  node-id: demo-service@10.0.0.10:9700
+```
+
+**`scatter.service-path`**（String，缺省 `/{spring.application.name}`，自动补前导 `/`）——服务分组（发现路径）；同 path + 同 group 的节点构成同一服务池，self-balance 只从该池选转发目标。
+
+```yaml
+scatter:
+  service-path: /demo-service
+```
+
+**`scatter.group`**（String，缺省 `default`）——组网范围（scatterId）；不同 group 即使网络互通也不合并成员表，可用于隔离多套集群。
+
+```yaml
+scatter:
+  group: order-cluster
+```
+
+**`scatter.context-path`**（String，缺省取 `server.servlet.context-path`）——业务上下文路径，写入业务端点 metadata 供对端拼转发地址；两节点不一致会转发 404，此时用它显式统一。
+
+```yaml
+scatter:
+  context-path: /api
+```
+
+#### 地址与端口
+
+**`scatter.port`**（int，缺省 `0`）——组网监听端口（控制面，无 HTTP）。≤0 时启动期自动预占空闲端口。**自动发现要求各节点固定且一致**：不配置时每实例随机取端口，节点互相发现不了；`seeds` 指向的也是这个端口（不是 `server.port`）。
+
+```yaml
+scatter:
+  port: 9700
+```
+
+**`scatter.host`**（String，缺省 `Project.applicationHost` → `127.0.0.1`）——组网绑定地址；多网卡 / 容器环境显式指定，绑全部网卡用 `0.0.0.0`。
+
+```yaml
+scatter:
+  host: 10.0.0.10
+```
+
+**`scatter.announce-host`**（String，缺省同 `host`）——对外通告地址；NAT / 端口映射 / 容器 published 地址等「对端连不到绑定地址」的场景配置。写入成员表供对端回连组网端口与拼转发地址。
+
+```yaml
+scatter:
+  host: 0.0.0.0
+  announce-host: 10.0.0.10
+```
+
+#### 发现模式（seed / 自动发现）
+
+**`scatter.seeds`**（List&lt;String&gt;，缺省 `[]`）——种子地址列表 `host:port`（指向**组网端口**）。**非空即进入 seed 引导模式**（优先于自动发现）：只与 seed 同步成员表、seed 扩散、最小 nodeId 选举，不扫网段，跨网段 / 跨机房首选。首个引导节点留空即可。
+
+```yaml
+# B 节点通过 A 的组网端口入网
+scatter:
+  seeds:
+    - 10.0.0.10:9700
+```
+
+**`scatter.auto-discovery`**（boolean，缺省 `true`）——自动发现开关，与 `seeds` 二选一（seeds 优先）：
+
+- `true` + `tcp`（默认）：网段 gossip 扫描——对 `subnet` 内所有地址的同一 `scatter.port` 做 gossip 同步试探，连不上的地址超时跳过；
+- `true` + `udp`：向 `255.255.255.255` 与多播组 `239.255.0.1` 宣告成员表，不逐台探测；
+- `false` 且无 seeds：独立节点，不发现对端。
+
+```yaml
+scatter:
+  auto-discovery: false   # 固定用 seed 引导时关掉
+```
+
+**`scatter.subnet`**（String，缺省本机非回环 IPv4 所在网段，如 `192.168.1.0/24`；推断失败告警并跳过扫描）——仅 tcp 自动发现使用；网段很大时显式收窄，减少无效试探。udp 模式不使用本项。
+
+```yaml
+scatter:
+  subnet: 192.168.50.0/24
+```
+
+#### 周期与容错
+
+| 配置路径 | 类型 | ≤0 时 utils 缺省 | 说明 |
+|---|---|---|---|
+| `scatter.auto-discovery-interval` | `long` | `30000`ms | 自动发现周期；tcp gossip 入网前 3 轮全量探测，之后每 3 轮一次全量、其余轮次随机选 4 个节点交换成员表 |
+| `scatter.heartbeat-interval` | `long` | `30000`ms | 心跳周期 |
+| `scatter.fail-remove-count` | `int` | `3` | 心跳连续失败 N 次剔除节点；调小摘得快但易误剔 |
+| `scatter.timeout-millis` | `long` | `2000`ms | 网络 / 同步超时；高延迟链路调大 |
+
+```yaml
+scatter:
+  auto-discovery-interval: 15000
+  heartbeat-interval: 10000
+  fail-remove-count: 5
+  timeout-millis: 5000
+```
+
+#### 成员表持久化
+
+**`scatter.persistence-enabled`**（boolean，Spring 宿主缺省 `false`）——是否持久化成员表。utils 原始缺省 `true`，本 starter 按宿主形态改为无状态：重启后靠重新发现 / seed 重建。节点地址固定、想跳过重启后的发现等待时再开启。
+
+**`scatter.persistence-file`**（String，缺省 `.scatter-nodes.json`，落在进程工作目录）——持久化文件路径，仅 `persistence-enabled=true` 时生效。
+
+```yaml
+scatter:
+  persistence-enabled: true
+  persistence-file: /var/lib/demo/scatter-nodes.json
+```
+
+#### self-balance 反向代理
+
+**`scatter.self-balance`**（boolean，缺省 `true`）——self-balance Filter 开关；`false` 时只组网不转发（不注册 Filter）。
+
+**`scatter.balance-strategy`**（String，缺省 `weight`）——`weight` / `random` / `round`，或自定义 `LoadBalance` SPI 名。本 starter 登记的业务端点固定 `weight=1.0`；`weight` 语义是「选中即权重减半」，长程分布近均匀。
+
+**`scatter.max-forward-body-bytes`**（long，缺省 `10485760` 即 10MB）——转发请求体上限，超限放弃转发、本地放行；≤0 不限制。multipart 上传本就命中跳过条件、不走转发。
+
+**`scatter.filter-order`**（int，缺省 `0`）——Filter 注册顺序，值越小越靠前；要抢在鉴权等 Filter 之前转发就调负值。
+
+```yaml
+scatter:
+  self-balance: true
+  balance-strategy: round
+  max-forward-body-bytes: 20971520   # 20MB
+  filter-order: -100
+```
+
+### 5.3 三种发现模式完整示例
+
+**模式一：seed 引导（跨网段 / 跨机房首选）**——各节点端口一致，非引导节点配 `seeds`：
+
+```yaml
+# 引导节点 A（10.0.0.10）
+scatter:
+  enabled: true
+  protocol: tcp
+  port: 9700
+  group: default
+  auto-discovery: false        # 纯 seed 模式可关掉自动发现
+```
+
+```yaml
+# 成员节点 B（10.0.0.11）
+scatter:
+  enabled: true
+  protocol: tcp
+  port: 9700
+  group: default
+  auto-discovery: false
+  seeds: [ "10.0.0.10:9700" ]  # 指向 A 的组网端口，不是 server.port
+```
+
+**模式二：tcp 网段自动发现（默认，局域网零配置）**——不配 seeds，各节点配同一 `port`（可选收窄 `subnet`）：
+
+```yaml
+scatter:
+  enabled: true
+  protocol: tcp              # 默认即是
+  port: 9700                 # 必须各节点一致
+  subnet: 192.168.50.0/24    # 不配则默认本机同网段
+```
+
+**模式三：udp 广播 / 多播自动发现（局域网零配置，免扫网段）**：
+
+```yaml
+scatter:
+  enabled: true
+  protocol: udp
+  port: 9700                 # 各节点一致；udp 模式忽略 subnet
+  # 多播组固定 239.255.0.1（utils 缺省，本 starter 未暴露修改项）
+```
+
+> 三种模式下，业务端点（`server.port`）都会登记进服务池；self-balance 转发永远走 HTTP 业务端口，不会打到组网端口。
+
+### 5.4 生产配置建议
+
+- `scatter.port` **必须显式固定**且全网一致（自动发现的硬前提）；
+- 跨网段 / 云环境用 **seed 模式**，不要依赖网段扫描与广播；
+- 多网卡 / NAT 给 `scatter.announce-host` 配对端真实可达的地址；
+- 心跳与发现周期默认 30s；进程被杀后最迟约 `heartbeat-interval × fail-remove-count`（默认 90s）被摘除，要求更快摘除就调小两者；
+- `persistence-enabled` 保持 `false`（Spring 宿主无状态重启），除非明确要跳过重启后的发现等待。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
@@ -262,7 +468,7 @@ public class ClusterInfoService {
 转发路径 = 上游请求的 `requestURI + queryString` 原样透传，且对端 metadata 里带 `context-path`。确认两节点 `server.servlet.context-path` 口径一致；不一致时用 `scatter.context-path` 显式指定登记值。
 
 **Q4：节点之间互相发现不了？**
-依次检查：`scatter.group` 是否一致（同组才互相同步）、`scatter.service-path` 是否一致、`seeds` 是否指向对方**组网端口**（不是 `server.port`）、组网端口防火墙是否放行、`scatter.subnet` 是否把对端网段过滤掉了。`udp` 模式还需确认组播/数据报可达。
+依次检查：`scatter.group` 是否一致（同组才互相同步）、`scatter.service-path` 是否一致、各节点 `scatter.port` 是否一致（自动发现按**同一端口**试探/宣告，随机端口必然互相发现不了）、`seeds` 是否指向对方**组网端口**（不是 `server.port`）、组网端口防火墙是否放行、`scatter.subnet` 是否把对端网段过滤掉了。`udp` 模式还需确认组播/数据报可达。
 
 **Q5：组网端口和业务端口是什么关系？**
 两个平面、两组条目：组网 self 条目（`serverId=nodeId`，protocol=`tcp`/`udp`，port=`scatter.port`）负责成员表同步/选举/心跳；业务端点条目（`serverId=nodeId+":http"`，protocol=`http`，port=`server.port`）供 self-balance 转发与业务发现使用。两组 serverId 不同，`updateService` 不会互相覆盖；self-balance 只按 `protocol=http` 选实例，绝不会把业务请求打到对端组网端口。
