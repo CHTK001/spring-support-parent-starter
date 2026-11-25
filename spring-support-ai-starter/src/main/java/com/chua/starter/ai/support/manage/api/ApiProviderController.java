@@ -8995,7 +8995,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (description != null) {
             m.put("description", description);
         }
-        Map<String, Object> metrics = HttpChatClientIndicator.parseModelMetrics(item);
+        Map<String, Object> metrics = HttpChatClientIndicator.parseModelMetrics(item, platform);
         if (!metrics.isEmpty()) {
             m.put("metrics", metrics);
             applyUpstreamMetrics(m, metrics);
