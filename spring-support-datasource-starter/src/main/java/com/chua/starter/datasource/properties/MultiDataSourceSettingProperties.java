@@ -46,7 +46,9 @@ public class MultiDataSourceSettingProperties {
 
     /**
      * 严格模式
-     * <p>开启后，如果指定数据源不存在则抛出异常，不回退到默认数据源。</p>
+     * <p>开启后，如果指定数据源（如 {@code @DS} 注解值）不存在则抛出异常，不回退到默认数据源；
+     * 关闭（默认）时回退到默认数据源——名为 {@code master} 的数据源，未命名 master 时为
+     * 按注册顺序第一个注册的数据源。</p>
      * 默认值: false
      * 示例: plugin.multi-datasource.strict=true
      */

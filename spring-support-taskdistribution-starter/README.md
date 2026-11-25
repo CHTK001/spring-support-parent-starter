@@ -110,6 +110,107 @@ sequenceDiagram
 | `plugin.taskdistribution.task.timeout-ms` | `long` | `30000` | **配置未接线**；实际超时取每个 `Task` 的 `timeoutMs` 字段（`Task.builder().timeoutMs(...)`，框架默认同为 30000） |
 | `plugin.taskdistribution.task.max-retries` | `int` | `3` | **配置未接线**；实际取每个 `Task` 的 `maxRetries` 字段（框架默认 3） |
 
+### 5.1 逐项配置示例（按功能分组）
+
+#### 开关与节点标识
+
+| 配置项 | 含义 | 默认值 |
+|:---|:---|:---|
+| `enabled` | 模块总开关，false 则整个自动配置不加载 | `true`（缺省即开启） |
+| `node-id` | 节点唯一标识，写入 `TaskIdGenerator` 作任务 ID 前缀；多实例部署必须显式配置且全局唯一 | null → 自动生成 `node-<时间戳>` 并回写 |
+
+```yaml
+plugin:
+  taskdistribution:
+    enabled: true        # 缺省即 true，可不写
+    node-id: node-01     # 不配则自动生成 node-<时间戳>
+```
+
+#### 派发与消费
+
+| 配置项 | 含义 | 默认值 |
+|:---|:---|:---|
+| `strategy` | 派发策略：`FIRST` / `LAST` / `RANDOM` / `ROUND` / `WEIGHT`；当前仅用于初始化日志与服务信息登记，未传给派发器 | `ROUND` |
+| `batch-size` | 内存派发器单次批量出队的任务数；配置 ≤0 时派发器内部回落为 1 | `1` |
+| `consumer-threads` | 内存派发器消费线程数（任务经桥接后在这些线程内执行）；配置 ≤0 时派发器内部回落为 1 | `1` |
+
+```yaml
+plugin:
+  taskdistribution:
+    strategy: ROUND         # FIRST / LAST / RANDOM / ROUND / WEIGHT
+    batch-size: 10          # 每次批量出队任务数
+    consumer-threads: 4     # 消费线程数
+```
+
+#### 存储模式
+
+| 配置项 | 含义 | 默认值 |
+|:---|:---|:---|
+| `store-type` | 任务/结果持久化实现：`memory` / `file` / `db`；db 缺 MyBatis 环境或非法值均回落 memory | `memory` |
+| `store-path` | 文件存储落盘目录，仅 `store-type=file` 生效 | `./data/taskstore/` |
+
+```yaml
+plugin:
+  taskdistribution:
+    store-type: file                  # memory / file / db
+    store-path: ./data/taskstore/     # 仅 store-type=file 生效
+```
+
+#### 服务端与任务默认值（当前仅声明，运行期未消费）
+
+| 配置项 | 含义 | 默认值 |
+|:---|:---|:---|
+| `server.enabled` | 服务端模式开关声明 | `true` |
+| `server.port` | 声明监听端口（不会实际监听） | `19390` |
+| `server.host` | 声明监听主机 | `0.0.0.0` |
+| `server.protocol` | 声明传输协议 tcp / udp | `tcp` |
+| `task.timeout-ms` | 任务默认超时声明；实际取每个 Task 的 `timeoutMs` 字段 | `30000` |
+| `task.max-retries` | 任务默认重试声明；实际取每个 Task 的 `maxRetries` 字段 | `3` |
+
+```yaml
+plugin:
+  taskdistribution:
+    server:              # 仅声明，当前不会监听端口
+      enabled: true
+      port: 19390
+      host: 0.0.0.0
+      protocol: tcp
+    task:                # 仅声明，实际以每个 Task 的字段为准
+      timeout-ms: 30000
+      max-retries: 3
+```
+
+### 5.2 完整 YAML 使用示例（生产参考：db 存储）
+
+```yaml
+plugin:
+  taskdistribution:
+    enabled: true
+    node-id: prod-node-01          # 多实例部署必须全局唯一
+    batch-size: 10
+    consumer-threads: 4
+    store-type: db                 # 生产推荐 db：重启后 recover() 自动恢复 PENDING/RUNNING 任务
+    # store-path 仅 store-type=file 时需要，db 模式忽略：
+    # store-path: ./data/taskstore/
+    # server.* / task.* / strategy 当前为仅声明配置，可不写
+```
+
+db 模式的三个前提（缺一自动回退内存并打 WARN）：
+
+1. 引入 optional 依赖 `spring-support-mybatis-starter` 并配置好数据源（数据源配置属宿主/mybatis-starter，不在本模块 `plugin.taskdistribution` 前缀内）；
+2. `@MapperScan` 扫描到 `com.chua.starter.taskdistribution.support.mapper`；
+3. 执行建表脚本 `src/main/resources/db/init/V2.0__init_all_taskdistribution.sql`（表 `sys_task_store`）。
+
+### 5.3 生产注意事项
+
+- **不要基于 19390 端口做防火墙/监控配置**：`server.*` 未接线，本模块不监听任何端口，也不存在 TCP/UDP 集群节点（详见 Q3）。
+- **超时与重试逐任务设置**：`task.timeout-ms` / `task.max-retries` 未接线，需在 `Task.builder().timeoutMs(...).maxRetries(...)` 中显式指定；框架没有自动重试调度器，需业务侧定期调 `getRetryableTasks()` 重新派发。
+- **nodeId 唯一性**：多实例共用一套存储（尤其 db/file 模式）时，`node-id` 必须全局唯一，否则任务 ID 前缀冲突、链路排查困难。
+- **db 模式写入语义**：`DbTaskStore` 的 upsert 异常只打日志不抛出（写失败不阻断业务但不落库）；`task_json`/`result_json` 为 TEXT（约 64KB），大 payload 请改 LONGTEXT 或先压缩。
+- **恢复范围**：启动恢复仅覆盖 PENDING/RUNNING 状态，已完成任务不重放；内存模式（默认）重启即丢任务。
+- **文件存储**：`store-path` 目录需宿主进程有读写权限；多实例不要指向同一目录，避免互相覆盖。
+- **消费线程与批量**：`consumer-threads` 决定派发消费并发度、`batch-size` 决定单轮出队数；队列为无界 `PriorityBlockingQueue`（初始容量 1024，超出自动扩容、不拒绝不阻塞），积压可通过 `pendingCount()` 观测，重任务场景请自行监控积压防止内存膨胀。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标

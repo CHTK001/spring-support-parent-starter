@@ -134,6 +134,115 @@ flowchart TD
 | `mybatis-plus.mapper-locations`、`mybatis-plus.configuration.*`、`mybatis-plus.global-config.*` | MyBatis-Plus 原生 | 由宿主按 MP 文档配置，本模块不重复封装 |
 | `plugin.datasource.materialized.enabled` | `MaterializedRouteProperties`（datasource-starter） | 启用后本模块挂载 `MaterializedSqlInterceptor` |
 
+### 5.5 逐项配置示例（按功能分组）
+
+以下「默认值」均与三个配置类（`MybatisPlusProperties` / `MybatisPlusDataScopeProperties` / `MybatisSlowSqlProperties`）的字段初始化值一致；各 YAML 片段可单独使用，也可合并（见 6.4 完整示例）。
+
+#### 基础开关
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.mybatis.enable` | 预留开关，模块内无消费方 | `true` |
+| `plugin.mybatis.read-only` | 只读模式，写操作抛 `ReadOnlyException` | `false` |
+
+```yaml
+plugin:
+  mybatis:
+    enable: true        # 预留开关：写 false 不会关闭模块，停用请移除依赖
+    read-only: false    # true 时 insert/update/delete 全部被拒绝
+```
+
+#### XML 热重载
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.mybatis.open-xml-reload` | 热重载总开关 | 字段默认 `true`；Bean 条件 `matchIfMissing=false`，须显式写 `true` 才注册 |
+| `plugin.mybatis.reload-type` | 重载方式：`NONE` / `AUTO` | `AUTO` |
+| `plugin.mybatis.reload-time` | 文件监听轮询间隔（毫秒） | `3000` |
+| `plugin.mybatis.reload-directories[n].path` | 监听目录，本地路径或 `classpath:` 前缀 | 无（为空跳过该条目） |
+| `plugin.mybatis.reload-directories[n].pattern` | 文件匹配模式 | `**/*Mapper.xml` |
+| `plugin.mybatis.reload-directories[n].watch-enabled` | 是否启用文件监听 | `true`（jar 内 classpath 资源无法监听） |
+
+```yaml
+plugin:
+  mybatis:
+    open-xml-reload: true
+    reload-type: AUTO
+    reload-time: 3000
+    reload-directories:
+      - path: D:/mapper              # 本地目录
+        pattern: "**/*Mapper.xml"
+        watch-enabled: true
+      - path: classpath:mapper       # 类路径目录（jar 包内不可监听）
+        pattern: "**/*Mapper.xml"
+```
+
+#### 自定义 SQL 注入
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.mybatis.sql-method[n].type` | SQL 来源：`FILE` 文件 / `MYSQL` 数据源 Bean | 无（未配置按 `MYSQL` 处理） |
+| `plugin.mybatis.sql-method[n].source` | 文件路径或数据源 Bean 名 | 无 |
+| `plugin.mybatis.sql-method[n].timeout` | watchdog 超时（毫秒） | `3000` |
+| `plugin.mybatis.sql-method[n].watchdog` | 是否开启变更检测 | `false` |
+
+```yaml
+plugin:
+  mybatis:
+    sql-method:
+      - type: FILE
+        source: sql/extend.sql
+        timeout: 3000
+        watchdog: false
+```
+
+⚠️ `SupportInjector` 当前仅注册为 Bean、未挂入 `SqlSessionFactory`，该组配置暂不生效（见第 4 节）。
+
+#### 数据权限
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.mybatis.data.scope.enable` | 启用数据权限拦截 | `false` |
+| `plugin.mybatis.data.scope.table-name` | 部门表名 | `sys_dept` |
+| `plugin.mybatis.data.scope.dept-id-column` | 部门 ID 列名 | `sys_dept_id` |
+| `plugin.mybatis.data.scope.dept-tree-id-column` | 部门树 ID 列名（`DEPT_AND_SUB` 用） | `sys_dept_tree_id` |
+| `plugin.mybatis.data.scope.current-user-id-column` | 当前用户 ID 列名（`SELF` 用） | `create_by` |
+
+```yaml
+plugin:
+  mybatis:
+    data:
+      scope:
+        enable: true
+        table-name: sys_dept
+        dept-id-column: sys_dept_id
+        dept-tree-id-column: sys_dept_tree_id
+        current-user-id-column: create_by
+```
+
+#### 慢 SQL 检测
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.mybatis.slow-sql.enabled` | 检测开关（`matchIfMissing=true`） | `true` |
+| `plugin.mybatis.slow-sql.threshold-ms` | 慢 SQL 阈值（毫秒） | `500` |
+| `plugin.mybatis.slow-sql.print` | 是否打印 WARN 日志 | `true` |
+| `plugin.mybatis.slow-sql.include-sql` | 事件是否携带 SQL 文本 | `true` |
+| `plugin.mybatis.slow-sql.include-parameters` | 事件是否携带参数映射 | `false` |
+| `plugin.mybatis.slow-sql.max-sql-length` | SQL 文本最大长度（超出截断） | `2000` |
+
+```yaml
+plugin:
+  mybatis:
+    slow-sql:
+      enabled: true
+      threshold-ms: 500
+      print: true
+      include-sql: true
+      include-parameters: false
+      max-sql-length: 2000
+```
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
@@ -198,6 +307,49 @@ public interface UserMapper extends BaseMapperX<User> {
 
 数据权限需提供名为 `authService`（或 `defaultAuthService`）的 `AuthService` Bean，返回携带 `userId`、`deptId`、`dataPermission`、`roles` 的 `CurrentUser`；`SUPER_ADMIN` / `ADMIN` 角色直接旁路。多表查询用 `@DataScope` 的 `deptAlias` / `userAlias` 指定别名。
 
+### 6.4 完整 YAML 使用示例
+
+生产环境推荐形态（含与数据源、MyBatis-Plus 原生配置的衔接；口令/密钥均为占位符，请替换为配置中心或环境变量注入的真实值）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/your-db?useUnicode=true&characterEncoding=utf8
+    username: your-username            # 占位符，请替换
+    password: your-password            # 占位符，请替换
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  encryptor:
+    password: change-me-32-bytes-key   # 字段加密密钥占位符；会被同步到系统属性，改密钥需重启
+    mode: AES
+
+plugin:
+  mybatis:
+    read-only: false                   # 报表/从库实例可改 true 拒绝写操作
+    open-xml-reload: true              # 须显式 true 才注册 mapper-reload 与 mybatis-extension 端点
+    reload-type: AUTO
+    reload-time: 3000
+    reload-directories:
+      - path: D:/mapper                # 开发期本地 Mapper XML 目录
+        pattern: "**/*Mapper.xml"
+        watch-enabled: true
+    data:
+      scope:
+        enable: true                   # 数据权限，依赖容器中的 AuthService Bean
+        table-name: sys_dept
+        dept-id-column: sys_dept_id
+        dept-tree-id-column: sys_dept_tree_id
+        current-user-id-column: create_by
+    slow-sql:
+      enabled: true
+      threshold-ms: 500
+      print: true
+      include-sql: true                # 生产可改 false，避免事件泄露敏感 SQL
+      include-parameters: false        # 生产建议保持 false
+      max-sql-length: 2000
+```
+
 ## 7. 使用场景
 
 **适用**：
@@ -257,3 +409,15 @@ public class TenantDataPermissionHandler extends MybatisPlusDataPermissionHandle
 3. **Spring Boot 4 兼容性？** 本仓库父 POM 为 Spring Boot 4.1.2 / Java 25；MyBatis-Plus 用 Boot 4 专用坐标 `mybatis-plus-spring-boot4-starter`（3.5.18），不要混入 `spring-boot3-starter` / `spring-boot-starter` 旧坐标。本模块仅提供 `AutoConfiguration.imports` 注册，Spring Boot 2.x 无法使用。
 
 4. **与兄弟模块冲突 / 端点 404？** `/actuator/mybatis-extension` 需同时满足：类路径有 Actuator、`open-xml-reload=true`（`mapper-reload` 存在）、`supportInjector` 存在（由 `@ConditionalOnBean` 约束）；`/actuator/mybatis-xml` 对应的 `MapperXmlEndpoint` 未在自动配置中注册 Bean，需要时自行声明。数据权限前缀必须是 `plugin.mybatis.data.scope`；`@DataScope` 解析结果按方法缓存，改注解需重启。`CryptoInterceptor` 与 `DeleteOnlySelfInterceptor` 仅注册未挂入拦截链，字段加密请用 `EncryptTypeHandler`。
+
+## 10. 生产注意事项
+
+1. **敏感信息脱敏**：`slow-sql.include-sql` / `include-parameters` 会把 SQL 文本与参数带进事件和日志，生产环境建议至少保持 `include-parameters: false`；开启 p6spy SQL 打印时同样注意脱敏。
+2. **密钥管理**：`mybatis-plus.encryptor.password` 会被本模块同步到系统属性供 `EncryptTypeHandler` 读取；请经环境变量/配置中心注入，不要把真实密钥提交进仓库；更换密钥需滚动重启并处理存量密文。
+3. **XML 热重载仅限开发期**：`open-xml-reload=true` 会启动文件监听线程并注册 `/actuator/mybatis-extension` 端点（还需类路径有 Actuator）；生产环境建议不开启，避免资源占用与端点暴露。
+4. **端点安全**：`/actuator/mybatis-extension`（及自行注册的 `MapperXmlEndpoint` 对应端点）会暴露 Mapper 元数据与 SQL 定义，生产环境应纳入 Actuator 鉴权或内网隔离。
+5. **数据权限旁路口径**：`SUPER_ADMIN` / `ADMIN` 角色自动旁路，`@DataScope(enabled = false)` 方法级关闭；上线前应核对这些旁路是否符合安全预期，且数据权限依赖的 `AuthService` 必须真实可用。
+6. **慢 SQL 告警要有消费方**：阈值调低前先确认有 `@EventListener(MybatisSlowSqlEvent)` 承接，否则事件无人消费；阈值过小会造成事件风暴，建议结合 p6spy 基线观察后再定。
+7. **不要覆盖 `sqlSessionFactory`**：覆盖后会失去逻辑删除全局配置与全部拦截器增强；定制优先覆盖 `GlobalConfig` 或追加 `InnerInterceptor` Bean。
+8. **深分页**：分页由 `PaginationInnerInterceptor` 改写 SQL 完成，大 offset 深分页仍会拖慢数据库，必要时改用游标/键集分页或限制可翻页深度。
+9. **依赖完整性**：`spring-support-datasource-starter` 虽为 `optional`，但缺失时本模块自动装配直接失败（见 6.2）；升级本模块时同步核对 MyBatis-Plus Boot 4 专用坐标，勿混入旧坐标。

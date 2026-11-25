@@ -206,8 +206,8 @@ flowchart LR
 | `plugin.security.fingerprint.include-body` 等 | 见 `FingerprintProps` | 方法 / 路径 / 参数 / 头 / 请求体是否参与指纹 |
 | `plugin.nonce.sign.secret-key` | 内置默认值 | 回退环境变量 `PLUGIN_NONCE_SIGN_SECRET_KEY`、前缀 `nonce.sign` |
 | `plugin.service-info.enable` / `banner` | `true` / `true` | `/service-info` 端点与启动横幅 |
-| `plugin.service-info.auth.enable` / `auth.username` / `auth.password` | `false` / `admin` / 空 | 端点认证 |
-| `plugin.service-info.auth.ip-whitelist` | 空 | 端点认证 IP 白名单（命中跳过认证；支持精确/通配符/CIDR） |
+| `plugin.service-info.auth-enable` / `auth-username` / `auth-password` | `false` / `admin` / 空 | 端点认证凭据（绑定 `ServiceInfoProperties` 扁平字段；过滤器注册条件是嵌套键 `plugin.service-info.auth.enable=true`，运行时门控是 `auth-enable`） |
+| `plugin.service-info.auth-ip-whitelist` | 空 | 端点认证 IP 白名单（命中跳过认证；支持精确/通配符/CIDR） |
 | `plugin.service-info.infrastructure` | `true` | 横幅展示 Redis/JDBC/Kafka 等已配置的连接信息 |
 | `plugin.ip.enable` / `database-file` / `ip-type` | `false` / `classpath:qqwry.dat` / `ip2region` | IP 归属地 |
 | `plugin.notice.enable` / `email.smtp-host` / `email.from` | `false` / `smtp.qq.com` / 无 | 邮件通知 |
@@ -338,10 +338,11 @@ plugin:
     banner: true                     # 启动横幅（默认 true）
     infrastructure: true             # 横幅展示 Redis/JDBC/Kafka 等连接信息（默认 true）
     auth:
-      enable: false                  # 端点认证（默认 false）
-      username: admin                # 认证用户名（默认 admin）
-      password: "${SERVICE_INFO_PASSWORD:change-me}"  # 认证密码（默认空）
-      ip-whitelist: []               # 认证 IP 白名单，命中跳过认证（默认空）
+      enable: false                  # 认证过滤器注册开关（嵌套键，缺省不注册过滤器）
+    auth-enable: false               # 运行时认证门控（扁平键；需与上面嵌套键同时开启才生效）
+    auth-username: admin             # 认证用户名（默认 admin）
+    auth-password: "${SERVICE_INFO_PASSWORD:change-me}"  # 认证密码（默认空）
+    auth-ip-whitelist: []            # 认证 IP 白名单，命中跳过认证（默认空）
   jackson:
     include-null: false              # 是否输出 null 字段（默认 false；无装配开关，恒生效）
   message:
@@ -480,10 +481,11 @@ plugin:
   service-info:
     enable: true
     auth:
-      enable: true
-      username: ops
-      password: "${SERVICE_INFO_PASSWORD:change-me}"
-      ip-whitelist: [ "10.0.0.0/8" ]
+      enable: true                   # 认证过滤器注册开关（缺省不注册过滤器）
+    auth-enable: true                # 运行时认证门控（需与上面嵌套键同时开启）
+    auth-username: ops
+    auth-password: "${SERVICE_INFO_PASSWORD:change-me}"
+    auth-ip-whitelist: [ "10.0.0.0/8" ]
   async:
     enable: true
   thread:
@@ -507,7 +509,7 @@ plugin:
 ### 8.3 生产注意事项
 
 1. **显式开启清单**：`plugin.log.enable`、`plugin.captcha.enable`、`plugin.optional.enable`、`plugin.security.fingerprint.enabled`、`plugin.actuator.enable-auth` 的字段默认值与装配条件不一致（端点/过滤器为 `matchIfMissing=false`），不显式配置即不生效。
-2. **密钥管理**：`plugin.actuator.password`、`plugin.nonce.sign.secret-key`、`plugin.api.decode.codec-request-key`、`plugin.service-info.auth.password`、`plugin.notice.email.password`、`plugin.captcha.external.api-token` 一律走环境变量或配置中心注入，禁止明文写入仓库；Nonce 密钥需与前端保持一致并定期轮换；`keylog-key-file` 指向的长期密钥文件同机多服务可共用一份。
+2. **密钥管理**：`plugin.actuator.password`、`plugin.nonce.sign.secret-key`、`plugin.api.decode.codec-request-key`、`plugin.service-info.auth-password`、`plugin.notice.email.password`、`plugin.captcha.external.api-token` 一律走环境变量或配置中心注入，禁止明文写入仓库；Nonce 密钥需与前端保持一致并定期轮换；`keylog-key-file` 指向的长期密钥文件同机多服务可共用一份。
 3. **CORS**：`allowed-origins` 必须显式白名单，禁止填 `*`——Spring 的 `allowedOriginPatterns("*")` 会把请求 Origin 原样反射回响应头，配合 `allow-credentials=true` 等于任意网站都能带凭证读接口响应；`allow-credentials=true` 必须以白名单配置为前提。
 4. **安全响应头**：HSTS 仅在 HTTPS 部署下开启，否则浏览器强制升级 https 导致站点打不开；CSP 默认留空（内联样式与 `@vite/client` 站点贸然启用会打挂页面），需按部署形态逐域评估后再配。
 5. **Actuator 加固**：生产同时开启 `enable-auth` 与 `ip-whitelist` 双重收敛；`exclude-paths` 谨慎使用，避免绕过认证。
@@ -517,7 +519,7 @@ plugin:
 9. **验证码**：端点前缀 `plugin.captcha.context-path` 修改后需同步前端与网关路由；`ttl` 过长会增加缓存占用，过短影响用户体验。
 10. **请求指纹**：`include-body` 上限默认 1MB，大报文接口可调小 `include-body-max-bytes` 或用 `body-methods` 排除。
 11. **null 序列化**：`plugin.jackson.include-null=false` 时响应省略 null 字段，前端判空逻辑需兼容「字段缺失」与「字段为 null」两种形态。
-12. **信息暴露面**：`/service-info` 与启动横幅会展示服务、连接与线程池信息，生产建议开启 `plugin.service-info.auth.enable=true`。
+12. **信息暴露面**：`/service-info` 与启动横幅会展示服务、连接与线程池信息，生产建议同时开启过滤器注册开关 `plugin.service-info.auth.enable=true` 与运行时门控 `plugin.service-info.auth-enable=true`（并配置 `auth-username` / `auth-password`）；只配嵌套键时过滤器不会进入执行链，端点仍匿名可读。
 
 ## 九、使用方式
 
@@ -629,7 +631,7 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 `plugin.api.cors.enable=true` 时 `allowed-origins` 为空则不放行任何跨域来源；把前端域名加入白名单（支持端口通配），不要使用 `*` 与 `allow-credentials=true` 组合。
 
 **Q：如何查看当前生效了哪些开关？**
-访问 `GET /service-info`（公网环境请开启 `plugin.service-info.auth.enable=true`），或查看应用启动横幅。
+访问 `GET /service-info`（公网环境请同时开启注册开关 `plugin.service-info.auth.enable=true` 与门控开关 `plugin.service-info.auth-enable=true`，并配置 `auth-username` / `auth-password`），或查看应用启动横幅。
 
 **Q：`@Watch` 的链路和日志里的 traceId 是一回事吗？**
 不是。traceId 由 `MdcHandlerFilter` 在 HTTP 边界写入 MDC；`@Watch` 的 linkId 由 `TrackContext` 在方法边界管理。两者仅在 `@Watch` 切面入口用同一个 UUID 关联，跨线程传播也各走各的（MDC 走 `MdcWrap`/`MdcTaskDecorator`，Span 栈是 ThreadLocal、最外层结束即清空）。

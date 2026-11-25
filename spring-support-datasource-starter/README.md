@@ -127,7 +127,7 @@ flowchart TD
 | `plugin.datasource.script.script-prefix / script-suffix / version-separator / validate-checksum / mixed` | `String`/`Boolean` | `V` / `.sql` / `__` / `true` / `false` | 脚本命名规则 / 校验和 / 混合模式 |
 | `plugin.datasource.script.timeout / verbose / database-type` | `Integer`/`Boolean`/`String` | `0` / `true` / — | 迁移超时（秒，`0` 不限）/ 详细日志 / 指定数据库类型脚本目录 |
 | `plugin.datasource.script.release-type / allowed-release-types` | `Enum`/`Set` | `STABLE` / — | 允许执行的版本类型（`SNAPSHOT`/`ALPHA`/`BETA`/`RC`/`STABLE`/`ALL`） |
-| `plugin.datasource.script.initdata-parallelism / initdata-timeout-minutes / scope / exclude-table-prefixes` | `Integer`/`String`/`String[]` | `0` / `5` / `table` / `[sys_]` | 数据脚本并行度（`0` 串行）/ 超时（分钟）/ 空库判断范围 / 排除表前缀 |
+| `plugin.datasource.script.initdata-parallelism / initdata-timeout-minutes / scope / exclude-table-prefixes` | `Integer`/`String`/`String[]` | `0` / `5` / `table` / `[sys_]` | 数据脚本并行度（`0` 不限制，每个脚本一个虚拟线程）/ 超时（分钟）/ 空库判断范围 / 排除表前缀 |
 | `plugin.datasource.monitor.enabled / auto-enable-environments` | `Boolean`/`List` | `null` / `dev,test,uat,local` | `null`=按 profile 自动；显式 `true`/`false` 优先 |
 | `plugin.datasource.monitor.slow-sql-threshold-ms` | `Long` | `1000` | 慢 SQL 阈值（毫秒） |
 | `plugin.datasource.monitor.max-sql-length / record-sql / publish-event` | `Integer`/`Boolean` | `2000` / `true` / `true` | SQL 截断长度 / 记录文本 / 发布 Spring 事件 |
@@ -263,7 +263,7 @@ plugin:
 | `verbose` | `true` | 详细日志 |
 | `database-type` | — | 指定数据库类型脚本目录（如 `mysql`） |
 | `release-type` / `allowed-release-types` | `STABLE` / — | 版本类型门槛（`SNAPSHOT`/`ALPHA`/`BETA`/`RC`/`STABLE`/`ALL`）；后者设置后覆盖前者 |
-| `initdata-parallelism` / `initdata-timeout-minutes` | `0` / `5` | 数据脚本并发（`0` 串行）/ 等待超时（分钟） |
+| `initdata-parallelism` / `initdata-timeout-minutes` | `0` / `5` | 数据脚本并发（`0` 不限制，每个脚本一个虚拟线程）/ 等待超时（分钟） |
 | `scope` / `exclude-table-prefixes` | `table` / `sys_` | 空库判断范围（`table`/`file`）/ 排除的表前缀 |
 
 ```yaml
@@ -565,7 +565,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/app
     username: root
-    password: root
+    password: "${DB_PASSWORD:change-me}"
 plugin:
   multi-datasource:
     load-balance: round_robin

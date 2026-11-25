@@ -142,6 +142,7 @@ public class SysAiProviderMetricService {
             case "together", "together-ai" -> "togetherai";
             case "poe" -> "poe";
             case "longcat" -> "longcat";
+            case "github-copilot" -> "github-copilot";
             case "kilo" -> "kilo";
             case "amazon", "aws-bedrock", "bedrock" -> "amazon-bedrock";
             case "vercel" -> "vercel";

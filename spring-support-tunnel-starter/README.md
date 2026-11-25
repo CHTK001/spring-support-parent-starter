@@ -131,6 +131,112 @@ sequenceDiagram
 
 配置元数据由 optional 依赖 `spring-boot-configuration-processor` 在编译期生成。厂商细节（authtoken、二进制路径、域名等）不在本前缀内，见各提供方的 `plugin.ngrok.*` / `plugin.cloudflared.*` 配置。
 
+### 5.1 逐项配置示例
+
+#### 开关与启动恢复
+
+**`plugin.tunnel.enable`** —— 统一入口总开关。
+
+- 含义：`false` 时不注册 `/ms/tunnel/**` REST 接口与 `TunnelService` 编排服务，应用就绪后也不再恢复自动启动的映射；各提供方 starter 自身的一次性隧道能力不受影响。
+- 默认值：`true`（未配置同视为开启，`matchIfMissing=true`）。
+
+```yaml
+plugin:
+  tunnel:
+    enable: true
+```
+
+**`plugin.tunnel.restore-on-startup`** —— 启动恢复开关。
+
+- 含义：应用就绪（`ApplicationReadyEvent`）时是否恢复 `enabled=true` 且 `autoStart=true` 的映射；恢复以「不接管」方式执行，同一条隧道已被其他实例运行时跳过。
+- 默认值：`true`。不希望重启后自动占用公网域名时设为 `false`。
+
+```yaml
+plugin:
+  tunnel:
+    restore-on-startup: false
+```
+
+#### 存储与多实例所有权
+
+**`plugin.tunnel.store-dir`** —— 映射持久化根目录。
+
+- 含义：一条映射一个 JSON 文件，按提供方分子目录（`<store-dir>/<provider>/<id>.json`）；运行锁文件 `<id>.lock` 也写在这里。单个提供方可通过 `TunnelProvider#storeDir()` 覆盖自己的目录。
+- 默认值：未配置或空白 → `~/.chua/tunnel`（`resolveStoreDir()` 取 `user.home/.chua/tunnel`）。
+
+```yaml
+plugin:
+  tunnel:
+    store-dir: /data/app/tunnel
+```
+
+**`plugin.tunnel.instance-url`** —— 本实例控制地址。
+
+- 含义：写入映射 `owner` 字段作所有权标记；多实例共享同一存储目录时据此互认，手动启动被占用隧道时先请求对方 `/ms/tunnel/{id}/stop` 再接管（约 6s 等待窗口）。
+- 默认值：未配置或空白 → `http://127.0.0.1:{server.port}`（端口缺省 8080）。多实例共享目录时必须为每个实例配置不同且互相可达的地址。
+
+```yaml
+plugin:
+  tunnel:
+    instance-url: http://192.168.1.10:8080
+```
+
+#### 提供方白名单
+
+**`plugin.tunnel.providers`** —— 对外暴露的提供方白名单。
+
+- 含义：多实现共存时按环境裁剪；名字大小写不敏感、自动去空白。配置后，`name()` 不在名单内的实现不会出现在 `/ms/tunnel/providers` 与页面中。
+- 默认值：空列表 = 容器里有几个暴露几个。
+
+```yaml
+plugin:
+  tunnel:
+    providers:
+      - cloudflared
+```
+
+#### SSE 状态推送
+
+**`plugin.tunnel.sse-interval`** —— SSE 快照推送间隔。
+
+- 含义：`GET /ms/tunnel/stream` 广播 `tunnels` 事件的周期；`TunnelStatusStream` 内部下限 500ms，配置小于 500ms 按 500ms 生效。
+- 默认值：`1500ms`（配置为空时同样回落 1500ms）。
+
+```yaml
+plugin:
+  tunnel:
+    sse-interval: 2s
+```
+
+### 5.2 完整 YAML 示例
+
+```yaml
+# application.yml —— tunnel 统一入口（厂商凭据等见各提供方 starter 文档）
+plugin:
+  tunnel:
+    enable: true                               # 总开关，默认 true
+    store-dir: /data/app/tunnel                # 映射 JSON 与 <id>.lock 的根目录，默认 ~/.chua/tunnel
+    providers:                                 # 对外暴露的白名单，留空 = 全部暴露
+      - cloudflared
+    instance-url: http://192.168.1.10:8080     # 本实例控制地址（owner 标记），默认按 server.port 推导
+    restore-on-startup: true                   # 启动时恢复 autoStart=true 且 enabled 的映射
+    sse-interval: 1500ms                       # SSE 推送间隔，内部下限 500ms
+
+server:
+  port: 8080
+```
+
+单实现部署可省略 `providers`；多实例共享 `store-dir` 时，`instance-url` 必须各不相同。
+
+### 5.3 生产注意事项
+
+- **鉴权**：本模块不提供鉴权，`/ms/tunnel/**`（含可新建/删除映射的写接口）的访问控制依赖宿主应用的安全链（网关、Spring Security 等），不要把管理端点直接暴露到公网。
+- **凭据管理**：ngrok authtoken、cloudflared 证书等厂商凭据不在 `plugin.tunnel.*` 内，由各提供方 starter 配置；示例与配置文件中一律使用 `your-auth-token` 之类占位符，不要提交真实凭据。
+- **多实例部署**：共享同一 `store-dir` 的实例必须配置不同且互相可达的 `instance-url`，否则所有权互认与接管（约 6s 等待窗口）无法工作；`restore-on-startup` 的恢复不接管，不会互抢域名。
+- **目录可写与备份**：`store-dir` 需应用可写；映射 JSON 与 `<id>.lock` 都在其中，迁移/备份按目录整体处理。运行态（公网地址、会话）只在内存，落盘的 `owner` 在停止后清空。
+- **SSE 频率**：`sse-interval` 越小页面刷新越及时，但推送越频繁；下限 500ms，按管理端规模权衡。
+- **关闭方式**：`enable: false` 只关闭统一入口与编排服务；已引入的提供方 starter 自身能力不受影响，排查问题时可据此二分。
+
 ## 6. 使用方式
 
 Maven 坐标：

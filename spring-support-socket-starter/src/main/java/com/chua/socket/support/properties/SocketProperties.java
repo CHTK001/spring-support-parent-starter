@@ -15,6 +15,39 @@ import static com.chua.socket.support.properties.SocketProperties.PRE;
  * Socket 基础配置属性类
  * 提供统一的 Socket 配置，支持多种协议切换
  *
+ * <p>配置前缀为 {@code plugin.socket}（{@link #PRE}），开启 {@code ignoreInvalidFields}：
+ * 绑定失败的字段被忽略、不抛异常。完整配置示例（各项默认值以字段初始化为准）：</p>
+ *
+ * <pre>
+ * plugin:
+ *   socket:
+ *     enable: true                # 总开关，默认 false；关闭时不创建任何会话模板 Bean
+ *     auto-start: true            # 是否随容器启动自动监听端口，默认 true
+ *     protocol: socketio          # 单协议：socketio/rsocket/sse/sse-server/ndjson，默认 sse
+ *     host: 0.0.0.0               # 监听地址，默认 0.0.0.0
+ *     codec-type: json            # 编解码类型，默认 json
+ *     max-frame-size: 1048576     # 最大帧大小（字节），默认 1MB
+ *     boss-count: 1               # Boss 线程数，默认 1
+ *     work-count: 100             # 工作线程数，默认 100
+ *     allow-custom-requests: true # 是否允许自定义请求，默认 true
+ *     ping-timeout: 60000         # 心跳超时（毫秒），默认 60000
+ *     ping-interval: 25000        # 心跳间隔（毫秒），默认 25000
+ *     auth-factory: com.example.socket.MySocketAuthFactory # 鉴权工厂类全名，默认空
+ *     use-linux-native-epoll: false # 是否启用 Linux Epoll，默认 false
+ *     room:                       # 单协议模式的实例（房间）列表
+ *       - client-id: default      # 实例标识，默认 default
+ *         context-path: /socket.io # 上下文路径，默认 /socket.io
+ *         port: 9000              # -1=主端口；-2/-3…=主端口+偏移；正数=独立端口
+ *     protocols:                  # 多协议模式（非空时忽略 protocol 与 room）
+ *       - protocol: socketio
+ *         room:
+ *           - client-id: default
+ *             port: 9000
+ *       - protocol: ndjson
+ *         room:
+ *           - client-id: default
+ * </pre>
+ *
  * @since 2024-12-04
  * @author CH
  */
@@ -28,21 +61,36 @@ public class SocketProperties {
     public static final String PRE = "plugin.socket";
 
     /**
-     * 是否开启
+     * 是否开启 Socket 模块
+     * <p>
+     * 默认 {@code false}：关闭时不创建任何会话模板/生命周期 Bean，装配静默跳过。
+     * </p>
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     enable: true
+     * </pre>
      */
     private boolean enable;
 
     /**
-     * 是否在 Spring 容器启动阶段自动启动 Socket 服务
+     * 是否在 Spring 容器启动阶段自动启动 Socket 服务，默认 {@code true}
      * <p>
      * 关闭后仍会创建对应的 {@link com.chua.socket.support.session.SocketSessionTemplate} Bean，
      * 但不会在应用启动时自动监听端口，适合由外部逻辑或运维脚本显式控制生命周期。
      * </p>
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     auto-start: false
+     * </pre>
      */
     private boolean autoStart = true;
 
     /**
-     * 房间配置列表
+     * 房间配置列表，默认空列表（无实例配置时的行为由协议实现决定）
      * <p>
      * 支持配置多个独立的 Socket 服务实例，每个实例可以有不同的端口和路径
      * </p>
@@ -64,13 +112,21 @@ public class SocketProperties {
     private List<Room> room = new ArrayList<>();
 
     /**
-     * 协议类型，默认 sse
-     * 可选值：Socket.IO, rsocket, sse
+     * 协议类型（单协议模式），默认 {@code sse}
+     * 可选值：socketio / rsocket / sse / sse-server / ndjson（别名 jsonl）；
+     * 无法识别的值经 {@link SocketProtocol#of(String)} 回落为 socketio。
+     * 配置了 {@link #protocols} 时本项被忽略。
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     protocol: socketio
+     * </pre>
      */
     private SocketProtocol protocol = SocketProtocol.SSE;
 
     /**
-     * 多协议配置列表（可选）
+     * 多协议配置列表（可选），默认空列表；非空时忽略 {@link #protocol} 与 {@link #room}
      * <p>
      * 支持同时启用多种协议，每种协议可独立配置房间
      * 如果配置了此项，将忽略单一的 协议 和 room 配置
@@ -118,53 +174,115 @@ public class SocketProperties {
     }
 
     /**
-     * 本地IP
+     * 监听主机地址，默认 {@code 0.0.0.0}（监听全部网卡）
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     host: 0.0.0.0
+     * </pre>
      */
     private String host = "0.0.0.0";
 
 
     /**
-     * 编解码器类型
+     * 编解码器类型，默认 {@code json}
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     codec-type: json
+     * </pre>
      */
     private String codecType = "json";
 
     /**
-     * 最大帧大小（字节），默认1MB
+     * 最大帧大小（字节），默认 {@code 1048576}（1MB）
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     max-frame-size: 1048576
+     * </pre>
      */
     private int maxFrameSize = 1048576;
 
     /**
-     * Boss 线程数
+     * Boss 线程数，默认 {@code 1}
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     boss-count: 1
+     * </pre>
      */
     private int bossCount = 1;
 
     /**
-     * 工作线程数
+     * 工作线程数，默认 {@code 100}
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     work-count: 100
+     * </pre>
      */
     private int workCount = 100;
 
     /**
-     * 是否允许自定义请求
+     * 是否允许自定义请求，默认 {@code true}
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     allow-custom-requests: true
+     * </pre>
      */
     private boolean allowCustomRequests = true;
 
     /**
-     * Ping 消息超时时间（毫秒），默认60秒
+     * Ping 消息超时时间（毫秒），默认 {@code 60000}（60 秒）
+     * <p>NDJSON 传输复用该值作为连接超时：大于 0 时直接生效，≤0 时回落 30 分钟。</p>
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     ping-timeout: 60000
+     * </pre>
      */
     private int pingTimeout = 60_000;
 
     /**
-     * Ping 消息间隔（毫秒），默认25秒
+     * Ping 消息间隔（毫秒），默认 {@code 25000}（25 秒）
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     ping-interval: 25000
+     * </pre>
      */
     private int pingInterval = 25_000;
 
     /**
-     * 认证工厂类名
+     * 认证工厂类名（{@link com.chua.socket.support.auth.SocketAuthFactory} 实现类全限定名），默认空
+     * <p>为空时不指定专属鉴权工厂，握手是否鉴权由协议实现模块决定。</p>
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     auth-factory: com.example.socket.MySocketAuthFactory
+     * </pre>
      */
     private String authFactory;
 
     /**
-     * 是否使用 Linux 的 NAT Epoll
+     * 是否使用 Linux 的 Native Epoll，默认 {@code false}（非 Linux 环境保持 false）
+     * YAML 示例：
+     * <pre>
+     * plugin:
+     *   socket:
+     *     use-linux-native-epoll: true
+     * </pre>
      */
     private boolean useLinuxNativeEpoll;
 
@@ -411,12 +529,29 @@ public class SocketProperties {
     public static class ProtocolConfig {
 
         /**
-         * 协议类型
+         * 协议类型，默认 {@code socketio}
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     protocols:
+         *       - protocol: socketio
+         * </pre>
          */
         private SocketProtocol protocol = SocketProtocol.SOCKETIO;
 
         /**
-         * 房间配置列表
+         * 房间配置列表，默认空列表
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     protocols:
+         *       - protocol: socketio
+         *         room:
+         *           - client-id: default
+         *             port: 9000
+         * </pre>
          */
         private List<Room> room = new ArrayList<>();
 
@@ -466,22 +601,43 @@ public class SocketProperties {
     public static class Room {
 
         /**
-         * 客户端标识，用于区分不同的服务实例
+         * 客户端标识，用于区分不同的服务实例，默认 {@code default}
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - client-id: default
+         * </pre>
          */
         private String clientId = "default";
 
         /**
-         * 上下文路径，如 /WebRTC、/Shell 等
+         * 上下文路径，如 /WebRTC、/Shell 等，默认 {@code /socket.io}
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - context-path: /socket.io
+         * </pre>
          */
         private String contextPath = "/socket.io";
 
         /**
-         * 端口号
+         * 端口号，默认 {@code -1}
          * <ul>
          *   <li>正数：使用指定端口启动独立服务</li>
          *   <li>-1：使用主配置的端口</li>
          *   <li>-2, -3...：使用主配置端口 + 偏移量（如主端口9000，-2表示9001）</li>
          * </ul>
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - port: 9000
+         * </pre>
          */
         private int port = -1;
 
@@ -504,17 +660,38 @@ public class SocketProperties {
         }
 
         /**
-         * 本地IP（可选，不设置则使用主配置）
+         * 本地IP（可选，默认空；不设置则回落主配置 {@code host}）
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - host: 192.168.1.10
+         * </pre>
          */
         private String host;
 
         /**
-         * 认证工厂类名（可选，不设置则使用主配置）
+         * 认证工厂类名（可选，默认空；不设置则回落主配置 {@code authFactory}）
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - auth-factory: com.example.socket.MySocketAuthFactory
+         * </pre>
          */
         private String authFactory;
 
         /**
-         * 是否启用此房间
+         * 是否启用此房间，默认 {@code true}
+         * YAML 示例：
+         * <pre>
+         * plugin:
+         *   socket:
+         *     room:
+         *       - enable: true
+         * </pre>
          */
         private boolean enable = true;
 

@@ -148,6 +148,211 @@ flowchart TD
 
 除上表外无其他配置；`type=chronicle-queue` 仅为默认字符串，模块内**不存在** Chronicle Queue 实现。
 
+### 5.3 逐项配置示例（按功能分组）
+
+#### ① 总开关与队列类型
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.enable` | 队列自动装配总开关；`false`/未配置时不注册任何队列 Bean | `false` |
+| `plugin.queue.type` | 队列实现类型；本模块仅内置 `local`，其余取值需自备 `MessageTemplate` Bean | `chronicle-queue` |
+| `plugin.queue.default-destination` | 预留的默认目标地址（当前代码未消费） | 未设置（null） |
+
+```yaml
+plugin:
+  queue:
+    enable: true          # 不开总开关，以下所有配置均不生效
+    type: local           # 本模块唯一内置实现；接 Kafka 等请自备 MessageTemplate Bean
+    # default-destination: order.events   # 预留字段，当前代码未消费
+```
+
+#### ② 本地队列（type=local 时生效）
+
+| 配置项 | 含义 | 默认值（含回落） |
+|---|---|---|
+| `plugin.queue.local.delay-threads` | 延迟消息（`sendDelayed`）调度线程数 | `2`；配置 ≤0 时 `LocalMessageTemplate` 构造时回落为 `2` |
+
+```yaml
+plugin:
+  queue:
+    local:
+      delay-threads: 2    # 0 或负数按 2 处理
+```
+
+#### ③ MQTT（属性模型，需自备客户端与 MessageTemplate 实现）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.mqtt.address` | broker 地址 | `tcp://localhost:1883` |
+| `plugin.queue.mqtt.client-id` | 客户端标识 | 未设置（null） |
+| `plugin.queue.mqtt.username` / `password` | 认证凭据 | 未设置（null） |
+| `plugin.queue.mqtt.qos` | QoS 级别（0/1/2） | `1` |
+| `plugin.queue.mqtt.connection-timeout` | 连接超时（秒） | `30` |
+| `plugin.queue.mqtt.keep-alive-interval` | 心跳间隔（秒） | `60` |
+
+```yaml
+plugin:
+  queue:
+    mqtt:
+      address: tcp://localhost:1883
+      client-id: your-client-id
+      username: your-username
+      password: your-password      # 占位符，勿提交真实凭据
+      qos: 1
+      connection-timeout: 30       # 秒
+      keep-alive-interval: 60      # 秒
+```
+
+#### ④ Kafka（属性模型，需自备客户端与 MessageTemplate 实现）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.kafka.bootstrap-servers` | 集群接入地址 | `localhost:9092` |
+| `plugin.queue.kafka.group-id` | 消费组 | `default-group` |
+| `plugin.queue.kafka.auto-offset-reset` | 位点重置策略（earliest/latest/none） | `earliest` |
+| `plugin.queue.kafka.enable-auto-commit` | 是否自动提交位点 | `true` |
+| `plugin.queue.kafka.auto-commit-interval-ms` | 自动提交间隔（毫秒） | `5000` |
+| `plugin.queue.kafka.acks` | 生产者确认级别（0/1/all） | `all` |
+
+```yaml
+plugin:
+  queue:
+    kafka:
+      bootstrap-servers: localhost:9092
+      group-id: default-group
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      auto-commit-interval-ms: 5000
+      acks: all
+```
+
+#### ⑤ RabbitMQ（属性模型，需自备客户端与 MessageTemplate 实现）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.rabbitmq.host` / `port` | 服务器地址与 AMQP 端口 | `localhost` / `5672` |
+| `plugin.queue.rabbitmq.username` / `password` | 认证凭据 | 空串 `""` |
+| `plugin.queue.rabbitmq.virtual-host` | 虚拟主机 | `/` |
+| `plugin.queue.rabbitmq.connection-timeout` | 连接超时（毫秒） | `60000` |
+
+```yaml
+plugin:
+  queue:
+    rabbitmq:
+      host: localhost
+      port: 5672
+      username: your-username
+      password: your-password      # 占位符，勿提交真实凭据
+      virtual-host: /
+      connection-timeout: 60000    # 毫秒
+```
+
+#### ⑥ RocketMQ（属性模型，需自备客户端与 MessageTemplate 实现）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.rocketmq.name-server` | NameServer 地址 | `localhost:9876` |
+| `plugin.queue.rocketmq.producer-group` / `consumer-group` | 生产/消费组 | `default-producer` / `default-consumer` |
+| `plugin.queue.rocketmq.send-msg-timeout` | 同步发送超时（毫秒） | `3000` |
+| `plugin.queue.rocketmq.max-message-size` | 单条消息上限（字节） | `4194304`（4MB） |
+
+```yaml
+plugin:
+  queue:
+    rocketmq:
+      name-server: localhost:9876
+      producer-group: default-producer
+      consumer-group: default-consumer
+      send-msg-timeout: 3000       # 毫秒
+      max-message-size: 4194304    # 字节
+```
+
+#### ⑦ NATS（属性模型，需自备客户端与 MessageTemplate 实现）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.nats.url` | 服务器地址 | `nats://localhost:4222` |
+| `plugin.queue.nats.username` / `password` / `token` | 认证凭据 | 未设置（null） |
+| `plugin.queue.nats.consumer-group` | 消费组 | `default-group` |
+| `plugin.queue.nats.connection-timeout` | 连接超时（毫秒） | `5000` |
+| `plugin.queue.nats.reconnect-wait` | 重连等待（毫秒） | `2000` |
+| `plugin.queue.nats.max-reconnects` | 最大重连次数（-1 无限） | `60` |
+
+```yaml
+plugin:
+  queue:
+    nats:
+      url: nats://localhost:4222
+      username: your-username
+      password: your-password      # 占位符，勿提交真实凭据
+      token: your-token
+      consumer-group: default-group
+      connection-timeout: 5000     # 毫秒
+      reconnect-wait: 2000         # 毫秒
+      max-reconnects: 60
+```
+
+#### ⑧ 审计拦截器
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.queue.audit.enabled` | 是否装配 `MessageAuditInterceptor`；来自该类上的 `@ConditionalOnProperty`，**不是** `QueueProperties` 字段 | 未配置即关闭 |
+
+```yaml
+plugin:
+  queue:
+    audit:
+      enabled: true    # 默认关闭；开启后注册审计拦截器 Bean（仍需自行编入收发链路）
+```
+
+#### ⑨ 死信队列
+
+| 配置项 | 含义 | 默认值（含校验/回落） |
+|---|---|---|
+| `plugin.dead-letter.enable` | 死信总开关；需 `plugin.queue.enable=true`（否则死信自动配置不被扫描） | `false` |
+| `plugin.dead-letter.type` | 死信底层存储类型；仅 `local` 有实现，其余（含未识别值）WARN 后回落本地 | `chronicle-queue` |
+| `plugin.dead-letter.delay-threads` | 死信延迟调度线程数 | `2`；≤0 时回落 `2` |
+| `plugin.dead-letter.max-retries` | 最大重试次数 | `3`；必须 >0，否则启动抛 `IllegalArgumentException` |
+| `plugin.dead-letter.retry-delay-seconds` | 首次重试延迟（秒） | `5`；必须 >0，否则启动抛 `IllegalArgumentException` |
+| `plugin.dead-letter.max-retry-delay-seconds` | 重试延迟上限（秒） | `300`；负数启动抛 `IllegalArgumentException`（0 合法但会把上限压为 0，不建议） |
+| `plugin.dead-letter.exponential-backoff` | 是否指数退避 | `true` |
+| `plugin.dead-letter.backoff-multiplier` | 退避乘数 | `2.0`；必须 >0，否则启动抛 `IllegalArgumentException` |
+
+```yaml
+plugin:
+  dead-letter:
+    enable: true
+    type: local
+    delay-threads: 2
+    max-retries: 3
+    retry-delay-seconds: 5
+    max-retry-delay-seconds: 300
+    exponential-backoff: true
+    backoff-multiplier: 2.0
+```
+
+### 5.4 完整 YAML 示例（本地队列 + 审计 + 死信，可直接运行）
+
+```yaml
+plugin:
+  queue:
+    enable: true                 # 总开关：不开启则本文件其余 queue 配置全部无效
+    type: local                  # 使用内置 Guava EventBus 本地实现
+    local:
+      delay-threads: 4           # 延迟消息调度线程数（<=0 回落为 2）
+    audit:
+      enabled: true              # 装配审计拦截器 Bean
+  dead-letter:
+    enable: true                 # 开启死信队列（需 plugin.queue.enable=true）
+    type: local                  # 死信底层存储；非 local 会回落 local 并打 WARN
+    delay-threads: 2
+    max-retries: 3               # 最多重试 3 次（必须 >0）
+    retry-delay-seconds: 5       # 首次重试等 5 秒（必须 >0）
+    max-retry-delay-seconds: 300 # 重试延迟上限 5 分钟
+    exponential-backoff: true    # 5s -> 10s -> 20s ...
+    backoff-multiplier: 2.0      # 退避乘数（必须 >0）
+```
+
 ## 6. 使用方式
 
 ```xml
@@ -252,3 +457,14 @@ Spring 事件互通：事件类标注 `@EventToQueue(value = "payment.order.crea
 
 **Q6：与 Spring Boot 4 兼容吗？消息会丢吗？**
 兼容。本模块只用 `META-INF/spring/...AutoConfiguration.imports` 登记自动配置（Boot 2.7 起标准方式，Boot 4 继续支持），无 `spring.factories`；本地实现用 Java 21 虚拟线程（`Thread.ofVirtual()`），要求运行时 JDK 21+。本地队列消息在内存中，进程重启即丢，可靠性要求高时请实现自己的 `MessageTemplate` 对接持久化 MQ。
+
+## 10. 生产注意事项
+
+1. **开关与类型必须成对确认**：`plugin.queue.enable=true` 且 `plugin.queue.type=local` 才有内置 `MessageTemplate`；只开 `enable` 不设 `type=local` 又不自备 Bean 时，`transactionalMessageTemplate` 因构造器强依赖 `MessageTemplate` 会导致**启动失败**。
+2. **本地实现的可靠性边界**：`LocalMessageTemplate` 消息存内存，进程重启即丢；`nack` 不重新入队（等同丢弃）；不支持消费组、顺序分区与海量吞吐。生产高可靠场景请实现自己的 `MessageTemplate` 对接 Kafka / RabbitMQ / RocketMQ 等持久化 MQ，并保证 `getType()` 与 `plugin.queue.type` 一致。
+3. **横切组件不会自动生效**：`MessageInterceptor`（日志/指标/链路/审计）、`DuplicateMessageFilter`、`GzipMessageConverter`、`SemaphoreMessageRateLimiter`、`TenantBasedMessageRouter` 只是注册成 Bean，收发链路**不会自动调用**，需在自定义 `MessageTemplate` 或业务代码中显式编排。
+4. **死信参数校验**：`plugin.dead-letter.max-retries`、`retry-delay-seconds`、`backoff-multiplier` 必须 >0，`max-retry-delay-seconds` 不可为负，否则 `DeadLetterTemplate` 初始化抛 `IllegalArgumentException` 使启动失败；`type` 非 `local` 只会 WARN 后回落本地存储，不要误以为接入了外部 MQ。
+5. **审计拦截器默认关闭**：`plugin.queue.audit.enabled` 未配置即不装配；它是注解条件而非 `QueueProperties` 字段，配置时注意前缀是 `plugin.queue.audit.enabled`。
+6. **运行时要求**：JDK 21+（虚拟线程）；`@QueueListener` 的 `concurrency > 1` 通过 `Semaphore` + 虚拟线程包装实现，本地实现忽略 `group`。
+7. **凭据安全**：示例中的 `your-username` / `your-password` / `your-token` 均为占位符；真实凭据请通过环境变量或配置中心注入，不要把明文口令提交进代码库或 YAML。
+8. **变更后先冒烟**：调整 `type`、`delay-threads`、死信参数后，先在测试环境验证收发、重试与死信转移链路，再发布生产。

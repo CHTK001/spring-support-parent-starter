@@ -130,6 +130,245 @@ flowchart TB
 | `plugin.ngrok.auto-start-stored` | `boolean` | `true` | 启动时是否恢复 `autoStart=true` 的持久化映射（SPI 启动恢复开关） |
 | `plugin.ngrok.store-dir` | `String` | 无（缺省 `~/.chua/tunnel/ngrok`） | 映射持久化目录覆盖（一条映射一个 JSON 文件，不用数据库） |
 
+### 5.1 逐项配置示例（按功能分组）
+
+每项给出含义、默认值与 YAML 示例；键名用 kebab-case 规范形式（camelCase 也能被 Spring Boot 宽松绑定识别，建议统一 kebab-case）。
+
+#### 开关与凭据
+
+**`plugin.ngrok.enable`**
+含义：总开关，`false` 时整个自动配置禁用（启动期隧道与 `/ms/tunnel` 的 ngrok 提供方都不装配）。默认：`true`。
+
+```yaml
+plugin:
+  ngrok:
+    enable: true
+```
+
+**`plugin.ngrok.authtoken`**
+含义：ngrok authtoken。解析顺序：配置值 → 环境变量 `NGROK_AUTHTOKEN` → 系统属性 `NGROK_AUTHTOKEN`；全部为空时启动期隧道失败（默认仅 ERROR 日志不中断，见 `fail-fast`）。默认：无（启用隧道必填）。
+
+```yaml
+plugin:
+  ngrok:
+    authtoken: your-ngrok-authtoken   # 推荐 ${NGROK_AUTHTOKEN} 环境变量注入，不入 git
+```
+
+#### 会话与私有部署
+
+**`plugin.ngrok.metadata`**
+含义：会话元数据，ngrok 控制台可见；隧道级 metadata 会自动追加 `/http-<tag>` 等后缀。为空时隧道元数据使用内置基名 `spring-support-ngrok`。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    metadata: my-spring-service
+```
+
+**`plugin.ngrok.server-addr`**
+含义：私有部署 ngrok 服务端地址，形如 `tunnel.example.com:443`；公有云不填。默认：无（连 ngrok 官方边缘节点）。
+
+```yaml
+plugin:
+  ngrok:
+    server-addr: tunnel.example.com:443
+```
+
+**`plugin.ngrok.ca-cert`**
+含义：私有部署 CA 证书，Spring 资源路径（先按 classpath 读取，失败回退按文件路径读取）。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    ca-cert: classpath:ngrok-ca.crt
+```
+
+**`plugin.ngrok.heartbeat-interval`** / **`plugin.ngrok.heartbeat-tolerance`**
+含义：会话心跳间隔与容忍时长；未配置（null）时不设置到客户端，使用 ngrok SDK 默认（约 30s / 60s）。弱网可适当调大。默认：无（SDK 默认）。
+
+```yaml
+plugin:
+  ngrok:
+    heartbeat-interval: 30s
+    heartbeat-tolerance: 60s
+```
+
+#### 隧道形态（启动期默认隧道）
+
+**`plugin.ngrok.type`**
+含义：隧道类型 `http` / `tcp` / `tls`。SPI 按需映射走映射记录的 `mode`，本项只影响启动期默认隧道。默认：`http`。
+
+```yaml
+plugin:
+  ngrok:
+    type: http
+```
+
+**`plugin.ngrok.mode`**
+含义：`forward` 把本机 `server.port` 流量转发出去；`listen` 仅建立并暴露公网 URL。默认：`forward`。
+
+```yaml
+plugin:
+  ngrok:
+    mode: forward
+```
+
+**`plugin.ngrok.domain`**
+含义：固定域名（http/tls 生效），需先在 ngrok 面板预留；未配置时由 ngrok 分配随机域名。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    domain: example.ngrok-free.app
+```
+
+**`plugin.ngrok.subdomain`**
+含义：已下线能力——配置后仅打印告警，不会设置到 SDK；请改用 `domain`。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    subdomain: my-sub   # 仅为兼容保留，实际不生效
+```
+
+**`plugin.ngrok.remote-address`**
+含义：tcp 模式的远端地址（需在 ngrok 面板 reserve），形如 `1.tcp.ngrok.io:20000`；tcp 模式必填，缺失时启动期隧道失败。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    type: tcp
+    remote-address: 1.tcp.ngrok.io:20000
+```
+
+**`plugin.ngrok.scheme`**
+含义：http 模式协议方案 `HTTP` / `HTTPS`。默认：`HTTPS`。
+
+```yaml
+plugin:
+  ngrok:
+    scheme: HTTPS
+```
+
+**`plugin.ngrok.compression`**
+含义：是否启用 HTTP 响应压缩。默认：`false`。
+
+```yaml
+plugin:
+  ngrok:
+    compression: true
+```
+
+#### HTTP 访问控制（BasicAuth）
+
+**`plugin.ngrok.basic-auth`**
+含义：BasicAuth 凭据，格式 `user:password`；与下面两个字段二选一，同时配置时本项优先。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    basic-auth: "your-username:your-password"
+```
+
+**`plugin.ngrok.basic-auth-username`** / **`plugin.ngrok.basic-auth-password`**
+含义：BasicAuth 用户名/密码，拆开配置时使用；密码需 8~128 位（ngrok 限制）。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    basic-auth-username: your-username
+    basic-auth-password: your-password
+```
+
+#### 启动行为与容错
+
+**`plugin.ngrok.fail-fast`**
+含义：启动期隧道失败（含 authtoken 缺失）是否中断应用：`true` 抛异常终止启动；`false` 仅 ERROR 日志后继续启动。默认：`false`。
+
+```yaml
+plugin:
+  ngrok:
+    fail-fast: false
+```
+
+**`plugin.ngrok.extra-local-ports`**
+含义：额外本地端口，逗号分隔；非空时为这些端口再各建一条 http 转发隧道（仅启动期 http + forward 生效），非法端口告警跳过。默认：无（只转发 `server.port`）。
+
+```yaml
+plugin:
+  ngrok:
+    extra-local-ports: 8081,8082
+```
+
+**`plugin.ngrok.auto-start`**
+含义：启动期是否用 `server.port` 自动建默认隧道；`false` 时模块仍启用，改由 `/ms/tunnel` 按需创建。默认：`true`。
+
+```yaml
+plugin:
+  ngrok:
+    auto-start: true
+```
+
+#### SPI 映射持久化
+
+**`plugin.ngrok.auto-start-stored`**
+含义：启动时是否恢复上次标记为「自动启动」的持久化映射（SPI 启动恢复开关）。默认：`true`。
+
+```yaml
+plugin:
+  ngrok:
+    auto-start-stored: true
+```
+
+**`plugin.ngrok.store-dir`**
+含义：映射持久化目录覆盖（一条映射一个 JSON 文件，不用数据库）。为空时使用缺省目录 `~/.chua/tunnel/ngrok`。默认：无。
+
+```yaml
+plugin:
+  ngrok:
+    store-dir: /data/tunnel/ngrok
+```
+
+### 5.2 完整 YAML 示例
+
+生产风格参考（token 走环境变量、固定域名 + BasicAuth、关闭启动期自动隧道改页面按需映射）：
+
+```yaml
+server:
+  port: 8080
+
+plugin:
+  ngrok:
+    enable: true
+    authtoken: ${NGROK_AUTHTOKEN}            # 环境变量注入，不入 git
+    metadata: order-service-prod             # ngrok 控制台可见
+    auto-start: false                        # 启动期不自动建隧道
+    auto-start-stored: true                  # 恢复上次标记自动启动的映射
+    store-dir: /data/tunnel/ngrok            # 持久化目录（容器挂持久卷）
+    fail-fast: true                          # 配置错误尽早暴露
+    type: http
+    mode: forward
+    domain: order.example.ngrok-free.app     # 需在 ngrok 面板预留
+    scheme: HTTPS
+    compression: true
+    basic-auth: "your-username:your-password"
+    # extra-local-ports: 8081,8082           # 需要多端口时再打开
+```
+
+本地开发最小示例见 [6. 使用方式](#6-使用方式)。
+
+### 5.3 生产注意事项
+
+- **凭据管理**：authtoken 与 BasicAuth 口令一律用环境变量/启动参数注入，不写入配置文件入库、不进镜像；轮换 token 无需改代码。
+- **最小暴露**：只暴露必要端口；`extra-local-ports` 会把更多本机服务带到公网，确认这些服务可被公网访问的风险后再开启。
+- **访问控制**：公网入口至少固定域名 + BasicAuth；ngrok 要求 BasicAuth 密码 8~128 位。
+- **管理面隔离**：`/ms/tunnel`、actuator 等管理端点不要经隧道暴露公网，或加独立鉴权/网络隔离。
+- **失败策略**：生产建议 `fail-fast: true`，让配置错误在发布阶段暴露；本地开发可用默认 `false` 不阻塞启动。
+- **随机端口**：`server.port: 0` 不会自动探测实际端口，启动期隧道会被跳过并告警。
+- **持久化**：容器/无盘环境把 `store-dir` 指到持久卷，否则重启后持久化映射丢失。
+- **私有部署**：`server-addr` 与 `ca-cert` 必须配套，证书用 classpath 或文件路径提供。
+- **合规与限额**：ngrok 免费版有带宽/连接数限制；生产长期公网暴露建议改用正式网关/Ingress（参见第 7 节取舍）。
+
 ## 6. 使用方式
 
 ```xml

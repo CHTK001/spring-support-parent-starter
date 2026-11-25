@@ -135,6 +135,116 @@ sequenceDiagram
 | `plugin.tencent.mini-app.app-id` | String | 空 | 无消费方：小程序登录走 `WECHAT_MINI` SPI |
 | `plugin.tencent.mini-app.app-secret` | String | 空 | 同上 |
 
+### 5.1 逐项配置示例
+
+按功能分组列出每个配置项的含义、默认值与 YAML 写法（示例中的凭据均为占位符，生产请经环境变量/配置中心注入）。
+
+**微信支付 `plugin.tencent.wechat-pay`**
+
+| 配置项 | 含义 | 默认值 | YAML 示例 |
+|---|---|---|---|
+| `enable` | 总开关；当前为死开关（装配与网关均不读取） | `false` | `enable: false` |
+| `enabled` | 兼容字段，未被读取 | `false` | `enabled: false` |
+| `app-id` | 公众号/小程序/APP 的 AppID（下单 `appid`；支付分/分账请求未带 appId 时回退本值） | 空 | `app-id: your-app-id` |
+| `merchant-id` | 商户号 `mchid`，下单/查单/关单/退款均读取 | 空 | `merchant-id: your-merchant-id` |
+| `private-key` | 商户 API 私钥**内容**（PEM 全文，非文件路径） | 空 | `private-key: ${WECHAT_MCH_PRIVATE_KEY}` |
+| `merchant-serial-number` | 商户证书序列号，与私钥配对 | 空 | `merchant-serial-number: your-merchant-serial-number` |
+| `api-v3-key` | APIv3 密钥（32 位），通知验签与解密 | 空 | `api-v3-key: ${WECHAT_API_V3_KEY}` |
+| `notify-url` | 默认通知地址；仅退款/支付分回退使用，下单只用请求级 notifyUrl | 空 | `notify-url: https://example.com/pay/wechat/notify` |
+| `sandbox` | 沙箱开关（未接线，网关固定走生产域名） | `false` | `sandbox: false` |
+| `sandbox-sign-key` | 沙箱 APIv3 密钥（未接线） | 空 | `sandbox-sign-key: your-sandbox-sign-key` |
+
+```yaml
+plugin:
+  tencent:
+    wechat-pay:
+      enable: false
+      enabled: false
+      app-id: your-app-id
+      merchant-id: your-merchant-id
+      private-key: ${WECHAT_MCH_PRIVATE_KEY}
+      merchant-serial-number: your-merchant-serial-number
+      api-v3-key: ${WECHAT_API_V3_KEY}
+      notify-url: https://example.com/pay/wechat/notify
+      sandbox: false
+      sandbox-sign-key: your-sandbox-sign-key
+```
+
+**微信开放平台 `plugin.tencent.open-platform`**
+
+| 配置项 | 含义 | 默认值 | YAML 示例 |
+|---|---|---|---|
+| `enable` | `true` 才装配 `wechatOpenPlatformService` / `openIdConvertService` 两个占位 Bean | `false` | `enable: false` |
+| `component-app-id` | 第三方平台 AppID（当前仅启动日志与占位实现构造入参） | 空 | `component-app-id: your-component-app-id` |
+| `component-app-secret` | 第三方平台 AppSecret（占位实现构造入参） | 空 | `component-app-secret: your-component-app-secret` |
+| `default-mini-app-id` | 默认小程序 AppID，调用 openid 转换接口时可省略 miniappid 参数 | 空 | `default-mini-app-id: your-default-mini-app-id` |
+| `storage-path` | openid 映射 JSON 存储路径（持久化未实现） | `wechat-openid-mapping.json` | `storage-path: /data/wechat-openid-mapping.json` |
+
+```yaml
+plugin:
+  tencent:
+    open-platform:
+      enable: false
+      component-app-id: your-component-app-id
+      component-app-secret: your-component-app-secret
+      default-mini-app-id: your-default-mini-app-id
+      storage-path: /data/wechat-openid-mapping.json
+```
+
+**小程序 `plugin.tencent.mini-app`**
+
+| 配置项 | 含义 | 默认值 | YAML 示例 |
+|---|---|---|---|
+| `enable` / `enabled` | 死开关，无代码读取 | `false` | `enable: false` |
+| `app-id` | 小程序 AppID（当前无消费方） | 空 | `app-id: your-mini-app-id` |
+| `app-secret` | 小程序 AppSecret（当前无消费方） | 空 | `app-secret: your-mini-app-secret` |
+
+```yaml
+plugin:
+  tencent:
+    mini-app:
+      enable: false
+      enabled: false
+      app-id: your-mini-app-id
+      app-secret: your-mini-app-secret
+```
+
+### 5.2 完整 YAML 示例
+
+可直接落地的生产配置骨架（凭据一律经环境变量或配置中心注入，避免明文落盘）：
+
+```yaml
+plugin:
+  tencent:
+    wechat-pay:
+      app-id: ${WECHAT_APP_ID}                      # 必填：公众号/小程序/APP AppID
+      merchant-id: ${WECHAT_MCH_ID}                 # 必填：商户号
+      private-key: ${WECHAT_MCH_PRIVATE_KEY}        # 必填：商户 API 私钥内容（PEM 全文，非路径）
+      merchant-serial-number: ${WECHAT_MCH_SERIAL}  # 必填：商户证书序列号
+      api-v3-key: ${WECHAT_API_V3_KEY}              # 必填：APIv3 密钥（32 位）
+      notify-url: https://pay.example.com/wechat/notify   # 退款/支付分默认回调；下单建议每单显式传
+      sandbox: false                                # 未接线，保持 false
+    open-platform:
+      enable: false                                 # 需要开放平台占位 Bean 时再打开
+      component-app-id: ${WECHAT_COMPONENT_APP_ID}
+      component-app-secret: ${WECHAT_COMPONENT_APP_SECRET}
+      default-mini-app-id: ${WECHAT_MINI_APP_ID}
+      storage-path: /data/wechat-openid-mapping.json
+    mini-app:
+      enable: false                                 # 当前无消费方，保持关闭
+```
+
+配套的最小 Java 调用示例见第 6 节。
+
+### 5.3 生产注意事项
+
+- **凭据保密**：`private-key` 是私钥 PEM **内容**而非文件路径，写进 YAML 即明文落盘；生产用环境变量、K8s Secret 或配置中心注入，并对接收配置的日志做脱敏。轮换商户证书时同步更新 `merchant-serial-number`。
+- **回调地址**：`notify-url` 必须外网可达且为 **HTTPS**（微信支付 APIv3 回调要求 HTTPS）；下单通道只认请求级 `notifyUrl()`，退款/支付分才回退到本配置——给 `notify-url` 赋值不会改变下单回调。
+- **通知幂等**：本模块不落库、不去重；`parsePayNotify` / `parseRefundNotify` 只做验签解密，微信会重试回调，同一订单可能收到多次通知，幂等与状态机由业务侧实现。
+- **性能**：默认网关每次调用都新建 `RSAAutoCertificateConfig`（含平台证书自动更新），无缓存；高并发场景建议在业务侧做网关实例缓存，或注册自定义 `TencentWechatPayGateway` 实现（见第 8 节）。
+- **死开关勿误信**：`wechat-pay.enable/enabled`、`mini-app.enable/enabled`、`sandbox`、`sandbox-sign-key` 当前均无代码读取（见第 9 节 Q2/Q3）；能力启停靠依赖管理与业务侧判断。
+- **依赖即带入（R5）**：本模块传递引入 `spring-support-oauth-client-starter` 与 `spring-support-common-starter` 的自动装配，引入前确认宿主需要这些副作用。
+
 ## 6. 使用方式
 
 ```xml

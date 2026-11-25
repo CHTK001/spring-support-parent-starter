@@ -546,3 +546,44 @@ CREATE TABLE IF NOT EXISTS `pay_profit_sharing_return` (
   INDEX `idx_pay_profit_sharing_return_status` (`pay_profit_sharing_return_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分账回退单表';
 
+CREATE TABLE IF NOT EXISTS `pay_reconciliation_statement` (
+  `pay_reconciliation_statement_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_reconciliation_statement_no` VARCHAR(64) NOT NULL COMMENT '对账单号',
+  `pay_reconciliation_statement_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_reconciliation_statement_channel_id` BIGINT DEFAULT NULL COMMENT '支付渠道ID',
+  `pay_reconciliation_statement_channel_type` VARCHAR(16) NOT NULL COMMENT '渠道类型: WECHAT/ALIPAY',
+  `pay_reconciliation_statement_bill_date` DATE NOT NULL COMMENT '账单日期',
+  `pay_reconciliation_statement_channel_count` INT NOT NULL DEFAULT 0 COMMENT '渠道账单笔数',
+  `pay_reconciliation_statement_channel_amount` DECIMAL(14,2) NOT NULL DEFAULT 0 COMMENT '渠道账单总金额',
+  `pay_reconciliation_statement_local_count` INT NOT NULL DEFAULT 0 COMMENT '本地流水笔数',
+  `pay_reconciliation_statement_local_amount` DECIMAL(14,2) NOT NULL DEFAULT 0 COMMENT '本地流水总金额',
+  `pay_reconciliation_statement_diff_count` INT NOT NULL DEFAULT 0 COMMENT '差异数',
+  `pay_reconciliation_statement_status` VARCHAR(16) NOT NULL DEFAULT 'MATCHED' COMMENT '状态: MATCHED-对账一致/DIFF-存在差异/FAILED-对账失败',
+  `pay_reconciliation_statement_fail_reason` VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
+  `pay_reconciliation_statement_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_reconciliation_statement_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_pay_reconciliation_statement` (`pay_reconciliation_statement_merchant_id`, `pay_reconciliation_statement_channel_type`, `pay_reconciliation_statement_bill_date`),
+  INDEX `idx_pay_reconciliation_statement_bill_date` (`pay_reconciliation_statement_bill_date`),
+  INDEX `idx_pay_reconciliation_statement_status` (`pay_reconciliation_statement_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='渠道对账单表';
+
+CREATE TABLE IF NOT EXISTS `pay_reconciliation_diff` (
+  `pay_reconciliation_diff_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_reconciliation_diff_statement_id` BIGINT NOT NULL COMMENT '对账单ID',
+  `pay_reconciliation_diff_statement_no` VARCHAR(64) NOT NULL COMMENT '对账单号',
+  `pay_reconciliation_diff_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_reconciliation_diff_channel_type` VARCHAR(16) NOT NULL COMMENT '渠道类型: WECHAT/ALIPAY',
+  `pay_reconciliation_diff_bill_date` DATE NOT NULL COMMENT '账单日期',
+  `pay_reconciliation_diff_type` VARCHAR(32) NOT NULL COMMENT '差异类型: LOCAL_MISSING-渠道有本地无/CHANNEL_MISSING-本地有渠道无/AMOUNT_MISMATCH-金额不一致',
+  `pay_reconciliation_diff_order_no` VARCHAR(64) DEFAULT NULL COMMENT '商户订单号',
+  `pay_reconciliation_diff_third_party_no` VARCHAR(128) DEFAULT NULL COMMENT '第三方交易号',
+  `pay_reconciliation_diff_channel_amount` DECIMAL(14,2) DEFAULT NULL COMMENT '渠道账单金额',
+  `pay_reconciliation_diff_local_amount` DECIMAL(14,2) DEFAULT NULL COMMENT '本地流水金额',
+  `pay_reconciliation_diff_diff_amount` DECIMAL(14,2) DEFAULT NULL COMMENT '差额(渠道-本地)',
+  `pay_reconciliation_diff_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `pay_reconciliation_diff_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  INDEX `idx_pay_reconciliation_diff_statement` (`pay_reconciliation_diff_statement_id`),
+  INDEX `idx_pay_reconciliation_diff_bill_date` (`pay_reconciliation_diff_bill_date`),
+  INDEX `idx_pay_reconciliation_diff_type` (`pay_reconciliation_diff_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='渠道对账差异明细表';
+

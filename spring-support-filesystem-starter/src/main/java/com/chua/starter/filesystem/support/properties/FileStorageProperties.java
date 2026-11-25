@@ -803,7 +803,25 @@ public class FileStorageProperties {
     }
 
     /**
-     * HTTP 文件服务器配置。
+     * HTTP 文件服务器配置（旧形态 {@code plugin.filesystem.servers[*]}，与
+     * {@link FileStorageServerProperties} 的 {@code plugin.filesystem.storage-server} 相互独立）。
+     *
+     * <p>由 {@code FileServerManager} 在应用启动时逐个拉起；每个条目对应一个
+     * 独立监听端口的 HTTP 文件服务，可分别绑定不同 Provider。</p>
+     *
+     * <h3>配置示例</h3>
+     * <pre>{@code
+     * plugin:
+     *   filesystem:
+     *     servers:
+     *       - name: default
+     *         enable: true
+     *         type: jdk
+     *         host: 0.0.0.0
+     *         port: 9000
+     *         context-path: /fs
+     *         provider-names: [local]
+     * }</pre>
      * @author CH
      * @since 4.0.0
      */
@@ -812,87 +830,305 @@ public class FileStorageProperties {
     @Setter
     public static class ServerConfig {
         /**
-         * 名称
-        */
+         * 服务名称（路由与展示用，同一应用内建议唯一）。
+         *
+         * <p>默认值：{@code "default"}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         * }</pre>
+         */
         private String name = "default";
         /**
-         * Enable
-        */
+         * 是否启用该文件服务器。
+         *
+         * <p>默认值：{@code true}。为 {@code false} 时该条目不启动，其余条目不受影响。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         enable: true
+         * }</pre>
+         */
         private boolean enable = true;
         /**
-         * 类型
-        */
+         * HTTP 服务器实现类型。
+         *
+         * <p>默认值：{@code "jdk"}（JDK 内置 HttpServer）。其它可选值以运行期注册的
+         * 服务器实现为准，未注册的类型会在启动该条目时失败。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         type: jdk
+         * }</pre>
+         */
         private String type = "jdk";
         /**
-         * 主机
-        */
+         * 监听地址。
+         *
+         * <p>默认值：{@code "0.0.0.0"}（监听所有网卡；生产环境建议显式绑定内网地址）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         host: 0.0.0.0
+         * }</pre>
+         */
         private String host = "0.0.0.0";
         /**
-         * 端口
-        */
+         * 监听端口。
+         *
+         * <p>默认值：{@code 9000}。注意与 {@code storage-server}（默认 18082）及
+         * 其它 servers 条目的端口互不冲突。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         port: 9000
+         * }</pre>
+         */
         private int port = 9000;
         /**
-         * SSL
-        */
+         * 是否启用 HTTPS。
+         *
+         * <p>默认值：{@code false}（HTTP）。开启后需同时配置
+         * {@link #sslCertPath} 与 {@link #sslCertPassword}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         ssl: false
+         * }</pre>
+         */
         private boolean ssl = false;
         /**
-         * SSL证书路径
-        */
+         * SSL 证书路径（{@code ssl: true} 时必填）。
+         *
+         * <p>默认值：无（null）。一般指向 PKCS12/JKS 格式证书文件
+         * （classpath 内路径或文件系统绝对路径）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         ssl: true
+         *         ssl-cert-path: /certs/server.p12
+         *         ssl-cert-password: your-password
+         * }</pre>
+         */
         private String sslCertPath;
         /**
-         * SSL证书密码
-        */
+         * SSL 证书口令（{@code ssl: true} 时必填）。
+         *
+         * <p>默认值：无（null）。建议经环境变量或配置中心注入，勿明文提交到仓库。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         ssl-cert-password: your-password
+         * }</pre>
+         */
         private String sslCertPassword;
         /**
-         * 提供者名称
-        */
+         * 该文件服务器绑定的 Provider 名称列表（对应 {@link #providers} 的 key）。
+         *
+         * <p>默认值：空列表（不额外限定；具体如何映射到 Provider 以
+         * {@code FileServerManager} 装配逻辑为准）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         provider-names: [local]
+         * }</pre>
+         */
         private List<String> providerNames = new ArrayList<>();
         /**
-         * 上下文路径
-        */
+         * 上下文路径（该服务的根路径）。
+         *
+         * <p>默认值：{@code "/"}（根路径）。配置为 {@code /fs} 后，
+         * 预览/下载等接口挂在 {@code /fs/**} 下。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         context-path: /fs
+         * }</pre>
+         */
         private String contextPath = "/";
         /**
-         * 读取超时毫秒
-        */
+         * 读取超时（毫秒）。
+         *
+         * <p>默认值：{@code 30000}（30 秒）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         read-timeout-millis: 30000
+         * }</pre>
+         */
         private long readTimeoutMillis = 30_000;
         /**
-         * 写入超时毫秒
-        */
+         * 写入超时（毫秒）。
+         *
+         * <p>默认值：{@code 30000}（30 秒）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         write-timeout-millis: 30000
+         * }</pre>
+         */
         private long writeTimeoutMillis = 30_000;
         /**
-         * 过滤器
-        */
+         * 附加过滤器（服务器级，作用于该服务的所有请求）。
+         *
+         * <p>默认值：空列表（不追加额外过滤器）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         filters: []
+         * }</pre>
+         */
         private List<String> filters = new ArrayList<>();
         /**
-         * 最大请求大小（字节）
+         * 单次请求最大体积（字节），超过即拒绝。
+         *
+         * <p>默认值：{@code 10}MB（{@code 10L * 1024 * 1024}）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         max-request-size: 10485760
+         * }</pre>
          */
         private long maxRequestSize = 10L * 1024 * 1024;
         /**
-         * 最大连接数
+         * 最大并发连接数。
+         *
+         * <p>默认值：{@code 512}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         max-connections: 512
+         * }</pre>
          */
         private int maxConnections = 512;
         /**
-         * 工作线程数
+         * 工作线程数。
+         *
+         * <p>默认值：{@code 8}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         worker-threads: 8
+         * }</pre>
          */
         private int workerThreads = 8;
         /**
-         * 响应超时（毫秒）
+         * 响应超时（毫秒）。
+         *
+         * <p>默认值：{@code 60000}（60 秒）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         response-timeout-millis: 60000
+         * }</pre>
          */
         private long responseTimeoutMillis = 60_000;
         /**
-         * 默认内容类型
+         * 默认响应内容类型（无法从文件名推断时的兜底）。
+         *
+         * <p>默认值：{@code "application/octet-stream"}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         content-type: application/octet-stream
+         * }</pre>
          */
         private String contentType = "application/octet-stream";
         /**
-         * 是否启用 gzip 压缩
+         * 是否启用 gzip 压缩响应。
+         *
+         * <p>默认值：{@code false}。开启后超过 {@link #gzipMinSize} 的响应体压缩传输，
+         * 对图片等已压缩内容收益有限。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         gzip-enabled: false
+         * }</pre>
          */
         private boolean gzipEnabled = false;
         /**
-         * gzip 压缩最小字节数
+         * 启用 gzip 压缩的最小响应体字节数（小于该值不压缩，避免负优化）。
+         *
+         * <p>默认值：{@code 1024}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         gzip-min-size: 1024
+         * }</pre>
          */
         private int gzipMinSize = 1024;
         /**
-         * 字符集
+         * 响应字符集。
+         *
+         * <p>默认值：{@code "UTF-8"}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     servers:
+         *       - name: default
+         *         charset: UTF-8
+         * }</pre>
          */
         private String charset = "UTF-8";
     }
@@ -902,15 +1138,50 @@ public class FileStorageProperties {
     /**
      * 旧版存储配置列表 (列表&lt;storage配置&gt;)。
      * 新版本请改用 {@link #providers}, 此字段保留用于向后兼容解析。
+     *
+     * <p>默认值：空列表（未配置旧版 {@code storages} 时不影响新配置 {@code providers}）。</p>
+     *
+     * <p>旧版 YAML 示例（{@code plugin.filesystem.storages[*]}，已弃用，仅保留兼容解析）：</p>
+     * <pre>{@code
+     * plugin:
+     *   filesystem:
+     *     storages:
+     *       - name: legacy-minio
+     *         type: minio
+     *         endpoint: http://127.0.0.1:9000
+     *         access-key-id: your-access-key
+     *         access-key-secret: your-secret-key
+     *         bucket: my-bucket
+     *         region: us-east-1
+     *         default-storage: false
+     *         base-path: files
+     * }</pre>
      */
     @Deprecated
-    /**
-     * Storages
-    */
     private List<LegacyStorageConfig> storages = new ArrayList<>();
 
     /**
-     * 旧版单存储配置 (用于平滑迁移)。
+     * 旧版单存储配置（用于平滑迁移，已弃用）。
+     *
+     * <p>新配置请使用 {@link ProviderConfig}（{@code plugin.filesystem.providers.*}）；
+     * 本类仅保留用于向后兼容解析旧版 {@code plugin.filesystem.storages[*]} 配置，
+     * 不建议在新代码中依赖。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   filesystem:
+     *     storages:
+     *       - name: legacy-minio
+     *         type: minio
+     *         endpoint: http://127.0.0.1:9000
+     *         access-key-id: your-access-key
+     *         access-key-secret: your-secret-key
+     *         bucket: my-bucket
+     *         region: us-east-1
+     *         default-storage: false
+     *         base-path: files
+     * }</pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -920,39 +1191,130 @@ public class FileStorageProperties {
     @Deprecated
     public static class LegacyStorageConfig {
         /**
-         * 名称
-        */
+         * 存储名称（建议唯一，用于关联默认存储等）。
+         *
+         * <p>默认值：无（null）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         * }</pre>
+         */
         private String name;
         /**
-         * 类型
-        */
+         * 存储实现类型。
+         *
+         * <p>默认值：{@code "minio"}。旧版常见取值：minio / oss / cos / obs / s3 / local，
+         * 具体以运行期注册的 Provider 类型为准。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         type: minio
+         * }</pre>
+         */
         private String type = "minio";
         /**
-         * 端点
+         * 服务端点（如 S3/MinIO 的访问地址）。
+         *
+         * <p>默认值：无（null）；本地存储一般无需配置。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         endpoint: http://127.0.0.1:9000
+         * }</pre>
         */
         private String endpoint;
         /**
-         * Access密钥标识
+         * Access Key ID（对象存储访问密钥标识）。
+         *
+         * <p>默认值：无（null）。建议经环境变量或配置中心注入，勿明文提交到仓库。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         access-key-id: your-access-key
+         * }</pre>
         */
         private String accessKeyId;
         /**
-         * Access密钥secret
+         * Access Key Secret（对象存储访问密钥）。
+         *
+         * <p>默认值：无（null）。建议经环境变量或配置中心注入，勿明文提交到仓库。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         access-key-secret: your-secret-key
+         * }</pre>
         */
         private String accessKeySecret;
         /**
-         * 存储桶
+         * 存储桶名称。
+         *
+         * <p>默认值：无（null）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         bucket: my-bucket
+         * }</pre>
         */
         private String bucket;
         /**
-         * 区域
+         * 区域（如 {@code us-east-1}；部分云厂商必填）。
+         *
+         * <p>默认值：无（null）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         region: us-east-1
+         * }</pre>
         */
         private String region;
         /**
-         * 默认存储
+         * 是否作为默认存储。
+         *
+         * <p>默认值：{@code false}。多个存储都未标记默认时，运行期通常回落到
+         * 第一个注册成功的存储。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         default-storage: false
+         * }</pre>
         */
         private boolean defaultStorage = false;
         /**
-         * 基础路径
+         * 对象在存储内的基础路径（前缀目录）。
+         *
+         * <p>默认值：无（null，即桶根路径）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   filesystem:
+         *     storages:
+         *       - name: legacy-minio
+         *         base-path: files
+         * }</pre>
         */
         private String basePath;
     }

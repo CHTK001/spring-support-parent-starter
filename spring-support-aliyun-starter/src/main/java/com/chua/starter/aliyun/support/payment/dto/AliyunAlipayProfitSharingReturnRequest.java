@@ -8,7 +8,8 @@ import java.util.Map;
 /**
  * 支付宝分账回退请求
  *
- * <p>对应支付宝接口 {@code alipay.trade.royalty.return}。</p>
+ * <p>SDK 未提供独立的分账回退接口模型，按支付宝官方口径走
+ * {@code alipay.trade.refund} 携带 {@code refund_royalty_parameters} 实现退分账。</p>
  *
  * @param outBizNo     商户回退单号
  * @param tradeNo      支付宝交易号

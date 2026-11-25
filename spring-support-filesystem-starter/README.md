@@ -177,6 +177,121 @@ flowchart TB
 | `merge-interval-ms` / `upload-interval-ms` | `long` | `10000` | 合并 / 对象上传调度间隔（毫秒） |
 | `retry-interval-ms` / `cleanup-interval-ms` | `long` | `60000` / `86400000`（24h） | 失败任务重试 / 过期数据清理调度间隔（毫秒） |
 
+### 5.4 逐项配置示例
+
+**总开关与全局行为**（`plugin.filesystem`）：
+
+```yaml
+plugin:
+  filesystem:
+    enable: true                 # 总开关，默认 false，必须显式开启
+    dir-list: false              # 本机目录浏览接口，生产建议保持 false
+    mode: BOTH                   # VIEW / DOWNLOAD / BOTH
+    default-provider: local      # 留空取第一个注册成功的 Provider
+    open-webjars: true           # 预览页静态资源
+    open-remote-file: false      # http(s)/ssh 对象键远程透传，按需开启
+    task-expire-minutes: 60      # 无新分片活动的任务过期回收时间（分钟）
+    task-sync-max-mb: 5          # 小文件同步直传阈值（MB），0 表示全部走任务
+```
+
+**Provider（存储后端）**（`plugin.filesystem.providers.<name>`）：
+
+```yaml
+plugin:
+  filesystem:
+    providers:
+      local:                     # 本地磁盘
+        type: local
+        bucket: system
+        base-path: ./oss         # 落盘到 ./oss/system
+      minio-main:                # MinIO（type 可省略，按 endpoint 推断为 minio）
+        endpoint: http://10.0.0.1:9000
+        bucket: my-bucket
+        access-key: your-access-key
+        secret-key: your-secret-key
+        connection-timeout: 10000
+        read-timeout: 30000
+        write-timeout: 30000
+        secure: false
+      oss-backup:                # 阿里云 OSS（显式声明 type）
+        type: oss
+        endpoint: https://oss-cn-hangzhou.aliyuncs.com
+        bucket: my-oss-bucket
+        access-key: your-access-key
+        secret-key: your-secret-key
+        region: cn-hangzhou
+```
+
+**上传（分片任务与调度）**（`plugin.filesystem.upload`）：
+
+```yaml
+plugin:
+  filesystem:
+    upload:
+      max-size-mb: 10            # 单文件上限（MB）
+      allowed-extensions: [jpg, jpeg, png, gif, bmp, webp]   # null 表示不限制
+      chunk-size: 5242880        # 分片大小（字节）
+      view-prefix: /v2/file/view/   # 宿主有 context-path 时需一并前缀
+      retention-days: 30         # 终态任务保留天数
+      merge-interval-ms: 10000   # 合并调度间隔（毫秒）
+      upload-interval-ms: 10000  # 对象存储转存调度间隔（毫秒）
+      retry-interval-ms: 60000   # 失败重试调度间隔（毫秒）
+      cleanup-interval-ms: 86400000  # 过期清理调度间隔（毫秒，24h）
+```
+
+**文件服务器**（`plugin.filesystem.storage-server`）：
+
+```yaml
+plugin:
+  filesystem:
+    storage-server:
+      enable: true
+      mode: embedded             # embedded 走应用端口 + path-prefix；standalone 另起 host:port
+      path-prefix: /fs           # 仅 embedded 生效
+      host: 0.0.0.0              # 仅 standalone
+      port: 18082                # 仅 standalone
+      type: jdk                  # jdk/nio/aio，仅 standalone
+      open-preview: true
+      open-download: true
+      open-range: true
+      open-webjars: true
+      open-remote-file: false
+      open-path-guard: true      # 路径穿越防护，勿随意关闭
+      layout: true
+      layout-type: SIMPLE
+      third-url-preview: NONE
+      image-filter: NONE
+      private-buckets: ""        # 留空回落 plugin.oauth.file-storage.private-buckets
+      frame-ancestors: "*"
+```
+
+**CORS**（`plugin.filesystem.storage-server.cors`）：
+
+```yaml
+plugin:
+  filesystem:
+    storage-server:
+      cors:
+        enable: true
+        allowed-origins: "*"     # 开启凭据后按规范回显实际来源而非字面 *
+        allow-credentials: true
+        allowed-headers: "Content-Type,Authorization,x-oauth-token,X-Requested-With,X-Trace-Id,X-Req-Fingerprint"
+        expose-headers: "Content-Disposition,Content-Range,Accept-Ranges,X-FileStorage-Preview,X-FileStorage-Client-Renderer,X-FileStorage-Convert,X-FileStorage-ImageOp,X-FileStorage-ImageOp-Reason"
+        allowed-methods: "GET,HEAD,POST,PUT,DELETE,PATCH,OPTIONS"
+```
+
+**协同文档落盘**（`plugin.filesystem.collab`）：
+
+```yaml
+plugin:
+  filesystem:
+    collab:
+      persist-enable: true       # 关闭则协同文档重启即丢
+      persist-seconds: 30        # 落盘间隔秒，只刷有改动的整库
+      persist-path: data/file-collab/collab-store.json
+      hub-path: data/file-collab/hub   # 空串表示纯内存
+```
+
 ## 6. 使用方式
 
 **Maven 坐标**（`groupId com.chua`，版本 `4.0.0.51`）：
@@ -204,6 +319,71 @@ plugin:
 ```
 
 上传并回显：`curl -X POST http://127.0.0.1:8080/v2/file/upload -F 'file=@./demo.png' -F 'fileBucket=system' -F 'ossType=local'`，返回 `accessUrl` 形如 `/v2/file/view/local/system/<key>`，浏览器可直接打开；文件服务器页面地址为 `http://127.0.0.1:8080/fs`。业务代码注入 `FileStorageTemplate` 调用 `putObject/getObject/deleteObject/listObject`（请求对象用 `PutObjectRequest.builder()` 构造，可指定 provider 名），并可用 `addStorage/removeStorage/setDefaultStorage` 运行期动态增删 Provider、切换默认存储。
+
+**生产级完整配置示例**（MinIO 后端 + 内置文件服务器 + CORS 收紧）：
+
+```yaml
+plugin:
+  filesystem:
+    enable: true
+    default-provider: minio-prod
+    dir-list: false
+    mode: BOTH
+    task-expire-minutes: 60
+    task-sync-max-mb: 5
+    providers:
+      minio-prod:
+        type: minio
+        endpoint: http://minio.internal:9000
+        bucket: app-prod
+        access-key: your-access-key
+        secret-key: your-secret-key
+        region: us-east-1
+        connection-timeout: 10000
+        read-timeout: 30000
+        write-timeout: 30000
+        secure: false
+    upload:
+      max-size-mb: 100
+      allowed-extensions: [jpg, jpeg, png, gif, bmp, webp, pdf, docx, xlsx, pptx, txt, zip]
+      chunk-size: 5242880
+      view-prefix: /v2/file/view/
+      retention-days: 30
+      merge-interval-ms: 10000
+      upload-interval-ms: 10000
+      retry-interval-ms: 60000
+      cleanup-interval-ms: 86400000
+    storage-server:
+      enable: true
+      mode: embedded
+      path-prefix: /fs
+      open-preview: true
+      open-download: true
+      open-range: true
+      open-webjars: true
+      open-path-guard: true
+      private-buckets: ""            # 留空回落 plugin.oauth.file-storage.private-buckets
+      frame-ancestors: "https://app.example.com"
+      cors:
+        enable: true
+        allowed-origins: "https://app.example.com"
+        allow-credentials: true
+        allowed-headers: "Content-Type,Authorization,x-oauth-token,X-Requested-With,X-Trace-Id,X-Req-Fingerprint"
+        allowed-methods: "GET,HEAD,POST,PUT,DELETE,PATCH,OPTIONS"
+    collab:
+      persist-enable: true
+      persist-seconds: 30
+      persist-path: data/file-collab/collab-store.json
+      hub-path: data/file-collab/hub
+```
+
+**生产注意事项**：
+
+- **安全**：总开关必须显式 `enable: true`（默认 false，漏配则整个模块不装配）；`dir-list` 生产保持 `false`（本机目录浏览接口）；`access-key`/`secret-key` 走配置中心或环境变量注入，不要明文进仓库；`allowed-extensions` 按需放开并自评回显（存储型 XSS）风险；私有桶需 classpath 提供 oauth 模块，并配置 `plugin.oauth.file-storage.private-buckets`（或 `storage-server.private-buckets`）。
+- **CORS 头**：`allowed-headers` 必须覆盖前端实际发出的全部自定义头（`X-Trace-Id`、`X-Requested-With`、`X-Req-Fingerprint`、`x-oauth-token` 等），缺一个预检即整体失败；开启 `allow-credentials` 后 `allowed-origins` 应从 `*` 收紧为具体来源白名单。
+- **内存任务易失**：分片上传任务保存在 `UploadTaskManager` 的内存 `ConcurrentHashMap`，重启即清空（`temp-path`/`temp-dir` 当前仅声明未生效，分片暂存在系统临时目录）；对强持久化有要求时，需自行落库或接受重启丢任务的窗口。
+- **端口**：`storage-server.port=18082` 仅在 `mode=standalone` 时监听；默认 `embedded` 形态走应用端口 + `/fs`。历史 `plugin.filesystem.servers`（`FileServerManager`）与 `storage-server` 相互独立，两套同时开启会各占一套端口，排查冲突时不要只看 `storage-server`。
+- **白名单**：默认仅放行图片扩展名；放开时建议保留 `open-path-guard: true`，并评估可执行/可脚本内容被直接回显的风险。
 
 **可选/provided 依赖说明**（缺了会怎样）：
 

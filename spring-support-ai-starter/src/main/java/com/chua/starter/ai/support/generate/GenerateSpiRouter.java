@@ -90,6 +90,7 @@ public final class GenerateSpiRouter {
             Map.entry("cohere", "openai"),
             Map.entry("perplexity", "openai"),
             Map.entry("huggingface", "openai"),
+            Map.entry("github-copilot", "openai"),
             Map.entry("nvidia", "openai"),
             Map.entry("ai302", "openai"),
             Map.entry("302.ai", "openai"),

@@ -90,6 +90,8 @@ sequenceDiagram
 
 **本模块没有任何 `@ConfigurationProperties` 配置类**（代码中不存在自定义配置前缀），因此没有「配置路径 / 类型 / 默认值」可列。行为由宿主配置决定：
 
+下文按「5.1 逐项配置示例（宿主侧）→ 5.2 完整 YAML 使用示例 → 5.3 生产注意事项」展开；本模块自身唯一的「行为开关」不在 YAML 里，是 classpath 上是否存在 socket-starter（见下表第 3 行）。
+
 | 宿主配置 | 作用 | 缺省行为 |
 | --- | --- | --- |
 | `spring.datasource.*` | MySQL 数据来源，本模块强依赖 | 未配置则启动失败 |
@@ -97,7 +99,103 @@ sequenceDiagram
 | classpath 是否有 `spring-support-socket-starter` | 唯一开关：`@ConditionalOnClass(name="com.chua.socket.support.session.SocketSessionTemplate")` 决定装 socket 发布器还是空发布器 | 缺失时空发布器兜底 |
 | 宿主权限拦截器 | `@Permission` 注解的解析方 | 无拦截器时 `/v2/soft/**` 完全开放 |
 
-模块自带的 `src/main/resources/application.yml` 只是 `SoftStarterApplication` 独立启动（`mvn spring-boot:run`）的示例，**不是 starter 配置项**：`server.port=8081`、`spring.application.name=soft-starter`、数据源指向 `jdbc:mysql://172.16.0.40:3306/softdb`（密码走环境变量 `SOFTWARE_DB_PASSWORD`）、`spring.sql.init.mode=never`（不自动建表）、`id-type=ASSIGN_ID`，并 exclude 了 `ShardingSphereAutoConfiguration` 与两个 Elasticsearch 自动配置。
+模块自带的 `src/main/resources/application.yml` 只是 `SoftStarterApplication` 独立启动（`mvn spring-boot:run`）的示例，**不是 starter 配置项**：`server.port=8081`、`spring.application.name=soft-starter`、数据源指向 `jdbc:mysql://172.16.0.40:3306/softdb`（密码走环境变量 `SOFTWARE_DB_PASSWORD`）、`spring.sql.init.mode=never`（建表由 db/init 自动脚本负责，与该开关无关）、`id-type=ASSIGN_ID`，并 exclude 了 `ShardingSphereAutoConfiguration` 与两个 Elasticsearch 自动配置。
+
+### 5.1 逐项配置示例（宿主侧）
+
+本模块自身没有可配置项，下面按功能分组列出它**实际消费**的宿主配置。「默认值」指宿主不配置该项时的行为。
+
+**① 数据源（必配，缺失启动失败）**
+
+| 配置项 | 含义 | 默认值 / 缺省行为 |
+| --- | --- | --- |
+| `spring.datasource.url` | MySQL JDBC 地址，4 张 `soft_*` 表所在库 | 无默认；未配置数据源则启动失败 |
+| `spring.datasource.username` / `spring.datasource.password` | 数据库账号与口令 | 无默认；口令建议走环境变量（示例 `${SOFTWARE_DB_PASSWORD:change-me}`） |
+| `spring.datasource.driver-class-name` | JDBC 驱动类 | 不配时由 URL 推断；示例显式 `com.mysql.cj.jdbc.Driver` |
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/softdb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: soft_user
+    password: ${SOFTWARE_DB_PASSWORD:change-me}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+```
+
+**② MyBatis-Plus（决定模块 4 个 Mapper 与 2 个 Mapper XML 如何工作）**
+
+| 配置项 | 含义 | 默认值 / 缺省行为 |
+| --- | --- | --- |
+| `mybatis-plus.mapper-locations` | 扫描 Mapper XML；模块内为 `mapper/SoftSoftwareMapper.xml`、`mapper/SoftConfigMapper.xml` | MyBatis-Plus 自带默认值；建议与模块示例一致：`classpath*:mapper/**/*.xml` |
+| `mybatis-plus.global-config.db-config.id-type` | 主键生成策略；模块实体主键均为 String | 宿主未配置时由 MyBatis-Plus 默认策略决定；模块示例显式 `ASSIGN_ID`，建议保持一致 |
+| `mybatis-plus.configuration.log-impl` | SQL 日志实现 | 默认不输出 SQL 日志；开发期可设 `org.apache.ibatis.logging.stdout.StdOutImpl`，生产不要开（见 5.3） |
+
+```yaml
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+  # configuration:
+  #   log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # 仅开发调试
+```
+
+**③ SQL 初始化（建表口径）**
+
+| 配置项 | 含义 | 默认值 / 缺省行为 |
+| --- | --- | --- |
+| `spring.sql.init.mode` | Spring SQL 初始化开关 | 模块示例设 `never`。模块建表脚本在 `db/init/` 下，随应用启动由 datasource-starter 的脚本机制（FlywayLike）自动执行（`CREATE TABLE IF NOT EXISTS` 幂等），与 `spring.sql.init.*` 无关，无需手工执行 `V2.0__init_all_software.sql` |
+
+**④ 独立启动示例项（`SoftStarterApplication` 专用，作为 starter 引入时不生效）**
+
+| 配置项 | 含义 | 默认值 / 缺省行为 |
+| --- | --- | --- |
+| `server.port` | 独立启动监听端口 | 模块示例 `8081`；作为 starter 时端口由宿主决定 |
+| `spring.application.name` | 应用名 | 模块示例 `soft-starter` |
+| `spring.autoconfigure.exclude` | 排除的自动配置 | 模块示例排除 ShardingSphere 与两个 Elasticsearch 自动配置；宿主按需自行决定 |
+
+**⑤ 唯一的「行为开关」不在 YAML 里**
+
+socket 进度推送的开关是**运行期 classpath**：存在 `com.chua.socket.support.session.SocketSessionTemplate` 类（即引入了 `spring-support-socket-starter`）时装 socket 发布器，否则由空发布器兜底。它不是配置项，写任何 YAML 都改变不了这个判定。
+
+### 5.2 完整 YAML 使用示例
+
+宿主引入本 starter 后的参考配置（数据源、MyBatis-Plus 为必配/建议项；安装进度实时推送需另在 pom 中引入可选依赖 `spring-support-socket-starter`，无对应 YAML 配置）：
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  application:
+    name: my-host-app
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/softdb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: soft_user
+    password: ${SOFTWARE_DB_PASSWORD:change-me}
+  sql:
+    init:
+      mode: never
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+```
+
+配套动作：建表脚本 `db/init/V2.0__init_all_software.sql` 随应用启动由 datasource-starter 的脚本机制（FlywayLike）自动执行（`CREATE TABLE IF NOT EXISTS` 幂等），无需手工执行；宿主主类 `@ComponentScan("com.chua.starter.software.support")` 或 `@Import(SoftwareConfiguration.class)`（见 6.2）。
+
+### 5.3 生产注意事项
+
+1. **口令不落仓库**：数据库口令一律走环境变量或配置中心（如 `${SOFTWARE_DB_PASSWORD:change-me}`）；示例中的 `change-me` 只是占位符。
+2. **建表脚本随启动自动执行**：模块 DDL 在 `db/init/` 下，由 datasource-starter 的脚本机制（FlywayLike）随应用启动自动执行（`CREATE TABLE IF NOT EXISTS` 幂等），与 `spring.sql.init.*` 无关，无需手工执行。演示数据脚本 `V2.0__initdata_software.sql` 不要在生产库执行。
+3. **SQL 日志**：`mybatis-plus.configuration.log-impl=StdOutImpl` 会把每条 SQL 打到 stdout，仅限开发排查，生产环境删除该配置。
+4. **同步长事务**：`syncFromSource` 在单个事务内逐条写库，软件目录大的源请安排在低峰期同步，并控制单源目录规模。
+5. **进度推送依赖**：安装进度推送要求 `spring-support-socket-starter` 在运行期 classpath 且 socket 服务启用；`InstallProgressPublisher` 在容器中必须唯一，出现多个时该帧推送被跳过（不影响安装本身）。
+6. **端点鉴权**：`/v2/soft/**` 的权限由宿主权限拦截器解析 `@Permission` 注解实现；宿主未配置拦截器时这些端点完全开放，接入前务必先接好认证鉴权。
+7. **装配必须显式**：本模块没有 `AutoConfiguration.imports`/`spring.factories`，依赖引入后不会自动生效，必须 `@ComponentScan` 或 `@Import(SoftwareConfiguration.class)`（见 Q1）。
 
 ## 6. 使用方式
 
@@ -113,7 +211,7 @@ sequenceDiagram
 
 ### 6.2 最小启用示例
 
-**第一步**：引入依赖，保证宿主已有 MySQL 数据源；手工执行 `src/main/resources/db/init/V2.0__init_all_software.sql` 建 4 张表（需要演示数据再执行 `V2.0__initdata_software.sql`）。
+**第一步**：引入依赖，保证宿主已有 MySQL 数据源；建表脚本 `db/init/V2.0__init_all_software.sql` 随应用启动由 datasource-starter 的脚本机制（FlywayLike）自动执行（`CREATE TABLE IF NOT EXISTS` 幂等），无需手工执行；演示数据脚本 `V2.0__initdata_software.sql` 仅建议在开发库使用。
 
 **第二步**：让装配生效。本模块**没有** `META-INF/spring/...AutoConfiguration.imports`，也没有 `spring.factories`，Boot 的自动配置发现机制不会加载它；`SoftwareConfiguration` 上的 `@AutoConfiguration` 只是声明，必须显式装配（或 `@Import(SoftwareConfiguration.class)`），之后 `/v2/soft/**` 端点与各 Service Bean 可用：
 
@@ -171,7 +269,7 @@ public class SoftwareOps {
 **不适用 / 慎用**：
 
 - 开箱即用的跨平台静默安装引擎：内置 `SoftwareSource` 实现均为占位/本地源，真实安装动作必须自行实现。
-- 没有 MySQL、不想建表，或海量软件高频并发同步的环境：强依赖 4 张表且不自动建表，`syncFromSource` 是单事务逐条写库的长事务。
+- 没有 MySQL，或不希望落地 4 张业务表的环境：强依赖 4 张表（建表脚本随应用启动自动执行），`syncFromSource` 是单事务逐条写库的长事务。
 
 **与相邻模块的取舍**：
 
@@ -249,4 +347,4 @@ public class FreeBsdLocalSoftwareCollector implements LocalSoftwareCollector {
 `SoftInstallRecordServiceImpl#install` 不判断 `SoftwareSourceResult#success`，拿到结果就推 100% 并置 INSTALLED。需要失败语义时，让实现在失败分支**抛异常**，才会走 `failInstall` 落 FAILED 状态。
 
 **Q4：与 Spring Boot 4.x 的兼容性？模块自带的 `server.port=8081` 为什么不生效？**
-仓库以 `spring-boot-starter-parent:4.1.2` 构建（父 POM `spring.boot.version=4.1.2`），模块使用 `jakarta.*` 命名空间（`jakarta.servlet-api 6.1.0`），数据访问由 `spring-support-mybatis-starter` 按 Boot 4 适配（父 POM 管理 `mybatis-plus-spring-boot4-starter`），升级 Boot 4 无额外适配点。`8081` 只出现在模块自带的 `application.yml`——那是 `SoftStarterApplication` 独立启动示例的配置；作为 starter 引入后端口完全由宿主决定。另注意该示例 yml 实际指向 MySQL（`jdbc:mysql://172.16.0.40:3306/softdb`）且不自动建表，`SoftStarterApplication` 注释里的「内置 H2」与实际配置不一致，独立调试也必须提供 MySQL 并手工执行 `db/init` 脚本。
+仓库以 `spring-boot-starter-parent:4.1.2` 构建（父 POM `spring.boot.version=4.1.2`），模块使用 `jakarta.*` 命名空间（`jakarta.servlet-api 6.1.0`），数据访问由 `spring-support-mybatis-starter` 按 Boot 4 适配（父 POM 管理 `mybatis-plus-spring-boot4-starter`），升级 Boot 4 无额外适配点。`8081` 只出现在模块自带的 `application.yml`——那是 `SoftStarterApplication` 独立启动示例的配置；作为 starter 引入后端口完全由宿主决定。另注意该示例 yml 实际指向 MySQL（`jdbc:mysql://172.16.0.40:3306/softdb`），`SoftStarterApplication` 注释里的「内置 H2」与实际配置不一致，独立调试必须提供 MySQL（建表脚本随启动自动执行，无需手工跑 `db/init` 脚本）。

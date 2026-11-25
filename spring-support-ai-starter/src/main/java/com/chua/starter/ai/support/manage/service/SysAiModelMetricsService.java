@@ -103,6 +103,11 @@ public class SysAiModelMetricsService {
     private final SysAiUsageMapper usageMapper;
 
     /**
+     * 模型价格服务（价格拆分后，价格字段统一落 {@code sys_ai_model_price}）
+     */
+    private final SysAiModelPriceService priceService;
+
+    /**
      * 指标源全量同步：指标源全量记录 → 插入/更新，行内锁定字段跳过。
      *
      * @return 处理的记录条数
@@ -129,6 +134,8 @@ public class SysAiModelMetricsService {
             if (key.isEmpty() || !processed.add(key)) {
                 continue;
             }
+            // 价格拆分：目录价格统一落价格库（锁定 / 他源让步在价格服务内判定）
+            priceService.upsertFromSnapshot(r.getId(), null, priceSnapshotOf(r), SOURCE);
             SysAiModelMetrics cur = existing.get(key);
             if (cur == null) {
                 SysAiModelMetrics entity = toEntity(r, key, now);
@@ -358,34 +365,43 @@ public class SysAiModelMetricsService {
         if (cur == null) {
             throw new IllegalArgumentException("指标记录不存在: " + key);
         }
+        // 价格字段拆给价格库：applyManualPrice 内部只认价格键，无价格键时为空操作
+        priceService.applyManualPrice(key, values, locked, operator);
         long now = System.currentTimeMillis();
         List<String> oldLocked = cur.getManualLocked() == null
                 ? new ArrayList<>() : new ArrayList<>(cur.getManualLocked());
+        // 指标侧只保留非价格字段：价格键的编辑 / 锁定 / 解锁全部由价格库负责
+        Map<String, BigDecimal> metricsValues = new LinkedHashMap<>();
+        if (values != null) {
+            for (Map.Entry<String, BigDecimal> en : values.entrySet()) {
+                if (!SysAiModelPriceService.isPriceField(en.getKey())) {
+                    metricsValues.put(en.getKey(), en.getValue());
+                }
+            }
+        }
         List<String> normLocked = new ArrayList<>();
         if (locked != null) {
             for (String f : locked) {
-                if (FIELD_COL.containsKey(f) && !normLocked.contains(f)) {
+                if (isMetricsField(f) && !normLocked.contains(f)) {
                     normLocked.add(f);
                 }
             }
         }
-        if (values != null) {
-            for (String field : values.keySet()) {
-                if (FIELD_COL.containsKey(field) && !normLocked.contains(field)) {
-                    normLocked.add(field);
-                }
+        for (String field : metricsValues.keySet()) {
+            if (isMetricsField(field) && !normLocked.contains(field)) {
+                normLocked.add(field);
             }
         }
         // 解锁字段：立即用指标源当前值回填，无需等待下次同步
         List<String> unlocked = new ArrayList<>();
         for (String f : oldLocked) {
-            if (!normLocked.contains(f)) {
+            if (!normLocked.contains(f) && isMetricsField(f)) {
                 unlocked.add(f);
             }
         }
         Map<String, Object> sourceMetrics = unlocked.isEmpty()
                 ? Map.of() : ProviderModelMetrics.metricsOf(ProviderModelMetrics.of(key));
-        applyManualUpdate(cur, values, normLocked, unlocked, sourceMetrics, operator, now);
+        applyManualUpdate(cur, metricsValues, normLocked, unlocked, sourceMetrics, operator, now);
         return metricsMapper.selectById(cur.getId());
     }
 
@@ -678,6 +694,8 @@ public class SysAiModelMetricsService {
             if (key.isEmpty()) {
                 continue;
             }
+            // 价格拆分：上游价格统一落价格库（锁定 / 他源让步在价格服务内判定）
+            priceService.upsertFromSnapshot(modelId, providerId, snapshot, dataSource);
             SysAiModelMetrics cur = existing.get(key);
             if (cur == null) {
                 SysAiModelMetrics entity = new SysAiModelMetrics();
@@ -695,24 +713,9 @@ public class SysAiModelMetricsService {
             }
             Set<String> locked = cur.getManualLocked() == null
                     ? Set.of() : new HashSet<>(cur.getManualLocked());
-            boolean owned = dataSource.equals(cur.getSource());
             LambdaUpdateWrapper<SysAiModelMetrics> uw = new LambdaUpdateWrapper<>();
             uw.eq(SysAiModelMetrics::getId, cur.getId());
             boolean changed = false;
-            for (String priceKey : UPSTREAM_PRICE_KEYS) {
-                if (!snapshot.containsKey(priceKey) || locked.contains(priceKey)) {
-                    continue;
-                }
-                if (priceValue(cur, priceKey) != null && !owned) {
-                    continue;
-                }
-                BigDecimal value = bd(snapshot, priceKey);
-                if (value == null) {
-                    continue;
-                }
-                uw.set(priceColumn(priceKey), value);
-                changed = true;
-            }
             // 能力位（流式 / 异步）不是价格列：只补空值，已有值（含人工锁定）不覆盖
             if (!locked.contains("streaming") && cur.getStreaming() == null
                     && snapshot.get("streaming") instanceof Boolean streaming) {
@@ -802,6 +805,8 @@ public class SysAiModelMetricsService {
             if (key.isEmpty()) {
                 continue;
             }
+            // 价格拆分：价格行先删后增（同源未锁定才替换，判定在价格服务内）
+            priceService.replaceFromSnapshot(modelId, providerId, snapshot, dataSource);
             SysAiModelMetrics cur = existing.get(key);
             if (cur != null && !dataSource.equals(cur.getSource())) {
                 // 其它来源收录的行不动：模型键全局唯一，不能被本次同步抢走
@@ -910,39 +915,6 @@ public class SysAiModelMetricsService {
     private static final String[] UPSTREAM_CAPABILITY_KEYS = {
             "streaming", "async"
     };
-
-    /**
-     * 价格键 → 指标库列。
-     *
-     * @param key 价格键
-     * @return 列引用
-     */
-    private static SFunction<SysAiModelMetrics, ?> priceColumn(String key) {
-        return switch (key) {
-            case "price_input_per_musd" -> SysAiModelMetrics::getPriceInputPerMusd;
-            case "price_output_per_musd" -> SysAiModelMetrics::getPriceOutputPerMusd;
-            case "price_cache_hit_per_musd" -> SysAiModelMetrics::getPriceCacheHitPerMusd;
-            case "price_cache_write_per_musd" -> SysAiModelMetrics::getPriceCacheWritePerMusd;
-            default -> SysAiModelMetrics::getCostPerTask;
-        };
-    }
-
-    /**
-     * 读指标行当前的价格值。
-     *
-     * @param row 指标行
-     * @param key 价格键
-     * @return 当前值
-     */
-    private static BigDecimal priceValue(SysAiModelMetrics row, String key) {
-        return switch (key) {
-            case "price_input_per_musd" -> row.getPriceInputPerMusd();
-            case "price_output_per_musd" -> row.getPriceOutputPerMusd();
-            case "price_cache_hit_per_musd" -> row.getPriceCacheHitPerMusd();
-            case "price_cache_write_per_musd" -> row.getPriceCacheWritePerMusd();
-            default -> row.getCostPerTask();
-        };
-    }
 
     /**
      * 上游计费同步结果。
@@ -1443,10 +1415,7 @@ public class SysAiModelMetricsService {
      * @return 返回值
     */
     private void applyMetricsToEntity(SysAiModelMetrics e, Map<String, Object> m) {
-        e.setPriceInputPerMusd(bd(m, "price_input_per_musd"));
-        e.setPriceOutputPerMusd(bd(m, "price_output_per_musd"));
-        e.setPriceCacheHitPerMusd(bd(m, "price_cache_hit_per_musd"));
-        e.setPriceCacheWritePerMusd(bd(m, "price_cache_write_per_musd"));
+        // 价格字段（price_* / cost_per_task）已拆到 sys_ai_model_price，指标实体不再落价格列
         e.setContextWindowTokens(longOf(m, "context_window_tokens"));
         e.setReasoning(boolOf(m, "reasoning"));
         e.setWebSearch(boolOf(m, "web_search"));
@@ -1460,7 +1429,6 @@ public class SysAiModelMetricsService {
         e.setOutputSpeedTps(bd(m, "output_speed_tps"));
         e.setLatencyFirstTokenSeconds(bd(m, "latency_first_token_seconds"));
         e.setElo(bd(m, "elo"));
-        e.setCostPerTask(bd(m, "cost_per_task"));
         e.setPricingRules(rulesOf(m.get("pricing_rules")));
     }
 
@@ -1535,22 +1503,7 @@ public class SysAiModelMetricsService {
     private void buildIndicatorUpdate(Map<String, Object> metrics, Set<String> locked,
                                        String source, long now,
                                        LambdaUpdateWrapper<SysAiModelMetrics> uw) {
-        if (metrics.containsKey("price_input_per_musd")
-                && !locked.contains("price_input_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceInputPerMusd, bd(metrics, "price_input_per_musd"));
-        }
-        if (metrics.containsKey("price_output_per_musd")
-                && !locked.contains("price_output_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceOutputPerMusd, bd(metrics, "price_output_per_musd"));
-        }
-        if (metrics.containsKey("price_cache_hit_per_musd")
-                && !locked.contains("price_cache_hit_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceCacheHitPerMusd, bd(metrics, "price_cache_hit_per_musd"));
-        }
-        if (metrics.containsKey("price_cache_write_per_musd")
-                && !locked.contains("price_cache_write_per_musd")) {
-            uw.set(SysAiModelMetrics::getPriceCacheWritePerMusd, bd(metrics, "price_cache_write_per_musd"));
-        }
+        // 价格键（price_*）已拆到价格库，本方法只维护非价格指标列
         if (metrics.containsKey("context_window_tokens")
                 && !locked.contains("context_window_tokens")) {
             uw.set(SysAiModelMetrics::getContextWindowTokens, longOf(metrics, "context_window_tokens"));
@@ -1748,18 +1701,7 @@ public class SysAiModelMetricsService {
      */
     private void buildSyncUpdate(ProviderModelInfo r, Set<String> locked, long now,
                                  LambdaUpdateWrapper<SysAiModelMetrics> uw) {
-        if (!locked.contains("price_input_per_musd") && r.getPriceInputPerMusd() != null) {
-            uw.set(SysAiModelMetrics::getPriceInputPerMusd, BigDecimal.valueOf(r.getPriceInputPerMusd()));
-        }
-        if (!locked.contains("price_output_per_musd") && r.getPriceOutputPerMusd() != null) {
-            uw.set(SysAiModelMetrics::getPriceOutputPerMusd, BigDecimal.valueOf(r.getPriceOutputPerMusd()));
-        }
-        if (!locked.contains("price_cache_hit_per_musd") && r.getPriceCacheHitPerMusd() != null) {
-            uw.set(SysAiModelMetrics::getPriceCacheHitPerMusd, BigDecimal.valueOf(r.getPriceCacheHitPerMusd()));
-        }
-        if (!locked.contains("price_cache_write_per_musd") && r.getPriceCacheWritePerMusd() != null) {
-            uw.set(SysAiModelMetrics::getPriceCacheWritePerMusd, BigDecimal.valueOf(r.getPriceCacheWritePerMusd()));
-        }
+        // 价格字段已拆到价格库（syncAll 循环内统一 upsert），指标侧只更新非价格列
         if (!locked.contains("context_window_tokens") && r.getContextWindow() != null) {
             uw.set(SysAiModelMetrics::getContextWindowTokens, r.getContextWindow());
         }
@@ -1878,10 +1820,7 @@ public class SysAiModelMetricsService {
         SysAiModelMetrics e = new SysAiModelMetrics();
         e.setModelKey(key);
         e.setModelName(key);
-        e.setPriceInputPerMusd(bd(r.getPriceInputPerMusd()));
-        e.setPriceOutputPerMusd(bd(r.getPriceOutputPerMusd()));
-        e.setPriceCacheHitPerMusd(bd(r.getPriceCacheHitPerMusd()));
-        e.setPriceCacheWritePerMusd(bd(r.getPriceCacheWritePerMusd()));
+        // 价格字段已拆到 sys_ai_model_price，指标实体不再落价格列
         e.setContextWindowTokens(r.getContextWindow());
         e.setReasoning(r.getReasoning());
         e.setImageInput(hasModality(r, "image"));
@@ -1890,16 +1829,6 @@ public class SysAiModelMetricsService {
         e.setCreateTime(now);
         e.setUpdateTime(now);
         return e;
-    }
-
-    /**
-     * Double → BigDecimal（目录价格是 Double，实体价格列是 DECIMAL）。
-     *
-     * @param v 目录值
-     * @return 实体值；入参为 {@code null} 返回 {@code null}
-     */
-    private static BigDecimal bd(Double v) {
-        return v == null ? null : BigDecimal.valueOf(v);
     }
 
     /**
@@ -1912,6 +1841,45 @@ public class SysAiModelMetricsService {
     private static Boolean hasModality(ProviderModelInfo r, String modality) {
         List<String> inputs = r.getInputModalities();
         return inputs == null || inputs.isEmpty() ? null : inputs.contains(modality);
+    }
+
+    /**
+     * 目录模型信息 → 价格快照（仅收录非空价格键，供价格库 upsert）。
+     *
+     * <p>价格拆分后，目录同步的价格不再写指标表旧列，统一经本快照落
+     * {@code sys_ai_model_price}；快照为空时价格服务会跳过。</p>
+     *
+     * @param r 目录模型信息
+     * @return 价格快照（可能为空 Map）
+     */
+    private static Map<String, Object> priceSnapshotOf(ProviderModelInfo r) {
+        Map<String, Object> snapshot = new HashMap<>(8);
+        if (r.getPriceInputPerMusd() != null) {
+            snapshot.put("price_input_per_musd", r.getPriceInputPerMusd());
+        }
+        if (r.getPriceOutputPerMusd() != null) {
+            snapshot.put("price_output_per_musd", r.getPriceOutputPerMusd());
+        }
+        if (r.getPriceCacheHitPerMusd() != null) {
+            snapshot.put("price_cache_hit_per_musd", r.getPriceCacheHitPerMusd());
+        }
+        if (r.getPriceCacheWritePerMusd() != null) {
+            snapshot.put("price_cache_write_per_musd", r.getPriceCacheWritePerMusd());
+        }
+        return snapshot;
+    }
+
+    /**
+     * 判断字段是否仍归属指标库（非价格字段）。
+     *
+     * <p>价格字段已拆分到 {@code sys_ai_model_price}，由
+     * {@link SysAiModelPriceService} 负责；指标侧不再编辑这些旧列。</p>
+     *
+     * @param field 字段键
+     * @return 属于指标库返回 {@code true}
+     */
+    private static boolean isMetricsField(String field) {
+        return FIELD_COL.containsKey(field) && !SysAiModelPriceService.isPriceField(field);
     }
 
     /**

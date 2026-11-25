@@ -16,6 +16,42 @@ import java.util.Map;
 /**
  * Hotsport 配置属性 — 绑定 {@code plugin.hotsport.*}。
  *
+ * <p>含两个一级子配置：{@link Agent}（Agent 自注入）与 {@link Apm}（APM 存储 / HTTP 上报接收 / TCP 接收端）。
+ * 所有键均可省略，省略即用默认值；时间单位如无说明为毫秒。</p>
+ *
+ * <p>完整配置示例：</p>
+ *
+ * <pre>{@code
+ * plugin:
+ *   hotsport:
+ *     agent:
+ *       enabled: true        # 是否自注入 Runtime Agent，默认 true
+ *       shell-port: 4567     # Agent Shell 端口
+ *       options: ""          # 附加 Agent 参数（逗号分隔 Key=值）
+ *     apm:
+ *       storage:
+ *         type: sqlite       # sqlite / mysql / inmemory / noop，默认 sqlite
+ *         path: ""           # sqlite 落盘目录；空 = APM 侧默认
+ *         retention-ms: 604800000   # 数据保留 7 天
+ *         capacity: 100000   # 单表容量上限，超出按最旧淘汰
+ *         url: ""            # mysql JDBC URL，type=mysql 时必填
+ *         username: ""       # mysql 用户名
+ *         password: ""       # mysql 密码
+ *         pool-size: 4       # mysql 写入连接池大小
+ *         batch-size: 200    # mysql 单批写入条数
+ *         async: true        # true 异步批量写 / false 同步写；不配置沿用 APM 默认异步
+ *         maintenance-interval-ms: 0   # 自维护周期，0 = 默认 60 秒（下限 5 秒）
+ *         flush-timeout-ms: 0          # 停机排空等待，0 = APM 侧默认
+ *       ingest:
+ *         token: ""          # 上报共享密钥；空 = 不校验 x-hotsport-token
+ *         max-batch: 1000    # 单批每种类型最大条数
+ *       tcp:
+ *         enabled: false     # TCP 接收端开关，默认关闭
+ *         host: 0.0.0.0      # 监听地址
+ *         port: 19392        # 监听端口
+ *         topic: hotsport-events   # 订阅主题名
+ * }</pre>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -25,11 +61,37 @@ public class HotsportProperties {
 
     /**
      * Agent 配置。
+     *
+     * <p>绑定 {@code plugin.hotsport.agent.*}，控制是否对当前 JVM 自注入 Runtime Agent。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   hotsport:
+     *     agent:
+     *       enabled: true
+     *       shell-port: 4567
+     *       options: ""
+     * }</pre>
     */
     private Agent agent = new Agent();
 
     /**
-     * APM 存储配置。
+     * APM 配置。
+     *
+     * <p>绑定 {@code plugin.hotsport.apm.*}，含存储（storage）、HTTP 上报接收（ingest）、
+     * TCP 接收端（tcp）三个子配置。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   hotsport:
+     *     apm:
+     *       storage:
+     *         type: sqlite
+     *       ingest:
+     *         token: ""
+     *       tcp:
+     *         enabled: false
+     * }</pre>
     */
     private Apm apm = new Apm();
 
@@ -75,18 +137,46 @@ public class HotsportProperties {
     public static class Agent {
 
         /**
-         * 是否启用自注入。
+         * 是否启用 Agent 自注入。
+         *
+         * <p>默认 {@code true}。开启后经 spring-support-agent-starter 对当前 JVM 自注入
+         * Runtime Agent 做字节码采集；JDK 25 等存在 retransform 风险的环境建议设为 {@code false}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     agent:
+         *       enabled: true   # 默认 true
+         * }</pre>
         */
         private boolean enabled = true;
 
         /**
-         * Shell 端口。
+         * Agent Shell 监听端口。
+         *
+         * <p>默认 {@code 4567}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     agent:
+         *       shell-port: 4567   # 默认 4567
+         * }</pre>
         */
         // [P3C A20 豁免]
         private int shellPort = 4567;
 
         /**
-         * 额外 Agent 参数（逗号分隔 Key=值）。
+         * 额外 Agent 参数（逗号分隔 {@code Key=值}）。
+         *
+         * <p>默认空串 {@code ""}，表示不附加参数、走 agent 侧默认配置。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     agent:
+         *       options: ""   # 默认空串
+         * }</pre>
         */
         private String options = "";
 
@@ -152,16 +242,51 @@ public class HotsportProperties {
 
         /**
          * 存储配置。
+         *
+         * <p>绑定 {@code plugin.hotsport.apm.storage.*}；经 {@link #toStorageConfig()}
+         * 展开为 {@code apm.storage.*} 键值对交给 APM 存储层。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         type: sqlite   # sqlite / mysql / inmemory / noop
+         * }</pre>
         */
         private Storage storage = new Storage();
 
         /**
          * 上报接收配置（HTTP {@code POST /api/apm/ingest}）。
+         *
+         * <p>绑定 {@code plugin.hotsport.apm.ingest.*}：共享密钥鉴权与单批上限。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       ingest:
+         *         token: ""
+         *         max-batch: 1000
+         * }</pre>
         */
         private Ingest ingest = new Ingest();
 
         /**
          * TCP 接收端配置（默认关闭）。
+         *
+         * <p>绑定 {@code plugin.hotsport.apm.tcp.*}，供无法直连 HTTP 的采集端按主题推送数据。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       tcp:
+         *         enabled: false
+         *         host: 0.0.0.0
+         *         port: 19392
+         *         topic: hotsport-events
+         * }</pre>
         */
         private Tcp tcp = new Tcp();
 
@@ -302,14 +427,33 @@ public class HotsportProperties {
     public static class Ingest {
 
         /**
-         * 共享密钥；为空表示不校验。
+         * 上报共享密钥；为空（默认 {@code ""}）表示不校验。
          *
-         * <p>非空时校验请求头 {@code x-hotsport-token}，不匹配返回 401。</p>
+         * <p>非空时校验请求头 {@code x-hotsport-token}，不匹配返回 401；
+         * 跨网络上报务必设置为强随机密钥。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       ingest:
+         *         token: ""   # 默认空串 = 不校验
+         * }</pre>
         */
         private String token = "";
 
         /**
          * 单批每种类型最大条数（超出部分截断丢弃）。
+         *
+         * <p>默认 {@code 1000}；配置为 ≤0 或未配置时，服务端同样按 1000 兜底。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       ingest:
+         *         max-batch: 1000   # 默认 1000
+         * }</pre>
         */
         // [P3C A20 豁免]
         private int maxBatch = 1000;
@@ -359,23 +503,65 @@ public class HotsportProperties {
     public static class Tcp {
 
         /**
-         * 是否启用 TCP 接收端（默认关闭，HTTP /ingest 始终可用）。
+         * 是否启用 TCP 接收端。
+         *
+         * <p>默认 {@code false}（关闭）；HTTP {@code /api/apm/ingest} 始终可用，不受本开关影响。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       tcp:
+         *         enabled: false   # 默认 false
+         * }</pre>
         */
         private boolean enabled = false;
 
         /**
-         * 监听地址。
+         * TCP 接收端监听地址。
+         *
+         * <p>默认 {@code 0.0.0.0}；配置为空或空白时同样回退 {@code 0.0.0.0}。
+         * 仅本机采集时建议收紧为 {@code 127.0.0.1}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       tcp:
+         *         host: 0.0.0.0   # 默认 0.0.0.0
+         * }</pre>
         */
         private String host = "0.0.0.0";
 
         /**
-         * 监听端口。
+         * TCP 接收端监听端口。
+         *
+         * <p>默认 {@code 19392}；配置为 ≤0 时回退 {@code 19392}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       tcp:
+         *         port: 19392   # 默认 19392
+         * }</pre>
         */
         // [P3C A20 豁免]
         private int port = 19392;
 
         /**
          * 订阅主题名（采集端按主题投递）。
+         *
+         * <p>默认 {@code hotsport-events}；配置为空或空白时回退该默认值。
+         * 采集端与接收端必须使用同一主题。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       tcp:
+         *         topic: hotsport-events   # 默认 hotsport-events
+         * }</pre>
         */
         private String topic = "hotsport-events";
 
@@ -462,23 +648,63 @@ public class HotsportProperties {
          *
          * <p>默认 {@code sqlite}：真实数据库（SQLite 文件），重启不丢数据，
          * 且不需要外部服务，观测组件不会因为数据库不可用而拖住宿主。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         type: sqlite   # 默认 sqlite
+         * }</pre>
         */
         private String type = "sqlite";
 
         /**
-         * 数据保留毫秒。
+         * 数据保留毫秒（超过保留期的数据被定期清理）。
+         *
+         * <p>默认 {@code 604800000}（7 天）；配置为 ≤0 时不下发 {@code apm.storage.retention.ms}，
+         * 交由 APM 侧默认值兜底。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         retention-ms: 604800000   # 默认 7 天
+         * }</pre>
         */
         // [P3C A20 豁免]
         private long retentionMs = 7L * 24 * 60 * 60 * 1000;
 
         /**
          * 单表容量上限（超出按最旧淘汰）。
+         *
+         * <p>默认 {@code 100000}；配置为 ≤0 时不下发 {@code apm.storage.capacity}，
+         * 交由 APM 侧默认值兜底。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         capacity: 100000   # 默认 100000
+         * }</pre>
         */
         // [P3C A20 豁免]
         private int capacity = 100000;
 
         /**
          * 存储落盘目录（sqlite 等非内存实现使用；为空时用临时目录）。
+         *
+         * <p>默认空串 {@code ""}，表示交由 APM 侧选择默认落盘目录。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         path: ""   # 默认空串 = APM 侧默认目录
+         * }</pre>
         */
         private String path = "";
 
@@ -486,27 +712,78 @@ public class HotsportProperties {
          * JDBC URL（type=mysql 时必填）。
          *
          * <p>形如 {@code jdbc:mysql://127.0.0.1:3306/hotsport}。驱动是可选依赖，
-         * 用 MySQL 存储时需自行引入 {@code mysql-connector-j}。</p>
+         * 用 MySQL 存储时需自行引入 {@code mysql-connector-j}。默认空串 {@code ""}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         url: "jdbc:mysql://127.0.0.1:3306/hotsport"   # type=mysql 时必填
+         * }</pre>
         */
         private String url = "";
 
         /**
          * 数据库用户名（type=mysql 时使用）。
+         *
+         * <p>默认空串 {@code ""}。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         username: ""   # 默认空串
+         * }</pre>
         */
         private String username = "";
 
         /**
          * 数据库密码（type=mysql 时使用）。
+         *
+         * <p>默认空串 {@code ""}；生产环境请使用强口令，勿将真实密码提交到配置仓库
+         * （示例中的 {@code your-password} 仅为占位符）。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         password: "your-password"   # 默认空串；示例为占位符
+         * }</pre>
         */
         private String password = "";
 
         /**
-         * 连接池大小（type=mysql 时使用，默认 4）。
+         * 连接池大小（type=mysql 时使用）。
+         *
+         * <p>默认 {@code 4}；配置为 ≤0 时不下发 {@code apm.storage.pool.size}，
+         * 交由 APM 侧默认值兜底。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         pool-size: 4   # 默认 4
+         * }</pre>
         */
         private int poolSize = 4;
 
         /**
-         * 单批写入条数（type=mysql 时使用，默认 200）。
+         * 单批写入条数（type=mysql 时使用）。
+         *
+         * <p>默认 {@code 200}；配置为 ≤0 时不下发 {@code apm.storage.batch.size}，
+         * 交由 APM 侧默认值兜底。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         batch-size: 200   # 默认 200
+         * }</pre>
         */
         // [P3C A20 豁免]
         private int batchSize = 200;
@@ -514,21 +791,49 @@ public class HotsportProperties {
         /**
          * 写入模式：true 异步批量写（默认，业务线程不阻塞），false 逐条同步写。
          *
-         * <p>null 表示「未显式配置」，沿用 APM 侧默认（异步）。</p>
+         * <p>null 表示「未显式配置」，沿用 APM 侧默认（异步）；
+         * 显式配置 {@code false} 时逐条同步写。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         async: true   # 不配置 = APM 侧默认异步
+         * }</pre>
          */
         private Boolean async;
 
         /**
          * 自维护周期（毫秒）：按保留期清理过期数据、按容量淘汰最旧数据的检查间隔。
          *
-         * <p>0 表示沿用 APM 侧默认（60 秒）。下限 5 秒。</p>
+         * <p>默认 {@code 0}，表示沿用 APM 侧默认（60 秒）；配置为 ≤0 时不下发
+         * {@code apm.storage.maintenance.interval.ms}，同样走默认。下限 5 秒。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         maintenance-interval-ms: 0   # 0 = 默认 60 秒，下限 5 秒
+         * }</pre>
          */
         private long maintenanceIntervalMs;
 
         /**
          * 关闭时等待异步队列落盘的最长时间（毫秒）。
          *
-         * <p>0 表示沿用 APM 侧默认。设太短会在关闭瞬间丢数据，设太长会拖慢停机。</p>
+         * <p>默认 {@code 0}，表示沿用 APM 侧默认；配置为 ≤0 时不下发
+         * {@code apm.storage.flush.timeout.ms}，同样走默认。
+         * 设太短会在关闭瞬间丢数据，设太长会拖慢停机。</p>
+         *
+         * <pre>{@code
+         * plugin:
+         *   hotsport:
+         *     apm:
+         *       storage:
+         *         flush-timeout-ms: 0   # 0 = APM 侧默认
+         * }</pre>
          */
         private long flushTimeoutMs;
 

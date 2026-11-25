@@ -13,7 +13,6 @@ import org.springframework.util.ClassUtils;
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
 import java.sql.Connection;
-import java.util.Collection;
 import java.util.Map;
 
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
@@ -35,7 +34,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     /**
      * 默认数据来源
     */
-    private final Object defaultDataSource;
+    private Object defaultDataSource;
     /**
      * MyBatis
     */
@@ -55,7 +54,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
      */
     public DynamicDataSource() {
         this.setTargetDataSources(TARGET_DATA_SOURCES);
-        this.defaultDataSource = createDefaultDataSource();
+        this.defaultDataSource = resolveDefaultDataSource();
         this.setDefaultTargetDataSource(defaultDataSource);
     }
 
@@ -63,7 +62,26 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     public void afterPropertiesSet() {
         super.afterPropertiesSet();
         this.setTargetDataSources(TARGET_DATA_SOURCES);
+        // 分片/联邦等运行期聚合源刷新后，默认源随之重解析（单业务源时由聚合源接管，摘除后自动还原）
+        this.defaultDataSource = resolveDefaultDataSource();
+        this.setDefaultTargetDataSource(defaultDataSource);
+    }
 
+    /**
+     * 解析默认数据源
+     * <p>优先级：运行期聚合源接管（仅当业务数据源恰好一个且存在在册分片/联邦源时，
+     * 聚合源临时充当默认源，业务免 {@code @DS} 直走分片/联邦）&gt; 名为 {@code master} 的数据源
+     * &gt; 按注册顺序的第一个数据源（未命名 master 时，第一个注册的数据源自动充当默认源，
+     * 即 master 角色）&gt; null。</p>
+     *
+     * @return 数据源
+     */
+    private Object resolveDefaultDataSource() {
+        Object composite = DataSourceContextSupport.resolveCompositeDefaultSource(TARGET_DATA_SOURCES);
+        if (composite != null) {
+            return composite;
+        }
+        return createDefaultDataSource();
     }
 
     /**
@@ -175,6 +193,8 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
     /**
      * 构建默认数据源
+     * <p>优先级：名为 {@code master} 的数据源 &gt; 按注册顺序的第一个数据源
+     * （未命名 master 时，第一个注册的数据源自动充当默认源，即 master 角色）&gt; null。</p>
      *
      * @return 数据源
      */
@@ -183,11 +203,12 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             return TARGET_DATA_SOURCES.get(MASTER);
         }
 
-        Collection<Object> values = TARGET_DATA_SOURCES.values();
-        if (values.isEmpty()) {
-            return null;
+        for (String name : DataSourceContextSupport.DATA_SOURCE_ORDER) {
+            if (TARGET_DATA_SOURCES.containsKey(name)) {
+                return TARGET_DATA_SOURCES.get(name);
+            }
         }
-        return values.iterator().next();
+        return null;
     }
 
     /**

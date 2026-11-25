@@ -105,6 +105,11 @@ public class ApiModelMetricsController {
     private final ModelPriceOverviewService priceOverviewService;
 
     /**
+     * 模型能力评估服务：固定六维雷达与能力 TOP 榜
+     */
+    private final com.chua.starter.ai.support.manage.service.ModelCapabilityService capabilityService;
+
+    /**
      * 分页查询全量指标库。
      *
      * @param page    当前页
@@ -153,6 +158,32 @@ public class ApiModelMetricsController {
             @RequestParam(value = "order", required = false) String order,
             @RequestParam(value = "hotOnly", defaultValue = "false") boolean hotOnly) {
         return ApiResult.ok(priceOverviewService.overview(page, size, keyword, provider, band, sort, order, hotOnly));
+    }
+
+    /**
+     * 单模型六维能力雷达图（固定维度，0-100 归一）。
+     *
+     * <p>维度固定：上下文窗口 / 推理 / 工具调用 / 多模态 / 输出速度 / 性价比；
+     * 数据全部来自指标库真实值，无数据的维度记 0 分。</p>
+     *
+     * @param modelKey 归一化模型键（查询参数：模型键可能含「/」，不便走路径变量）
+     * @return 雷达评估；指标库无该模型时 data 为 {@code null}
+     */
+    @GetMapping("/model-metrics/radar")
+    public ApiResult<Object> modelRadar(@RequestParam("model_key") String modelKey) {
+        return ApiResult.ok(capabilityService.radar(modelKey));
+    }
+
+    /**
+     * 能力 TOP 榜：已添加（启用）模型按综合分排序。
+     *
+     * @param limit 返回条数（默认 20，上限 100）
+     * @return 榜单（综合分降序）
+     */
+    @GetMapping("/model-capability/ranking")
+    public ApiResult<List<com.chua.starter.ai.support.manage.service.ModelCapabilityService.CapabilityRankingRow>> capabilityRanking(
+            @RequestParam(value = "limit", defaultValue = "20") int limit) {
+        return ApiResult.ok(capabilityService.ranking(limit));
     }
 
     /**

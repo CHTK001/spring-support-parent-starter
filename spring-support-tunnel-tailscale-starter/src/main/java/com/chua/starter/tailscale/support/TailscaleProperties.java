@@ -27,6 +27,20 @@ import java.time.Duration;
  *   <tr><td>storeDir</td><td>否</td><td>{@code ~/.chua/tunnel/tailscale}</td><td>映射持久化目录；一条映射一个 JSON 文件，不使用数据库</td></tr>
  * </table>
  *
+ * <h2>完整配置示例（全部可选项，前缀 {@code plugin.tailscale}）</h2>
+ * <pre>
+ * plugin:
+ *   tailscale:
+ *     enable: true                            # 总开关，缺省 true；false 完全禁用模块
+ *     binary: /usr/local/bin/tailscale        # 可执行文件路径；缺省自动定位（TAILSCALE_BIN -> PATH -> 常见安装目录）
+ *     auth-key: ${TS_AUTHKEY}                 # 设备认证 Key；缺省读环境变量 TS_AUTHKEY；设备已 tailscale up 时可省
+ *     start-timeout: 60s                      # 等待公网 URL 输出的超时，缺省 60s
+ *     fail-fast: false                        # 启动失败是否中断应用，缺省 false（只打 ERROR 日志继续启动）
+ *     auto-start: true                        # 启动期是否为 server.port 自动建隧道，缺省 true
+ *     auto-start-stored: true                 # 启动期是否恢复持久化映射，缺省 true
+ *     store-dir: /data/app/tunnel/tailscale   # 映射持久化目录；缺省 ~/.chua/tunnel/tailscale
+ * </pre>
+ *
  * <h2>TCP 模式说明</h2>
  * <p>Tailscale Funnel 只能暴露 {@code 443 / 8443 / 10000} 三个公网 TCP 端口（未提权的设备），
  * 因此 {@code tcp} 模式下映射固定暴露 {@code 443}（提供者常量 {@code TCP_PORTS} 的首项），
@@ -68,30 +82,68 @@ public class TailscaleProperties {
 
     /**
      * 总开关。【选填】默认 {@code true}；设为 false 完全禁用。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     enable: true
+     * </pre>
      */
     private boolean enable = true;
 
     /**
      * tailscale 可执行文件路径。【选填】默认自动定位；
-     * 为空时按 TAILSCALE_BIN 环境变量 → PATH → 常见安装目录 顺序查找。
+     * 为空/空白时按 TAILSCALE_BIN 环境变量 → PATH → 常见安装目录 顺序查找；
+     * 相对路径会转为绝对路径。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     binary: /usr/local/bin/tailscale
+     * </pre>
      */
     private String binary;
 
     /**
-     * 设备认证 Key。【选填】默认无；
-     * 可通过环境变量 {@code TS_AUTHKEY} 设置，自动注入子进程环境。
-     * 依赖设备先加入 tailnet（{@code tailscale up}）时可不填。
+     * 设备认证 Key。【选填】字段初始值为 null；
+     * 解析顺序为「配置文件 → 环境变量 {@code TS_AUTHKEY}」（见 {@link #resolveAuthKey()}），
+     * 两者均未配置时返回 null，此时设备需先加入 tailnet（{@code tailscale up}）才能建隧道。
+     *
+     * <p>YAML 示例（推荐走环境变量注入，避免明文落盘）：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     auth-key: ${TS_AUTHKEY}
+     * </pre>
      */
     private String authKey;
 
     /**
-     * 启动等待公网 URL 的超时。【选填】默认 60 秒。
+     * 启动等待公网 URL 的超时。【选填】默认 60 秒（字段初始化值）。
+     * <p>为空（未配置）时不向底层客户端传值，由客户端同名默认值（60 秒）兜底；
+     * 代码不拦截 0 或负数——0/负数没有等待窗口会立即超时，请务必配置正时长。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     start-timeout: 90s
+     * </pre>
      */
     private Duration startTimeout = Duration.ofSeconds(60);
 
     /**
      * 启动失败时是否中断应用。【选填】默认 {@code false}。
      * false 只打 ERROR 日志、Spring 继续启动；true 抛出异常中断启动。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     fail-fast: false
+     * </pre>
      */
     private boolean failFast = false;
 
@@ -99,17 +151,40 @@ public class TailscaleProperties {
      * 启动时是否按本配置文件自动建立默认隧道。【选填】默认 {@code true}（保持原有行为）。
      * <p>设为 {@code false} 时模块（含管理接口与持久化映射）仍然启用，只是不在启动期
      * 自动为 {@code server.port} 建隧道 —— 适合「从页面按需映射端口」的部署方式。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     auto-start: false
+     * </pre>
      */
     private boolean autoStart = true;
 
     /**
      * 启动时是否恢复上次标记为「自动启动」的持久化映射。【选填】默认 {@code true}。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     auto-start-stored: false
+     * </pre>
      */
     private boolean autoStartStored = true;
 
     /**
-     * 映射持久化目录。【选填】默认 {@code ~/.chua/tunnel/tailscale}。
+     * 映射持久化目录。【选填】字段初始值为 null；
+     * 为空时由 tunnel-starter 按「{@code <plugin.tunnel.store-dir 或 ~/.chua/tunnel>/tailscale}」解析，
+     * 实际缺省落为 {@code ~/.chua/tunnel/tailscale}。
      * <p>一条映射一个 JSON 文件，不使用数据库；目录可指向挂载盘做备份。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   tailscale:
+     *     store-dir: /data/app/tunnel/tailscale
+     * </pre>
      */
     private String storeDir;
 

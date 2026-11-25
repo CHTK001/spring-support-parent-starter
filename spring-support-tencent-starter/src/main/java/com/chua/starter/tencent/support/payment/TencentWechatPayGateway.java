@@ -8,6 +8,10 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingReturnRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingReturnResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
@@ -211,5 +215,51 @@ public interface TencentWechatPayGateway {
      * @return 解析薪酬score通知的结果
      */
     TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request);
+
+    /**
+     * 创建分账订单。
+     *
+     * <p>对应微信支付 V3 接口 {@code POST /v3/profitsharing/orders}。</p>
+     *
+     * @param properties 微信支付配置
+     * @param request    分账创建请求
+     * @return 分账创建结果
+     */
+    TencentWechatProfitSharingResponse createProfitSharingOrder(TencentWechatPayProperties properties, TencentWechatProfitSharingRequest request);
+
+    /**
+     * 查询分账订单。
+     *
+     * <p>对应微信支付 V3 接口 {@code GET /v3/profitsharing/orders/{out_order_no}}。</p>
+     *
+     * @param properties    微信支付配置
+     * @param outOrderNo    商户分账单号
+     * @param transactionId 微信支付订单号
+     * @return 分账查询结果
+     */
+    TencentWechatProfitSharingResponse queryProfitSharingOrder(TencentWechatPayProperties properties, String outOrderNo, String transactionId);
+
+    /**
+     * 分账回退。
+     *
+     * <p>对应微信支付 V3 接口 {@code POST /v3/profitsharing/return-orders}。</p>
+     *
+     * @param properties 微信支付配置
+     * @param request    分账回退请求
+     * @return 分账回退结果
+     */
+    TencentWechatProfitSharingReturnResponse returnProfitSharing(TencentWechatPayProperties properties, TencentWechatProfitSharingReturnRequest request);
+
+    /**
+     * 查询交易账单下载地址。
+     *
+     * <p>对应微信支付 V3 接口 {@code GET /v3/bill/tradebill}，返回的下载地址有效期较短，
+     * 调用方应尽快下载。</p>
+     *
+     * @param properties 微信支付配置
+     * @param billDate   账单日期，格式 yyyy-MM-DD
+     * @return 账单压缩文件下载地址
+     */
+    String queryTradeBillDownloadUrl(TencentWechatPayProperties properties, String billDate);
 }
 

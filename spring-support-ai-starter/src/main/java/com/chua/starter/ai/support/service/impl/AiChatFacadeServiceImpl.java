@@ -24,6 +24,9 @@ import com.chua.starter.ai.support.chat.DecisionClientRegistry;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.controller.AiSessionController;
+import com.chua.starter.ai.support.npm.NpmMiddlewareChatClient;
+import com.chua.starter.ai.support.npm.NpmPluginHostService;
+import com.chua.starter.ai.support.npm.NpmPluginProperties;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiRole;
 import com.chua.starter.ai.support.entity.SysAiServiceAccessLog;
@@ -131,6 +134,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final AiSessionTodoService sessionTodoService; // 会话待办镜像（opencode todowrite → sys_ai_session_todo）
     private final SessionGoalService sessionGoalService; // 会话目标（settings.goal.tokenBudget = 会话令牌预算）
     private final AgentEvalRecorderProvider agentEvalRecorderProvider; // Agent 评测记录器（懒加载单例）
+    private final NpmPluginHostService npmPluginHostService; // npm 插件 Node 侧车宿主
+    private final NpmPluginProperties npmPluginProperties; // npm 插件配置
 
     /**
      * DB 提供者 多 appKey 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
@@ -413,7 +418,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 emitter.completeWithError(missing);
                 return emitter;
             }
-            configured = maybeWrapAgent(configureClient(client, request), request);
+            configured = NpmMiddlewareChatClient.wrapIfConfigured(
+                    maybeWrapAgent(configureClient(client, request), request), request,
+                    npmPluginHostService, npmPluginProperties);
         } catch (Throwable e) {
             lease.release();
             // 组装阶段（含 Agent 包装 / SPI 实例化）异常必须显式记录并经错误回调下发，

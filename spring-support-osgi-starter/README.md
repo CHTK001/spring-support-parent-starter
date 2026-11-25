@@ -43,6 +43,7 @@ flowchart TD
     S["Spring Boot 启动"] --> I["读取 META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"]
     I --> C1["OsgiAutoConfiguration：@ConditionalOnClass FelixOsgiLauncher / OsgiLauncher；plugin.osgi.enabled 缺省 true"]
     I --> C2["OsgiRealtimeConfiguration"]
+    I --> C3["OsgiServicePublisherAutoConfiguration：osgiServicePublisher 门面始终装配；SPI 自动发布器另需 plugin.osgi.server.enabled=true"]
     C1 -->|"条件不满足"| X["模块静默不装配，零副作用"]
     C1 -->|"条件满足"| P["注册 OsgiProperties（plugin.osgi.*）"]
     P --> B1["osgiLauncher：buildFelixConfig + start，固定写入 gosh.args=--noshutdown"]
@@ -73,12 +74,15 @@ flowchart TD
 | 运行时观测端点 | `OsgiMonitorController` | `endpoint.enabled=true` 且 classpath 存在 `RestController` |
 | 插件操作实时日志 | `OsgiLogPublisher` / `SocketOsgiLogPublisher` | 始终有兜底实现；引入 socket-starter 后自动切换广播实现 |
 | 服务信息登记 | `osgiServiceInfoContributor`（`ServiceInfoContributor`） | 随自动配置装配，向服务目录登记 `osgi` 模块 |
+| SPI 服务发布门面 | `OsgiServicePublisherAutoConfiguration`（`osgiServicePublisher` / `osgiSpiBeanPublisher` / `bundleSpiAutoPublisher`） | 门面随自动配置装配，Felix 未运行时 no-op；`@Spi` 自动发布器仅在 `plugin.osgi.server.enabled=true`（默认 false）时装配，行为由 `plugin.osgi.spi.*` 调节 |
 
 `/osgi/**` 端点（`OsgiMonitorController`，整体开关 `plugin.osgi.endpoint.enabled`，默认关闭）：
 
 | 方法 | 路径 | 说明 | 额外开关 |
 |:-----|:-----|:-----|:---------|
 | GET | `/osgi/stats` | 框架统计与已注册服务类型 | — |
+| GET | `/osgi/stats/history` | 历史采样序列（时间升序）；`stats.enabled=false` 时返回空数组 | — |
+| GET | `/osgi/stats/actions` | 插件操作流水（仅 success/failure 终态事件，按时间倒序） | — |
 | GET | `/osgi/bundles` | bundle 清单 | — |
 | GET | `/osgi/jars` | 部署目录 jar 清单（含是否仍在框架中） | — |
 | GET | `/osgi/bundles/{symbolicName}` | 单 bundle 详情（headers、注册服务类型） | — |
@@ -86,11 +90,15 @@ flowchart TD
 | GET | `/osgi/snapshot` | 桥接快照与验收拒绝记录 | — |
 | GET | `/osgi/context` | 框架 `BundleContext` 可用性 | — |
 | GET | `/osgi/bundles/{symbolicName}/download` | 下载 bundle 对应本地 jar | — |
+| GET | `/osgi/jars/{fileName}/download` | 按文件名下载部署目录中的 jar（删除前备份、误删取回） | — |
 | POST | `/osgi/bundles/install` | 上传安装（同位置自动转升级），参数 `file`、`start` | `manage-enabled=true` |
 | POST | `/osgi/bundles/{symbolicName}/update` | 上传新版本原地升级 | `manage-enabled=true` |
 | POST | `/osgi/bundles/{symbolicName}/start` / `/stop` / `/uninstall` | 启动 / 停止 / 卸载（卸载不删 jar） | `manage-enabled=true` |
 | POST | `/osgi/bundles/batch-start` / `batch-stop` / `batch-uninstall` | 批量启停/卸载，body 为符号名 JSON 数组（单次 ≤100），逐项尽力执行、逐项返回结果与失败原因 | `manage-enabled=true` |
-| POST | `/osgi/jars/{fileName}/delete` | 删除部署目录 jar（须先卸载） | `manage-enabled=true` |
+| POST | `/osgi/jars/{fileName}/delete` | 删除部署目录 jar（须先卸载；`recycle.enabled=true` 时先移入回收站，响应含 `recycled` 标记） | `manage-enabled=true` |
+| GET | `/osgi/jars/recycle` | 回收站清单（按删除时间倒序；个别元数据边车损坏只跳过该条目） | `manage-enabled=true` |
+| POST | `/osgi/jars/recycle/{fileName}/restore` | 从回收站恢复到部署目录原文件名（同名冲突时拒绝） | `manage-enabled=true` |
+| DELETE | `/osgi/jars/recycle/{fileName}` | 彻底清除回收站中的 jar 及其元数据边车（不可恢复） | `manage-enabled=true` |
 | POST | `/osgi/framework/refresh` | 刷新框架装配（bundle 升级/卸载后重新解析），参数 `wait`（默认 true，最多等 30 秒完成事件） | `manage-enabled=true` |
 
 > 插件操作的**进度与日志不经 REST 轮询**：变更接口同步返回，过程日志（`start`/`success`/`failure`，含耗时）经 socket 通道 `osgi/operation-log` 实时推送，见 §6.8。
@@ -154,8 +162,203 @@ flowchart TD
 | `plugin.osgi.shell.idle-timeout-seconds` | `int` | `600` | SSH 空闲会话超时秒数，超时断开防止半死连接占线程；≤0 用 SSHD 默认（10 分钟） |
 | `plugin.osgi.shell.max-sessions` | `int` | `8` | 并发 SSH shell 会话上限，超限新会话立即被拒；≤0 不限制 |
 | `plugin.osgi.shell.install-framework-sshd-bundles` | `boolean` | `false` | 框架内安装 sshd bundle（sshd 2.13.2 下 sftp/scp 必然解析失败） |
+| `plugin.osgi.stats.enabled` | `boolean` | `true` | 体征采样开关；关闭后 `/osgi/stats/history` 恒为空，操作统计不受影响 |
+| `plugin.osgi.stats.interval-seconds` | `long` | `60` | 采样间隔（秒），小于 5 按 5 兜底 |
+| `plugin.osgi.stats.history-size` | `int` | `240` | 内存保留的历史采样点数，收敛到 [10, 1440]（60 秒间隔约 4 小时~1 天趋势） |
+| `plugin.osgi.recycle.enabled` | `boolean` | `true` | 删除 jar 先移入回收站（可恢复/彻底清除）；关闭后删除即物理删除 |
+| `plugin.osgi.recycle.dir-name` | `String` | `.recycle` | 回收站目录名（相对部署目录；热部署扫描只看第一层 `.jar`，不会误加载） |
+| `plugin.osgi.spi.enabled` | `boolean` | `true` | 外部 bundle `@Spi` 服务自动发布开关（还需 `plugin.osgi.server.enabled=true`） |
+| `plugin.osgi.spi.max-scan-classes` | `int` | `2000` | 无 SPI 索引时单 bundle 兜底扫描的 class 数上限，达到即停止并告警 |
 
 > 框架配置固定先写入 `gosh.args=--noshutdown`（防 Gogo 在 stdin EOF 时停掉整个框架），仍可被 `framework-properties` 覆盖。
+
+### 5.1 逐项配置示例（按功能分组）
+
+以下片段均可直接并入 `application.yaml` 的 `plugin.osgi` 节点；各键含义与默认值以上表及源码为准。
+
+**框架核心**
+
+```yaml
+plugin:
+  osgi:
+    enabled: true                       # 自动装配总开关
+    storage: ./osgi-cache               # Felix 持久化存储目录
+    start-level: 4                      # 框架初始启动级别
+    storage-clean: onFirstInit          # onFirstInit / onInit / none
+    auto-start-installed-bundles: true  # 安装后是否自动启动（仅 shell.enabled=true 时装配进 launcher）
+    framework-properties:               # 透传 Felix 框架属性，可覆盖 gosh.args
+      org.osgi.framework.system.packages.extra: com.example.api
+```
+
+**目录热部署（deploy）**
+
+```yaml
+plugin:
+  osgi:
+    deploy:
+      enabled: false             # 默认 false；生产环境建议保持关闭
+      directory: ./osgi-deploy   # 部署目录
+      polling-interval: 10000    # 扫描间隔（毫秒）
+      uninstall-on-removed: true # jar 移除后自动卸载对应 bundle
+      update-on-changed: false   # 移除后对已装 bundle 原地升级
+```
+
+**源码扩展点（source）**
+
+```yaml
+plugin:
+  osgi:
+    source:
+      enabled: true              # 默认 true；目录不存在则无副作用
+      directory: ./osgi-source   # 源码目录
+      output-directory:          # 留空取 <directory>/../osgi-source-classes
+      polling-interval: 5000     # 扫描间隔（毫秒），指纹未变不编译
+      groovy-enabled: true       # 无 Groovy 引擎时降级为仅 Java
+      script-engine: groovy      # 匹配 ScriptProvider#engineName
+```
+
+**Bean 桥接（bridge）**
+
+```yaml
+plugin:
+  osgi:
+    bridge:
+      acceptance-enabled: true              # 桥接定义经 BeanAcceptance 验收器链
+      invalidate-on-bundle-lifecycle: true  # bundle 生命周期变化时失效桥接快照
+      proxy-enabled: true                   # 桥接 Bean 外发为切换代理
+```
+
+**观测端点（endpoint）**
+
+```yaml
+plugin:
+  osgi:
+    endpoint:
+      enabled: false                  # /osgi/** 端点总开关（还需 RestController）
+      manage-enabled: true            # 变更类操作开关
+      lifecycle-timeout-seconds: 60   # start/stop 等待上限（秒），≤0 不限时
+      max-upload-bytes: 104857600     # 上传 jar 上限（字节，100MB），≤0 不限制
+```
+
+**远程 Shell（shell）**
+
+```yaml
+plugin:
+  osgi:
+    shell:
+      enabled: false                        # 默认 false；开启前务必设置非空凭据
+      protocol: ssh                         # ssh / telnet 二选一
+      port: 0                               # 0=按协议取默认（SSH 8122 / Telnet 6666）
+      host: 127.0.0.1                       # 绑定地址
+      username: ops                         # SSH 用户名（示例，请改为真实账号）
+      password: change-me                   # SSH 密码（示例，请改为真实密码）
+      host-key:                             # 留空则 target/osgi-hostkey.ser 首启自动生成
+      allow-empty-credential: false         # 等同无认证暴露，切勿在生产开启
+      max-auth-attempts: 3                  # 认证请求总数上限（最小 1）
+      idle-timeout-seconds: 600             # 空闲断开秒数，≤0 用 SSHD 默认（10 分钟）
+      max-sessions: 8                       # 并发会话上限，≤0 不限制
+      install-framework-sshd-bundles: false # 框架内安装 sshd bundle（sftp/scp 必然解析失败）
+```
+
+**体征采样（stats）**
+
+```yaml
+plugin:
+  osgi:
+    stats:
+      enabled: true           # 关闭后 /osgi/stats/history 恒为空；操作统计不受影响
+      interval-seconds: 60    # 采样间隔（秒），小于 5 按 5 兜底
+      history-size: 240       # 历史保留点数，收敛到 [10, 1440]
+```
+
+**jar 回收站（recycle）**
+
+```yaml
+plugin:
+  osgi:
+    recycle:
+      enabled: true           # 删除 jar 先进回收站，可恢复或彻底清除
+      dir-name: .recycle      # 回收站目录名（相对部署目录）
+```
+
+**SPI 自动发布（spi）**
+
+```yaml
+plugin:
+  osgi:
+    spi:
+      enabled: true            # 还需 plugin.osgi.server.enabled=true 才装配自动发布器
+      max-scan-classes: 2000   # 无 SPI 索引时单 bundle 兜底扫描的 class 数上限
+```
+
+### 5.2 完整 application.yaml 示例
+
+```yaml
+plugin:
+  osgi:
+    enabled: true
+    storage: ./osgi-cache
+    start-level: 4
+    storage-clean: onFirstInit
+    auto-start-installed-bundles: true
+    framework-properties:
+      org.osgi.framework.system.packages.extra: com.example.api
+    deploy:
+      enabled: false
+      directory: ./osgi-deploy
+      polling-interval: 10000
+      uninstall-on-removed: true
+      update-on-changed: false
+    source:
+      enabled: true
+      directory: ./osgi-source
+      output-directory:
+      polling-interval: 5000
+      groovy-enabled: true
+      script-engine: groovy
+    bridge:
+      acceptance-enabled: true
+      invalidate-on-bundle-lifecycle: true
+      proxy-enabled: true
+    endpoint:
+      enabled: true                    # 示例开启观测端点（默认 false）
+      manage-enabled: true
+      lifecycle-timeout-seconds: 60
+      max-upload-bytes: 104857600
+    shell:
+      enabled: false
+      protocol: ssh
+      port: 0
+      host: 127.0.0.1
+      username: ops                    # 示例凭据，请改为真实值
+      password: change-me
+      host-key:
+      allow-empty-credential: false
+      max-auth-attempts: 3
+      idle-timeout-seconds: 600
+      max-sessions: 8
+      install-framework-sshd-bundles: false
+    stats:
+      enabled: true
+      interval-seconds: 60
+      history-size: 240
+    recycle:
+      enabled: true
+      dir-name: .recycle
+    spi:
+      enabled: true
+      max-scan-classes: 2000
+```
+
+### 5.3 生产注意事项
+
+- **SSH Shell 是远程命令执行通道**：`shell.enabled=true` 后必须配置非空 `username`/`password`，且不要开启 `allow-empty-credential`（等同无认证暴露）。`host` 保持 `127.0.0.1` 仅本机排障；确需远程访问时绑定内网地址并配合防火墙/安全组。`max-auth-attempts` 是「认证请求总数」口径，客户端一次登录内部会发送多个认证请求，实际可容忍的密码试错次数少于该值。
+- **端点鉴权**：`/osgi/**` 自身不做认证，开启 `endpoint.enabled` 后应置于网关或安全过滤器之后；变更类操作（安装/升级/启停/卸载/删除/回收站）由 `manage-enabled` 单独控制，可只读开放观测、关闭变更。
+- **磁盘占用**：`source.output-directory` 留空时编译输出位于 `<directory>/../osgi-source-classes`；宿主为 Spring Boot fat jar 时会把 `BOOT-INF/lib` 抽取到该目录（实测约 685MB，应用停止时自动清理），请预留磁盘空间，容器场景注意镜像层膨胀。
+- **热部署慎开**：`deploy.enabled` 默认 false，生产环境建议保持关闭，改走受控的 `POST /osgi/bundles/install` + `POST /osgi/framework/refresh` 流程。
+- **SPI 扫描开销**：`spi.enabled=true` 且 `plugin.osgi.server.enabled=true` 时，bundle 启动事件线程上会做 `@Spi` 发现；没有 `META-INF/extensions` 索引的 jar 退化为逐类扫描，`max-scan-classes` 限制单 bundle 扫描类数（默认 2000，达到即停止并告警），大 jar 请优先提供索引。
+- **采样频率**：`stats.interval-seconds` 越小观测越细、开销越高，默认 60 秒足够；`history-size` 上限 1440，按分钟级采样约覆盖一天。
+- **主机密钥**：`shell.host-key` 留空时首启在 `target/osgi-hostkey.ser` 自动生成并持久化；请把该文件纳入备份，避免客户端指纹反复变更。
 
 ## 6. 使用方式
 

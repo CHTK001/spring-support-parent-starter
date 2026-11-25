@@ -24,7 +24,29 @@ import java.time.Duration;
  *   <tr><td>logLevel</td><td>否</td><td>{@code info}</td><td>cloudflared 日志级别：debug / info / warn / error / fatal</td></tr>
  *   <tr><td>startTimeout</td><td>否</td><td>{@code 40s}</td><td>启动等待公网 URL 的超时</td></tr>
  *   <tr><td>failFast</td><td>否</td><td>{@code false}</td><td>隧道启动失败时是否中断应用；true 直接抛异常退出，false 只打日志</td></tr>
+ *   <tr><td>autoStart</td><td>否</td><td>{@code true}</td><td>启动时是否为 server.port 自动建默认隧道；false 时管理入口仍可用</td></tr>
+ *   <tr><td>autoStartStored</td><td>否</td><td>{@code true}</td><td>重启时是否恢复上次标记「自动启动」的持久化映射</td></tr>
+ *   <tr><td>storeDir</td><td>否</td><td>{@code ~/.chua/tunnel/cloudflared}</td><td>映射持久化目录；为空回落 tunnel-starter 根目录 {@code ~/.chua/tunnel} 下的 cloudflared 子目录</td></tr>
  * </table>
+ *
+ * <h2>完整配置示例</h2>
+ * <pre>
+ * # 配置前缀：plugin.cloudflared（camelCase → kebab-case）
+ * plugin:
+ *   cloudflared:
+ *     enable: true                          # 总开关，默认 true
+ *     binary: /usr/local/bin/cloudflared    # 可执行文件；为空自动定位（CLOUDFLARED_BIN → PATH → 常见目录）
+ *     token: ${CLOUDFLARE_TUNNEL_TOKEN}     # Zero Trust 隧道 Token；为空走免账号 Quick Tunnel
+ *     hostname: tunnel.example.com          # 固定域名；需账户 + CNAME 路由
+ *     local-url: http://127.0.0.1:8080      # 本地服务地址；为空回落 http://127.0.0.1:server.port
+ *     no-auto-update: true                  # 禁用运行期自更新，默认 true
+ *     log-level: info                       # 日志级别 debug/info/warn/error/fatal；置空回落 info
+ *     start-timeout: 40s                    # 等待公网 URL 超时；为空回落 40s，勿配 ≤0
+ *     fail-fast: false                      # 启动失败是否中断应用，默认 false
+ *     auto-start: true                      # 启动期为 server.port 自动建隧道，默认 true
+ *     auto-start-stored: true               # 重启恢复「自动启动」的持久化映射，默认 true
+ *     store-dir: /data/tunnel/cloudflared   # 持久化目录；为空回落 ~/.chua/tunnel/cloudflared
+ * </pre>
  *
  * <h2>最小启用示例</h2>
  * <pre>
@@ -52,46 +74,109 @@ import java.time.Duration;
 public class CloudflaredProperties {
 
     /**
-     * 总开关。【选填】默认 {@code true}；设为 false 完全禁用。
+     * 总开关。【选填】默认 {@code true}；设为 false 完全禁用（本模块任何 Bean 都不装配）。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     enable: true
+     * </pre>
      */
     private boolean enable = true;
 
     /**
-     * cloudflared 可执行文件路径。【选填】默认自动定位；
-     * 为空时按 CLOUDFLARED_BIN 环境变量 → PATH → 常见安装目录 顺序查找。
+     * cloudflared 可执行文件路径。【选填】默认无；
+     * 为空时按 CLOUDFLARED_BIN 环境变量 → PATH → 常见安装目录 顺序查找；
+     * 相对路径会按工作目录转为绝对路径。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     binary: /usr/local/bin/cloudflared
+     * </pre>
      */
     private String binary;
 
     /**
      * Zero Trust 远程管理隧道 Token。【选填】默认无；
-     * 为空时使用免账号、免登录的 Quick Tunnel（随机 *.trycloudflare.com 域名）。
+     * 为空时使用免账号、免登录的 Quick Tunnel（随机 *.trycloudflare.com 域名）；
+     * 仅 named 模式会传给 cloudflared 进程。
+     *
+     * <p>YAML 示例（推荐经环境变量注入，避免明文入库）：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     token: ${CLOUDFLARE_TUNNEL_TOKEN}
+     * </pre>
      */
     private String token;
 
     /**
-     * 固定自定义域名。【选填】默认无；需该域名已添加到 Cloudflare 账户并配置 CNAME 路由。
+     * 固定自定义域名。【选填】默认无；为空时 Quick Tunnel 使用随机域名。
+     * 需该域名已添加到 Cloudflare 账户并配置 CNAME 路由；
+     * 仅启动期默认隧道生效，/ms/tunnel 映射路径改用记录的 domain 字段。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     hostname: tunnel.example.com
+     * </pre>
      */
     private String hostname;
 
     /**
-     * 本地待暴露的服务地址。【选填】默认 {@code http://127.0.0.1:server.port}。
+     * 本地待暴露的服务地址。【选填】默认无；
+     * 为空时回落 {@code http://127.0.0.1:server.port}；
+     * 仅启动期默认隧道生效，/ms/tunnel 映射路径固定使用 {@code http://127.0.0.1:<localPort>}。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     local-url: http://127.0.0.1:8080
+     * </pre>
      */
     private String localUrl;
 
     /**
      * 是否禁用 cloudflared 运行期自动更新。【选填】默认 {@code true}，
      * 避免运行期自更新导致隧道中断。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     no-auto-update: true
+     * </pre>
      */
     private boolean noAutoUpdate = true;
 
     /**
      * cloudflared 日志级别。【选填】默认 {@code info}；
-     * 可选 debug / info / warn / error / fatal。
+     * 可选 debug / info / warn / error / fatal；置空时回落 {@code info}。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     log-level: info
+     * </pre>
      */
     private String logLevel = "info";
 
     /**
-     * 启动等待公网 URL 的超时。【选填】默认 40 秒。
+     * 启动等待公网 URL 的超时。【选填】默认 40 秒；
+     * 为空（null）时回落底层客户端默认 40 秒；配置 ≤0 会被立即判定超时、启动失败，勿用。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     start-timeout: 40s
+     * </pre>
      */
     // [P3C A20 豁免]
     private Duration startTimeout = Duration.ofSeconds(40);
@@ -99,6 +184,13 @@ public class CloudflaredProperties {
     /**
      * 启动失败时是否中断应用。【选填】默认 {@code false}。
      * false 只打 ERROR 日志、Spring 继续启动；true 抛出异常中断启动。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     fail-fast: false
+     * </pre>
      */
     private boolean failFast = false;
 
@@ -106,17 +198,39 @@ public class CloudflaredProperties {
      * 启动时是否按本配置文件自动建立默认隧道。【选填】默认 {@code true}（保持原有行为）。
      * <p>设为 {@code false} 时模块（含管理接口与持久化映射）仍然启用，只是不在启动期
      * 自动为 {@code server.port} 建隧道 —— 适合「从页面按需映射端口」的部署方式。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     auto-start: true
+     * </pre>
      */
     private boolean autoStart = true;
 
     /**
      * 启动时是否恢复上次标记为「自动启动」的持久化映射。【选填】默认 {@code true}。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     auto-start-stored: true
+     * </pre>
      */
     private boolean autoStartStored = true;
 
     /**
-     * 映射持久化目录。【选填】默认 {@code ~/.chua/tunnel/cloudflared}。
+     * 映射持久化目录。【选填】默认无；
+     * 为空时回落 {@code ~/.chua/tunnel/cloudflared}（tunnel-starter 根目录 {@code ~/.chua/tunnel} + 提供方子目录）。
      * <p>一条映射一个 JSON 文件，不使用数据库；目录可指向挂载盘做备份。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   cloudflared:
+     *     store-dir: /data/tunnel/cloudflared
+     * </pre>
      */
     private String storeDir;
 }

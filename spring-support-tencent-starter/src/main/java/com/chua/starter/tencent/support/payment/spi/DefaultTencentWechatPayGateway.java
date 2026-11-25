@@ -11,6 +11,10 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingReturnRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatProfitSharingReturnResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
@@ -34,6 +38,7 @@ import org.springframework.util.StringUtils;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -893,7 +898,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
      * @return 第一个文本的结果
      */
     private String firstText(Map<String, Object> body, String... keys) {
-        if (keys == null) {
+        if (body == null || keys == null) {
             return null;
         }
         for (String key : keys) {
@@ -967,6 +972,166 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
             throw new IllegalStateException(message);
         }
         return value;
+    }
+
+    @Override
+    /**
+     * 创建分账订单。
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
+    */
+    public TencentWechatProfitSharingResponse createProfitSharingOrder(TencentWechatPayProperties properties, TencentWechatProfitSharingRequest request) {
+        if (request == null || !StringUtils.hasText(request.transactionId()) || !StringUtils.hasText(request.outOrderNo())) {
+            throw new IllegalArgumentException("微信分账创建缺少必要参数：transactionId 与 outOrderNo 必填");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        putIfHasText(body, "appid", firstNonBlank(request.appId(), properties.getAppId()));
+        body.put("transaction_id", request.transactionId());
+        body.put("out_order_no", request.outOrderNo());
+        body.put("receivers", request.receivers());
+        putIfHasText(body, "finish_type", request.finishType());
+        mergeExtraParams(body, request.extraParams());
+        return callProfitSharingApi(properties, "/v3/profitsharing/orders", body, request.outOrderNo());
+    }
+
+    @Override
+    /**
+     * 查询分账订单。
+     * @param properties 参数
+     * @param outOrderNo 参数
+     * @param transactionId 参数
+     * @return 返回值
+    */
+    public TencentWechatProfitSharingResponse queryProfitSharingOrder(TencentWechatPayProperties properties, String outOrderNo, String transactionId) {
+        String orderNo = requiredText(outOrderNo, "微信分账查询缺少商户分账单号");
+        String transaction = requiredText(transactionId, "微信分账查询缺少微信支付订单号");
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        HttpClient client = clientFactory.createHttpClient(config);
+        String path = WECHAT_PAY_BASE_URL + "/v3/profitsharing/orders/" + urlEncode(orderNo)
+                + "?transaction_id=" + urlEncode(transaction);
+        Map<String, Object> response = client.get(new HttpHeaders(), path, Map.class).getServiceResponse();
+        return toProfitSharingResponse(response, orderNo);
+    }
+
+    @Override
+    /**
+     * 分账回退。
+     * @param properties 参数
+     * @param request 参数
+     * @return 返回值
+    */
+    public TencentWechatProfitSharingReturnResponse returnProfitSharing(TencentWechatPayProperties properties, TencentWechatProfitSharingReturnRequest request) {
+        if (request == null || !StringUtils.hasText(request.outOrderNo()) || !StringUtils.hasText(request.outReturnNo())
+                || !StringUtils.hasText(request.returnMchid()) || request.returnAmountFen() == null) {
+            throw new IllegalArgumentException("微信分账回退缺少必要参数：outOrderNo/outReturnNo/returnMchid/returnAmountFen 必填");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        putIfHasText(body, "appid", firstNonBlank(request.appId(), properties.getAppId()));
+        body.put("out_order_no", request.outOrderNo());
+        body.put("out_return_no", request.outReturnNo());
+        body.put("return_mchid", request.returnMchid());
+        body.put("return_amount", request.returnAmountFen());
+        putIfHasText(body, "description", request.description());
+        mergeExtraParams(body, request.extraParams());
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        HttpClient client = clientFactory.createHttpClient(config);
+        Map<String, Object> response = client.post(
+                new HttpHeaders(),
+                WECHAT_PAY_BASE_URL + "/v3/profitsharing/return-orders",
+                new JsonRequestBody.Builder().body(toJson(body)).build(),
+                Map.class
+        ).getServiceResponse();
+        return new TencentWechatProfitSharingReturnResponse(
+                response != null,
+                firstText(response, "out_order_no", "outOrderNo", request.outOrderNo()),
+                firstText(response, "out_return_no", "outReturnNo", request.outReturnNo()),
+                firstText(response, "return_id", "returnId"),
+                firstText(response, "result"),
+                firstText(response, "message"),
+                toJson(response)
+        );
+    }
+
+    @Override
+    /**
+     * 查询交易账单下载地址。
+     * @param properties 参数
+     * @param billDate 参数
+     * @return 返回值
+    */
+    public String queryTradeBillDownloadUrl(TencentWechatPayProperties properties, String billDate) {
+        String date = requiredText(billDate, "微信账单下载缺少账单日期");
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        HttpClient client = clientFactory.createHttpClient(config);
+        String path = WECHAT_PAY_BASE_URL + "/v3/bill/tradebill?bill_date=" + urlEncode(date)
+                + "&bill_type=ALL&type=ALL";
+        Map<String, Object> response = client.get(new HttpHeaders(), path, Map.class).getServiceResponse();
+        String downloadUrl = firstText(response, "download_url");
+        if (!StringUtils.hasText(downloadUrl)) {
+            throw new IllegalStateException("微信账单下载未返回下载地址");
+        }
+        return downloadUrl;
+    }
+
+    /**
+     * 调用微信分账创建接口并转换为统一响应
+     * @param properties 属性
+     * @param path 路径
+     * @param body 请求体
+     * @param fallbackOutOrderNo 兜底商户分账单号
+     * @return 分账响应
+     */
+    private TencentWechatProfitSharingResponse callProfitSharingApi(TencentWechatPayProperties properties,
+                                                                    String path,
+                                                                    Map<String, Object> body,
+                                                                    String fallbackOutOrderNo) {
+        Config config = clientFactory.createAutoCertificateConfig(properties);
+        HttpClient client = clientFactory.createHttpClient(config);
+        Map<String, Object> response = client.post(
+                new HttpHeaders(),
+                WECHAT_PAY_BASE_URL + path,
+                new JsonRequestBody.Builder().body(toJson(body)).build(),
+                Map.class
+        ).getServiceResponse();
+        return toProfitSharingResponse(response, fallbackOutOrderNo);
+    }
+
+    /**
+     * 将微信分账接口响应转换为统一响应
+     * @param body 响应体
+     * @param fallbackOutOrderNo 兜底商户分账单号
+     * @return 分账响应
+     */
+    private TencentWechatProfitSharingResponse toProfitSharingResponse(Map<String, Object> body, String fallbackOutOrderNo) {
+        return new TencentWechatProfitSharingResponse(
+                body != null,
+                firstText(body, "out_order_no", "outOrderNo", fallbackOutOrderNo),
+                firstText(body, "order_id", "orderId"),
+                firstText(body, "state"),
+                profitSharingReceivers(body),
+                firstText(body, "message"),
+                toJson(body)
+        );
+    }
+
+    /**
+     * 提取分账接收方明细列表
+     * @param body 响应体
+     * @return 接收方明细列表，无法解析时返回 null
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> profitSharingReceivers(Map<String, Object> body) {
+        if (body == null || !(body.get("receivers") instanceof List<?> values)) {
+            return null;
+        }
+        List<Map<String, Object>> receivers = new ArrayList<>();
+        for (Object item : values) {
+            if (item instanceof Map) {
+                receivers.add((Map<String, Object>) item);
+            }
+        }
+        return receivers;
     }
 }
 

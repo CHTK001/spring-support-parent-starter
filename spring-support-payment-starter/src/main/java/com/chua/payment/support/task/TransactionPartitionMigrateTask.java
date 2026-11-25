@@ -3,6 +3,7 @@ package com.chua.payment.support.task;
 import com.chua.payment.support.service.OrderPartitionConfigService;
 import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 /**
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
  * @since 4.0.0.51
  */
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
@@ -19,6 +21,10 @@ public class TransactionPartitionMigrateTask implements PaymentManagedTask {
      * 分表配置服务
      */
     private final OrderPartitionConfigService orderPartitionConfigService;
+    /**
+     * 分表开关闸门
+     */
+    private final PaymentSplitTableGate paymentSplitTableGate;
     @Override public String taskKey() { return "payment.transaction.partition.migrate"; }
     @Override public String taskName() { return "交易流水主表迁移"; }
     @Override public String defaultCron() { return "0 30 3 * * ?"; }
@@ -29,5 +35,11 @@ public class TransactionPartitionMigrateTask implements PaymentManagedTask {
             cron = "0 30 3 * * ?",
             desc = "把交易流水主表超过阈值的历史数据迁移到目标分表"
     )
-    public void execute() { orderPartitionConfigService.executeAutoMigrate("TRANSACTION"); }
+    public void execute() {
+        if (!paymentSplitTableGate.anyMerchantEnabled()) {
+            log.info("[分表] 无商户启用支付分表，跳过交易流水分表数据迁移");
+            return;
+        }
+        orderPartitionConfigService.executeAutoMigrate("TRANSACTION");
+    }
 }

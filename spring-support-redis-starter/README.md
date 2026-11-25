@@ -126,6 +126,88 @@ sequenceDiagram
 
 实际连接行为消费 Spring Boot 4 的 `spring.data.redis`（`org.springframework.boot.data.redis.autoconfigure.DataRedisProperties`）：`host`（localhost）、`port`（6379）、`database`（0）、`username`、`password`、`url`（非空时优先于 host:port）、`client-name`、`timeout` / `connect-timeout`（未配置回退 10000ms），全部喂给 Redisson `useSingleServer()`。Lettuce 连接池等其余属性由 Boot 自身 Redis 自动配置处理，本模块不重复处理。
 
+### 5.1 逐项配置示例（按功能分组）
+
+**① 模块开关**
+
+| 配置项 | 含义 | 默认值 | 生效方式 |
+|---|---|---|---|
+| `plugin.redis.server.enable` | `RedisConfiguration` 全部 Bean 的总开关 | `false`（字段默认值） | 装配条件 `matchIfMissing=true`：不配置即生效，仅显式 `false` 关闭 |
+
+```yaml
+plugin:
+  redis:
+    server:
+      enable: true   # 可省略，效果相同；只有显式 false 才整体关闭模块
+```
+
+**② 预留连接项（实际连接以 `spring.data.redis.*` 为准）**
+
+| 配置项 | 含义 | 默认值 | 说明 |
+|---|---|---|---|
+| `plugin.redis.server.open-embedded` | 嵌入式 Redis 开关（预留） | `false` | 当前无代码消费，嵌入式 Redis 未实现 |
+| `plugin.redis.server.port` | 端口（预留） | `6379` | 实际连接端口取 `spring.data.redis.port` |
+| `plugin.redis.server.database` | 数据库编号（预留） | `0` | 实际库号取 `spring.data.redis.database` |
+| `plugin.redis.server.host` | 主机地址（预留） | `0.0.0.0` | 实际主机取 `spring.data.redis.host` |
+
+```yaml
+plugin:
+  redis:
+    server:
+      open-embedded: false   # 预留：当前无代码消费
+      port: 6379             # 预留：真实端口见 spring.data.redis.port
+      database: 0            # 预留：真实库号见 spring.data.redis.database
+      host: 0.0.0.0          # 预留：真实主机见 spring.data.redis.host
+```
+
+**③ 预留资源上限项**
+
+| 配置项 | 含义 | 默认值 | 说明 |
+|---|---|---|---|
+| `plugin.redis.server.max-memory` | 最大内存（预留） | `128M` | 当前无代码消费 |
+| `plugin.redis.server.max-heap` | 最大堆内存（预留） | `100M` | 当前无代码消费 |
+
+```yaml
+plugin:
+  redis:
+    server:
+      max-memory: 128M
+      max-heap: 100M
+```
+
+### 5.2 完整 YAML 示例（生产参考）
+
+```yaml
+spring:
+  data:
+    redis:
+      host: 192.168.1.10        # Redis 地址
+      port: 6379
+      database: 0
+      username: default         # Redis 6+ ACL 用户名，未启用 ACL 可省略
+      password: your-password   # 占位符：真实值请经环境变量/配置中心注入
+      client-name: my-app       # 连接标识，便于服务端排查
+      timeout: 3s               # 命令超时；不配置时 Redisson 侧回落 10000ms
+      connect-timeout: 3s       # 连接超时；不配置时 Redisson 侧回落 10000ms
+      # url: redis://:your-password@192.168.1.10:6379/0   # 配置后优先于 host:port
+
+plugin:
+  redis:
+    server:
+      enable: true              # 可省略：matchIfMissing=true，不配置即生效
+```
+
+Redisson 单机客户端与 Lettuce 连接工厂共用上述 `spring.data.redis` 地址与凭据；如需调整 Lettuce 连接池，按 Spring Boot 标准属性 `spring.data.redis.lettuce.pool.*` 配置并确保 classpath 含 `commons-pool2`。依赖坐标与最小用法见第 6 节。
+
+### 5.3 生产注意事项
+
+1. **凭据安全**：`password` 一律以占位符书写，真实值经环境变量或配置中心注入，禁止明文入库入仓。
+2. **降级风险**：容器缺少 `RedissonClient` 时锁降级为 `NoopLockTemplate`，所有锁操作空跑，启动日志仅一条 WARN（`>>>>> 未检测到 RedissonClient，使用 NoopLockTemplate`）；必须监控该日志，绝不能把降级锁当真实锁使用。
+3. **部署形态**：本模块 Redisson 只按 `useSingleServer` 构建，`spring.data.redis.cluster/sentinel` 不会传给 Redisson；需要集群/哨兵时自行声明 `RedissonClient` Bean（本模块因 `@ConditionalOnMissingBean` 自动退让）。
+4. **缓存语义**：预置 7 档缓存一律 `disableCachingNullValues()`（方法返回 null 会抛异常而非缓存），缓存键带 `<cacheName>:` 前缀；Spring Data Redis 4.x 缓存写默认异步，本模块已强制 `immediateWrites(true)`，自建 `CacheManager` 务必保留该设置，否则 `@CacheEvict` 可能到不了 Redis。
+5. **Pub/Sub 顺序**：监听容器的 topic 序列化器必须在 `addMessageListener` 之后设置（本模块 `container` 已按此顺序实现）；自定义容器时颠倒顺序会导致订阅端收不到消息。
+6. **键规范**：分布式锁 key 统一加 `lock:` 前缀；`RedisKvEngine` 前缀查询走 SCAN（每批 1000 键），生产环境避免使用 `KEYS` 全量扫描。
+
 ## 6. 使用方式
 
 Maven 坐标：

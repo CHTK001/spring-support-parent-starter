@@ -78,7 +78,9 @@ flowchart TB
 
 ## 5. 完整配置
 
-配置类 `UebaProperties`（`@ConfigurationProperties(prefix = "plugin.ueba")`）为扁平结构，**无嵌套类**，共 5 个字段：
+配置类 `UebaProperties`（`@ConfigurationProperties(prefix = "plugin.ueba")`）为扁平结构，**无嵌套类**，共 5 个字段。
+
+### 5.1 配置总表
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
@@ -101,6 +103,88 @@ plugin:
 相关系统属性（非 Spring 配置项）：`ueba.model.dir` 由 `UebaEngineBuilder#build()` 写入（值来自 `plugin.ueba.model-dir`），是 JVM 全局副作用，后写覆盖先写；`ueba.minimind.model.dir` 由宿主以 `-Dueba.minimind.model.dir=...` 提供（MiniMind 模型目录，需含 `model.onnx` 与 `tokenizer.json`）。
 
 `config-resource` / `config-path` 指向的是**引擎配置文件**（utils 层 `UebaConfig` 用 snakeyaml 解析），段结构为 `features` / `autoEncoder` / `lstm` / `risk` / `preprocessing`，不是 Spring 配置项。classpath 默认文件关键值：`features` 10 项（`request_rate`、`path_entropy`、`unique_paths_count`、`error_rate`、`method_diversity`、`ua_diversity`、`avg_response_time`、`max_response_time`、`avg_body_size`、`time_of_day`，顺序即 AutoEncoder 输入维度顺序）、`autoEncoder.threshold=0.8`、`autoEncoder.modelFile=autoencoder_ip.onnx`、`lstm.windowSize=20`、`lstm.numClasses=3`、`lstm.classLabels=[normal, suspicious, attack]`、`lstm.modelFile=lstm_attention_behavior.onnx`、`risk.ipWeight=0.5`、`risk.behaviorWeight=0.5`、`risk.highThreshold=0.7`、`risk.mediumThreshold=0.35`。
+
+### 5.2 逐项配置示例
+
+按功能分组给出每个配置项的含义、默认值与 YAML 写法（均可在 `UebaProperties` 源码中对应到同名字段）。
+
+#### （1）装配开关：`plugin.ueba.enabled`
+
+- 含义：UEBA 自动装配总开关。`true` 时装配 `uebaEngine` 与服务信息贡献者；`false` 时整个 `UebaAutoConfiguration` 跳过，不创建任何 Bean。
+- 类型 / 默认值：`boolean`，默认 `true`（未配置视为开启，对应 `matchIfMissing = true`）。
+
+```yaml
+plugin:
+  ueba:
+    enabled: true   # false 时完全关闭 UEBA 装配
+```
+
+#### （2）语义解释开关：`plugin.ueba.llm`
+
+- 含义：是否启用 MiniMind 语义解释。`true` → `enableLlm()`；`false` → `disableLlm()`，使用引擎内置模板解释。注意 `llm=true` 还需 JVM 系统属性 `ueba.minimind.model.dir` 提供模型目录（含 `model.onnx` 与 `tokenizer.json`），缺失或加载失败时运行期自动回退模板解释，不阻塞分析。
+- 类型 / 默认值：`boolean`，默认 `true`。
+
+```yaml
+plugin:
+  ueba:
+    llm: true
+```
+
+#### （3）引擎配置文件来源：`plugin.ueba.config-path` / `plugin.ueba.config-resource`
+
+- 含义：两者都指向**引擎配置文件**（段结构 `features` / `autoEncoder` / `lstm` / `risk` / `preprocessing`），不是 Spring 配置项。`config-path` 非空时以外部文件加载并优先；为空时回落到 `config-resource` 指定的 classpath 资源。
+- 类型 / 默认值：`config-path` 为 `String`，默认空串 `""`；`config-resource` 为 `String`，默认 `ueba-config.yaml`。
+
+```yaml
+plugin:
+  ueba:
+    config-resource: ueba-config.yaml   # 默认：classpath 内置引擎配置
+    # config-path: /opt/app/config/ueba-config.yaml   # 配置后优先于 config-resource
+```
+
+#### （4）模型目录：`plugin.ueba.model-dir`
+
+- 含义：AutoEncoder 与 LSTM 的 ONNX 模型目录。非空时 `UebaEngineBuilder#build()` 将其写入 JVM 系统属性 `ueba.model.dir`（JVM 全局副作用，后写覆盖先写）；为空时不写该属性，引擎按内置策略定位模型。
+- 类型 / 默认值：`String`，默认空串 `""`。
+
+```yaml
+plugin:
+  ueba:
+    # model-dir: /opt/app/models/ueba   # 目录内含 autoencoder_ip.onnx / lstm_attention_behavior.onnx
+```
+
+### 5.3 完整 YAML 使用示例
+
+```yaml
+# application.yml —— UEBA 完整配置示例
+plugin:
+  ueba:
+    # 总开关：false 时整个自动配置跳过，不创建 UebaEngine
+    enabled: true
+    # MiniMind 语义解释开关；false 时使用引擎内置模板解释
+    llm: true
+    # 引擎配置文件（features / autoEncoder / lstm / risk / preprocessing），
+    # config-path 为空时从 classpath 加载该资源
+    config-resource: ueba-config.yaml
+    # 外部引擎配置文件，优先级高于 config-resource；不需要外部文件时删除本行
+    # config-path: /opt/app/config/ueba-config.yaml
+    # AutoEncoder / LSTM 的 ONNX 模型目录；不配置则按引擎内置策略加载
+    # model-dir: /opt/app/models/ueba
+
+# MiniMind 语义解释模型目录不是 Spring 配置项，需以 JVM 系统属性提供：
+#   -Dueba.minimind.model.dir=/opt/app/models/minimind
+#   （目录内需含 model.onnx 与 tokenizer.json）
+```
+
+### 5.4 生产注意事项
+
+1. **开关语义**：`enabled=false` 时容器内没有 `UebaEngine` Bean，宿主代码里的 `@Resource UebaEngine` 会导致启动失败——下线 UEBA 时同步移除注入点，或改用 `ObjectProvider<UebaEngine>` / `@Autowired(required = false)`。
+2. **配置文件校验**：`config-path` 指向的文件需进程可读且格式合法；`UebaEngineBuilder#build()` 解析失败会抛 `IllegalStateException` 使应用启动失败，更换引擎配置请先在测试环境验证。
+3. **系统属性副作用**：`model-dir` 写入的 `ueba.model.dir` 是 JVM 全局属性，同一进程构建多个不同模型目录的引擎时后写覆盖先写；建议每进程只保留一个引擎实例，或统一模型目录。
+4. **LLM 回退**：`llm=true` 但未设置 `ueba.minimind.model.dir`（或目录缺 `model.onnx` / `tokenizer.json`）时不会阻塞启动，分析照常进行、解释降级为模板文案；需要语义解释时务必配置该系统属性。
+5. **资源占用**：ONNX 模型在引擎构建期加载并常驻内存，MiniMind 语义解释额外增加推理开销；容量规划时把模型内存与 `analyze` 的同步推理耗时计入，高吞吐场景在宿主侧做异步化 / 限流。
+6. **能力边界**：本模块无 REST 端点、无持久化、无定时任务；日志采集、结果落库、告警通知由宿主自行实现。
+7. **运行环境**：随父 POM 基于 Spring Boot 4.1.2 / Java 25 构建，宿主需 JDK 25+；DJL / OnnxRuntime 经 `utils-support-ueba-starter` 传递引入，部署前确认目标机可正常加载本地 ONNX 运行时。
 
 ## 6. 使用方式
 

@@ -4,15 +4,26 @@ import com.alipay.api.AlipayApiException;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.spi.annotations.Spi;
 import com.alipay.api.AlipayClient;
+import com.alipay.api.domain.AlipayDataDataserviceBillDownloadurlQueryModel;
+import com.alipay.api.domain.AlipayTradeOrderSettleModel;
+import com.alipay.api.domain.AlipayTradeRefundModel;
+import com.alipay.api.domain.OpenApiRoyaltyDetailInfoPojo;
+import com.alipay.api.domain.RoyaltyDetail;
 import com.alipay.api.internal.util.AlipaySignature;
+import com.alipay.api.request.AlipayDataDataserviceBillDownloadurlQueryRequest;
 import com.alipay.api.request.AlipayTradeCloseRequest;
+import com.alipay.api.request.AlipayTradeOrderSettleQueryRequest;
+import com.alipay.api.request.AlipayTradeOrderSettleRequest;
 import com.alipay.api.request.AlipayTradeFastpayRefundQueryRequest;
 import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.request.AlipayTradeQueryRequest;
 import com.alipay.api.request.AlipayTradeRefundRequest;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
 import com.alipay.api.request.AlipayTradeAppPayRequest;
+import com.alipay.api.response.AlipayDataDataserviceBillDownloadurlQueryResponse;
 import com.alipay.api.response.AlipayTradeFastpayRefundQueryResponse;
+import com.alipay.api.response.AlipayTradeOrderSettleQueryResponse;
+import com.alipay.api.response.AlipayTradeOrderSettleResponse;
 import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.alipay.api.response.AlipayTradeQueryResponse;
 import com.alipay.api.response.AlipayTradeRefundResponse;
@@ -25,6 +36,11 @@ import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayNotifyRequest;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayNotifyPayload;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayRequest;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayResponse;
+import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayProfitSharingQueryResponse;
+import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayProfitSharingRequest;
+import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayProfitSharingResponse;
+import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayProfitSharingReturnRequest;
+import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayProfitSharingReturnResponse;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayRefundRequest;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayRefundResponse;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayTradeQueryResponse;
@@ -35,7 +51,10 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -447,6 +466,185 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
              * @return illegal状态异常的结果
              */
             throw new IllegalStateException("支付宝请求序列化失败", e);
+        }
+    }
+
+    @Override
+    public AliyunAlipayProfitSharingResponse createProfitSharingOrder(AliyunAlipayProperties properties, AliyunAlipayProfitSharingRequest request) {
+        if (request == null || !StringUtils.hasText(request.outRequestNo()) || !StringUtils.hasText(request.tradeNo())) {
+            throw new IllegalArgumentException("支付宝分账创建缺少必要参数：outRequestNo 与 tradeNo 必填");
+        }
+        try {
+            AlipayTradeOrderSettleRequest settleRequest = new AlipayTradeOrderSettleRequest();
+            AlipayTradeOrderSettleModel model = new AlipayTradeOrderSettleModel();
+            model.setOutRequestNo(request.outRequestNo());
+            model.setTradeNo(request.tradeNo());
+            model.setRoyaltyParameters(toRoyaltyDetails(request.royaltyParameters()));
+            settleRequest.setBizModel(model);
+            AlipayTradeOrderSettleResponse response = client(properties).execute(settleRequest);
+            return new AliyunAlipayProfitSharingResponse(
+                    response.isSuccess(),
+                    response.getSettleNo(),
+                    response.getTradeNo(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody());
+        } catch (AlipayApiException e) {
+            throw new IllegalStateException("支付宝分账创建失败", e);
+        }
+    }
+
+    @Override
+    public AliyunAlipayProfitSharingQueryResponse queryProfitSharingOrder(AliyunAlipayProperties properties, String outRequestNo, String tradeNo) {
+        if (!StringUtils.hasText(outRequestNo) && !StringUtils.hasText(tradeNo)) {
+            throw new IllegalArgumentException("支付宝分账查询缺少必要参数：outRequestNo 与 tradeNo 至少填一项");
+        }
+        try {
+            AlipayTradeOrderSettleQueryRequest queryRequest = new AlipayTradeOrderSettleQueryRequest();
+            Map<String, Object> bizContent = new LinkedHashMap<>();
+            if (StringUtils.hasText(outRequestNo)) {
+                bizContent.put("out_request_no", outRequestNo);
+            }
+            if (StringUtils.hasText(tradeNo)) {
+                bizContent.put("trade_no", tradeNo);
+            }
+            queryRequest.setBizContent(toJson(bizContent));
+            AlipayTradeOrderSettleQueryResponse response = client(properties).execute(queryRequest);
+            return new AliyunAlipayProfitSharingQueryResponse(
+                    response.isSuccess(),
+                    firstNonBlank(response.getOutRequestNo(), outRequestNo),
+                    tradeNo,
+                    toRoyaltyDetailMaps(response.getRoyaltyDetailList()),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody());
+        } catch (AlipayApiException e) {
+            throw new IllegalStateException("支付宝分账查询失败", e);
+        }
+    }
+
+    @Override
+    public AliyunAlipayProfitSharingReturnResponse returnProfitSharing(AliyunAlipayProperties properties, AliyunAlipayProfitSharingReturnRequest request) {
+        if (request == null || !StringUtils.hasText(request.outBizNo()) || !StringUtils.hasText(request.tradeNo())
+                || !StringUtils.hasText(request.transIn()) || request.returnAmount() == null) {
+            throw new IllegalArgumentException("支付宝分账回退缺少必要参数：outBizNo/tradeNo/transIn/returnAmount 必填");
+        }
+        try {
+            AlipayTradeRefundRequest refundRequest = new AlipayTradeRefundRequest();
+            AlipayTradeRefundModel model = new AlipayTradeRefundModel();
+            model.setTradeNo(request.tradeNo());
+            model.setOutRequestNo(request.outBizNo());
+            // 仅退分账：退款金额固定为 0，回退资金通过 refund_royalty_parameters 指定
+            model.setRefundAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP).toPlainString());
+            model.setRefundReason(firstNonBlank(request.reason(), "分账回退"));
+            OpenApiRoyaltyDetailInfoPojo detail = new OpenApiRoyaltyDetailInfoPojo();
+            detail.setTransIn(request.transIn());
+            detail.setAmount(AliyunAlipayProfitSharingRequest.amountText(request.returnAmount()));
+            detail.setDesc(firstNonBlank(request.reason(), "分账回退"));
+            model.setRefundRoyaltyParameters(Collections.singletonList(detail));
+            refundRequest.setBizModel(model);
+            AlipayTradeRefundResponse response = client(properties).execute(refundRequest);
+            return new AliyunAlipayProfitSharingReturnResponse(
+                    response.isSuccess(),
+                    request.outBizNo(),
+                    response.getTradeNo(),
+                    firstNonBlank(response.getSubMsg(), response.getMsg()),
+                    response.getBody());
+        } catch (AlipayApiException e) {
+            throw new IllegalStateException("支付宝分账回退失败", e);
+        }
+    }
+
+    /**
+     * 将分账明细原始列表转换为支付宝 SDK 明细对象列表
+     *
+     * @param royaltyParameters 分账明细原始列表，元素形如 {trans_in, amount, desc, royalty_type}
+     * @return SDK 明细对象列表
+     */
+    private List<OpenApiRoyaltyDetailInfoPojo> toRoyaltyDetails(List<Map<String, Object>> royaltyParameters) {
+        if (royaltyParameters == null || royaltyParameters.isEmpty()) {
+            throw new IllegalArgumentException("支付宝分账明细不能为空");
+        }
+        List<OpenApiRoyaltyDetailInfoPojo> details = new ArrayList<>();
+        for (Map<String, Object> item : royaltyParameters) {
+            if (item == null) {
+                continue;
+            }
+            OpenApiRoyaltyDetailInfoPojo detail = new OpenApiRoyaltyDetailInfoPojo();
+            detail.setTransIn(textValue(item.get("trans_in")));
+            detail.setTransInType(textValue(item.get("trans_in_type")));
+            detail.setTransOut(textValue(item.get("trans_out")));
+            detail.setTransOutType(textValue(item.get("trans_out_type")));
+            detail.setAmount(textValue(item.get("amount")));
+            detail.setDesc(textValue(item.get("desc")));
+            detail.setRoyaltyType(textValue(item.get("royalty_type")));
+            detail.setRoyaltyScene(textValue(item.get("royalty_scene")));
+            details.add(detail);
+        }
+        if (details.isEmpty()) {
+            throw new IllegalArgumentException("支付宝分账明细不能为空");
+        }
+        return details;
+    }
+
+    /**
+     * 将支付宝分账查询明细转换为原始 Map 列表
+     *
+     * @param royaltyDetails SDK 分账明细列表
+     * @return 原始 Map 列表
+     */
+    private List<Map<String, Object>> toRoyaltyDetailMaps(List<RoyaltyDetail> royaltyDetails) {
+        if (royaltyDetails == null || royaltyDetails.isEmpty()) {
+            return null;
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (RoyaltyDetail detail : royaltyDetails) {
+            if (detail == null) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("detail_id", detail.getDetailId());
+            item.put("trans_in", detail.getTransIn());
+            item.put("trans_in_type", detail.getTransInType());
+            item.put("trans_out", detail.getTransOut());
+            item.put("trans_out_type", detail.getTransOutType());
+            item.put("amount", detail.getAmount());
+            item.put("state", detail.getState());
+            item.put("operation_type", detail.getOperationType());
+            item.put("error_code", detail.getErrorCode());
+            item.put("error_desc", detail.getErrorDesc());
+            result.add(item);
+        }
+        return result;
+    }
+
+    /**
+     * 对象转文本
+     *
+     * @param value 值
+     * @return 文本值
+     */
+    private String textValue(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    @Override
+    public String queryBillDownloadUrl(AliyunAlipayProperties properties, String billDate) {
+        if (!StringUtils.hasText(billDate)) {
+            throw new IllegalArgumentException("支付宝账单下载缺少账单日期");
+        }
+        try {
+            AlipayDataDataserviceBillDownloadurlQueryRequest request = new AlipayDataDataserviceBillDownloadurlQueryRequest();
+            AlipayDataDataserviceBillDownloadurlQueryModel model = new AlipayDataDataserviceBillDownloadurlQueryModel();
+            model.setBillDate(billDate);
+            model.setBillType("trade");
+            request.setBizModel(model);
+            AlipayDataDataserviceBillDownloadurlQueryResponse response = client(properties).execute(request);
+            if (response == null || !response.isSuccess() || !StringUtils.hasText(response.getBillDownloadUrl())) {
+                throw new IllegalStateException("支付宝账单下载未返回下载地址："
+                        + (response == null ? "无响应" : firstNonBlank(response.getSubMsg(), response.getMsg())));
+            }
+            return response.getBillDownloadUrl();
+        } catch (AlipayApiException e) {
+            throw new IllegalStateException("支付宝账单下载地址查询失败", e);
         }
     }
 }

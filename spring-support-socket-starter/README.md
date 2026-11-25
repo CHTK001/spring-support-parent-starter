@@ -1,6 +1,6 @@
 # spring-support-socket-starter
 
-Socket 通信抽象层：只定义协议枚举、统一会话模型、SPI 发现机制与自动装配，自身**不含任何传输实现**。在 spring-support 体系中，它是所有 Socket/推送能力（socketio / sse / sse-server / rsocket）的公共契约与装配入口；具体协议由 `spring-support-socket-io-starter`、`spring-support-socket-sse-starter`、`spring-support-socket-rsocket-starter` 等实现模块提供，依赖方向恒为实现模块依赖本模块。基线：`com.chua:spring-support-socket-starter:4.0.0.51`，父 POM `spring-support-parent-starter:4.0.0.51`（Spring Boot 4.1.2，Java 25）。
+Socket 通信抽象层：定义协议枚举、统一会话模型、SPI 发现机制与自动装配；自身仅内置一套 NDJSON（jsonl）传输实现，其余传输实现由实现模块提供。在 spring-support 体系中，它是所有 Socket/推送能力（socketio / sse / sse-server / rsocket / ndjson）的公共契约与装配入口；具体协议由 `spring-support-socket-io-starter`、`spring-support-socket-sse-starter`、`spring-support-socket-rsocket-starter` 等实现模块提供，依赖方向恒为实现模块依赖本模块。基线：`com.chua:spring-support-socket-starter:4.0.0.51`，父 POM `spring-support-parent-starter:4.0.0.51`（Spring Boot 4.1.2，Java 25）。
 
 ## 1. 架构图
 
@@ -36,7 +36,7 @@ flowchart TB
     SVC -.-> OPT
 ```
 
-依赖方向单向：本模块不依赖任何实现模块。`spring-support-socket-websocket-starter` 自带 `plugin.websocket` 配置体系，不参与 `plugin.socket` 装配。
+依赖方向单向：本模块不依赖任何实现模块。`spring-support-socket-websocket-starter` 自带 `plugin.websocket` 配置体系，不参与 `plugin.socket` 装配。例外：`ndjson` 协议的 Provider 与连接端点由本模块内置（`NdjsonSocketProvider` / `NdjsonSocketController`），无需额外依赖即可启用。
 
 ## 2. 核心流程图
 
@@ -69,8 +69,9 @@ sequenceDiagram
 |---|---|---|
 | 自动装配 | `SocketConfiguration`（内含 `SocketLifecycle`） | `META-INF/spring/...AutoConfiguration.imports`（无 `spring.factories`） |
 | 配置属性 | `SocketProperties` | `plugin.socket.*`，`ignoreInvalidFields=true` |
-| 协议枚举 | `SocketProtocol`：`socketio` / `rsocket` / `sse` / `sse-server` | `plugin.socket.protocol` / `protocols[].protocol` |
+| 协议枚举 | `SocketProtocol`：`socketio` / `rsocket` / `sse` / `sse-server` / `ndjson`（别名 `jsonl`） | `plugin.socket.protocol` / `protocols[].protocol` |
 | SPI 扩展点 | `SocketProvider` | `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，经 `ServiceProvider` 发现 |
+| 内置 NDJSON 传输 | `NdjsonSocketProvider` / `NdjsonSocketSessionTemplate` | 本模块 extensions 文件登记 `ndjson`，配置 `protocol: ndjson` 即用 |
 | 统一会话操作 | `SocketSessionTemplate` | 注入 Bean（`@Primary` 默认模板） |
 | 会话/用户模型 | `SocketSession`、`SocketUser` | `template.getSession(...)`、`session.getUser()` |
 | 消息载体 | `MsgEvent`、`MsgStep` | `broadcast(event, msgEvent)`，`toString()` 输出 JSON |
@@ -79,6 +80,7 @@ sequenceDiagram
 | 队列→Socket 桥接 | `SocketQueueBridge` | `plugin.queue.enable=true`，订阅 topic `socket:push` |
 | 服务端注册/发现 | `SocketServerRegistry`、`SocketHeartbeatTask` | Redis key `socket:servers:*`，30s 心跳、120s 判离线 |
 | 查询端点 | `SocketServerController` | `GET /socket/servers`、`GET /socket/addresses` |
+| NDJSON 连接端点 | `NdjsonSocketController`（经 `NdjsonSocketAutoConfiguration` 装配） | `POST /ndjson/connect`、`GET /ndjson/status`、`POST /ndjson/bind`、`POST /ndjson/disconnect` |
 | 服务信息登记 | `socketServiceInfoContributor` → `ServiceInfoContributor` | 无条件注册 `socket` 能力标志 |
 
 本模块无消息编解码类：对象消息由 `Json.toJson` 序列化，`MsgEvent`/`MsgStep` 走 `toString()`（JSON）出站。
@@ -97,6 +99,7 @@ sequenceDiagram
 | `socketServerRegistry`（宿主扫描） | `SocketServerRegistry`（`@Service`） | 宿主扫描覆盖 `...support.session`；构造器需 `RedisTemplate<String,Object>` | 可（常规组件） | Socket 服务动态注册与地址发现 |
 | `socketHeartbeatTask`（宿主扫描） | `SocketHeartbeatTask`（`@Component`） | 宿主扫描覆盖 `...support.schedule`，且宿主开启 `@EnableScheduling` | 可 | 每 30s 触发 `registry.heartbeat()` |
 | `socketServerController`（宿主扫描） | `SocketServerController`（`@RestController`） | 宿主扫描覆盖 `...support.controller`，Web 环境 | 可 | 前端查询 `/socket/servers`、`/socket/addresses` |
+| `ndjsonSocketController`（`NdjsonSocketAutoConfiguration`） | `NdjsonSocketController`（`@RestController`） | `plugin.socket.enable=true` 且 `socketSessionTemplates` 含 `ndjson` 模板；否则 Bean 方法返回 null、不注册 | 否 | NDJSON 长连接端点 `/ndjson/*` |
 
 注：`EventListenerProcessor` 不是 Spring Bean，由实现模块在 `createSessionTemplate` 时以 `List<SocketListener>` 构造。
 
@@ -154,6 +157,161 @@ plugin:
 
 多协议同时启用时改用 `protocols` 列表，每项含 `protocol` 与 `room`（见上表），例如 socketio 占 9000、sse 占 9001。
 
+### 5.1 逐项配置示例（按功能分组）
+
+**① 总开关与生命周期**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.enable` | 总开关；`false` 时不创建任何会话模板/生命周期 Bean | `false` |
+| `plugin.socket.auto-start` | 是否随容器启动自动 `start()`；`false` 时模板仍创建、仅跳过自动启动 | `true` |
+
+```yaml
+plugin:
+  socket:
+    enable: true        # 不开启 enable，其余所有配置均不生效
+    auto-start: true    # 改为 false 可由外部逻辑手动调用 template.start()/stop()
+```
+
+**② 协议与实例（room / protocols）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.protocol` | 单协议模式；可选 `socketio` / `rsocket` / `sse` / `sse-server` / `ndjson`（别名 `jsonl`）；无法识别的值回落 `socketio`；配置了 `protocols` 后被忽略 | `sse` |
+| `plugin.socket.protocols` | 多协议列表；非空时忽略 `protocol` 与 `room` | `[]` |
+| `plugin.socket.room` | 单协议模式的实例（房间）列表 | `[]` |
+| `...room[].client-id` | 服务实例标识 | `default` |
+| `...room[].context-path` | 上下文路径 | `/socket.io` |
+| `...room[].port` | `-1`=主端口；`-2、-3…`=主端口+偏移（-2 即主端口+1）；正数=独立端口 | `-1` |
+| `...room[].host` | 实例监听地址；为空回落主配置 `host` | 空 |
+| `...room[].auth-factory` | 实例专属鉴权工厂类名；为空回落主配置 `auth-factory` | 空 |
+| `...room[].enable` | 是否启用该实例 | `true` |
+
+```yaml
+plugin:
+  socket:
+    protocol: socketio
+    room:
+      - client-id: default
+        context-path: /socket.io
+        port: 9000          # -1=主端口；-2=主端口+1；正数=独立端口
+        host: 0.0.0.0       # 留空回落主配置 host
+        enable: true
+```
+
+**③ 网络与线程**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.host` | 默认监听地址 | `0.0.0.0` |
+| `plugin.socket.boss-count` | Boss 线程数 | `1` |
+| `plugin.socket.work-count` | 工作线程数 | `100` |
+| `plugin.socket.use-linux-native-epoll` | 是否启用 Linux Epoll（仅 Linux 生效） | `false` |
+
+```yaml
+plugin:
+  socket:
+    host: 0.0.0.0
+    boss-count: 1
+    work-count: 100
+    use-linux-native-epoll: false   # Linux 生产环境可改 true
+```
+
+**④ 心跳与帧**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.ping-timeout` | 心跳超时（毫秒）；NDJSON 传输复用该值作连接超时，≤0 时回落 30 分钟 | `60000` |
+| `plugin.socket.ping-interval` | 心跳间隔（毫秒） | `25000` |
+| `plugin.socket.max-frame-size` | 最大帧大小（字节） | `1048576`（1MB） |
+| `plugin.socket.codec-type` | 编解码类型 | `json` |
+| `plugin.socket.allow-custom-requests` | 是否允许自定义请求 | `true` |
+
+```yaml
+plugin:
+  socket:
+    ping-timeout: 60000     # NDJSON 下即连接超时；0 或负数回落 30 分钟
+    ping-interval: 25000
+    max-frame-size: 1048576
+    codec-type: json
+    allow-custom-requests: true
+```
+
+**⑤ 鉴权**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.auth-factory` | `SocketAuthFactory` 实现类全限定名；为空时不指定专属工厂，是否鉴权由实现模块决定 | 空 |
+
+```yaml
+plugin:
+  socket:
+    auth-factory: com.example.socket.MySocketAuthFactory
+```
+
+### 5.2 完整 YAML 使用示例
+
+单协议（socketio）完整示例：
+
+```yaml
+plugin:
+  socket:
+    enable: true
+    auto-start: true
+    protocol: socketio
+    host: 0.0.0.0
+    codec-type: json
+    max-frame-size: 1048576
+    boss-count: 1
+    work-count: 100
+    allow-custom-requests: true
+    ping-timeout: 60000
+    ping-interval: 25000
+    # auth-factory: com.example.socket.MySocketAuthFactory   # 可选
+    use-linux-native-epoll: false                             # Linux 下可改 true
+    room:
+      - client-id: default
+        context-path: /socket.io
+        port: 9000
+```
+
+多协议（socketio + 内置 ndjson）示例：
+
+```yaml
+plugin:
+  socket:
+    enable: true
+    protocols:
+      - protocol: socketio
+        room:
+          - client-id: default
+            context-path: /socket.io
+            port: 9000
+      - protocol: ndjson        # 本模块内置，无需额外依赖
+        room:
+          - client-id: default
+```
+
+配套可选项（队列桥接）：
+
+```yaml
+plugin:
+  queue:
+    enable: true   # 需已引入 spring-support-queue-starter；打开后向 topic socket:push 发 JSON 即广播
+```
+
+### 5.3 生产注意事项
+
+1. **必须引入实现模块**：只引本模块并设 `enable=true`，除内置 `ndjson` 外的协议都会在装配期抛 `IllegalStateException`（找不到 `SocketProvider`），不会静默降级。
+2. **`ignoreInvalidFields=true`**：配置项写错（类型不符、键名拼错）不会启动报错，而是被静默忽略——上线前建议用 `/actuator/configprops` 或启动日志核对实际绑定值。
+3. **NDJSON 连接超时**：`ndjson` 传输复用 `ping-timeout` 作为连接超时；若设为 0 或负数会回落 30 分钟，按需调整。
+4. **心跳与服务发现依赖宿主**：`SocketHeartbeatTask` 需宿主开启 `@EnableScheduling`，`SocketServerRegistry` 需 Redis 连接；缺任一则 `/socket/servers` 心跳不更新。
+5. **队列桥接**：开 `plugin.queue.enable=true` 前必须引入 `spring-support-queue-starter`，否则 `SocketQueueBridge` 实例化报 `NoClassDefFoundError`。
+6. **反向代理场景**：SSE / NDJSON 为流式响应，Nginx 等代理需关闭缓冲（如 `proxy_buffering off` 或响应头 `X-Accel-Buffering: no`），否则消息会被攒包延迟送达。
+7. **多实例端口规划**：同进程多协议/多实例用 `room[].port` 的 `-2、-3…` 偏移或正数独立端口错开，避免端口冲突；跨实例用 `client-id` 区分。
+8. **GraalVM native-image**：新增 `SocketProvider` / `SocketAuthFactory` 实现需同步补 reflect-config，否则反射构造失败。
+9. **rsocket 勿配**：`rsocket` 的 Provider 类存在但未登记 extensions 文件，配置 `protocol: rsocket` 会启动失败。
+
 ## 6. 使用方式
 
 ```xml
@@ -175,7 +333,7 @@ plugin:
 | `com.chua:spring-support-queue-starter` | `SocketQueueBridge` 依赖的 `Message` / `@QueueListener` | `optional`；不引入时勿开 `plugin.queue.enable=true`，否则桥接 Bean 实例化报 `NoClassDefFoundError` |
 | `org.springframework.boot:spring-boot-starter-data-redis` | `SocketServerRegistry` 动态注册 | `optional`；不引入时宿主不应把 `session` 包扫进容器 |
 
-本模块**不含传输实现**：只引它并设 `enable=true`，装配期会因找不到 `SocketProvider` 抛 `IllegalStateException`，不会静默降级。按第 5 节示例配置后，注入模板即可发消息：
+本模块除内置 `ndjson` 外**不含其他传输实现**：只引它并配置 socketio/sse 等协议，装配期会因找不到对应 `SocketProvider` 抛 `IllegalStateException`，不会静默降级。按第 5 节示例配置后，注入模板即可发消息：
 
 ```java
 @Service
@@ -210,10 +368,11 @@ public class PushService {
 
 | 模块 | 协议别名 | 端口形态 | 取舍 |
 |---|---|---|---|
-| 本模块 | — | — | 抽象层 + 装配 + SPI，单独使用无传输能力 |
+| 本模块 | — | — | 抽象层 + 装配 + SPI；仅内置 `ndjson` 传输，其余协议需实现模块 |
 | `spring-support-socket-io-starter` | `socketio` | 独立端口（默认 9000） | netty-socketio，功能最全，支持房间/ACK |
 | `spring-support-socket-sse-starter` | `sse` | 复用主应用 HTTP 端口 | 单向推送，部署最简 |
 | `spring-support-socket-sse-starter` | `sse-server` | 独立端口 SSE | 事件流单独监听，不占主应用端口 |
+| 本模块（内置） | `ndjson`（`jsonl`） | 复用主应用 HTTP 端口 | NDJSON 流式长连接，端点 `/ndjson/*`，随本模块自带、无需实现模块 |
 | `spring-support-socket-rsocket-starter` | `rsocket` | 复用 WebSocket 通道 | SPI 类存在但未登记 extensions，直接配置会失败 |
 | `spring-support-socket-websocket-starter` | — | 同应用端口 | `plugin.websocket` 独立体系，不经本 SPI |
 
@@ -228,7 +387,7 @@ public class PushService {
 | `start(SocketSessionTemplate)` / `stop(SocketSessionTemplate)` | 启动 / 停止服务 |
 | `supports(SocketProtocol)`（default） | 默认按 `getProtocol() == protocol` 判断 |
 
-新增协议三步：① 实现 `SocketProvider`；② 在实现模块登记 `src/main/resources/META-INF/extensions/com.chua.socket.support.spi.SocketProvider`（格式 `别名=实现类全名`；现有登记：`socketio`→io 模块，`sse`、`sse-server`→sse 模块）；③ 在 `SocketProtocol` 枚举补值——`protocol` 配置项是枚举类型，只加 SPI 别名无法配置，`SocketProtocol.of(...)` 对未知值回落 `SOCKETIO`。GraalVM native-image 需同步补 reflect-config，否则反射构造失败。
+新增协议三步：① 实现 `SocketProvider`；② 在实现模块登记 `src/main/resources/META-INF/extensions/com.chua.socket.support.spi.SocketProvider`（格式 `别名=实现类全名`；现有登记：`socketio`→io 模块，`sse`、`sse-server`→sse 模块，`ndjson`→本模块内置 `NdjsonSocketProvider`）；③ 在 `SocketProtocol` 枚举补值——`protocol` 配置项是枚举类型，只加 SPI 别名无法配置，`SocketProtocol.of(...)` 对未知值回落 `SOCKETIO`。GraalVM native-image 需同步补 reflect-config，否则反射构造失败。
 
 **事件监听：`SocketListener` + `@OnEvent("事件名")`**：实现 `SocketListener` 的 Spring Bean 会被收集进 `socketSessionTemplates`，由实现模块包装为 `EventListenerProcessor`；入站事件按名称反射调用，方法参数 0~2 个（`SocketSession` 参数注入会话，其余注入消息体，超过 2 个仅记 WARN）。`@OnConnect` / `@OnDisconnect` 已定义但当前未被扫描，不可依赖。
 

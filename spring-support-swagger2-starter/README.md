@@ -29,7 +29,7 @@ flowchart TB
     end
 
     subgraph COLLAB["配合方（运行期反射识别 2.x 注解，非本模块依赖）"]
-        COMMON["spring-support-common-starter<br/>AbstractLoggerPointcutAdvisor"]
+        COMMON["spring-support-logger-starter<br/>AbstractLoggerPointcutAdvisor<br/>（com.chua.starter.common.support.logger 包）"]
         OAUTH["spring-support-oauth-client-starter<br/>UserLoggerPointcutAdvisor"]
         MB["spring-support-mybatis-starter<br/>SysLoggerPointcutAdvisor"]
     end
@@ -46,7 +46,7 @@ flowchart TB
     COMMON --> UTILSC
 ```
 
-> 分层说明：本模块是"壳"。①把 2.x 注解 jar 声明进依赖（provided，仅本模块编译期可见）；②向 Spring Boot 显式声明没有自动配置类；③④本模块既无核心服务也无 SPI。真正读取这些注解的逻辑在配合方模块（common-starter 的日志切面），通过反射解耦，本模块不参与其装配。
+> 分层说明：本模块是"壳"。①把 2.x 注解 jar 声明进依赖（provided，仅本模块编译期可见）；②向 Spring Boot 显式声明没有自动配置类；③④本模块既无核心服务也无 SPI。真正读取这些注解的逻辑在配合方模块（logger-starter 的日志切面基类 `AbstractLoggerPointcutAdvisor` 与各业务模块的子类切面），通过反射解耦，本模块不参与其装配。
 
 ## 2. 核心流程图
 
@@ -56,7 +56,7 @@ flowchart TB
 flowchart TB
     A["宿主 pom 引入本模块<br/>并自行声明 io.swagger:swagger-annotations"] --> B["编译期：老代码直接使用<br/>@Api / @ApiOperation / @ApiParam，不缺类"]
     B --> C["运行期：注解随 class 字节码存在<br/>（本模块不注册任何 Bean / 端点 / UI）"]
-    C --> D{"宿主是否装配了<br/>common-starter 日志切面？"}
+    C --> D{"宿主是否装配了<br/>日志切面（logger-starter 体系）？"}
     D -->|是| E["UserLoggerPointcutAdvisor（oauth-client-starter）/<br/>SysLoggerPointcutAdvisor（mybatis-starter）拦截方法"]
     E --> F["AbstractLoggerPointcutAdvisor.getName() 回退链：<br/>注解 name > 3.x Operation.summary > 2.x ApiOperation.value"]
     F --> G["ApiOperation 经 ReflectUtils.forName 反射解析；<br/>classpath 无该注解时返回 null 静默跳过，不报错"]
@@ -70,14 +70,14 @@ flowchart TB
 | 能力域 | 关键类 | 入口/触发方式 |
 |:-------|:-------|:--------------|
 | Swagger 2.x 注解供给 | `io.swagger.annotations.*`（`@Api`、`@ApiOperation`、`@ApiParam`、`@ApiModel`、`@ApiModelProperty` 等，来自 provided 依赖 jar，本模块不含源码） | 宿主 pom 引入本模块并自行声明 `io.swagger:swagger-annotations` 后，编译期直接标注在代码上 |
-| 操作日志接口名识别（配合方能力，非本模块代码） | `AbstractLoggerPointcutAdvisor`（spring-support-common-starter，`com.chua.starter.common.support.logger` 包）；`UserLoggerPointcutAdvisor`（spring-support-oauth-client-starter）；`SysLoggerPointcutAdvisor`（spring-support-mybatis-starter） | 请求命中日志切面时，按"注解 name > 3.x `Operation.summary` > 2.x `ApiOperation.value`"回退链反射读取，拿到接口中文描述 |
+| 操作日志接口名识别（配合方能力，非本模块代码） | `AbstractLoggerPointcutAdvisor`（spring-support-logger-starter，`com.chua.starter.common.support.logger` 包，类寄宿于 common 命名空间）；`UserLoggerPointcutAdvisor`（spring-support-oauth-client-starter）；`SysLoggerPointcutAdvisor`（spring-support-mybatis-starter） | 请求命中日志切面时，按"注解 name > 3.x `Operation.summary` > 2.x `ApiOperation.value`"回退链反射读取，拿到接口中文描述 |
 | 自动配置 | — | **无**：`AutoConfiguration.imports` 仅含 2 行注释，无自动配置类、无 Bean、无端点 |
 
 实际生效的能力边界：
 
 - 引入后老代码里的 2.x 注解**编译期不缺类**（前提：宿主 classpath 上有 `io.swagger:swagger-annotations`，见第 6 节 provided 依赖说明）；
 - 与 `spring-support-swagger-starter`（3.x）**可同时引入**，注解包名不同，无类冲突；
-- common-starter 的操作日志切面按第 2 节回退链识别 2.x 注解，让老接口的操作日志也能显示接口描述；
+- logger-starter 体系的操作日志切面按第 2 节回退链识别 2.x 注解，让老接口的操作日志也能显示接口描述；
 - **不注册任何自动配置类、不装配 Bean、不暴露 HTTP 端点、没有 web 资源、不占用端口**。
 
 ## 4. Bean 能力矩阵
@@ -88,7 +88,7 @@ flowchart TB
 |:--------|:-----|:---------|:---------|:---------|
 | 无 | — | — | — | — |
 
-> 运行期真正读取 2.x 注解的 Bean 在**配合方模块**：`UserLoggerPointcutAdvisor`（oauth-client-starter，`@Component`）与 `SysLoggerPointcutAdvisor`（mybatis-starter）继承 common-starter 的 `AbstractLoggerPointcutAdvisor`。它们不是本模块装配的，覆盖方式见第 8 节。
+> 运行期真正读取 2.x 注解的 Bean 在**配合方模块**：`UserLoggerPointcutAdvisor`（oauth-client-starter，`@Component`）与 `SysLoggerPointcutAdvisor`（mybatis-starter）继承 spring-support-logger-starter 的 `AbstractLoggerPointcutAdvisor`（类在 logger-starter 模块、common 命名空间包下）。它们不是本模块装配的，覆盖方式见第 8 节。
 
 ## 5. 完整配置
 
@@ -99,6 +99,45 @@ flowchart TB
 | 无 | — | — | 本模块不读取任何配置，也不提供生效开关 |
 
 注意：不要为本模块配置 `plugin.swagger.*` 或 `plugin.swagger.export.*`——那是姊妹模块 `spring-support-swagger-starter` 的前缀（分别对应其 `Knife4jProperties` 与 `SwaggerExportProperties`；`Knife4jConfiguration` 由 `@ConditionalOnProperty(prefix = "plugin.swagger", name = "enable", havingValue = "true", matchIfMissing = true)` 控制）。本模块既不读取配置，也不参与文档装配。
+
+### 5.1 逐项配置示例
+
+本模块没有配置类，因此**没有可逐项列举的配置项**：不存在配置前缀，也就没有"含义 / 默认值 / YAML 示例"可写。把口径固定为三条：
+
+- **配置前缀**：无——模块内没有任何 `@ConfigurationProperties`，不绑定任何前缀；
+- **配置项数量**：0——多写、少写或写错任何键，本模块都不读取、不校验、不报错；
+- **生效方式**：引入依赖即在编译期生效（提供 2.x 注解），没有运行时开关，因此不存在"默认值 / ≤0 或为空时的回落值"一说。
+
+若老项目习惯性想给"Swagger2"留一段配置，请直接删掉——留空与写错效果相同（都无效果）。
+
+### 5.2 完整 YAML 使用示例
+
+宿主的 `application.yml` **无需为本模块增加任何键**。下面是一份可直接使用的完整示例（与本模块相关的部分刻意为空并注释说明）：
+
+```yaml
+# spring-support-swagger2-starter：零配置模块，无需任何配置键。
+# 下面 spring 段只是宿主自身的常规配置示意，与本模块无关。
+spring:
+  application:
+    name: demo-service
+  profiles:
+    active: dev
+
+# 不要为本模块写"伪配置"（不存在的前缀，写了也无效）：
+# swagger2:
+#   enable: true
+```
+
+若同进程还引入了姊妹模块 `spring-support-swagger-starter`（3.x），文档能力的配置属于它，示例如下（仅作区分，避免误挂到本模块头上）：
+
+```yaml
+# 姊妹模块 spring-support-swagger-starter（3.x）的配置前缀：
+plugin:
+  swagger:
+    enable: true            # Knife4jConfiguration 开关，缺省即开启
+#  export:
+#    enabled: true          # SwaggerExportProperties（plugin.swagger.export.enabled）
+```
 
 ## 6. 使用方式
 
@@ -161,7 +200,7 @@ public class UserController {
 **适用：**
 
 1. 老项目仍在使用 `@Api` / `@ApiOperation` / `@ApiParam` 等 2.x 注解，迁移到本生态后需要这些注解编译期不缺类；
-2. 需要老接口的操作日志显示中文接口描述——配合 common-starter 日志切面的回退链，`ApiOperation.value` 可作为日志名称兜底；
+2. 需要老接口的操作日志显示中文接口描述——配合 logger-starter 日志切面体系的回退链，`ApiOperation.value` 可作为日志名称兜底；
 3. 与 `spring-support-swagger-starter`（3.x）同进程共存：老代码保留 2.x 注解，新文档体系用 3.x。
 
 **不适用/慎用：**
@@ -185,7 +224,7 @@ public class UserController {
 
 | 想改什么 | 位置 | 方式 |
 |:---------|:-----|:-----|
-| 操作日志的名称识别规则（回退链） | `spring-support-common-starter` 的 `AbstractLoggerPointcutAdvisor#getName` | 继承并覆写 `getName`（`UserLoggerPointcutAdvisor` 即如此：先走父类回退链，取不到再退到方法名） |
+| 操作日志的名称识别规则（回退链） | `spring-support-logger-starter` 的 `AbstractLoggerPointcutAdvisor#getName` | 继承并覆写 `getName`（`UserLoggerPointcutAdvisor` 即如此：先走父类回退链，取不到再退到方法名） |
 | 操作日志的落库 / 事件发布 | `UserLoggerPointcutAdvisor`（oauth-client-starter）、`SysLoggerPointcutAdvisor`（mybatis-starter） | 替换或覆写对应切面 Bean（普通 Spring Bean，可 `@Primary` 覆盖） |
 | 注解本身 | `io.swagger:swagger-annotations` 是第三方 jar | 本模块不修改、不扩展该 jar |
 
@@ -202,3 +241,14 @@ public class UserController {
 
 **Q4：为什么 2.x 注解的接口没出现在 Swagger 文档里？会不会和 3.x 模块冲突？**
 不会冲突：本模块提供 `io.swagger.annotations`（2.x），`spring-support-swagger-starter` 解析的是 `io.swagger.v3.oas.annotations`（3.x），二者包名不同、互不解析。要让接口进 OpenAPI 文档，请在接口上补 3.x 注解（`@Operation`、`@Tag` 等）并依赖 3.x 模块；本模块只负责老注解不缺类与日志切面识别。
+
+## 10. 生产注意事项
+
+1. **provided 依赖必须由宿主自行声明**：本模块对 `io.swagger:swagger-annotations` 的依赖是 `provided`，不传递给宿主、也不会打进 fat jar。宿主源码要书写 2.x 注解，必须在宿主 pom 中再次声明该依赖（版本交给父 pom 的 `${swagger.annotations.v2.version}`，当前 1.6.16），否则编译期报 `package io.swagger.annotations does not exist`。
+2. **运行期缺 jar 是安全的，但别外溢**：本模块与配合方日志切面都通过 `ReflectUtils.forName` 反射解析 2.x 注解，classpath 上没有该 jar 只是静默跳过 2.x 分支；但若宿主引入的第三方库在**运行期直接引用**（非反射）`io.swagger.annotations`，宿主需自行以 `compile`/`runtime` 范围引入该 jar，不能指望本模块的 provided 声明兜底。
+3. **版本统一由父 pom 管理**：升级 2.x 注解版本时改父 pom 的 `${swagger.annotations.v2.version}`，不要在宿主 pom 硬编码版本，避免多模块漂移（见第 9 节 Q2）。
+4. **不要为本模块编写任何配置**：它不读取 `plugin.swagger.*`、`plugin.swagger.export.*` 或任何其它前缀；文档相关配置属于 `spring-support-swagger-starter`（3.x）。
+5. **不要期望 UI、文档端点或运行时行为**：本模块零 Bean、零端点、零端口占用、零 Web 资源；上线巡检 / 健康检查不必也不应为它设置任何项。
+6. **2.x 注解不会生成 OpenAPI 文档**：需要接口出现在 Swagger UI / 导出文档中的，请补 3.x 注解（`@Tag`、`@Operation` 等）并依赖 3.x 模块；两套注解可共存，建议渐进迁移。
+7. **日志名称回退是有条件的**：只有宿主同时装配了日志切面（如 oauth-client-starter 的 `UserLoggerPointcutAdvisor`、mybatis-starter 的 `SysLoggerPointcutAdvisor`）时，`ApiOperation.value` 才会作为操作日志名称的兜底；未装配切面时，2.x 注解仅是编译期元数据。
+8. **本模块无任何凭据或密钥配置**：不涉及口令、令牌、密钥等敏感信息，无需在配置中心或环境变量中为它维护任何 secret。

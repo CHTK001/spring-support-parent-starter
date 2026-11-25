@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.manage.service;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.manage.mapper.SysAiModelMetricsMapper;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.store.SysAiModelPrice;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.model.vo.AiUsageModelTrendPointVO;
 import com.chua.starter.ai.support.service.SysAiUsageService;
@@ -144,6 +145,11 @@ public class ModelPriceOverviewService {
     private final SysAiModelMetricsMapper metricsMapper;
 
     /**
+     * 模型价格服务（价格拆分后，价格字段权威来源为 {@code sys_ai_model_price}）
+     */
+    private final SysAiModelPriceService modelPriceService;
+
+    /**
      * 定价表 Mapper
      */
     private final SysAiPricingMapper pricingMapper;
@@ -171,9 +177,11 @@ public class ModelPriceOverviewService {
         long safePage = Math.max(page, 1);
         long safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
 
-        // 1) 指标库按模型名聚合报价（只收有价行：输入价或输出价至少一项非空）
+        // 1) 指标库按模型名聚合报价（只收有价行：输入价或输出价至少一项非空）。
+        //    价格拆分后以价格库（sys_ai_model_price）为权威，指标库旧列仅作历史数据回退。
         long totalModels = 0;
         Map<String, ModelGroup> groups = new LinkedHashMap<>();
+        Map<String, SysAiModelPrice> priceIndex = modelPriceService.findAllAsMap();
         for (SysAiModelMetrics row : metricsMapper.selectList(null)) {
             if (row == null) {
                 continue;
@@ -183,12 +191,21 @@ public class ModelPriceOverviewService {
             if (modelName == null) {
                 continue;
             }
-            if (row.getPriceInputPerMusd() == null && row.getPriceOutputPerMusd() == null) {
+            SysAiModelPrice priceRow = row.getModelKey() == null
+                    ? null : priceIndex.get(row.getModelKey());
+            BigDecimal input = priceRow != null && priceRow.getPriceInput() != null
+                    ? priceRow.getPriceInput() : row.getPriceInputPerMusd();
+            BigDecimal output = priceRow != null && priceRow.getPriceOutput() != null
+                    ? priceRow.getPriceOutput() : row.getPriceOutputPerMusd();
+            BigDecimal cacheHit = priceRow != null && priceRow.getPriceCacheHit() != null
+                    ? priceRow.getPriceCacheHit() : row.getPriceCacheHitPerMusd();
+            BigDecimal cacheWrite = priceRow != null && priceRow.getPriceCacheWrite() != null
+                    ? priceRow.getPriceCacheWrite() : row.getPriceCacheWritePerMusd();
+            if (input == null && output == null) {
                 continue;
             }
             ModelGroup group = groups.computeIfAbsent(modelName, ModelGroup::new);
-            group.merge(blankToNull(row.getProvider()), row.getPriceInputPerMusd(), row.getPriceOutputPerMusd(),
-                    row.getPriceCacheHitPerMusd(), row.getPriceCacheWritePerMusd(), SOURCE_METRICS);
+            group.merge(blankToNull(row.getProvider()), input, output, cacheHit, cacheWrite, SOURCE_METRICS);
             if (row.getIntelligenceIndex() != null
                     && (group.intelligenceIndex == null
                         || row.getIntelligenceIndex().compareTo(group.intelligenceIndex) > 0)) {

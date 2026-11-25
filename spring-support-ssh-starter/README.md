@@ -129,6 +129,125 @@ flowchart TD
 
 另：模块 jar 内附带示例文件 `application-ssh.yml`，其前缀写的是 `ssh.server.*`，与实际绑定前缀 `plugin.ssh.server.*` **不一致**，不会被绑定生效，只可当字段清单参考，请勿照抄其前缀。
 
+### 5.1 逐项配置示例（按功能分组）
+
+以下示例逐项标注含义与默认值；「生效」口径与上表一致（✅ 运行期生效 / ⚠️ 仅日志 / ❌ 未接入）。
+
+#### 基础开关与网络
+
+```yaml
+plugin:
+  ssh:
+    server:
+      enabled: true        # ✅ 是否真正启动 SSHD；默认 false（缺省时 Bean 注册但服务不启动）
+      host: 0.0.0.0        # ✅ 监听地址；默认 0.0.0.0（所有网卡）
+      port: 2222           # ✅ 监听端口；默认 2222
+      # enable: false      # ❌ 历史保留字段，运行期不读取，配置无效
+```
+
+#### 认证（authentication.*）
+
+```yaml
+plugin:
+  ssh:
+    server:
+      authentication:
+        password: true                  # ✅ 启用密码认证；默认 true
+        public-key: false               # ✅ 启用公钥认证；默认 false
+        username: admin                 # ✅ 唯一允许的用户名；默认 admin
+        user-password: change-me        # ✅ 登录口令；默认空串（必须显式配置，见 5.3）
+        public-key-file: /etc/ssh/authorized_keys   # ✅ authorized_keys 格式公钥文件；public-key=true 时必配
+        # private-key-file: /etc/ssh/id_rsa         # ❌ 预留字段，运行期未使用
+```
+
+#### 会话（session.*）
+
+```yaml
+plugin:
+  ssh:
+    server:
+      session:
+        timeout: 3600        # ⚠️ 会话超时（秒）；默认 3600，当前仅 debug 日志，不真正生效
+        max-sessions: 10     # ⚠️ 最大会话数；默认 10，当前仅 debug 日志，不限制并发
+        idle-timeout: 1800   # ❌ 空闲超时（秒）；默认 1800，设置逻辑已被注释，未生效
+```
+
+#### 文件传输（file-transfer.*）
+
+```yaml
+plugin:
+  ssh:
+    server:
+      file-transfer:
+        sftp-enabled: true          # ✅ 启用 SFTP 子系统；默认 true
+        root-directory: /data/sftp  # ✅ SFTP 虚拟根目录；默认 /tmp（Windows 解析为当前盘根 \tmp）
+        # scp-enabled: true         # ❌ 默认 true，但服务端未注册 SCP 命令工厂，配置无效
+        # max-file-size: 104857600  # ❌ 默认 100MB，当前无大小校验逻辑
+```
+
+#### 安全（security.*，当前均未接入运行期）
+
+```yaml
+plugin:
+  ssh:
+    server:
+      security:
+        allowed-ips:                 # ❌ 允许的 IP 列表；默认 []，未接入运行期
+          - 127.0.0.1
+        denied-ips: []               # ❌ 禁止的 IP 列表；默认 []，未接入运行期
+        max-login-attempts: 3        # ❌ 最大登录尝试次数；默认 3，未接入运行期
+        lockout-duration: 300        # ❌ 登录失败锁定时间（秒）；默认 300，未接入运行期
+        host-key-verification: true  # ❌ 主机密钥验证开关；默认 true，未接入运行期
+```
+
+### 5.2 完整 YAML 使用示例
+
+一份可直接粘贴的生产基线配置（组合全部生效项；注释掉的键为无效/预留项，仅供对照）：
+
+```yaml
+plugin:
+  ssh:
+    server:
+      enabled: true                 # 必须显式开启
+      host: 192.168.1.10            # 收敛到内网地址，避免 0.0.0.0 裸奔
+      port: 2222
+      authentication:
+        password: true
+        public-key: false
+        username: ops-admin
+        user-password: change-me    # 上线前改为强口令，经环境变量/配置中心注入
+        public-key-file: /etc/ssh/authorized_keys
+      session:
+        timeout: 3600
+        max-sessions: 10
+        idle-timeout: 1800
+      file-transfer:
+        sftp-enabled: true
+        root-directory: /data/sftp  # Windows 示例：D:/sftp-root
+      security:
+        allowed-ips:
+          - 192.168.1.0/24
+        denied-ips: []
+        max-login-attempts: 3
+        lockout-duration: 300
+        host-key-verification: true
+
+logging:
+  level:
+    com.chua.starter.ssh: INFO
+    org.apache.sshd: INFO
+```
+
+### 5.3 生产注意事项
+
+1. **必须显式开启并修改默认凭据**：`enabled` 缺省为 `false`；`user-password` 默认空串，而密码认证是 `username` + `user-password` 的字面量比对——空串意味着「用户名匹配且提交空口令即可登录」。上线前务必改为强口令，经环境变量/配置中心注入，不要把真实口令提交到仓库。
+2. **Shell 与端口转发是全开放的**：`ProcessShellFactory` 直接以运行应用的 OS 用户执行系统命令，`AcceptAllForwardingFilter` 无条件接受本地/远程端口转发；凭据泄露后的攻击面等于该 OS 用户。公网或跨信任域场景请改用堡垒机或加网络层隔离。
+3. **`security.*` 与 `session.*` 不是安全边界**：IP 白/黑名单、登录失败锁定、会话/空闲超时、文件大小上限当前都**未接入运行期**，不要把它们当作已生效的防护；真正的访问控制要靠 `host` 监听地址、防火墙/安全组与 OS 权限。
+4. **SFTP 根目录**：`root-directory` 是 SFTP 会话的虚拟根，登录用户只能在该目录内活动；Windows 下默认 `/tmp` 会解析为当前盘符根下的 `\tmp`，目录不存在会导致 SFTP 操作失败，建议显式绝对路径并确保应用有读写权限。
+5. **主机密钥落盘位置**：host key 由 `SimpleGeneratorHostKeyProvider` 生成到**工作目录**下的 `hostkey.ser`；更换部署目录会生成新密钥，客户端将收到 host key 变更告警。固定部署目录或备份该文件可保持指纹稳定。
+6. **SCP 不可用**：服务端未注册 SCP 命令工厂，纯 SCP 协议（`scp -O`）无法连接；文件传输请统一走 SFTP（`sftp -P 2222` 或支持 SFTP 的工具）。
+7. **开关键名是 `enabled` 不是 `enable`**：`enable` 为历史字段，运行期不读取。
+
 ## 6. 使用方式
 
 Maven 坐标（版本由父 pom `spring-support-parent-starter:4.0.0.51` 管理）：

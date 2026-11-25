@@ -130,7 +130,7 @@ sequenceDiagram
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `plugin.message.track.enabled` | `boolean` | `false` | 邮件阅读追踪总开关；`false` 时不生成 `track_token`、不注入追踪图 |
-| `plugin.message.track.base-url` | `String` | 空（null） | 追踪图基础地址，拼成 `{base-url}/v2/message/track/{token}`。**为空时 `buildContentWithTrack` 直接返回原文**——代码不回退当前服务地址（类 Javadoc 的「缺省回退」描述与实现不符，以代码为准） |
+| `plugin.message.track.base-url` | `String` | 空（null） | 追踪图基础地址，拼成 `{base-url}/v2/message/track/{token}`。**为空时 `buildContentWithTrack` 直接返回原文**——代码不回退当前服务地址 |
 
 ```yaml
 plugin:

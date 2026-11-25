@@ -109,6 +109,53 @@ flowchart TB
 | `plugin.server.support.telnet.port` | `int` | `23` | 台账未配远控端口时的 Telnet 默认端口 |
 | `plugin.server.support.telnet.timeout` | `int` | `8000` | Telnet 建连超时（毫秒） |
 
+#### 5.1.1 逐项配置示例（按功能分组）
+
+**基础开关与凭据安全**
+
+```yaml
+plugin:
+  server:
+    support:
+      enabled: true                # 展示旗标（非模块开关，置 false 不卸载 Bean）；默认 true
+      credential-key: change-me    # 凭据加密密钥；默认 server-support-default-credential-key，生产必须覆盖
+```
+
+**会话与批量执行**
+
+```yaml
+plugin:
+  server:
+    support:
+      session-idle-minutes: 30     # 远控会话空闲超时（分钟）；默认 30，0/负数无兜底（会立即判超时）
+      exec-concurrency: 16         # 批量执行最大并发主机数；默认 16，须为正整数
+```
+
+**guacd 网关**
+
+```yaml
+plugin:
+  server:
+    support:
+      guacd:
+        host: 127.0.0.1             # guacd 地址；默认 127.0.0.1
+        port: 4822                  # guacd 端口；默认 4822
+        client-host: 127.0.0.1:8082 # 浏览器侧回连地址（host:port）；默认 127.0.0.1:8082，同域部署置空
+        drive-path: /opt/spring-support/drive          # RDP 磁盘映射挂载根目录；默认 /opt/spring-support/drive
+        recording-path: /opt/spring-support/recordings # 录屏输出目录；默认 /opt/spring-support/recordings
+```
+
+**Telnet 直连**
+
+```yaml
+plugin:
+  server:
+    support:
+      telnet:
+        port: 23                   # 台账未配远控端口时的默认端口；默认 23
+        timeout: 8000              # 建连超时（毫秒）；默认 8000
+```
+
 ### 5.2 `plugin.server.support.serial.*`（`SerialProperties`）
 
 | 配置路径 | 类型 | 默认值 | 说明 |
@@ -123,6 +170,25 @@ flowchart TB
 | `plugin.server.support.serial.write-timeout` | `int` | `0` | 写超时（毫秒），0 表示等待发送完成 |
 | `plugin.server.support.serial.exclusive` | `boolean` | `true` | 是否独占打开串口 |
 | `plugin.server.support.serial.device-path-prefix` | `String` | `/dev/` | 设备路径前缀，仅用于规范化；实际路径以台账 `serverHostAddress` 为准 |
+
+逐项配置示例：
+
+```yaml
+plugin:
+  server:
+    support:
+      serial:
+        enabled: true              # 开关字段（当前仅属性绑定，不参与装配判断）；默认 true
+        baud-rate: 115200          # 默认波特率
+        data-bits: 8               # 数据位（5/6/7/8）；默认 8
+        stop-bits: 1               # 停止位（1/2）；默认 1
+        parity: 0                  # 校验位 0 无 / 1 奇 / 2 偶 / 3 标记 / 4 空；默认 0
+        flow-control: 0            # 流控位掩码 0 关 / 1 RTS / 2 CTS / 4 DSR / 8 DTR / 16 XON/XOFF 入 / 32 出；默认 0
+        read-timeout: 1000         # 读超时（毫秒），只影响轮询节奏；默认 1000
+        write-timeout: 0           # 写超时（毫秒），0 表示等待发送完成；默认 0
+        exclusive: true            # 是否独占打开串口；默认 true
+        device-path-prefix: /dev/  # 设备路径规范化前缀；默认 /dev/，实际路径以台账为准
+```
 
 ### 5.3 运行期键值（`server_config` 表，`ServerConfigService`）
 
@@ -149,6 +215,61 @@ flowchart TB
 | `spring.servlet.multipart.max-request-size` | `2GB` |
 | `server.tomcat.max-swallow-size` | `2GB` |
 | `server.tomcat.max-http-form-post-size` | `2GB` |
+
+### 5.5 完整 YAML 配置示例（生产模板）
+
+```yaml
+plugin:
+  server:
+    support:
+      enabled: true                              # 展示旗标（非模块开关）
+      credential-key: ${SERVER_CREDENTIAL_KEY:change-me}  # 凭据加密密钥：必须经环境变量/配置中心注入强随机值
+      session-idle-minutes: 30                   # 远控会话空闲 30 分钟由后台任务回收
+      exec-concurrency: 16                       # 批量执行并发：按主机规模与出口带宽调整，须为正整数
+      guacd:
+        host: 127.0.0.1                          # guacd 与后端同机部署；跨机改为 guacd 实际地址
+        port: 4822
+        client-host: ""                          # 前后端同域（反向代理）部署时置空，浏览器自动使用当前访问地址
+        drive-path: /opt/spring-support/drive    # RDP 磁盘映射挂载根目录（需 guacd 进程可写）
+        recording-path: /opt/spring-support/recordings  # 录屏输出目录（需 guacd 进程可写，注意容量与清理）
+      telnet:
+        port: 23                                 # 台账未配远控端口时的默认端口
+        timeout: 8000                            # Telnet 建连超时（毫秒）
+      serial:                                    # 串口参数（可选；当前仅属性绑定，串口 WS 端点未在本模块注册）
+        enabled: true
+        baud-rate: 115200
+        data-bits: 8
+        stop-bits: 1
+        parity: 0
+        flow-control: 0
+        read-timeout: 1000
+        write-timeout: 0
+        exclusive: true
+        device-path-prefix: "/dev/"
+
+# 以下上传默认值由 ServerUploadEnvironmentPostProcessor 仅在未显式配置时追加，显式配置优先
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 2GB
+      max-request-size: 2GB
+server:
+  tomcat:
+    max-swallow-size: 2GB
+    max-http-form-post-size: 2GB
+```
+
+### 5.6 生产注意事项
+
+- **凭据密钥必须覆盖**：`credential-key` 默认值是随代码公开的常量，用默认值上线等同于台账凭据可逆明文；须经环境变量或配置中心注入强随机密钥，并保证多实例取值一致（否则解不开彼此写入的密文）。
+- **guacd 是外部进程**：本模块只做协议对接，不内嵌 guacd；先独立部署 guacd（默认 `127.0.0.1:4822`），再配置 `guacd.host/port`。`guacd.client-host` 必须是浏览器可达地址；前后端同域（反向代理）部署时置空。
+- **会话与并发**：`session-idle-minutes` 按业务巡检节奏设置（0/负数无兜底，会话会被立即判定超时）；`exec-concurrency` 必须为正整数，且不要超过目标机 SSH 并发承受能力。
+- **磁盘与权限**：`guacd.drive-path`、`guacd.recording-path` 指向的目录需真实存在、对 guacd 进程可写；录屏文件可能很大，需配额与定期清理。
+- **数据库初始化**：首次启用需执行 `src/main/resources/db/init/V3.1__init_all_server.sql`（或由宿主启动时的 FlywayLike 初始化），共 15 张 `server_*` 表。
+- **运行期键值优先**：5.3 的 `server_config` 运行期键值读取优先于本节静态配置，且保存后热生效（`ServerConfigChangedEvent`）；调整 guacd/RDP/VNC/SSH 体验参数优先走 `/ms/server/config`，无需重启。
+- **开关语义**：`plugin.server.support.enabled` 与 `plugin.server.support.serial.enabled` 都不是模块开关（本模块无 `@ConditionalOnProperty`）；真要停用只能移除依赖。
+- **上传默认值不覆盖显式配置**：5.4 的默认值仅在对应键未配置时追加；一旦显式配置 `spring.servlet.multipart.*` / `server.tomcat.*`，以显式值为准。
 
 ## 6. 使用方式
 

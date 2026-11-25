@@ -157,6 +157,265 @@ flowchart TB
 | `plugin.sync.data-sync.default-channel` | String | `default` | 默认逻辑通道，channel 为空时使用 |
 | `plugin.sync.datasync.enabled` | boolean | `true` | 是否启用 DataSync 桥接（仅桥接配置类被加载时读取，见 9.3） |
 
+### 5.5 逐项配置示例（按功能分组）
+
+下列示例均基于前缀 `plugin.sync`，YAML 使用空格缩进；`#` 后为含义与默认值说明。
+
+**① 顶层模式与传输加密**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `type` | 运行形态：`server` 仅服务端 / `client` 仅客户端 / `both` 双端 | `client` |
+| `topics` | 全局主题映射，Key=主题名；Value 仅备注、不参与路由 | 空 |
+| `crypto-secret` | 传输加密密钥，两端必须一致；未配置则明文 | 未设置 |
+| `crypto-version` | `2`=随机盐+HKDF 派生密钥；`1`=旧版固定密钥（过渡） | `2` |
+
+```yaml
+plugin:
+  sync:
+    type: both                                  # server / client / both
+    crypto-secret: ${SYNC_SECRET:change-me}     # 生产用环境变量注入，两端一致
+    crypto-version: 2                           # 滚动升级期间临时降为 1
+    topics:
+      order: 订单主题（Value 仅备注）
+```
+
+**② 服务端基础参数**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `server.enable` | 是否启用服务端（与 `type` 双条件） | `false` |
+| `server.host` | 默认绑定地址（`instances` 为空时使用） | `0.0.0.0` |
+| `server.port` | 默认端口（同上） | `19380` |
+| `server.protocol` | 默认协议（SPI 键，同上） | `http` |
+| `server.heartbeat` | 心跳开关 | `true` |
+| `server.heartbeat-interval` | 心跳间隔（秒） | `30` |
+| `server.connect-timeout` | 连接超时（毫秒） | `10000` |
+
+```yaml
+plugin:
+  sync:
+    server:
+      enable: true
+      host: 0.0.0.0
+      port: 19380
+      protocol: websocket
+      heartbeat: true
+      heartbeat-interval: 30
+      connect-timeout: 10000
+```
+
+**③ 服务端服务发现与分组**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `server.service-name` | 服务发现注册名；为空回落到实例名 `instances[].name` | 未设置 |
+| `server.scatter-id` | 业务分组；为空回落到 `service-name` | 未设置 |
+
+```yaml
+plugin:
+  sync:
+    server:
+      service-name: sync-server
+      scatter-id: sync-server
+```
+
+**④ 服务端多实例（instances[]）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `instances[].name` | 实例名（`SyncServer#getInstances` 的 Key） | 随机 UUID |
+| `instances[].host` | 绑定地址 | `0.0.0.0` |
+| `instances[].port` | 端口 | `19380` |
+| `instances[].protocol` | 协议名（SPI 键）；**默认键 `rsocket-sync` 无实现，手写必须显式覆盖** | `rsocket-sync` |
+| `instances[].enable` | 是否启用该实例 | `true` |
+| `instances[].description` | 实例说明 | 未设置 |
+| `instances[].topics` | 实例专属主题，覆盖全局同名 Key | 空 |
+
+```yaml
+plugin:
+  sync:
+    server:
+      instances:
+        - name: main
+          host: 0.0.0.0
+          port: 19380
+          protocol: websocket      # 必须写已注册协议键
+          enable: true
+          description: 主同步通道
+          topics:
+            order: 订单主题
+```
+
+**⑤ 客户端连接与寻址**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `client.enable` | 是否启用客户端（与 `type` 双条件） | `false` |
+| `client.protocol` | 协议名（SPI 键） | `http` |
+| `client.server-host` | 服务端地址（`server-address` 为空时使用） | `localhost` |
+| `client.server-port` | 服务端端口（同上） | `19380` |
+| `client.server-address` | 完整地址（如 `ws://host:port`），优先级最高 | 未设置 |
+| `client.discovery-name` | 按名称从发现中心寻址，需与服务端注册名一致 | 未设置 |
+| `client.scatter-id` | 业务分组；为空回落到 `discovery-name` | 未设置 |
+| `client.instance-id` | 客户端实例标识（预留，当前实现未消费） | 未设置 |
+| `client.ip-address` | 客户端 IP（预留，当前实现未消费） | 未设置 |
+
+```yaml
+plugin:
+  sync:
+    client:
+      enable: true
+      protocol: websocket
+      server-host: 192.168.1.10
+      server-port: 19380
+      # server-address: ws://192.168.1.10:19380   # 配置后优先于 host:port
+      discovery-name: sync-server
+      scatter-id: sync-server
+```
+
+**⑥ 客户端心跳与重连**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `client.heartbeat` | 心跳开关 | `true` |
+| `client.heartbeat-interval` | 心跳间隔（秒） | `30` |
+| `client.connect-timeout` | 连接超时（毫秒） | `10000` |
+| `client.auto-reconnect` | 自动重连 | `true` |
+| `client.max-reconnect-attempts` | 最大重连次数；`-1` 无限 | `-1` |
+| `client.reconnect-interval` | 重连间隔（毫秒） | `5000` |
+
+```yaml
+plugin:
+  sync:
+    client:
+      heartbeat: true
+      heartbeat-interval: 30
+      connect-timeout: 10000
+      auto-reconnect: true
+      max-reconnect-attempts: -1
+      reconnect-interval: 5000
+```
+
+**⑦ 客户端注册与元数据**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `client.auto-register` | 连接后自动发送注册消息 | `true` |
+| `client.register-topic` | 注册主题 | `sync/client/register` |
+| `client.heartbeat-topic` | 心跳主题 | `sync/client/heartbeat` |
+| `client.offline-topic` | 下线主题 | `sync/client/offline` |
+| `client.capabilities` | 能力清单（预留：当前注册报文未携带） | `[job, actuator, file, log]` |
+| `client.metadata` | 扩展元数据，供 `publishByMetadata` 定向推送 | 空 |
+
+```yaml
+plugin:
+  sync:
+    client:
+      auto-register: true
+      register-topic: sync/client/register
+      heartbeat-topic: sync/client/heartbeat
+      offline-topic: sync/client/offline
+      capabilities: [job, actuator, file, log]
+      metadata:
+        tenant: t-001
+        region: north
+```
+
+**⑧ 数据交换（data-sync）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `data-sync.enabled` | 是否装配 `SyncDataExchangeService`（`matchIfMissing=true`） | `true` |
+| `data-sync.topic-prefix` | 主题前缀，实际主题 = 前缀 + `/` + channel | `sync/data` |
+| `data-sync.request-timeout` | 请求超时（毫秒）；当前 `request()` 即发即忘，该值为预留 | `30000` |
+| `data-sync.default-channel` | 默认逻辑通道 | `default` |
+
+```yaml
+plugin:
+  sync:
+    data-sync:
+      enabled: true
+      topic-prefix: sync/data
+      request-timeout: 30000
+      default-channel: default
+```
+
+**⑨ DataSync 桥接（datasync）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `datasync.enabled` | 是否启用 DataSync 桥接；仅当桥接配置类被扫描/`@Import` 加载时读取（见 9.3） | `true` |
+
+```yaml
+plugin:
+  sync:
+    datasync:
+      enabled: true
+```
+
+### 5.6 完整配置示例（生产参考）
+
+服务端（`type=server`，只开服务端）：
+
+```yaml
+plugin:
+  sync:
+    type: server
+    crypto-secret: ${SYNC_SECRET:change-me}     # 生产从环境变量/配置中心注入，禁止明文入库
+    crypto-version: 2
+    topics:
+      order: 订单主题
+    server:
+      enable: true
+      host: 0.0.0.0
+      port: 19380
+      protocol: websocket
+      service-name: sync-server
+      scatter-id: sync-server
+      heartbeat: true
+      heartbeat-interval: 30
+      connect-timeout: 10000
+      instances:
+        - name: main
+          host: 0.0.0.0
+          port: 19380
+          protocol: websocket
+          enable: true
+          description: 主同步通道
+    data-sync:
+      enabled: true
+      topic-prefix: sync/data
+      request-timeout: 30000
+      default-channel: default
+```
+
+客户端（`type=client`，只开客户端；`crypto-secret` 必须与服务端一致）：
+
+```yaml
+plugin:
+  sync:
+    type: client
+    crypto-secret: ${SYNC_SECRET:change-me}
+    crypto-version: 2
+    client:
+      enable: true
+      protocol: websocket
+      server-host: 192.168.1.10
+      server-port: 19380
+      discovery-name: sync-server
+      scatter-id: sync-server
+      heartbeat: true
+      heartbeat-interval: 30
+      connect-timeout: 10000
+      auto-reconnect: true
+      max-reconnect-attempts: -1
+      reconnect-interval: 5000
+      auto-register: true
+      metadata:
+        tenant: t-001
+```
+
 ## 6. 使用方式
 
 Maven 坐标：
@@ -255,3 +514,16 @@ public SyncClientInfoCustomizer tenantCustomizer() {
 **9.3 DataSync 桥接为何没生效**：`DataSyncAgentLifecycleConfiguration`（`@ConditionalOnClass(name="com.chua.starter.datasync.agent.DataSyncAgentServer")`）与 `SyncDataSyncConfiguration` 虽标注 `@AutoConfiguration`，但未登记进 `AutoConfiguration.imports`（该文件只有 `SyncAutoConfiguration` 一行），Boot 4 不会自动加载。需 `utils-support-datasync-starter` 在 classpath（本模块中为 optional），且宿主组件扫描覆盖 `com.chua.starter.sync.support.datasync` 包或显式 `@Import`，再配合 `plugin.sync.datasync.enabled=true`（`@ConditionalOnProperty` 缺省视为 true）。注意 `SyncDataSyncConfiguration#init()` 内读同一个键时缺省是 `false`，未显式配置时桥接 Bean 仍会创建，但服务信息标志与启动日志会显示未启用。
 
 **9.4 数据交换、主题路由与加密**：`SyncDataExchangeService#request(channel, payload)` 是发送后立即返回本地 `SyncResponse.success(...)`，不挂起等待远端回执（`data-sync.request-timeout` 未参与该路径）；真正往返请用主题 handler + `sync/response` 自行编排，或改用 RPC 模块。`plugin.sync.topics` 的 Value 在 `SyncServer#registerHandlersToInstance` 中不用于选择处理器（实现是把所有已注册处理器挂到配置的每个主题上），精确绑定请用 `registerHandler(topic, handler)`；系统主题里 `sync/health`、`sync/client/register`、`sync/client/heartbeat`、`sync/client/offline` 由服务端 `handleSystemTopic` 内部消化，`sync/response`、`sync/connect`、`sync/disconnect` 由服务端主动下发，业务主题避开这些名字。加密：`crypto-secret` 未配置即明文，配置后两端必须一致；加解密失败抛异常并丢弃消息，不静默降级为明文；滚动升级先让新节点以 `crypto-version=1` 与旧节点互通，全部升级后统一改回 `2`。
+
+## 10. 生产注意事项
+
+1. **双条件缺一不可**：`type` 与对应端的 `enable` 必须同时配置；`enable` 缺省 `false`，只写 `type: server` 不会启动服务端。
+2. **密钥管理**：`crypto-secret` 通过环境变量或配置中心注入（如 `${SYNC_SECRET}`），禁止提交到代码库或写死在配置里；两端必须一致；轮换按 9.4 的 `crypto-version=1` 过渡流程执行。
+3. **网络与端口**：服务端绑定 `0.0.0.0` 会监听所有网卡，生产建议绑定内网地址；`server.port` / `instances[].port` 需在防火墙/安全组放行。
+4. **协议键必须真实注册**：`instances[].protocol` 字段默认值 `rsocket-sync` 没有对应实现，手写 `instances[]` 时必须显式写 `http` / `websocket` / `tcp` / `udp` 等已注册键（见 9.2）。
+5. **未启用端判空获取**：未启用的端在容器中没有对应 Bean，用 `ObjectProvider<SyncServer>` / `ObjectProvider<SyncClient>` 的 `getIfAvailable()` 判空，避免 `NoSuchBeanDefinitionException`。
+6. **服务发现唯一性**：容器中存在多个 `ServiceDiscovery` 实例时不接入（标记 `@Primary` 也不接入），回落显式地址；确保 discovery Bean 唯一。
+7. **主题命名避让**：业务主题避开系统主题 `sync/health`、`sync/client/register`、`sync/client/heartbeat`、`sync/client/offline`、`sync/response`、`sync/connect`、`sync/disconnect`。
+8. **不要当 RPC 用**：`SyncDataExchangeService#request()` 即发即忘、不等待远端回执；可靠往返用主题 handler + `sync/response` 自行编排，或改用 `spring-support-rpc-starter`。
+9. **心跳/重连参数按网络调整**：`heartbeat-interval` 单位是秒、`reconnect-interval` 单位是毫秒，注意单位差异；弱网环境适当调大 `connect-timeout` 与 `reconnect-interval`。
+10. **DataSync 桥接需显式引入**：`utils-support-datasync-starter` 为 optional 依赖，且桥接配置类不在 `AutoConfiguration.imports` 中，需组件扫描覆盖 `datasync` 包或显式 `@Import`（见 9.3）。

@@ -160,7 +160,202 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 
 > MySQL 凭据传递链：`ApmQueryService#currentStorageConfig` 把 `plugin.hotsport.apm.storage.url/username/password` 从 provider 中剔除并写入系统属性 `apm.storage.url/username/password`；`ApmBootstrap.resolveStorageConfig` 仅合并系统属性里的 `apm.storage.*` 键。JDBC 连接由 `JdbcStorage` 自管 `DriverManager`，不经 Spring `DataSource`。
 
-## 6. 使用方式
+## 6. 逐项配置示例
+
+按功能分组给出「含义 + 默认值 + YAML 示例」；所有键均可省略，省略即用默认值。时间单位如无说明为毫秒。
+
+### 6.1 Agent 自注入（`plugin.hotsport.agent.*`）
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `agent.enabled` | 是否对当前 JVM 自注入 Runtime Agent 做字节码采集；JDK 25 等存在 retransform 风险的环境建议 `false` | `true` |
+| `agent.shell-port` | Agent Shell 监听端口 | `4567` |
+| `agent.options` | 附加 Agent 参数（逗号分隔 `Key=值`），空串走 agent 侧默认 | `""` |
+
+```yaml
+plugin:
+  hotsport:
+    agent:
+      enabled: true
+      shell-port: 4567
+      options: ""
+```
+
+### 6.2 APM 存储（`plugin.hotsport.apm.storage.*`）
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `storage.type` | 存储后端：`sqlite` / `mysql` / `inmemory` / `noop` | `sqlite` |
+| `storage.retention-ms` | 数据保留时长，过期由自维护任务清理 | `604800000`（7 天） |
+| `storage.capacity` | 单表容量上限，超出按最旧淘汰 | `100000` |
+| `storage.path` | sqlite 落盘目录（库文件 `<path>/apm.db`）；空走 APM 侧默认 | `""`（application.yml 预置 `${user.home}/.hotsport/apm`） |
+| `storage.url` | mysql JDBC URL，`type=mysql` 时必填 | `""` |
+| `storage.username` | mysql 用户名 | `""` |
+| `storage.password` | mysql 密码（示例用占位符，勿提交真实口令） | `""` |
+| `storage.pool-size` | mysql 写入连接池大小（≤0 走 APM 侧默认） | `4` |
+| `storage.batch-size` | mysql 单批写入条数（≤0 走 APM 侧默认） | `200` |
+| `storage.async` | 写入模式：`true` 异步批量（业务线程不阻塞）/ `false` 同步逐条；不配置沿用 APM 默认异步 | `null` |
+| `storage.maintenance-interval-ms` | 自维护（清理过期 / 容量淘汰）周期；`0` = APM 默认 60 秒，下限 5 秒 | `0` |
+| `storage.flush-timeout-ms` | 停机时等待异步队列落盘的最长时间；`0` = APM 默认 | `0` |
+
+单机默认（sqlite，零外部依赖）：
+
+```yaml
+plugin:
+  hotsport:
+    apm:
+      storage:
+        type: sqlite
+        path: ${user.home}/.hotsport/apm
+        retention-ms: 604800000
+        capacity: 100000
+        async: true
+        maintenance-interval-ms: 0
+        flush-timeout-ms: 0
+```
+
+多实例集中存储（mysql）：
+
+```yaml
+plugin:
+  hotsport:
+    apm:
+      storage:
+        type: mysql
+        url: jdbc:mysql://127.0.0.1:3306/hotsport
+        username: your-username
+        password: your-password
+        pool-size: 4
+        batch-size: 200
+```
+
+### 6.3 HTTP 上报接收（`plugin.hotsport.apm.ingest.*`）
+
+采集端通过 `POST /api/apm/ingest` 推送数据（JSON 数组 / 单条对象 / 混合载荷）。
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `ingest.token` | 共享密钥；非空时校验请求头 `x-hotsport-token`（不匹配返回 401），空 = 不校验 | `""` |
+| `ingest.max-batch` | 单批每种类型最大条数，超出截断丢弃（≤0 或未配置走兜底 1000） | `1000` |
+
+```yaml
+plugin:
+  hotsport:
+    apm:
+      ingest:
+        token: ""          # 跨网络上报务必改为强随机密钥
+        max-batch: 1000
+```
+
+### 6.4 TCP 接收端（`plugin.hotsport.apm.tcp.*`）
+
+供无法直连 HTTP 的采集端经 TCP 通道按主题推送 APM 数据；默认关闭。
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `tcp.enabled` | TCP 接收端开关（HTTP `/ingest` 不受影响、始终可用） | `false` |
+| `tcp.host` | 监听地址；仅本机采集建议收紧为 `127.0.0.1`（空白回退 `0.0.0.0`） | `0.0.0.0` |
+| `tcp.port` | 监听端口（≤0 回退 19392；注意防火墙与端口管控） | `19392` |
+| `tcp.topic` | 订阅主题名，采集端与接收端必须一致（空白回退默认值） | `hotsport-events` |
+
+```yaml
+plugin:
+  hotsport:
+    apm:
+      tcp:
+        enabled: false
+        host: 0.0.0.0
+        port: 19392
+        topic: hotsport-events
+```
+
+### 6.5 采集与 API 开关（由自动配置 / 服务直接绑定，不在 `HotsportProperties` 中）
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `api.enabled` | `HotsportApiAutoConfiguration` 总开关：关闭后 `/api/apm/*` 端点与服务 Bean（含 TCP 接收端）整体不装配 | `true`（matchIfMissing） |
+| `request-record.enabled` | 请求采集开关（SlowCallFilter + 控制器耗时拦截器，一套采集链） | `true`（matchIfMissing） |
+| `request-record.threshold-ms` | 慢调用记录阈值；`0` = 记录全部真实请求 | `0` |
+| `log-capture.enabled` | Logback 应用日志采集开关（宿主无 Logback 时该配置整体不加载） | `true`（matchIfMissing） |
+| `log-capture.min-level` | 采集的最低日志级别 | `INFO` |
+| `log-capture.caller-data` | 是否采集调用方类名/方法名 | `true` |
+| `log-capture.max-message-length` | 单条日志最大长度（超长截断） | `4096` |
+| `jvm.sample-interval-ms` | JVM 指标采样间隔（`@Scheduled` fixedDelay） | `5000` |
+
+```yaml
+plugin:
+  hotsport:
+    api:
+      enabled: true
+    request-record:
+      enabled: true
+      threshold-ms: 0
+    log-capture:
+      enabled: true
+      min-level: INFO
+      caller-data: true
+      max-message-length: 4096
+    jvm:
+      sample-interval-ms: 5000
+```
+
+### 6.6 完整配置示例（多实例集中观测）
+
+```yaml
+server:
+  port: 8086                    # 独立运行时的 HTTP 端口（页面与 /api/apm/* 同端口）
+
+plugin:
+  hotsport:
+    api:
+      enabled: true
+    agent:
+      enabled: true             # JDK 25 等环境先评估 retransform 风险
+      shell-port: 4567
+      options: ""
+    request-record:
+      enabled: true
+      threshold-ms: 0
+    log-capture:
+      enabled: true
+      min-level: INFO
+      caller-data: true
+      max-message-length: 4096
+    jvm:
+      sample-interval-ms: 5000
+    apm:
+      storage:
+        type: mysql             # 多实例集中存储；单机改 sqlite + path
+        url: jdbc:mysql://127.0.0.1:3306/hotsport
+        username: your-username
+        password: your-password # 占位符，部署时替换
+        pool-size: 4
+        batch-size: 200
+        async: true
+        retention-ms: 604800000
+        capacity: 100000
+        maintenance-interval-ms: 60000
+        flush-timeout-ms: 10000
+      ingest:
+        token: change-me        # 采集端请求头 x-hotsport-token 与此一致
+        max-batch: 1000
+      tcp:
+        enabled: false          # 仅当采集端无法直连 HTTP 时打开
+        host: 127.0.0.1
+        port: 19392
+        topic: hotsport-events
+```
+
+生产注意事项：
+
+- **驱动与降级**：`mysql-connector-j` 是 optional 依赖，`type=mysql` 时必须显式引入；连库失败时 `StorageManager` 降级 `NoopStorage`（宿主不受影响，但数据不落库），上线前先验证连通性。
+- **Agent 风险**：自注入会对已加载类 retransform，部分新 JDK（如 JDK 25）存在 JVM 退出风险；强隔离环境建议 `agent.enabled=false`，升级 JDK 前先在隔离环境验证。
+- **密钥管理**：`ingest.token`、`storage.password` 经配置中心/环境变量注入，勿把真实口令写入仓库。
+- **容量规划**：`capacity` 默认 10 万条按最旧淘汰、`retention-ms` 默认 7 天；高流量场景按写入速率调大容量或缩短保留期。
+- **网络与端口**：独立运行默认 8086；开启 `tcp` 后额外监听 `tcp.port`（默认 19392），只做本机采集时把 `tcp.host` 收紧为 `127.0.0.1`。
+- **优雅停机**：`async=true` 时依赖 `flush-timeout-ms` 在停机时排空写入队列，不要设得过小以免丢尾部数据。
+
+## 7. 使用方式
 
 Maven 坐标：
 
@@ -201,7 +396,7 @@ plugin:
     enabled: true          # Agent 自注入（plugin.agent.* 由 agent-starter 绑定）
 ```
 
-嵌入形态的关键前提：4 个自动配置类**必然**随依赖装配（请求采集、日志采集即生效）；但 `ApmController`、`ApmQueryService` 等注解 Bean 依赖组件扫描——宿主启动类需位于 `com.chua` 包下，或显式 `@ComponentScan("com.chua.starter.hotsport.support")`，否则只有采集、没有查询端点。
+嵌入形态的关键前提：5 个自动配置类**必然**随依赖装配。其中 `HotsportApiAutoConfiguration`（开关 `plugin.hotsport.api.enabled`，缺省 true）通过 `@Import` 直接注册 `ApmController`、`ApmQueryService`、`ApmIngestService`、`JvmMetricsService`、`JvmMemoryService`、`AlertMonitorService`、`AlertStore`、`HotsportTcpServer` 等 Bean——**不依赖宿主包扫描**，宿主启动类不在 `com.chua` 包下也有完整 `/api/apm/*` 端点；请求采集、日志采集两个自动配置同样缺省生效。唯一不经 `@Import` 的是 `SpaWebConfig`（SPA 路由回退）：它只走组件扫描，嵌入宿主时默认不注册，正好避免 SPA 回退劫持宿主自己的页面路由；确需在宿主内托管本模块前端时，再显式 `@ComponentScan` 引入。
 
 可选依赖说明：
 
@@ -209,7 +404,7 @@ plugin:
 - `lombok`（provided）：仅编译期需要，运行期不传递。
 - `spring-support-agent-starter`：传递带入 `utils-support-runtime-starter` / `utils-support-runtime-agent`，提供 `AgentAttachService` 与 `plugin.agent.*` 绑定。
 
-## 7. 使用场景
+## 8. 使用场景
 
 适用：
 
@@ -225,7 +420,7 @@ plugin:
 
 与相邻模块的取舍：本模块是 `utils-support-runtime-apm` 的**展示与查询后台**（Controller/Service/前端托管/采集过滤器），不是采集引擎本身；字节码插桩能力全部来自 `spring-support-agent-starter` 与 utils 层，本模块只做装配与消费。需要纯嵌入式采集（无页面/无 REST）时直接依赖 agent-starter + utils-support-runtime-apm 即可，不必引入本模块。
 
-## 8. 扩展点
+## 9. 扩展点
 
 | 扩展点 | 位置 | 注册 / 自定义方式 |
 |:-------|:-----|:------------------|
@@ -237,10 +432,10 @@ plugin:
 | 前端替换 | `src/main/resources/static/` | `apps/vue-support-hotspot-starter` 构建产物置于该目录（pom 仅有 repackage，无前端资源拷贝插件）；替换目录即可换前端实现 |
 | 采集数据面 | `ApmBootstrap` 内置 8 个 Handler（Log / Net / Transmission / DependencyGraph / HandleLeak / Trace / HttpClient / JdkHttpServer） | 由 `ApmQueryService#startLocalApmEngine` 固定装配；新增数据面需扩展 utils-support-runtime-apm 层，本模块不重复实现 |
 
-## 9. 常见问题
+## 10. 常见问题
 
 **Q1：引入依赖后为什么没有 `/api/apm/*` 端点？**
-`ApmController`、`ApmQueryService` 等是组件扫描 Bean，不是自动配置注册的。宿主启动类不在 `com.chua` 包下时扫描不到，需 `@ComponentScan("com.chua.starter.hotsport.support")` 或改用独立运行形态；4 个自动配置（过滤器/拦截器/日志采集）不受此影响。
+按顺序排查：① 总开关 `plugin.hotsport.api.enabled` 是否被显式设为 `false`（缺省 true）；② 宿主是否为 Servlet Web 应用——`HotsportApiAutoConfiguration` 带 `@ConditionalOnWebApplication(SERVLET)`，非 Web 宿主不装配。排除以上两点后，`ApmController`、`ApmQueryService` 等由该自动配置 `@Import` 注册，**不依赖宿主包扫描**，正常应有端点；若仍缺失，可改用独立运行形态（`java -jar`）对照验证。
 
 **Q2：如何彻底关闭采集，让宿主零开销？**
 依次设 `plugin.hotsport.request-record.enabled=false`（关请求+耗时拦截器）、`plugin.hotsport.log-capture.enabled=false`（关日志采集）、`plugin.agent.enabled=false`（关字节码自注入）。注意：当前源码中 `AgentAttachFallbackConfiguration#disabledAgentAttachService` 未标注 `@Bean`，关闭 agent 后没有兜底 Bean；`ApmQueryService` 强依赖 `AgentAttachService` 时若上下文启动失败，以实际代码为准排查。

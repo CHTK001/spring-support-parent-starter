@@ -152,6 +152,117 @@
 |:----|:-------|:-----|
 | `plugin.payment.event.log-enabled` | `true` | `PaymentEventListener` 是否打印订单创建/支付成功/退款成功/回调接收/回调失败事件日志 |
 
+### 3.7 逐项配置示例（按功能分组）
+
+以下按功能分组逐项给出含义、默认值与 YAML 写法；键名均可在源码中找到
+（`PaymentProviderProperties`、`PaymentCallbackProperties`、各任务/控制器/监听器上的
+`@ConditionalOnProperty`、`PaymentCipherService` 读取的 Environment 键）。
+
+**提供方 SPI（`PaymentProviderProperties`，前缀 `plugin.payment.provider`）**
+
+```yaml
+plugin:
+  payment:
+    provider:
+      default-spi: default    # 含义：全局兜底 SPI；默认值：default；为空时解析仍回落 default
+      alipay-spi: alipay      # 含义：支付宝渠道 SPI；默认值：default；为空时回落 default-spi
+      wechat-spi: wechat-pay  # 含义：微信渠道 SPI；默认值：default；为空时回落 default-spi
+      epay-spi: epay          # 含义：易支付渠道 SPI；默认值：epay；为空时仍按 epay 处理
+```
+
+**回调地址（`PaymentCallbackProperties`，前缀 `plugin.payment.callback`）**
+
+```yaml
+plugin:
+  payment:
+    callback:
+      base-url: https://pay.example.com   # 含义：对外回调根地址；默认值：无（不配置则无法生成 scoped 默认回调地址）
+```
+
+**调度开关（7 个内置任务类上的 `@ConditionalOnProperty`）**
+
+```yaml
+plugin:
+  payment:
+    scheduler:
+      enabled: true   # 含义：是否创建内置调度任务 Bean；默认值：true（matchIfMissing=true）
+```
+
+**运营台开关（`PaymentOpsController` 上的 `@ConditionalOnProperty`）**
+
+```yaml
+plugin:
+  payment:
+    ops:
+      enabled: true   # 含义：是否暴露 /ops/** 运营接口；默认值：true（matchIfMissing=true）
+```
+
+**加解密密钥（`PaymentCipherService` 读取的 Environment 键，非绑定式配置类）**
+
+```yaml
+plugin:
+  payment:
+    security:
+      key: change-me-16bytes             # 含义：当前加密密钥（16 字节 UTF-8）；默认值：无（回退内置 PaymentSystem16）
+      legacy-keys: old-key-1,old-key-2   # 含义：历史兼容密钥列表（逗号分隔）；默认值：无
+```
+
+**事件日志（`PaymentEventListener` 上的 `@ConditionalOnProperty`）**
+
+```yaml
+plugin:
+  payment:
+    event:
+      log-enabled: true   # 含义：是否打印支付事件日志；默认值：true（matchIfMissing=true）
+```
+
+### 3.8 完整 YAML 示例与生产注意事项
+
+支付中心宿主的完整配置示例（数据源按实际环境替换）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/payment
+    username: root
+    password: your-password
+
+plugin:
+  payment:
+    callback:
+      base-url: https://pay.example.com   # 必填：对外可访问根地址
+    provider:
+      default-spi: default
+      alipay-spi: alipay
+      wechat-spi: wechat-pay
+      epay-spi: epay
+    scheduler:
+      enabled: true       # 非支付中心服务建议 false
+    ops:
+      enabled: true       # 非支付中心服务建议 false
+    security:
+      key: change-me-16bytes              # 渠道敏感字段加密密钥（16 字节 UTF-8）
+      legacy-keys: old-key-1              # 密钥轮换期间保留旧密钥
+    event:
+      log-enabled: true
+```
+
+生产注意事项：
+
+1. **`callback.base-url` 必须对外可达**：第三方网关需要公网访问回调地址；内网/联调环境可在
+   `pay_global_config.payment_notify_base_url` 中维护联调地址，并用 `/ops/notify/error/{id}/retry` 手工重放。
+2. **密钥管理**：`security.key` 建议使用 16 字节强随机值并纳入密钥管理，切勿以内置 `PaymentSystem16` 上生产；
+   轮换时把旧密钥放入 `legacy-keys`，保证历史密文可读；密文格式为「16 字节随机 IV + 密文」的 Base64。
+3. **SPI 标识与依赖对应**：`wechat-spi: wechat-pay`、`epay-spi: epay` 依赖 `spring-support-tencent-starter`
+   的对应扩展，`alipay-spi: alipay` 依赖 `spring-support-aliyun-starter`；自研网关需按 `META-INF/extensions`
+   注册并标 `@Spi`。
+4. **渠道 Bean 需宿主注册**：`channel.impl` 的 10 个实现类未自动装配，未注册的渠道在下单/支付时报
+   「暂不支持的支付方式」。
+5. **调度与运营台按需关闭**：多服务共享依赖时，非支付中心实例建议 `scheduler.enabled=false`、
+   `ops.enabled=false`，避免重复跑批与暴露运营接口；任务治理走 `spring-support-job-starter` 控制台。
+6. **回调安全**：回调接口依赖 provider 网关验签（模块内不二次验签），务必保证网关扩展验签开启，
+   并通过 OAuth 白名单仅放行 `/api/notify/**`。
+
 ## 四、快速开始
 
 **第一步：引入依赖**（见「二、依赖与引入」），并保证已配置数据源与 Mapper 扫描（模块自动配置自带
@@ -181,11 +292,10 @@ plugin:
       wechat-spi: default
     scheduler:
       enabled: true
-      engine: internal
     ops:
       enabled: true
     security:
-      key: Your16ByteSecret                # 渠道敏感字段加密密钥，未配置时使用内置 PaymentSystem16
+      key: change-me-16bytes               # 渠道敏感字段加密密钥，未配置时使用内置 PaymentSystem16
 ```
 
 业务方服务（非支付运营中心）可关闭内置调度与运营接口：
@@ -327,9 +437,11 @@ plugin:
 - **回调控制器隐藏且不二次验签**：`PaymentNotifyController`/`WalletNotifyController` 标注 `@Hidden` 与
   `@ApiReturnFormatIgnore`；签名校验由 provider 网关（`parsePayNotify`/`verifyAndParsePayNotify`）完成，
   `logNotify` 记录的 `signVerified` 初始为 `null`。
-- **SCP/分账等未接入**：`pay_merchant.payment_profit_sharing_enabled`、`payment_coupon_enabled`、
-  `payment_split_table_enabled` 等商户开关仅有字段与 SQL 列，代码未实现分账、优惠、自动分表逻辑
-  （分表仅以独立任务组件形式存在）。
+- **商户开关接线状态**：`pay_merchant.payment_profit_sharing_enabled`（分账）、`payment_coupon_enabled`（优惠券）、
+  `payment_split_table_enabled`（自动分表）均已由对应业务消费——分账由 `ProfitSharingEventListener` 监听支付成功事件
+  按商户开关触发执行引擎，优惠券由下单核销/退券链路消费，自动分表由 `PaymentSplitTableGate` 闸门控制 4 个分区任务
+  （手动触发端点不受闸门限制）；渠道对账已落地（B1）：`PaymentReconciliationTask` 每日对昨日账单执行对账，
+  `ReconciliationController` 提供触发与查询入口（见 8.2）。
 - **Redis 未参与业务**：`RedisConfig` 声明的 `RedisTemplate` 序列化方案在模块业务代码中无引用，幂等/锁未使用 Redis。
 - **回调重退机制**：失败重试退避固定为 1/5/15/30/60 分钟，`maxRetryCount=5`，超过后标 `ABANDONED`；
   清理任务仅删除 `RESOLVED` 且超过 30 天的记录。
@@ -350,16 +462,29 @@ plugin:
 
 ### 8.1 A 档：数据模型已就位，只差业务实现（性价比最高）
 
+> **2026-11-25 更新：A 档三项已完成。** 优惠券域（模板/发放/下单核销/退券）、分账执行引擎
+> （分账单/接收方/回退三表 + 微信/支付宝网关对接 + 支付成功事件触发）、自动分表商户开关接线
+> （`PaymentSplitTableGate` 闸门）均已落地。
+
 | 增强点 | 现状 | 待补 |
 |:-------|:-----|:-----|
-| 分账（SCP/利润分配） | `pay_merchant.payment_profit_sharing_enabled` 字段已建（`V2.0__init_all_payment.sql:27`），代码未实现 | 分账创建/查询/回退链路，对接微信/支付宝分账 API；商户开关已有，缺执行引擎与分账账单表 |
-| 优惠券发放与核销 | `payment_coupon_enabled`、`coupon_deduct_withdrawable` 字段齐全；提现侧校验已实现（`CurrentAccountWalletController`「优惠券抵扣部分不可提现」） | 券模板、发放、下单核销、退券；提现校验已消费该语义，业务闭环只差发券/核销两环 |
-| 自动分表接线 | `payment_split_table_enabled` 字段在；分区创建/迁移任务已 `@Job` 化（`PaymentOrderPartitionCreateTask`/`MigrateTask`） | 「按商户开关触发」的编排：把 `payment_split_table_enabled` 与分区任务串起来 |
+| 分账（SCP/利润分配） | ✅ 已完成：`pay_profit_sharing_order/receiver/return` 三表 + `ProfitSharingService` 执行引擎（登记/幂等/比例算钱/微信/支付宝执行/回退），监听 `PaymentSuccessEvent` 按 `payment_profit_sharing_enabled` 触发 | 无 |
+| 优惠券发放与核销 | ✅ 已完成：券模板/发放/下单核销/退券全链路，提现侧「优惠券抵扣部分不可提现」校验闭环 | 无 |
+| 自动分表接线 | ✅ 已完成：4 个分区创建/迁移任务经 `PaymentSplitTableGate` 按 `payment_split_table_enabled` 商户开关触发，无商户开启时自动跳过 | 无 |
 
 ### 8.2 B 档：能力缺口（完全缺失，需新设计）
 
-1. **渠道对账**：仅有入职引导文案（`MerchantChannelServiceImpl`「配置对账策略」），无任何实现；渠道账单下载、
-   本地流水比对、差异工单整套缺失，是最大的功能空洞。
+1. **渠道对账**：✅ 已完成（2026-11-25）。新增 `pay_reconciliation_statement`（对账单）与
+   `pay_reconciliation_diff`（差异明细）两表；`ReconciliationService` 经 provider 网关取账单下载地址
+   （微信 `/v3/bill/tradebill`、支付宝 `alipay.data.dataservice.bill.downloadurl.query`），payment 侧用
+   JDK `HttpClient` 下载并解析（微信 gzip CSV、支付宝 zip 内 GBK CSV），与本地 `pay_transaction_record`
+   成功支付流水（transactionType=PAY、status=1、账单日当天）按商户订单号比对，产出
+   LOCAL_MISSING / CHANNEL_MISSING / AMOUNT_MISMATCH 三类差异（差额=渠道−本地）；按
+   （商户、渠道、账单日）唯一键幂等，重跑先删旧差异再重算。`ReconciliationController`（`/reconciliation`）
+   提供触发与查询端点：`POST /run`、`GET /statements/page`、`GET /statements/{statementNo}`、
+   `GET /statements/{statementNo}/diffs`、`GET /diffs/page`；`PaymentReconciliationTask`
+   （`plugin.payment.scheduler` 门控，默认每日 04:00）对昨日账单对账，单渠道失败登记 FAILED 对账单不中断整体。
+   支持渠道：WECHAT / ALIPAY。
 2. **渠道能力矩阵显式化**：`PaymentChannel` 目前以 `UnsupportedOperationException` 表达「不支持充值/转账/提现」，
    调用方只能靠异常探测；可参照设备模块 `DeviceCapabilityMatrix` 口径做显式能力声明，路由与 UI 据此过滤。
 3. **Redis 参与业务**：`RedisConfig` 空挂（见「已知限制」），幂等/防重全靠数据库；值得补回调通知幂等锁、
@@ -392,6 +517,7 @@ plugin:
 | 提现审核台 | `WalletWithdrawApprovalController` | 管理员审批/驳回；现有 `denyIfNecessary` 手写鉴权应换平台统一 OAuth 权限点 |
 | 钱包账户 | `WalletAccountController`、`WalletOrderController` | 账户余额、流水、充值/转账/提现订单 |
 | 商户与渠道配置 | `MerchantController`、`MerchantChannelController`、`MerchantSettingController` | 商户开关（分账/优惠/分表）、渠道费率与凭据（落库走 `PaymentCipherService` 加密） |
+| 渠道对账 | `ReconciliationController` | 触发对账（按日/商户/渠道）、对账单列表与详情、差异明细分页（三类差异筛选），金额双侧对照 |
 | 全局配置 | `PaymentGlobalConfigController`、`OrderConfigController` | 订单分区策略预览（`OrderConfigController` 已有 preview 端点，适合做成可视化向导） |
 
 组件口径复用平台前端既有约定：`ReTable`/`ReSearch` 列表、`RePageHead` 操作区、`ReDialog` 弹层、
@@ -399,6 +525,7 @@ plugin:
 
 ### 8.5 优先级
 
-1. **若重启**：先做 A 档三项（字段已在，缺的只是编排），再做渠道对账（B1，最缺的能力），UI 随管理端一起排期。
+1. **若重启**：A 档三项与 B1 渠道对账均已完成（2026-11-25）；下一步做管理端 UI（`pages/payment` 页面包，按 8.4
+   映射），随前端排期。
 2. **若不重启**：不再投入；本节作为知识存档。
 3. **不建议做**：订单号换算法、Redis 锁等锦上添花项——模块无宿主状态下属过度设计。

@@ -91,11 +91,14 @@ public class ShardingRuleManager {
             // 成员池统一由 MemberDataSourcePool 按命名空间清理
             pool.closeShardingPools();
             DataSourceContextSupport.DATA_SOURCE_MAP.remove(BEAN_NAME);
+            // 分片源摘除后注销默认源候选，默认源自动还原为原业务数据源
+            DataSourceContextSupport.unregisterCompositeDefaultSource(BEAN_NAME);
             activeRules = List.of();
             currentPhysical = List.of();
             lastRefreshAt = System.currentTimeMillis();
             lastRefreshResult = "无启用规则，分片数据源已摘除";
             log.info("[ds-runtime] {}", lastRefreshResult);
+            reResolveRouting();
             return List.of();
         }
 
@@ -131,6 +134,8 @@ public class ShardingRuleManager {
 
             // 旧实例不 close（会连带关闭成员池），仅替换引用交由 GC；成员池由池管理器差量清理
             DataSourceContextSupport.addDatasource(BEAN_NAME, sharding);
+            // 单业务数据源场景下，分片源接管默认源（业务免 @DS 直走分片）
+            DataSourceContextSupport.registerCompositeDefaultSource(BEAN_NAME);
             currentPhysical = new ArrayList<>(named.values());
             activeRules = List.copyOf(rules);
             reResolveRouting();

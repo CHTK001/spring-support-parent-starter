@@ -11,6 +11,64 @@ import java.util.Map;
  *
  * <p>配置前缀：{@code plugin.osgi}。控制 Felix 框架启动和远程管理。</p>
  *
+ * <p>完整配置示例（各键含义与默认值见对应字段说明）：</p>
+ * <pre>
+ * plugin:
+ *   osgi:
+ *     enabled: true                       # 自动装配总开关（默认 true）
+ *     storage: ./osgi-cache               # Felix 持久化存储目录
+ *     start-level: 4                      # 框架初始启动级别
+ *     storage-clean: onFirstInit          # onFirstInit / onInit / none
+ *     auto-start-installed-bundles: true  # 安装后是否自动启动
+ *     framework-properties:               # 透传 Felix 框架属性
+ *       org.osgi.framework.system.packages.extra: com.example.api
+ *     deploy:                             # 目录热部署（默认关闭）
+ *       enabled: false
+ *       directory: ./osgi-deploy
+ *       polling-interval: 10000
+ *       uninstall-on-removed: true
+ *       update-on-changed: false
+ *     source:                             # 源码扩展点（默认开启）
+ *       enabled: true
+ *       directory: ./osgi-source
+ *       output-directory:                 # 留空取 &lt;directory&gt;/../osgi-source-classes
+ *       polling-interval: 5000
+ *       groovy-enabled: true
+ *       script-engine: groovy
+ *     bridge:                             # Bean 桥接
+ *       acceptance-enabled: true
+ *       invalidate-on-bundle-lifecycle: true
+ *       proxy-enabled: true
+ *     endpoint:                           # /osgi/** 观测端点（默认关闭）
+ *       enabled: false
+ *       manage-enabled: true
+ *       lifecycle-timeout-seconds: 60
+ *       max-upload-bytes: 104857600
+ *     shell:                              # 远程管理（默认关闭）
+ *       enabled: false
+ *       protocol: ssh
+ *       port: 0                           # 0=按协议取默认（SSH 8122 / Telnet 6666）
+ *       host: 127.0.0.1
+ *       username: ops                     # 示例凭据，请改为真实值
+ *       password: change-me
+ *       host-key:                         # 留空取 target/osgi-hostkey.ser
+ *       allow-empty-credential: false
+ *       max-auth-attempts: 3
+ *       idle-timeout-seconds: 600
+ *       max-sessions: 8
+ *       install-framework-sshd-bundles: false
+ *     stats:                              # 体征采样
+ *       enabled: true
+ *       interval-seconds: 60
+ *       history-size: 240
+ *     recycle:                            # jar 回收站
+ *       enabled: true
+ *       dir-name: .recycle
+ *     spi:                                # 外部 bundle SPI 自动发布
+ *       enabled: true
+ *       max-scan-classes: 2000
+ * </pre>
+ *
  * <p>远程管理策略：shell 只支持一种协议，由 {@code protocol} 决定：
  * <ul>
  *   <li>{@code ssh}（默认）— 通过 Apache SSHD bundle 提供 SSH 远程管理</li>
@@ -31,11 +89,15 @@ public class OsgiProperties {
 
     /**
      * Felix 框架持久化存储目录。
+     *
+     * <p>默认 {@code ./osgi-cache}。</p>
      */
     private String storage = "./osgi-cache";
 
     /**
      * Felix 框架初始启动级别。
+     *
+     * <p>默认 {@code 4}。</p>
      */
     private int startLevel = 4;
 
@@ -53,11 +115,15 @@ public class OsgiProperties {
 
     /**
      * 是否在安装 bundle 后自动启动（默认开启）。
+     *
+     * <p>注意：该值仅在远程管理 shell 启用（{@code plugin.osgi.shell.enabled=true}）时
+     * 被装配进 launcher；REST {@code /osgi/bundles/install} 的 {@code start} 参数
+     * （默认 true）按次覆盖本配置。</p>
      */
     private boolean autoStartInstalledBundles = true;
 
     /**
-     * Felix 框架附加配置（原样透传给 Felix 框架）。
+     * Felix 框架附加配置（原样透传给 Felix 框架），默认空 Map。
      *
      * <p>用于需要自定义框架行为的场景，例如跨 bundle 共享应用侧接口包：</p>
      * <pre>
@@ -118,6 +184,15 @@ public class OsgiProperties {
      *
      * <p>控制 OSGi 服务投影为容器 Bean 时的验收与切换行为。</p>
      *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     bridge:
+     *       acceptance-enabled: true              # 是否启用 Bean 验收（默认 true）
+     *       invalidate-on-bundle-lifecycle: true  # 生命周期变化时失效快照（默认 true）
+     *       proxy-enabled: true                   # 外发 Bean 为切换代理（默认 true）
+     * </pre>
+     *
      * @author CH
      * @since 4.0.0.43
      */
@@ -125,7 +200,7 @@ public class OsgiProperties {
     public static class Bridge {
 
         /**
-         * 是否启用 Bean 验收。
+         * 是否启用 Bean 验收（默认开启）。
          *
          * <p>启用后，投影出的每个桥接定义都会经过 {@code BeanAcceptance} 验收器链；
          * 任一验收器拒绝即不纳入快照，拒绝原因可经
@@ -134,7 +209,7 @@ public class OsgiProperties {
         private boolean acceptanceEnabled = true;
 
         /**
-         * 是否在 bundle 生命周期变化时失效桥接快照。
+         * 是否在 bundle 生命周期变化时失效桥接快照（默认开启）。
          *
          * <p>关闭后将退化为「每次查询都重新枚举框架」，正确性不变但失去缓存收益；
          * 仅在调试切换行为时需要关闭。</p>
@@ -142,7 +217,7 @@ public class OsgiProperties {
         private boolean invalidateOnBundleLifecycle = true;
 
         /**
-         * 是否为桥接 Bean 生成动态代理，使在用引用随 OSGi 变化自动切换。
+         * 是否为桥接 Bean 生成动态代理，使在用引用随 OSGi 变化自动切换（默认开启）。
          *
          * <p>启用后，容器外发的桥接 Bean 是「每次调用都解析当前生效服务」的
          * JDK 动态代理：bundle 升级/卸载或更高 {@code service.ranking} 的服务上线后，
@@ -158,8 +233,20 @@ public class OsgiProperties {
     /**
      * 运行时观测端点配置。
      *
-     * <p>提供 {@code /osgi/**} 下的只读查询接口：框架统计、bundle 清单、
-     * 服务注册表、单 bundle 详情。变更类操作不在此暴露。</p>
+     * <p>提供 {@code /osgi/**} 下的观测与管理接口：框架统计、bundle 清单、
+     * 服务注册表、单 bundle 详情等只读查询随端点开放；安装/升级/启停/卸载、
+     * 批量操作与 jar 删除/回收站等变更类操作由 {@link #manageEnabled} 单独控制
+     * （默认允许）。端点整体由 {@link #enabled} 控制启闭（默认关闭）。</p>
+     *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     endpoint:
+     *       enabled: false                  # 端点总开关（默认 false）
+     *       manage-enabled: true            # 变更类操作开关（默认 true）
+     *       lifecycle-timeout-seconds: 60   # start/stop 等待上限秒，&le;0 不限
+     *       max-upload-bytes: 104857600     # 上传 jar 上限字节，&le;0 不限
+     * </pre>
      *
      * @author CH
      * @since 4.0.0.43
@@ -184,7 +271,7 @@ public class OsgiProperties {
         private boolean manageEnabled = true;
 
         /**
-         * 单个 bundle 启动/停止操作的最长等待时间（秒）。
+         * 单个 bundle 启动/停止操作的最长等待时间（秒），默认 60。
          *
          * <p>bundle 的 activator 可能在 start/stop 里阻塞（例如等待外部资源），
          * 同步调用会一直占用请求线程。超过该时长仍未返回即放弃等待并报错，
@@ -195,7 +282,7 @@ public class OsgiProperties {
         private int lifecycleTimeoutSeconds = 60;
 
         /**
-         * 单个插件 jar 的上传大小上限（字节）。
+         * 单个插件 jar 的上传大小上限（字节），默认 104857600（100MB）。
          *
          * <p>超限直接拒绝上传，避免超大文件占满磁盘。仅约束本端点的插件 jar 上传，
          * 不影响全局 multipart 配置。&le;0 表示不限制。</p>
@@ -246,7 +333,7 @@ public class OsgiProperties {
         private boolean enabled = true;
 
         /**
-         * 源码目录。
+         * 源码目录，默认 {@code ./osgi-source}。
          *
          * <p>目录不存在时按「无源码」处理，不报错——配置项可以先开起来再放源码。</p>
          */
@@ -268,7 +355,7 @@ public class OsgiProperties {
         private String outputDirectory = "";
 
         /**
-         * 扫描间隔（毫秒）。
+         * 扫描间隔（毫秒），默认 5000。
          *
          * <p>源码指纹（路径 + 大小 + 修改时间）未变化时不会触发编译。</p>
          */
@@ -276,7 +363,7 @@ public class OsgiProperties {
         private long pollingInterval = 5000L;
 
         /**
-         * 是否启用 Groovy 脚本扩展点。
+         * 是否启用 Groovy 脚本扩展点（默认开启）。
          *
          * <p>开启后目录下的 {@code .groovy} 也会被加载，走既有
          * {@code ScriptProvider} SPI。若 classpath 中没有对应引擎实现，
@@ -285,7 +372,7 @@ public class OsgiProperties {
         private boolean groovyEnabled = true;
 
         /**
-         * 脚本引擎名，对应 {@code ScriptProvider#engineName}。
+         * 脚本引擎名，对应 {@code ScriptProvider#engineName}，默认 {@code groovy}。
          */
         private String scriptEngine = "groovy";
     }
@@ -297,6 +384,17 @@ public class OsgiProperties {
      * 发现对应符号名的 bundle 已被移除时自动卸载，实现"改代码 → 丢 jar → 生效"的
      * 无重启迭代。适用于开发与测试环境，生产环境不建议开启。</p>
      *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     deploy:
+     *       enabled: false             # 是否启用目录热部署（默认 false）
+     *       directory: ./osgi-deploy   # 部署目录
+     *       polling-interval: 10000    # 扫描间隔（毫秒）
+     *       uninstall-on-removed: true # jar 移除后自动卸载（默认 true）
+     *       update-on-changed: false   # 移除后原地升级（默认 false）
+     * </pre>
+     *
      * @author CH
      * @since 4.0.0.43
      */
@@ -304,28 +402,28 @@ public class OsgiProperties {
     public static class Deploy {
 
         /**
-         * 是否启用目录热部署。
+         * 是否启用目录热部署（默认关闭）。
          */
         private boolean enabled = false;
 
         /**
-         * 部署目录。
+         * 部署目录，默认 {@code ./osgi-deploy}。
          */
         private String directory = "./osgi-deploy";
 
         /**
-         * 扫描间隔（毫秒）。
+         * 扫描间隔（毫秒），默认 10000。
          */
         // [P3C A20 豁免]
         private long pollingInterval = 10000L;
 
         /**
-         * 部署目录中 jar 移除后是否自动卸载对应 bundle。
+         * 部署目录中 jar 移除后是否自动卸载对应 bundle（默认开启）。
          */
         private boolean uninstallOnRemoved = true;
 
         /**
-         * 是否在移除对应 jar 后对已安装 bundle 执行原地升级。
+         * 是否在移除对应 jar 后对已安装 bundle 执行原地升级（默认关闭）。
          *
          * <p>关闭时移除 jar 会导致 bundle 停留在原版本；开启后
          * 以框架原生 update 替换为新内容，保留 bundle 标识与状态。</p>
@@ -338,6 +436,25 @@ public class OsgiProperties {
      *
      * <p>单一协议原则：shell 同时只启用一种远程连接方式。
      * 默认使用 SSH（端口 8122），安全性更高。</p>
+     *
+     * <pre>
+     * plugin:
+     *   osgi:
+     *     shell:
+     *       enabled: false                        # 是否启用远程管理（默认 false）
+     *       protocol: ssh                         # ssh / telnet
+     *       port: 0                               # 0=按协议取默认（SSH 8122 / Telnet 6666）
+     *       host: 127.0.0.1                       # 绑定地址
+     *       username: ops                         # SSH 用户名（示例，请改为真实值）
+     *       password: change-me                   # SSH 密码（示例，请改为真实值）
+     *       host-key:                             # 留空取 target/osgi-hostkey.ser
+     *       allow-empty-credential: false         # 空凭据登录，等同无认证暴露
+     *       max-auth-attempts: 3                  # 认证请求总数上限（最小 1）
+     *       idle-timeout-seconds: 600             # 空闲断开秒数，&le;0 用 SSHD 默认
+     *       max-sessions: 8                       # 并发会话上限，&le;0 不限
+     *       install-framework-sshd-bundles: false # 框架内安装 sshd bundle（当前不可用）
+     * </pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -345,7 +462,7 @@ public class OsgiProperties {
     public static class Shell {
 
         /**
-         * 是否启用远程管理。
+         * 是否启用远程管理（默认关闭）。
          */
         private boolean enabled = false;
 
@@ -364,17 +481,20 @@ public class OsgiProperties {
         private int port;
 
         /**
-         * 绑定地址。
+         * 绑定地址，默认 {@code 127.0.0.1}。
          */
         private String host = "127.0.0.1";
 
         /**
-         * 认证用户名（SSH 模式）。
+         * 认证用户名（SSH 模式），默认空串。
+         *
+         * <p>与 {@link #password} 须都非空才可登录
+         * （或显式开启 {@link #allowEmptyCredential}，仅限本地调试）。</p>
          */
         private String username = "";
 
         /**
-         * 认证密码（SSH 模式）。
+         * 认证密码（SSH 模式），默认空串。
          */
         private String password = "";
 
@@ -395,15 +515,17 @@ public class OsgiProperties {
         private boolean allowEmptyCredential = false;
 
         /**
-         * 单次连接允许的认证失败次数上限，超过则断开连接。
+         * 单次连接允许的认证请求次数上限，超过则断开连接，默认 3（最小 1）。
          *
          * <p>经 MINA SSHD 的 {@code max-auth-requests} 属性生效：
-         * 同一连接上认证请求达到该次数即被服务端主动断开。</p>
+         * 同一连接上认证请求达到该次数即被服务端主动断开。
+         * 注意：客户端一次认证流程内部会发送多个认证请求，
+         * 实际可容忍的密码试错次数少于该值。</p>
          */
         private int maxAuthAttempts = 3;
 
         /**
-         * SSH shell 空闲会话超时（秒）。
+         * SSH shell 空闲会话超时（秒），默认 600。
          *
          * <p>会话持续无流量超过该时长即被服务端断开，防止半死连接长期占用线程。
          * &le;0 表示不设置，使用 SSHD 默认值（10 分钟）。</p>
@@ -411,7 +533,7 @@ public class OsgiProperties {
         private int idleTimeoutSeconds = 600;
 
         /**
-         * 并发 SSH shell 会话上限。
+         * 并发 SSH shell 会话上限，默认 8。
          *
          * <p>超出上限的新会话会被立即拒绝并提示，防止远程管理通道被占满。
          * &le;0 表示不限制。</p>
@@ -550,7 +672,7 @@ public class OsgiProperties {
         private boolean enabled = true;
 
         /**
-         * 无 SPI 索引时兜底扫描的最大 class 数。
+         * 无 SPI 索引时兜底扫描的最大 class 数，默认 2000。
          *
          * <p>扫描发生在框架 bundle 事件线程上，超大 jar 全量扫描会拖慢
          * 事件派发；达到上限即停止并告警。仅对「没有 META-INF/extensions

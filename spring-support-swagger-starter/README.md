@@ -153,6 +153,73 @@ flowchart TB
 | `knife4j.documents[i].group` / `.name` | 分组 `group`（为空取 `group-name`） | 配置了分组时 |
 | `springdoc.group-configs[i].group/title/description/version/display-name/paths-to-match/packages-to-scan` | 对应分组字段 | 配置了分组时 |
 
+### 5.5 逐项配置示例（按功能分组）
+
+每组示例可独立粘贴到 `application.yml`，未写出的键走默认值；标 ⚠ 的键当前运行期不生效（预留字段），配置与否均不影响行为。
+
+#### ① 总开关与 Basic 认证（`plugin.swagger`）
+
+```yaml
+plugin:
+  swagger:
+    enable: true          # 总开关；不写该键 = 开启（matchIfMissing=true），仅显式 false 才关闭
+    username: admin       # 文档 Basic 认证账号；不写 = root（knife4j.basic.enable 固定开启）
+    password: change-me   # 文档 Basic 认证密码；不写 = root123，生产环境务必更换
+```
+
+#### ② 文档信息（写入 `knife4j-OpenAPI` 的 Info；需至少配置一个分组该 Bean 才注册）
+
+```yaml
+plugin:
+  swagger:
+    description: 订单中心接口文档   # 文档描述；默认 "无"
+    version: 2.3.0                # 文档版本；默认 "1.0"
+    terms-of-service: https://example.com/api-terms   # 服务条款；默认内置 12 条条款文本
+```
+
+#### ③ 分组路由（`plugin.swagger.knife4j[]` → `springdoc.group-configs` / `knife4j.documents`）
+
+```yaml
+plugin:
+  swagger:
+    knife4j:
+      - group: order              # 分组编码；不写取 group-name
+        group-name: 订单模块       # 分组名 → springdoc.group-configs[i].group / display-name
+        title: 订单服务 API        # 分组标题；默认 ""
+        description: 订单查询、创建、取消   # 分组描述；默认 ""
+        version: v2.3.0           # 分组版本；默认 "v1.0.0"
+        base-package:             # 分组扫描包 → packages-to-scan；不写 = 不限包
+          - com.example.order.controller
+        paths-to-match:           # 分组匹配路径 → paths-to-match；桥接时空值缺省 /**
+          - /order/**
+```
+
+#### ④ 离线/在线导出（`plugin.swagger.export`）
+
+```yaml
+plugin:
+  swagger:
+    export:
+      enabled: true               # 导出总开关（Runner 与 Controller 同受控）；不写 = true
+      output: ./docs/api.html     # 输出文件路径；默认 ./swagger-export.html；后缀决定类型（.html/.htm→html、.md/.markdown→markdown、.docx/.doc→word；为空回落 html）
+      title: 订单中心 OpenAPI      # 顶部标题；默认 "Open API 接口文档"；仅在原 OpenAPI 标题为空时回填
+      version: 2.3.0              # 版本徽标；默认 "1.0.0"；仅在原 OpenAPI 版本为空时回填
+      download-after-start: true  # 启动后立即离线导出；不写 = true
+      path: /chua/swagger/export  # 在线导出端点路径（@RequestMapping 占位符）；不写 = /chua/swagger/export
+```
+
+#### ⑤ 预留项（⚠ 当前运行期不生效）
+
+```yaml
+plugin:
+  swagger:
+    default-header:     # ⚠ 默认请求头；仅未被装配的 customize 预留类读取，当前配置无效
+      X-Request-Source: swagger-docs
+    log: false          # ⚠ 「Swagger 注解记录操作日志」声明；当前无代码读取
+    export:
+      include-request-sample: true   # ⚠ 「是否生成请求/响应示例」声明；当前无代码读取
+```
+
 ## 6. 使用方式
 
 ```xml
@@ -170,7 +237,7 @@ plugin:
   swagger:
     enable: true          # 显式关闭用 false
     username: admin       # 缺省 root
-    password: admin@2026  # 缺省 root123
+    password: change-me   # 缺省 root123，生产环境务必更换
     description: 业务接口文档
     version: 1.0.0
     knife4j:
@@ -187,7 +254,7 @@ plugin:
       download-after-start: true
 ```
 
-启动后验证：`curl -u admin:admin@2026 http://localhost:8080/doc.html`（Knife4j UI，Basic 认证）、`curl http://localhost:8080/v3/api-docs`（OpenAPI JSON）、`curl -u admin:admin@2026 'http://localhost:8080/chua/swagger/export' -o api.html`（在线导出）。控制台横幅出现 `knife4j · 文档` 标记（由 `knife4jServiceInfoContributor` 登记）；工作目录默认生成 `./swagger-export.html`（`download-after-start=true` 缺省行为）。
+启动后验证：`curl -u admin:change-me http://localhost:8080/doc.html`（Knife4j UI，Basic 认证）、`curl http://localhost:8080/v3/api-docs`（OpenAPI JSON）、`curl -u admin:change-me 'http://localhost:8080/chua/swagger/export' -o api.html`（在线导出）。控制台横幅出现 `knife4j · 文档` 标记（由 `knife4jServiceInfoContributor` 登记）；工作目录默认生成 `./swagger-export.html`（`download-after-start=true` 缺省行为）。
 
 可选依赖说明：
 
@@ -196,6 +263,51 @@ plugin:
 | `com.github.xiaoymin:knife4j-openapi3-jakarta-spring-boot-starter`（4.5.0）、`io.swagger.core.v3:swagger-annotations`（2.2.56）、`spring-boot-actuator` / `spring-boot-actuator-autoconfigure`、`spring-boot-webmvc` | 传递必选（本模块 pom 已带） | 缺失会导致文档 UI、OpenAPI 3 注解或 Boot 4 端点兼容 Bean 无法工作 |
 | `spring-support-common-starter`（`provided`，须宿主自带） | 编译期必需 | `Knife4jConfiguration` 的 `@Bean` 方法返回 `ServiceInfoContributor`、lambda 参数为 `ServiceInfoRegistry`，类加载即需要该包；缺失会导致该自动配置加载失败，文档 UI 与 Boot 4 端点兼容 Bean 一并失效，而非只少一条 `knife4j · 文档` 横幅 |
 | utils 层 `com.chua.common.support.lang.document`（需宿主显式引入 `utils-support-common-starter`） | 运行时必需 | `OpenApiDocumentProvider` SPI 与 `OpenApiDocumentData` 模型缺失时导出链路不可用；本模块的 `spring-support-common-starter` 为 `provided` 作用域，**不会**把 utils 传递进来，宿主必须自行声明 |
+
+### 6.1 完整 YAML 示例（生产参考）
+
+```yaml
+plugin:
+  swagger:
+    enable: true
+    username: ${SWAGGER_USER:admin}          # 口令经环境变量注入，勿把真实凭据提交进仓库
+    password: ${SWAGGER_PASSWORD:change-me}
+    description: 订单中心接口文档
+    version: 2.3.0
+    knife4j:
+      - group: order
+        group-name: 订单模块
+        title: 订单服务 API
+        description: 订单查询、创建、取消、售后
+        version: v2.3.0
+        base-package:
+          - com.example.order.controller
+        paths-to-match:
+          - /order/**
+      - group: pay
+        group-name: 支付模块
+        title: 支付服务 API
+        base-package:
+          - com.example.pay.controller
+        paths-to-match:
+          - /pay/**
+    export:
+      enabled: true
+      output: ./docs/api.html
+      title: 订单中心 OpenAPI
+      version: 2.3.0
+      download-after-start: true
+```
+
+### 6.2 生产注意事项
+
+1. **更换 Basic 缺省口令**：`knife4j.basic.enable` 固定为 `true`，未配置 `username/password` 时实际生效 `root / root123`；建议经环境变量注入并定期轮换，勿以缺省值上线。
+2. **收敛文档暴露面**：`/doc.html`、`/swagger-ui.html`、`/v3/api-docs`、`/chua/swagger/export` 会完整暴露接口结构。生产环境建议 `plugin.swagger.enable: false`，或由网关/安全组屏蔽上述路径；注意 `enable=false` 不会移除 springdoc 的 `/v3/api-docs`（见 Q2），需同时显式设置 `springdoc.api-docs.enabled=false`。
+3. **导出文件落盘**：`download-after-start=true`（缺省）会在进程工作目录写 `output` 文件；容器/只读文件系统环境应置为 `false`，或把 `output` 指向可写挂载点。
+4. **在线导出端点管控**：`/chua/swagger/export` 是本模块自带的普通 Controller 端点，不应默认依赖文档页的 Basic 认证保护它；不需要文档下载能力时设 `plugin.swagger.export.enabled=false`（Runner 与 Controller 一并关闭），或用 `plugin.swagger.export.path` 改写路径并在网关层管控。
+5. **markdown/word 导出不可用**：内置渲染 SPI 仅 `OpenApiHtmlProvider`（`html`），其余格式启动期记 error 跳过、在线端点返回 500；需要时按第 8 节自行提供 `OpenApiDocumentProvider` SPI 实现。
+6. **导出能力依赖组件扫描**：`SwaggerExportRunner` / `SwaggerExportController` 为 `@Component` / `@RestController`，不在 `AutoConfiguration.imports` 中；宿主组件扫描未覆盖 `com.chua.starter.swagger.support.export` 包时两者都不注册（文档 UI 不受影响）。
+7. **注意桥接属性的兜底语义**：`SwaggerEnvironmentPostProcessor` 以最低优先级写入 `springdoc.default-flat-param-object=true` 等属性，应用配置可覆盖；若不希望「对象参数平铺」展示，显式配置 `springdoc.default-flat-param-object: false`。
 
 ## 7. 使用场景
 

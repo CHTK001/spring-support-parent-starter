@@ -169,6 +169,170 @@ plugin:
         context-path: /webrtc
 ```
 
+### 5.4 逐项配置示例（按功能分组）
+
+以下按功能分组给出每个配置项的含义、默认值与 YAML 写法。所有键均对应抽象层 `com.chua.socket.support.properties.SocketProperties`（前缀 `plugin.socket`）的真实字段，与 5.1–5.3 的总表一致。
+
+**开关与生命周期**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.enable` | Socket 总开关；`false` 时抽象层不创建任何模板 Bean | `false` |
+| `plugin.socket.auto-start` | 是否随容器启动自动 `start()` 监听端口；`false` 时模板 Bean 仍存在，需手动调用 `template.start()` | `true` |
+
+```yaml
+plugin:
+  socket:
+    enable: true        # 默认 false，必须显式开启
+    auto-start: true    # 默认 true；false 时需自行 template.start()
+```
+
+**协议选择**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.protocol` | 单协议模式的协议名；使用本模块必须设为 `socketio` | `sse` |
+| `plugin.socket.protocols` | 多协议分组列表；非空时忽略顶层 `protocol` 与 `room` | 空列表 |
+
+```yaml
+plugin:
+  socket:
+    protocol: socketio   # 可选值：socketio / rsocket / sse / sse-server
+    # 多协议写法（与 protocol/room 二选一，protocols 非空时优先）：
+    # protocols:
+    #   - protocol: socketio
+    #     room:
+    #       - port: 9092
+```
+
+**网络与线程**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.host` | 所有实例的默认监听地址（`room[].host` 为空时使用） | `0.0.0.0` |
+| `plugin.socket.boss-count` | netty boss 线程数（每个 room 实例独立一份） | `1` |
+| `plugin.socket.work-count` | netty worker 线程数（每个 room 实例独立一份） | `100` |
+| `plugin.socket.use-linux-native-epoll` | 是否启用 Linux native Epoll | `false` |
+
+```yaml
+plugin:
+  socket:
+    host: 0.0.0.0
+    boss-count: 1
+    work-count: 100
+    use-linux-native-epoll: false   # 仅 Linux 生效
+```
+
+**心跳与帧**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.ping-interval` | 心跳间隔（毫秒） | `25000` |
+| `plugin.socket.ping-timeout` | 心跳超时（毫秒），需大于 `ping-interval` | `60000` |
+| `plugin.socket.max-frame-size` | 单帧与 HTTP 内容上限（字节），同时写入 `setMaxFramePayloadLength` 与 `setMaxHttpContentLength` | `1048576`（1MB） |
+| `plugin.socket.allow-custom-requests` | 是否允许自定义请求 | `true` |
+| `plugin.socket.codec-type` | 保留字段，本模块 `SocketIOSessionTemplate` 未使用 | `json` |
+
+```yaml
+plugin:
+  socket:
+    ping-interval: 25000
+    ping-timeout: 60000
+    max-frame-size: 1048576
+    allow-custom-requests: true
+    codec-type: json
+```
+
+**握手鉴权**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.auth-factory` | 鉴权工厂全限定类名（需 public 无参构造器）；不配置则匿名放行、`sendToUser` 不可用；配置后失败关闭 | 空 |
+
+```yaml
+plugin:
+  socket:
+    auth-factory: com.example.socket.AuthFactory   # 占位类名，替换为你的实现
+```
+
+**服务实例 `room[]`**（`SocketProperties.Room`）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.room[].client-id` | 实例标识，`servers` map 与会话缓存的 key | `default` |
+| `plugin.socket.room[].context-path` | Socket.IO 上下文路径 | `/socket.io` |
+| `plugin.socket.room[].port` | 监听端口；正数直接使用，负数以 9000 为基准换算（`-1`→9000、`-2`→9001） | `-1` |
+| `plugin.socket.room[].host` | 实例专属监听地址，为空时用主配置 `host` | 空 |
+| `plugin.socket.room[].auth-factory` | 预留字段，本模块当前按主配置 `auth-factory` 解析 | 空 |
+| `plugin.socket.room[].enable` | 是否启用该实例 | `true` |
+
+```yaml
+plugin:
+  socket:
+    room:
+      - client-id: default
+        context-path: /socket.io
+        port: 9092          # 生产建议写明确正数端口
+        host: 0.0.0.0       # 可省略，默认继承主配置 host
+        enable: true
+```
+
+**多协议分组 `protocols[]`**（`SocketProperties.ProtocolConfig`）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.protocols[].protocol` | 分组协议名 | `socketio` |
+| `plugin.socket.protocols[].room` | 该协议分组的服务实例列表 | 空列表 |
+
+```yaml
+plugin:
+  socket:
+    protocols:
+      - protocol: socketio
+        room:
+          - client-id: default
+            port: 9092
+```
+
+### 5.5 完整 YAML 配置示例（生产参考）
+
+```yaml
+plugin:
+  socket:
+    enable: true                                  # 总开关，默认 false，必须显式开启
+    auto-start: true                              # 随容器启动自动监听端口
+    protocol: socketio                            # 使用本模块必须为 socketio
+    host: 0.0.0.0                                 # 所有实例的默认监听地址
+    boss-count: 1                                 # 每 room 实例的 boss 线程数
+    work-count: 100                               # 每 room 实例的 worker 线程数
+    ping-interval: 25000                          # 心跳间隔（毫秒）
+    ping-timeout: 60000                           # 心跳超时（毫秒），需大于 ping-interval
+    max-frame-size: 1048576                       # 帧/HTTP 内容上限（字节），默认 1MB
+    allow-custom-requests: true
+    use-linux-native-epoll: false                 # Windows/macOS 保持 false
+    auth-factory: com.example.socket.AuthFactory  # 占位类名，替换为你的鉴权工厂
+    room:
+      - client-id: default                        # 主通道
+        port: 9092
+        context-path: /socket.io
+        enable: true
+      - client-id: webrtc                         # 独立业务通道（独立端口 + 上下文）
+        port: 9093
+        context-path: /webrtc
+        enable: true
+```
+
+### 5.6 生产注意事项
+
+- **端口规划**：每个 `room[]` 元素独占一个 netty 监听端口；负数端口以 9000 为基准（本模块 `start()` 写死 `room.getActualPort(9000)`），生产环境建议直接写正数端口，避免依赖隐式基准。端口被占用会抛 `RuntimeException("Socket.IO 服务启动失败: <clientId>")` 并导致容器启动失败，不会跳过该实例继续。
+- **线程与内存**：`boss-count` / `work-count` 按 room 实例各自创建（默认每实例 1 + 100 线程），多实例部署时按 `N × (boss + worker)` 估算线程开销；连接数不大时可下调 `work-count`。
+- **鉴权失败关闭**：配置 `auth-factory` 后，工厂加载失败、`getUser` 返回 null、`userId` 为空或抛异常，一律按 `FAILED_AUTHORIZATION` 拒绝连接，不会降级为匿名；工厂由反射创建（模板不在 Spring 容器内），必须提供 public 无参构造器。握手数据只含 `headers`（键已转小写）、`query`、`address` 三个键，令牌从 `headers` 取。
+- **跨源部署**：服务端固定放行自定义请求头 `x-oauth-token`（`setAllowHeaders("x-oauth-token")`）并自动放行 CORS 预检（OPTIONS）；若前端还要携带其它自定义头，需在网关/代理层处理，服务端不会额外放行。
+- **大报文**：`max-frame-size` 同时是帧上限与 HTTP 内容上限，上调前评估内存；入站事件固定按 `String.class` 接收，出站非 String 载荷经 Jackson 序列化为字符串（失败时退化为 `toString()`）。
+- **心跳调优**：`ping-timeout` 必须大于 `ping-interval`，并与前端 socket.io 客户端的超时/重连配置匹配；默认 25s/60s 适合常规场景。
+- **多实例水平扩展**：会话缓存是单机内存（`ConcurrentHashMap`），跨实例广播请引入 `spring-support-queue-starter` 并设 `plugin.queue.enable=true`，由 `SocketQueueBridge` 消费队列 `socket:push` 后广播；不要假设单实例会话对其它实例可见。
+- **优雅停机与手动启停**：`auto-start=true` 时由抽象层 `SocketLifecycle` 在容器关闭时调用 `stop()`；`auto-start=false` 时启停完全由调用方负责。`stop()` 会清空全部服务实例与会话缓存，重复 `start()` 前需确认已 `stop()`（`servers` 非空时 `start()` 直接告警返回）。
+
 ## 6. 使用方式
 
 ```xml

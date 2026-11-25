@@ -20,6 +20,35 @@ import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
  * 支持服务端多端口配置，客户端和服务端配置分离
  * </p>
  *
+ * <p>配置前缀：{@code plugin.sync}。完整 YAML 配置示例：</p>
+ * <pre>{@code
+ * plugin:
+ *   sync:
+ *     type: both                        # server / client / both，默认 client
+ *     crypto-secret: change-me          # 传输加密密钥，两端一致；不配则明文
+ *     crypto-version: 2                 # 2=HKDF 派生密钥（默认），1=旧版固定密钥
+ *     topics:                           # 全局主题映射（Key=主题名）
+ *       order: 订单主题
+ *     server:
+ *       enable: true                    # 服务端开关，默认 false
+ *       host: 0.0.0.0
+ *       port: 19380
+ *       protocol: websocket
+ *       service-name: sync-server       # 服务发现注册名
+ *       instances:
+ *         - name: main
+ *           port: 19380
+ *           protocol: websocket
+ *     client:
+ *       enable: true                    # 客户端开关，默认 false
+ *       protocol: websocket
+ *       server-host: 127.0.0.1
+ *       server-port: 19380
+ *     data-sync:
+ *       enabled: true                   # 数据交换服务开关，默认 true
+ *       topic-prefix: sync/data
+ * }</pre>
+ *
  * @since 2024/12/04
  * @author CH
  */
@@ -33,21 +62,51 @@ public class SyncProperties {
 
     /**
      * 程序类型：服务端-服务端，客户端-客户端，both-同时启用
+     * <p>默认值：{@code client}（仅客户端）。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     type: both
+     * }</pre>
      */
     private String type = "client";
 
     /**
      * 主题与处理器映射 (全局)
+     * <p>默认值：空 Map。Key 为主题名；Value 仅作备注，不参与处理器路由。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     topics:
+     *       order: 订单主题
+     *       notice: 通知主题
+     * }</pre>
      */
     private Map<String, String> topics = new LinkedHashMap<>();
 
     /**
      * 服务端配置
+     * <p>默认值：见 {@link ServerConfig}（enable=false、host=0.0.0.0、port=19380、protocol=http）。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     server:
+     *       enable: true
+     *       port: 19380
+     * }</pre>
      */
     private ServerConfig server = new ServerConfig();
 
     /**
      * 客户端配置
+     * <p>默认值：见 {@link ClientConfig}（enable=false、protocol=http、server-host=localhost、server-port=19380）。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     client:
+     *       enable: true
+     *       server-host: 127.0.0.1
+     * }</pre>
      */
     private ClientConfig client = new ClientConfig();
 
@@ -62,6 +121,12 @@ public class SyncProperties {
      * 加密或解密失败会抛异常，不会再静默降级为明文。旧版本（固定密钥 + 随机 IV）
      * 的密文仍可读，因此升级时先升级接收端、再升级发送端即可平滑过渡。
      * </p>
+     * <p>默认值：未设置（null，明文传输）。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     crypto-secret: ${SYNC_SECRET:change-me}
+     * }</pre>
      */
     private String cryptoSecret;
 
@@ -75,11 +140,25 @@ public class SyncProperties {
      * 升级顺序：新节点先设为 1 与旧节点互通，全部升级完成后再统一改为 2。
      * 解密端始终同时兼容 1 与 2。
      * </p>
+     * <p>默认值：{@code 2}；配置为空或 ≥2 均按 2 处理，≤1 按 1（旧版固定密钥）处理。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     crypto-version: 2
+     * }</pre>
      */
     private Integer cryptoVersion = 2;
 
     /**
      * 数据同步交换配置
+     * <p>默认值：见 {@link DataSyncConfig}（enabled=true、topic-prefix=sync/data、request-timeout=30000、default-channel=default）。</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     data-sync:
+     *       enabled: true
+     *       topic-prefix: sync/data
+     * }</pre>
      */
     private DataSyncConfig dataSync = new DataSyncConfig();
 
@@ -238,6 +317,27 @@ public class SyncProperties {
 
     /**
      * 服务端配置
+     *
+     * <p>配置前缀：{@code plugin.sync.server}。YAML 配置示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     server:
+     *       enable: true                  # 默认 false
+     *       host: 0.0.0.0
+     *       port: 19380
+     *       protocol: websocket
+     *       service-name: sync-server
+     *       scatter-id: sync-server
+     *       heartbeat: true
+     *       heartbeat-interval: 30
+     *       connect-timeout: 10000
+     *       instances:
+     *         - name: main
+     *           port: 19380
+     *           protocol: websocket
+     * }</pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -245,26 +345,64 @@ public class SyncProperties {
 
         /**
          * 是否启用服务端
+         * <p>默认值：{@code false}。与 {@code plugin.sync.type ∈ {server, both}} 双条件同时满足才装配服务端。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       enable: true
+         * }</pre>
          */
         private boolean enable = false;
 
         /**
          * 服务实例列表 (支持多端口)
+         * <p>默认值：空列表；为空时按 host/port/protocol 生成一个名为 {@code default} 的单实例。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           port: 19380
+         *           protocol: websocket
+         * }</pre>
          */
         private List<ServerInstance> instances = new ArrayList<>();
 
         /**
          * 默认绑定地址
+         * <p>默认值：{@code 0.0.0.0}（监听所有网卡）；仅在 {@code instances} 为空时作为单实例的绑定地址。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       host: 0.0.0.0
+         * }</pre>
          */
         private String host = "0.0.0.0";
 
         /**
          * 默认端口 (当 instances 为空时使用)
+         * <p>默认值：{@code 19380}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       port: 19380
+         * }</pre>
          */
         private int port = 19380;
 
         /**
          * 默认协议
+         * <p>默认值：{@code http}。取值为 SPI 注册键：http / websocket / tcp / udp / rsocket / socketio / kcp（后三者需引入对应 utils starter）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       protocol: websocket
+         * }</pre>
          */
         private String protocol = "http";
 
@@ -272,6 +410,13 @@ public class SyncProperties {
          * 服务发现名：非空时服务端启动后注册到发现中心。
          *
          * <p>客户端按同名查找，因此两端通常配置成同一个值。为空表示不注册。</p>
+         * <p>默认值：未设置（不注册发现中心；客户端寻址回落到该实例的 instances[].name）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       service-name: sync-server
+         * }</pre>
          */
         private String serviceName;
 
@@ -279,21 +424,49 @@ public class SyncProperties {
          * 业务分组标识（scatterId）：与服务端注册时写入的 scatterId 一致。
          *
          * <p>为空时回落到 serviceName。</p>
+         * <p>默认值：未设置（回落到 serviceName）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       scatter-id: sync-server
+         * }</pre>
          */
         private String scatterId;
 
         /**
          * 心跳开关
+         * <p>默认值：{@code true}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       heartbeat: true
+         * }</pre>
          */
         private boolean heartbeat = true;
 
         /**
          * 心跳间隔（秒）
+         * <p>默认值：{@code 30} 秒。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       heartbeat-interval: 30
+         * }</pre>
          */
         private int heartbeatInterval = 30;
 
         /**
          * 连接超时时间（毫秒）
+         * <p>默认值：{@code 10000} 毫秒。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       connect-timeout: 10000
+         * }</pre>
          */
         private int connectTimeout = 10000;
 
@@ -527,6 +700,23 @@ public class SyncProperties {
 
     /**
      * 服务实例配置 (支持多端口)
+     *
+     * <p>配置路径：{@code plugin.sync.server.instances[]}。YAML 配置示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     server:
+     *       instances:
+     *         - name: main
+     *           host: 0.0.0.0
+     *           port: 19380
+     *           protocol: websocket
+     *           enable: true
+     *           description: 主同步通道
+     *           topics:
+     *             order: 订单主题
+     * }</pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -534,36 +724,99 @@ public class SyncProperties {
 
         /**
          * 实例名称 (用于标识)
+         * <p>默认值：随机 UUID。同时是 {@code SyncServer#getInstances} 的 Key；服务发现注册名优先取 {@code server.service-name}，为空才用本名称。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         * }</pre>
          */
         private String name = UUID.randomUUID().toString();
 
         /**
          * 绑定地址
+         * <p>默认值：{@code 0.0.0.0}（监听所有网卡）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           host: 0.0.0.0
+         * }</pre>
          */
         private String host = "0.0.0.0";
 
         /**
          * 端口
+         * <p>默认值：{@code 19380}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           port: 19380
+         * }</pre>
          */
         private int port = 19380;
 
         /**
          * 协议类型
+         * <p>默认值：{@code rsocket-sync}。<b>注意：该默认键当前没有已注册的 SPI 实现</b>，手写实例必须显式改为 http / websocket / tcp / udp 等已注册协议，否则启动时取不到实例。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           protocol: websocket
+         * }</pre>
          */
         private String protocol = "rsocket-sync";
 
         /**
          * 是否启用
+         * <p>默认值：{@code true}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           enable: true
+         * }</pre>
          */
         private boolean enable = true;
 
         /**
          * 描述
+         * <p>默认值：未设置。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           description: 主同步通道
+         * }</pre>
          */
         private String description;
 
         /**
          * 该实例的主题映射 (可覆盖全局)
+         * <p>默认值：空 Map；同名 Key 覆盖 {@code plugin.sync.topics} 中的全局配置。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     server:
+         *       instances:
+         *         - name: main
+         *           topics:
+         *             order: 订单主题
+         * }</pre>
          */
         private Map<String, String> topics = new LinkedHashMap<>();
 
@@ -721,6 +974,25 @@ public class SyncProperties {
 
     /**
      * 客户端配置
+     *
+     * <p>配置前缀：{@code plugin.sync.client}。YAML 配置示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     client:
+     *       enable: true                  # 默认 false
+     *       protocol: websocket
+     *       server-host: 127.0.0.1
+     *       server-port: 19380
+     *       discovery-name: sync-server
+     *       heartbeat: true
+     *       heartbeat-interval: 30
+     *       connect-timeout: 10000
+     *       auto-reconnect: true
+     *       reconnect-interval: 5000
+     *       auto-register: true
+     * }</pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -728,11 +1000,25 @@ public class SyncProperties {
 
         /**
          * 是否启用客户端
+         * <p>默认值：{@code false}。与 {@code plugin.sync.type ∈ {client, both}} 双条件同时满足才装配客户端。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       enable: true
+         * }</pre>
          */
         private boolean enable = false;
 
         /**
          * 实例标识 (默认自动生成)
+         * <p>默认值：未设置。预留字段，当前实现未消费。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       instance-id: client-001
+         * }</pre>
          */
         private String instanceId;
 
@@ -741,27 +1027,62 @@ public class SyncProperties {
          * <p>
          * 多网卡场景下指定使用的 IP 地址，为空则自动获取
          * </p>
+         * <p>默认值：未设置。预留字段，当前实现未消费（出口 IP 由底层协议实现自行决定）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       ip-address: 192.168.1.20
+         * }</pre>
          */
         private String ipAddress;
 
         /**
          * 协议类型
+         * <p>默认值：{@code http}。取值为 SPI 注册键：http / websocket / tcp / udp / rsocket / socketio / kcp（后三者需引入对应 utils starter）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       protocol: websocket
+         * }</pre>
          */
         private String protocol = "http";
 
         /**
          * 服务端地址
+         * <p>默认值：{@code localhost}；仅在 {@code server-address} 为空时与 server-port 拼接使用。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       server-host: 192.168.1.10
+         * }</pre>
          */
         private String serverHost = "localhost";
 
         /**
          * 服务端端口
+         * <p>默认值：{@code 19380}；仅在 {@code server-address} 为空时与 server-host 拼接使用。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       server-port: 19380
+         * }</pre>
          */
         private int serverPort = 19380;
 
         /**
          * 服务端地址 (完整格式，优先级高于 服务端主机:服务端端口)
          * 格式：主机:端口 或 ws://主机:端口
+         * <p>默认值：未设置（为空时使用 server-host:server-port）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       server-address: ws://192.168.1.10:19380
+         * }</pre>
          */
         private String serverAddress;
 
@@ -770,6 +1091,13 @@ public class SyncProperties {
          *
          * <p>取值与服务端注册时使用的 service-name 保持一致（默认就是本端注册的服务名），
          * 两边相同才能互相找到。协议名（如 redis/nacos）由 discovery 的 bean 名决定，不在这里配置。</p>
+         * <p>默认值：未设置（不使用服务发现寻址）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       discovery-name: sync-server
+         * }</pre>
          */
         private String discoveryName;
 
@@ -777,66 +1105,158 @@ public class SyncProperties {
          * 业务分组标识（scatterId）：同一服务名下按业务集群隔离。
          *
          * <p>为空时回落到 discoveryName，保证零配置下客户端与服务端落在同一分组。</p>
+         * <p>默认值：未设置（回落到 discoveryName）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       scatter-id: sync-server
+         * }</pre>
          */
         private String scatterId;
 
         /**
          * 心跳开关
+         * <p>默认值：{@code true}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       heartbeat: true
+         * }</pre>
          */
         private boolean heartbeat = true;
 
         /**
          * 心跳间隔（秒）
+         * <p>默认值：{@code 30} 秒。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       heartbeat-interval: 30
+         * }</pre>
          */
         private int heartbeatInterval = 30;
 
         /**
          * 连接超时时间（毫秒）
+         * <p>默认值：{@code 10000} 毫秒。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       connect-timeout: 10000
+         * }</pre>
          */
         private int connectTimeout = 10000;
 
         /**
          * 是否启用自动重连
+         * <p>默认值：{@code true}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       auto-reconnect: true
+         * }</pre>
          */
         private boolean autoReconnect = true;
 
         /**
          * 最大重连次数，-1表示无限重连
+         * <p>默认值：{@code -1}（无限重连）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       max-reconnect-attempts: -1
+         * }</pre>
          */
         private int maxReconnectAttempts = -1;
 
         /**
          * 重连间隔时间（毫秒）
+         * <p>默认值：{@code 5000} 毫秒。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       reconnect-interval: 5000
+         * }</pre>
          */
         private long reconnectInterval = 5000;
 
         /**
          * 支持的功能列表
+         * <p>默认值：{@code ["job", "actuator", "file", "log"]}。预留字段：当前注册报文未携带该字段。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       capabilities: [job, actuator, file, log]
+         * }</pre>
          */
         private String[] capabilities = new String[]{"job", "actuator", "file", "log"};
 
         /**
          * 扩展元数据
+         * <p>默认值：空 Map。服务端可按其中的键值用 {@code publishByMetadata} 定向推送。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       metadata:
+         *         tenant: t-001
+         * }</pre>
          */
         private Map<String, Object> metadata = new HashMap<>();
 
         /**
          * 连接后是否自动注册
+         * <p>默认值：{@code true}。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       auto-register: true
+         * }</pre>
          */
         private boolean autoRegister = true;
 
         /**
          * 注册主题
+         * <p>默认值：{@code sync/client/register}。该主题由服务端系统处理，业务请勿占用。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       register-topic: sync/client/register
+         * }</pre>
          */
         private String registerTopic = "sync/client/register";
 
         /**
          * 心跳主题
+         * <p>默认值：{@code sync/client/heartbeat}。该主题由服务端系统处理，业务请勿占用。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       heartbeat-topic: sync/client/heartbeat
+         * }</pre>
          */
         private String heartbeatTopic = "sync/client/heartbeat";
 
         /**
          * 下线主题
+         * <p>默认值：{@code sync/client/offline}。该主题由服务端系统处理，业务请勿占用。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     client:
+         *       offline-topic: sync/client/offline
+         * }</pre>
          */
         private String offlineTopic = "sync/client/offline";
 
@@ -1293,6 +1713,18 @@ public class SyncProperties {
 
     /**
      * 数据同步交换配置
+     *
+     * <p>配置前缀：{@code plugin.sync.data-sync}。YAML 配置示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   sync:
+     *     data-sync:
+     *       enabled: true               # 默认 true
+     *       topic-prefix: sync/data
+     *       request-timeout: 30000
+     *       default-channel: default
+     * }</pre>
+     *
      * @author CH
      * @since 4.0.0
      */
@@ -1300,21 +1732,49 @@ public class SyncProperties {
 
         /**
          * 是否启用数据同步交换服务
+         * <p>默认值：{@code true}；对应装配条件 {@code plugin.sync.data-sync.enabled=true}（未配置时 matchIfMissing 视为开启）。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     data-sync:
+         *       enabled: true
+         * }</pre>
          */
         private boolean enabled = true;
 
         /**
          * 主题前缀
+         * <p>默认值：{@code sync/data}；实际主题 = 前缀 + {@code /} + 逻辑通道名。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     data-sync:
+         *       topic-prefix: sync/data
+         * }</pre>
          */
         private String topicPrefix = "sync/data";
 
         /**
          * 默认请求超时时间（毫秒）
+         * <p>默认值：{@code 30000} 毫秒。预留字段：当前 {@code SyncDataExchangeService#request} 为即发即忘实现，该超时暂未参与请求链路。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     data-sync:
+         *       request-timeout: 30000
+         * }</pre>
          */
         private long requestTimeout = 30000L;
 
         /**
          * 默认逻辑通道
+         * <p>默认值：{@code default}；调用时 channel 为空则使用该通道。</p>
+         * <pre>{@code
+         * plugin:
+         *   sync:
+         *     data-sync:
+         *       default-channel: default
+         * }</pre>
          */
         private String defaultChannel = "default";
 

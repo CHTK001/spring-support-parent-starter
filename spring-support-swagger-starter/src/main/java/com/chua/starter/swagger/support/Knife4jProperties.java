@@ -8,9 +8,33 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Swagger 刀4j 配置
+ * Swagger / Knife4j 基础配置（前缀 {@code plugin.swagger}）。
  *
- * <p>用于统一管理 Swagger / Knife4j 的基础配置和分组信息。</p>
+ * <p>统一管理文档总开关、Basic 认证、文档信息与分组列表；由
+ * {@link com.chua.starter.swagger.support.environment.SwaggerEnvironmentPostProcessor}
+ * 在启动早期桥接为 {@code knife4j.*} / {@code springdoc.*} 属性
+ * （属性源 {@code knife4j-extension}，最低优先级，可被应用配置覆盖）。</p>
+ *
+ * <p>完整 YAML 配置示例（注释含各键含义与默认值）：</p>
+ * <pre>
+ * plugin:
+ *   swagger:
+ *     enable: true                  # 总开关；字段默认 false，未配置时按 true 处理（matchIfMissing=true）
+ *     username: admin               # 文档 Basic 认证账号；默认空串，桥接缺省 root
+ *     password: change-me           # 文档 Basic 认证密码；默认空串，桥接缺省 root123
+ *     description: 业务接口文档       # 文档描述；默认 "无"
+ *     version: 1.0.0                # 文档版本；默认 "1.0"
+ *     knife4j:                      # 分组列表；不配置则不注册 knife4j-OpenAPI 与分组
+ *       - group: user               # 分组编码；为空时取 group-name
+ *         group-name: 用户模块       # 分组名 → springdoc.group-configs[i].group / display-name
+ *         title: 用户服务            # 分组标题；默认 ""
+ *         description: 用户相关接口   # 分组描述；默认 ""
+ *         version: v1.0.0           # 分组版本；默认 "v1.0.0"
+ *         base-package:             # 分组扫描包 → packages-to-scan；不写 = 不限包
+ *           - com.example.user.controller
+ *         paths-to-match:           # 分组匹配路径 → paths-to-match；桥接空值缺省 /**
+ *           - /user/**
+ * </pre>
  *
  * @author CH
  * @since 4.0.0
@@ -21,44 +45,138 @@ public class Knife4jProperties {
 
 
     /**
-     * 是否开启
+     * 文档总开关。
+     *
+     * <p>含义：控制 {@code Knife4jConfiguration} 是否装配，并经环境后处理器桥接为 {@code knife4j.enable}。</p>
+     * <p>默认值：{@code false}；但自动装配条件为 {@code matchIfMissing=true}，即配置中未出现该键时文档默认开启，
+     * 仅显式配置 {@code plugin.swagger.enable=false} 才关闭。该开关不会移除 springdoc 自身的 {@code /v3/api-docs}
+     * 端点（桥接层无条件写入 {@code springdoc.api-docs.enabled=true}）。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     enable: true
+     * </pre>
      */
     private boolean enable = false;
 
     /**
-     * 刀4j
+     * Knife4j 分组列表。
+     *
+     * <p>含义：多分组路由配置；非空时由 {@code Knife4jConfiguration} 注册 {@code knife4j-OpenAPI} Bean，
+     * 并经环境后处理器展开为 {@code springdoc.group-configs[i].*} 与 {@code knife4j.documents[i].*}。</p>
+     * <p>默认值：{@code null}（不配置则不注册分组与 {@code knife4j-OpenAPI}）。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     knife4j:
+     *       - group: user
+     *         group-name: 用户模块
+     *         base-package:
+     *           - com.example.user.controller
+     * </pre>
      */
     private List<Knife4j> knife4j;
 
     /**
-     * 默认请求头
+     * 默认请求头。
+     *
+     * <p>含义：声明文档调试时附加的默认请求头。</p>
+     * <p>默认值：{@code null}。</p>
+     * <p>⚠ 当前运行期不生效：仅未被装配的 {@code customize} 包预留类读取该配置，配置与否均不影响文档行为。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     default-header:
+     *       X-Request-Source: swagger-docs
+     * </pre>
      */
     private Map<String, String> defaultHeader;
 
     /**
-     * 账号
+     * 文档 Basic 认证账号。
+     *
+     * <p>含义：访问文档页面 / OpenAPI 数据的 Basic 认证用户名，桥接为 {@code knife4j.basic.username}
+     * （{@code knife4j.basic.enable} 固定为 {@code true}）。</p>
+     * <p>默认值：空串 {@code ""}；未配置该键时桥接占位符 {@code ${plugin.swagger.username:root}} 回落为 {@code root}。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     username: admin
+     * </pre>
      */
     private String username = "";
     /**
-     * 密码
+     * 文档 Basic 认证密码。
+     *
+     * <p>含义：访问文档页面 / OpenAPI 数据的 Basic 认证密码，桥接为 {@code knife4j.basic.password}。</p>
+     * <p>默认值：空串 {@code ""}；未配置该键时桥接占位符 {@code ${plugin.swagger.password:root123}} 回落为
+     * {@code root123}（生产环境务必显式更换）。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     password: change-me
+     * </pre>
      */
     private String password = "";
     /**
-     * 是否开启Swagger注解记录用户操作日志
+     * 是否开启 Swagger 注解记录用户操作日志。
+     *
+     * <p>含义：声明「Swagger 注解记录操作日志」意图。</p>
+     * <p>默认值：{@code false}。</p>
+     * <p>⚠ 当前本模块运行期无代码读取该字段，配置与否均不影响文档行为。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     log: false
+     * </pre>
      */
     private boolean log;
 
     /**
-     * 描述
+     * 文档描述。
+     *
+     * <p>含义：写入 {@code knife4j-OpenAPI} 的 {@code Info.description}（需配置分组，否则该 Bean 不注册）。</p>
+     * <p>默认值：{@code "无"}。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     description: 业务接口文档
+     * </pre>
      */
     private String description = "无";
     /**
-     * 版本
+     * 文档版本。
+     *
+     * <p>含义：写入 {@code knife4j-OpenAPI} 的 {@code Info.version}（需配置分组）。</p>
+     * <p>默认值：{@code "1.0"}。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     version: 1.0.0
+     * </pre>
      */
     private String version = "1.0";
 
     /**
-     * 条款初始化服务
+     * 服务条款。
+     *
+     * <p>含义：写入 {@code knife4j-OpenAPI} 的 {@code Info.termsOfService}（需配置分组）；
+     * 支持含 {@code <br>} 的多行 HTML 文本。</p>
+     * <p>默认值：内置 12 条服务条款长文本（含授权、使用限制、账户安全、责任限制、知识产权、隐私保护、争议解决等）。</p>
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     terms-of-service: https://example.com/api-terms
+     * </pre>
      */
     private String termsOfService = "1.服务提供方：本条款中的“服务提供方”指指定的公司或组织，提供API服务。<br>\n" +
             "  2.用户：本条款中的“用户”指使用服务提供方提供的API服务的个人、公司或组织。<br>\n" +
@@ -126,7 +244,26 @@ public class Knife4jProperties {
     @Data
     @Accessors(chain = true)
     /**
-     * 刀4j类。
+     * Knife4j 分组配置。
+     *
+     * <p>对应 {@code plugin.swagger.knife4j[]} 列表项，经环境后处理器展开为
+     * {@code springdoc.group-configs[i].*} 与 {@code knife4j.documents[i].*}。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   swagger:
+     *     knife4j:
+     *       - group: user            # 分组编码；为空取 group-name
+     *         group-name: 用户模块    # 分组名
+     *         title: 用户服务         # 分组标题；默认 ""
+     *         description: 用户接口   # 分组描述；默认 ""
+     *         version: v1.0.0        # 分组版本；默认 "v1.0.0"
+     *         base-package:          # 分组扫描包；不写 = 不限包
+     *           - com.example.user.controller
+     *         paths-to-match:        # 分组匹配路径；桥接空值缺省 /**
+     *           - /user/**
+     * </pre>
      *
      * @author CH
      * @since 4.0.0
@@ -134,33 +271,106 @@ public class Knife4jProperties {
     public static class Knife4j {
 
         /**
-         * 分组
+         * 分组编码。
+         *
+         * <p>含义：写入 {@code knife4j.documents[i].group} 与 {@code knife4j.documents[i].name}。</p>
+         * <p>默认值：{@code null}；桥接时为空回落取 {@code groupName}。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - group: user
+         * </pre>
          */
         private String group;
         /**
-         * 分组名
+         * 分组名。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].group} 与 {@code springdoc.group-configs[i].display-name}；
+         * {@code group} 为空时兼作 knife4j 侧分组编码。</p>
+         * <p>默认值：{@code null}。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - group-name: 用户模块
+         * </pre>
          */
         private String groupName;
 
         /**
-         * 路径 openapi
+         * 分组匹配路径。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].paths-to-match}（多值逗号拼接）。</p>
+         * <p>默认值：{@code null}；桥接时空值缺省 {@code "/**"}（匹配全部路径）。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - paths-to-match:
+         *           - /user/**
+         * </pre>
          */
         private String[] pathsToMatch;
         /**
-         * 基础包
+         * 分组扫描包。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].packages-to-scan}（多值逗号拼接）。</p>
+         * <p>默认值：{@code null}（不限定扫描包）。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - base-package:
+         *           - com.example.user.controller
+         * </pre>
          */
         private String[] basePackage;
         /**
-         * 标题
+         * 分组标题。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].title}。</p>
+         * <p>默认值：空串 {@code ""}。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - title: 用户服务
+         * </pre>
          */
         private String title = "";
 
         /**
-         * 描述
+         * 分组描述。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].description}。</p>
+         * <p>默认值：空串 {@code ""}。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - description: 用户相关接口
+         * </pre>
          */
         private String description = "";
         /**
-         * 版本
+         * 分组版本。
+         *
+         * <p>含义：写入 {@code springdoc.group-configs[i].version}。</p>
+         * <p>默认值：{@code "v1.0.0"}。</p>
+         * <p>YAML 示例：</p>
+         * <pre>
+         * plugin:
+         *   swagger:
+         *     knife4j:
+         *       - version: v1.0.0
+         * </pre>
          */
         private String version = "v1.0.0";
 

@@ -191,6 +191,249 @@ flowchart TD
 - DEFAULT（`use-default-whitelist=false` 可整体关闭）：`/**/oauth`、`/**/logout`、`/logout`、`/doc.html`、`/actuator`、`/actuator/**`、`/report`、`/webjars/**`、`/markdown/**`、`/v1/sys/setting`、`/static/**`、`/v1/file/**`、`/**/*.html`、`/v3/api-docs/**`、`/**/node/receive_push`、`/api/system/info`、`/api/auth/status`、`/api/extensions/**`、`/api/workshop/**`、`/v2/usage/**`、`/api/terminals`、`/api/terminals/**`。
 - 动态：`GET/POST/DELETE /oauth/whitelist?pattern=...`（`OAuthWhitelistController`，三个端点均要求 `@Permission("admin")`）。
 
+### 5.1 分场景配置示例
+
+按功能域拆分的 YAML 片段，可单独复制进 `application.yml`；未写出的键保持源码默认值（含义与默认值见上表）。
+
+**① 认证服务端与协议（远程校验链路）**
+
+```yaml
+plugin:
+  oauth:
+    address: http://auth-1:9090,http://auth-2:9090   # 认证服务端地址，多实例逗号分隔；默认无，不配则远程校验失败
+    protocol: http              # tcp(默认) / http / http-lite / oauth2 / rsocket / static
+    oauth-url: /verify          # 令牌校验路径，默认 /verify
+    login-address: http://auth-1:9090   # 登录端点；默认取 ${plugin.oauth.auth-address:}，为空时鉴权直接判失败
+    balance: polling            # 多地址负载均衡策略，默认 polling
+    connect-timeout: 5000       # 连接超时（毫秒），默认 5000
+    read-timeout: 10000         # 读取超时（毫秒），默认 10000
+    request-timeout: 15000      # 请求超时（毫秒），默认 15000
+    retry:
+      enabled: true             # 是否启用重试，默认 true
+      max-attempts: 3           # 最大重试次数，默认 3
+      delay: 1000               # 首次重试间隔（毫秒），默认 1000
+      multiplier: 1.5           # 重试间隔倍数（指数退避），默认 1.5
+      max-delay: 5000           # 最大重试间隔（毫秒），默认 5000
+    circuit-breaker:
+      enabled: true                        # 是否启用熔断，默认 true
+      failure-rate-threshold: 50           # 失败率阈值（%），默认 50
+      slow-call-rate-threshold: 80         # 慢调用率阈值（%），默认 80
+      slow-call-duration-threshold: 3000   # 慢调用时间阈值（毫秒），默认 3000
+      sliding-window-size: 10              # 滑动窗口大小，默认 10
+      wait-duration-in-open-state: 30      # 熔断打开后等待时间（秒），默认 30
+      permitted-calls-in-half-open-state: 5  # 半开状态允许的请求数，默认 5
+      fallback-message: 认证服务暂时不可用，请稍后重试   # 降级提示消息，默认同左
+```
+
+**② 令牌与传输加密**
+
+```yaml
+plugin:
+  oauth:
+    token-name: x-oauth-token     # 令牌请求头名，默认 x-oauth-token（同时兼容 Authorization: Bearer）
+    cookie-name: x-oauth-cookie   # 令牌 Cookie 名，默认 x-oauth-cookie
+    alias: Boren-Token            # 令牌别名头，默认 Boren-Token
+    encryption: aes               # 传输加密算法，默认 aes
+    enable-encryption: true       # 是否启用传输加密，默认 true
+    key:                          # AK/SK 二次加密，默认关闭
+      enabled: false
+      access-key: your-access-key # 占位符，请替换
+      secret-key: change-me       # 占位符，请替换；建议经环境变量 / 配置中心注入
+```
+
+**③ 拦截范围与白名单**
+
+```yaml
+plugin:
+  oauth:
+    block-address: /*               # 过滤器拦截地址（urlPatterns），默认 /*；与白名单是两套机制
+    whitelist:                      # 自定义白名单（Ant 风格），只能增加放行范围
+      - /api/public/**
+      - /v2/v1/**
+    whitelist-file: config/oauth.whitelist   # 外部白名单文件（热更新，# 注释），默认该路径
+    use-default-whitelist: true     # 内置默认白名单开关，默认 true；按自身路由收紧时置 false
+```
+
+**④ 登录与页面路径**
+
+```yaml
+plugin:
+  oauth:
+    login-page: /login                     # 登录页，默认 /login
+    login-form-action: /login/form         # 自渲染登录表单提交端点，默认 /login/form
+    logout-page: /logout                   # 登出页，默认 /logout
+    temporary-token-page: /temporary-token # 临时令牌页，默认 /temporary-token
+    upgrade-page: /upgrade                 # 升级页，默认 /upgrade
+    no-permission-page: /oauth-page        # 无权限页，默认 /oauth-page
+```
+
+**⑤ 认证缓存**
+
+```yaml
+plugin:
+  oauth:
+    cache-timeout: 21600         # 认证缓存秒数，默认 21600（6 小时）；窗口内权限变更不立即生效
+    cache-hot-cold-backup: true  # 缓存冷热备份，默认 true
+```
+
+**⑥ 限流（总开关默认关闭）**
+
+```yaml
+plugin:
+  oauth:
+    rate-limit:
+      enable: false              # 总开关，默认 false；打开后子开关默认即生效
+      login:                     # 登录限流（防暴力破解）
+        enable: true             # 默认 true
+        ip-limit: 30             # 同一 IP 窗口内最大登录尝试次数，默认 30
+        ip-window-seconds: 60    # 登录 IP 限流窗口（秒），默认 60
+        account-fail-limit: 5    # 同一账号失败锁定阈值（次），默认 5
+        account-lock-minutes: 5  # 账号锁定时间（分钟），默认 5
+      api:                       # 全局接口限流
+        enable: true             # 默认 true
+        qps: 200                 # 同一 IP 每窗口最大请求数，默认 200
+        window-seconds: 1        # 限流窗口（秒），默认 1
+```
+
+**⑦ 静态账号 / 本地登录（联调、内网场景）**
+
+```yaml
+plugin:
+  oauth:
+    temp:
+      open: true                      # 装配条件（非绑定字段），显式 true 才装配 /login 与 /v1/users/login
+      menu-path: classpath:menu.json  # 临时账号菜单文件，默认无
+      user: "admin:your-salt$your-md5-digest"  # 默认留空；推荐加盐摘要 用户名:盐$MD5(盐+口令)
+```
+
+**⑧ 指纹校验**
+
+```yaml
+plugin:
+  oauth:
+    fingerprint:
+      global-verification: false         # 全局指纹验证，默认 false（否则只验 @VerifyFingerprint 接口）
+      enable-client-verification: false  # 客户端侧指纹预校验，默认 false
+      config-cache-timeout: 3600         # 指纹配置缓存时间（秒），默认 3600
+      app-key-configs:                   # 按 appKey 配置，默认空 Map
+        "your-app-key":                  # 占位符，请替换
+          enable-fingerprint: 1          # 0 不启用 / 1 启用，默认 0
+          fingerprint-whitelist: "fp-1,fp-2"  # 指纹白名单，逗号分隔
+```
+
+**⑨ AI AppKey 本地校验**
+
+```yaml
+plugin:
+  oauth:
+    ai-app-key:
+      enabled: false   # 默认 false；还需 AI 模块提供 AppKeyAuthenticator 实现，否则静默无效
+```
+
+### 5.2 完整配置示例
+
+```yaml
+plugin:
+  oauth:
+    # ---- 开关与协议 ----
+    enable: true
+    protocol: http
+    address: http://auth-server:9090
+    oauth-url: /verify
+    login-address: http://auth-server:9090
+    balance: polling
+    # ---- 令牌与加密 ----
+    token-name: x-oauth-token
+    cookie-name: x-oauth-cookie
+    alias: Boren-Token
+    encryption: aes
+    enable-encryption: true
+    # ---- 拦截与白名单 ----
+    block-address: /*
+    whitelist:
+      - /api/public/**
+    whitelist-file: config/oauth.whitelist
+    use-default-whitelist: true
+    # ---- 页面路径 ----
+    login-page: /login
+    login-form-action: /login/form
+    logout-page: /logout
+    temporary-token-page: /temporary-token
+    upgrade-page: /upgrade
+    no-permission-page: /oauth-page
+    # ---- 缓存 / 超时 / 有效期 ----
+    cache-timeout: 21600
+    cache-hot-cold-backup: true
+    connect-timeout: 5000
+    read-timeout: 10000
+    request-timeout: 15000
+    static-token-expire-seconds: 86400
+    local-admin-fallback: false
+    # ---- 重试 ----
+    retry:
+      enabled: true
+      max-attempts: 3
+      delay: 1000
+      multiplier: 1.5
+      max-delay: 5000
+    # ---- 熔断 ----
+    circuit-breaker:
+      enabled: true
+      failure-rate-threshold: 50
+      slow-call-rate-threshold: 80
+      slow-call-duration-threshold: 3000
+      sliding-window-size: 10
+      wait-duration-in-open-state: 30
+      permitted-calls-in-half-open-state: 5
+      fallback-message: 认证服务暂时不可用，请稍后重试
+    # ---- 限流 ----
+    rate-limit:
+      enable: false
+      login:
+        enable: true
+        ip-limit: 30
+        ip-window-seconds: 60
+        account-fail-limit: 5
+        account-lock-minutes: 5
+      api:
+        enable: true
+        qps: 200
+        window-seconds: 1
+    # ---- AK/SK 二次加密 ----
+    key:
+      enabled: false
+      access-key: your-access-key
+      secret-key: change-me
+    # ---- 静态账号（联调场景）----
+    temp:
+      open: false
+      menu-path: classpath:menu.json
+      user: "admin:your-salt$your-md5-digest"
+    # ---- 指纹校验 ----
+    fingerprint:
+      global-verification: false
+      enable-client-verification: false
+      config-cache-timeout: 3600
+      app-key-configs:
+        "your-app-key":
+          enable-fingerprint: 1
+          fingerprint-whitelist: "fp-1,fp-2"
+    # ---- AI AppKey 本地校验 ----
+    ai-app-key:
+      enabled: false
+```
+
+### 5.3 生产环境注意事项
+
+- **认证服务端地址必配**：`address` 默认无，不配则远程校验失败；`login-address` 为空时鉴权同样直接判失败。多实例用逗号分隔并保持 `balance=polling` 轮询。
+- **严禁绕过鉴权**：`local-admin-fallback=true` 等价于无令牌即 admin，只能用于本地联调；生产保持默认 `false`。本地联调更推荐 `dev`/`test` profile + `enable=false` 走匿名直通降级。
+- **密钥不入库**：`key.access-key`、`key.secret-key` 与 `temp.user` 中的口令一律以占位符书写、经环境变量 / 配置中心注入；`temp.user` 推荐加盐摘要形式（`用户名:盐$MD5(盐+口令)`），避免明文落盘。
+- **白名单收敛**：内置默认白名单含 `/actuator/**`、`/v3/api-docs/**`、`/**/*.html` 等放行项，暴露管理端点前先评估风险；不需要时置 `use-default-whitelist=false`（登录链路 ALWAYS 豁免不受影响）。不要把凭据读取、AI 协议等敏感端点加进 `whitelist`。
+- **限流与熔断**：`rate-limit.enable` 默认关闭，生产建议打开并按压测结论调整 `api.qps` 与登录阈值；熔断是 **fail-closed**——打开时按「认证服务端异常」降级并进入失败链路，不会静默放行，`fallback-message` 随降级日志输出。
+- **缓存时延权衡**：认证信息默认缓存 6 小时，权限变更 / 踢人在窗口内不立即生效；对时效敏感的系统调小 `cache-timeout`，或主动调用 `AbstractProtocol#invalidateCache` / `revokeToken`。
+- **静态令牌有效期**：`static-token-expire-seconds` 实际取值夹到 `[60, 604800]`，超范围配置会被夹取而不报错，按需设置并知晓上限。
+- **超时与重试**：`connect-timeout` / `read-timeout` / `request-timeout` 未做 ≤0 夹取，保持正数；重试默认指数退避（1.5 倍、上限 5 秒），认证服务端故障时注意重试与熔断叠加对上游的冲击。
+
 ## 6. 使用方式
 
 Maven 坐标：
@@ -215,6 +458,8 @@ plugin:
     whitelist:
       - /api/public/**
 ```
+
+更多按功能域拆分的配置示例与完整配置模板见 5.1 / 5.2 节。
 
 业务代码里用注解与注入的 `AuthService`：
 

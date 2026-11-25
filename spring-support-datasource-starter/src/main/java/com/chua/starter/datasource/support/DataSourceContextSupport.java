@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import javax.sql.DataSource;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.chua.starter.datasource.support.DynamicDataSource.TARGET_DATA_SOURCES;
 
@@ -26,6 +28,24 @@ public class DataSourceContextSupport {
     }
 
     public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>(); // 数据源映射
+
+    /**
+     * 数据源注册顺序（按首次注册先后记录）
+     * <p>用于默认数据源判定：未注册名为 {@code master} 的数据源时，取第一个注册的数据源
+     * 充当默认源（master 角色）。同名重复注册不改变次序；条目失效（从
+     * {@link #DATA_SOURCE_MAP} 移除）后由读取方跳过。</p>
+     */
+    public static final List<String> DATA_SOURCE_ORDER = new CopyOnWriteArrayList<>();
+
+    /**
+     * 运行期聚合源（分片 {@code shardingDataSource} / Calcite 联邦 {@code calciteDataSource}）
+     * 的默认源候选，按注册先后记录。
+     * <p>当业务数据源恰好只有一个时，在册的聚合源临时充当默认源（master 角色），
+     * 业务免 {@code @DS} 直走分片/联邦；聚合源摘除后由
+     * {@link #resolveCompositeDefaultSource(Map)} 返回 null，默认源自动还原为原业务源。
+     * 多数据源场景不接管，默认源仍为 {@code master}/第一个注册源。</p>
+     */
+    public static final List<String> COMPOSITE_DEFAULT_CANDIDATES = new CopyOnWriteArrayList<>();
 
     /**
      * 默认数据源
@@ -82,15 +102,68 @@ public class DataSourceContextSupport {
     /**
      * 添加数据源
      * <p>若 SQL 监听已启用，注册前会统一包装数据源（幂等），实现纯 JDBC 层 SQL 监控。</p>
+     * <p>首次注册会按先后顺序记录到 {@link #DATA_SOURCE_ORDER}，作为「未命名 master 时取第一个」的依据。</p>
      *
      * @param name       名称
      * @param dataSource 添加数据源
      */
     public static void addDatasource(String name, DataSource dataSource) {
         DataSource target = com.chua.starter.datasource.monitor.DataSourceSqlMonitor.wrapIfEnabled(name, dataSource);
-        TARGET_DATA_SOURCES.put(name, target);
+        Object previous = TARGET_DATA_SOURCES.put(name, target);
+        if (null == previous && !DATA_SOURCE_ORDER.contains(name)) {
+            // 首次注册才记录顺序；同名重复注册（含移除后重注册）不改变、不重复记录次序
+            DATA_SOURCE_ORDER.add(name);
+        }
         // 自动检测并注册数据源分组（如 slave_1 → slave 组）
         DataSourceGroupRegistry.register(name, target);
+    }
+
+    /**
+     * 登记运行期聚合源为默认源候选（分片/联邦刷新建源后调用）
+     *
+     * @param name 聚合源名称（如 shardingDataSource / calciteDataSource）
+     */
+    public static void registerCompositeDefaultSource(String name) {
+        if (name != null && !COMPOSITE_DEFAULT_CANDIDATES.contains(name)) {
+            COMPOSITE_DEFAULT_CANDIDATES.add(name);
+        }
+    }
+
+    /**
+     * 注销运行期聚合源的默认源候选（分片/联邦摘除后调用），默认源随之自动还原
+     *
+     * @param name 聚合源名称
+     */
+    public static void unregisterCompositeDefaultSource(String name) {
+        if (name != null) {
+            COMPOSITE_DEFAULT_CANDIDATES.remove(name);
+        }
+    }
+
+    /**
+     * 解析「聚合源接管默认源」：仅当业务数据源恰好一个且存在在册聚合源时生效
+     * <p>聚合源候选必须仍存在于当前注册表，防止默认源悬空指向已摘除的聚合源。</p>
+     *
+     * @param sources 当前数据源注册表
+     * @return 应充当默认源的聚合源；条件不满足返回 null（调用方回退常规规则）
+     */
+    public static Object resolveCompositeDefaultSource(Map<Object, Object> sources) {
+        if (COMPOSITE_DEFAULT_CANDIDATES.isEmpty() || sources.isEmpty()) {
+            return null;
+        }
+        long businessCount = sources.keySet().stream()
+                .filter(key -> !COMPOSITE_DEFAULT_CANDIDATES.contains(String.valueOf(key)))
+                .count();
+        if (businessCount != 1) {
+            return null;
+        }
+        for (String name : COMPOSITE_DEFAULT_CANDIDATES) {
+            Object dataSource = sources.get(name);
+            if (dataSource != null) {
+                return dataSource;
+            }
+        }
+        return null;
     }
 
     /**

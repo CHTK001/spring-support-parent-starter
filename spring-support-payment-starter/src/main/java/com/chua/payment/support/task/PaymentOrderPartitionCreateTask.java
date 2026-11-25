@@ -3,6 +3,7 @@ package com.chua.payment.support.task;
 import com.chua.payment.support.service.OrderPartitionConfigService;
 import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 /**
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
  * @since 4.0.0.51
  */
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
@@ -19,6 +21,10 @@ public class PaymentOrderPartitionCreateTask implements PaymentManagedTask {
      * 分表配置服务
      */
     private final OrderPartitionConfigService orderPartitionConfigService;
+    /**
+     * 分表开关闸门
+     */
+    private final PaymentSplitTableGate paymentSplitTableGate;
     @Override public String taskKey() { return "payment.order.partition.create"; }
     @Override public String taskName() { return "订单分表预创建"; }
     @Override public String defaultCron() { return "0 0 2 * * ?"; }
@@ -29,5 +35,11 @@ public class PaymentOrderPartitionCreateTask implements PaymentManagedTask {
             cron = "0 0 2 * * ?",
             desc = "根据订单分表配置预创建未来分区表"
     )
-    public void execute() { orderPartitionConfigService.executeAutoCreate("ORDER"); }
+    public void execute() {
+        if (!paymentSplitTableGate.anyMerchantEnabled()) {
+            log.info("[分表] 无商户启用支付分表，跳过订单分表预创建");
+            return;
+        }
+        orderPartitionConfigService.executeAutoCreate("ORDER");
+    }
 }

@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 教育 AI 模块配置。
  *
  * <p>对应 application.yml 中的 {@code plugin.eduai} 配置段（各字段含义与默认值见嵌套类 Javadoc）：</p>
- * <pre>{@code
+ * <pre>
  * plugin:
  *   eduai:
  *     marking:
@@ -38,16 +38,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       retry:
  *         times: 5                   # 最大重试次数，0 = 不重试（默认 5）
  *         backoff-millis: 1000       # 初始退避毫秒（默认 1000）
- *         backoff-multiplier: 2.0    # 退避倍数，<=1 按 2 处理（默认 2.0）
- *         max-backoff-millis: 20000  # 退避上限毫秒，<=0 按 15000 处理（默认 20000）
+ *         backoff-multiplier: 2.0    # 退避倍数，&lt;=1 按 2 处理（默认 2.0）
+ *         max-backoff-millis: 20000  # 退避上限毫秒，&lt;=0 按 15000 处理（默认 20000）
  *         retry-on-transient: true   # 除限流 429 外重试瞬时故障（默认 true）
  *     alert:                         # 顶层字段：前缀是 plugin.eduai.alert，不在 ai 之下
- *       enabled: true                # 是否启用重试耗尽告警（默认 false）
+ *       enabled: true                # 开启重试耗尽告警（不配置或为 false 时关闭）
  *       webhook-url: https://your-webhook.example.com/eduai-alert
- *       timeout-millis: 5000         # 告警 HTTP 超时毫秒，<=0 按 5000 处理（默认 5000）
+ *       timeout-millis: 5000         # 告警 HTTP 超时毫秒，&lt;=0 按 5000 处理（默认 5000）
  *     collect:
- *       default-cron: "0 0/30 * * * ?"  # 采集默认调度周期（当前未读取，兼容声明）
- * }</pre>
+ *       default-cron: "0 *&#47;30 * * * ?"  # 采集默认调度周期（当前未读取，兼容声明）
+ * </pre>
  *
  * @since 4.0.0.42
  * @author CH
@@ -488,12 +488,12 @@ public class EduAiProperties {
      * <p>采集调度已收敛到 collect-starter（走 {@code plugin.collect.*} 前缀），
      * 本组当前主代码无读取点，仅作兼容声明保留。</p>
      *
-     * <pre>{@code
+     * <pre>
      * plugin:
      *   eduai:
      *     collect:
-     *       default-cron: "0 0/30 * * * ?"   # 采集任务未填 Cron 时的默认调度周期（默认值，当前未读取）
-     * }</pre>
+     *       default-cron: "0 *&#47;30 * * * ?"   # 采集任务未填 Cron 时的默认调度周期（默认值，当前未读取）
+     * </pre>
      *
      * @author CH
      * @since 4.0.0
@@ -502,8 +502,8 @@ public class EduAiProperties {
         /**
          * 采集任务未配置 Cron 时的默认调度周期（Spring 6 Cron）。
          *
-         * <p>默认 {@code "0 0/30 * * * ?"}（每 30 秒一次的等价 Cron 写法）；当前主代码无读取点（采集已收敛到 collect-starter）。
-         * YAML：{@code plugin.eduai.collect.default-cron: "0 0/30 * * * ?"}。</p>
+         * <p>默认 <code>"0 *&#47;30 * * * ?"</code>（每 30 分钟一次的等价 Cron 写法）；当前主代码无读取点（采集已收敛到 collect-starter）。
+         * YAML：<code>plugin.eduai.collect.default-cron: "0 *&#47;30 * * * ?"</code>。</p>
          */
         private String defaultCron = "0 */30 * * * ?";
     }
@@ -512,7 +512,7 @@ public class EduAiProperties {
      * AI 调用重试耗尽时的告警配置。
      *
      * <p>重试全部失败后触发 HTTP POST 到指定地址，供接入钉钉/企微/飞书 Webhook 等通知渠道。
-     * 默认不开启；配置 webhookUrl 后立即生效，无需重启。</p>
+     * 默认不开启；告警参数在应用启动时一次性装配生效，运行期修改 webhookUrl 需重启应用。</p>
      *
      * <p>注意：本组是 {@code EduAiProperties} 的顶层字段，YAML 前缀是
      * {@code plugin.eduai.alert.*}，不是 {@code plugin.eduai.ai.alert.*}。</p>
@@ -521,7 +521,7 @@ public class EduAiProperties {
      * plugin:
      *   eduai:
      *     alert:
-     *       enabled: true                                              # 是否启用告警（默认 false）
+     *       enabled: true                                              # 开启告警（不配置或为 false 时关闭）
      *       webhook-url: https://your-webhook.example.com/eduai-alert  # Webhook 地址（默认空，留空不发送）
      *       timeout-millis: 5000                                       # HTTP 超时毫秒，<=0 按 5000 处理（默认 5000）
      * }</pre>
@@ -534,7 +534,7 @@ public class EduAiProperties {
         /**
          * 是否启用告警。
          *
-         * <p>默认 {@code false}。YAML：{@code plugin.eduai.alert.enabled: true}。</p>
+         * <p>默认 {@code false}。开启示例：{@code plugin.eduai.alert.enabled: true}。</p>
          */
         private boolean enabled = false;
         /**

@@ -128,6 +128,89 @@ sequenceDiagram
 | `room.turn-user` | `String` | 空串 | TURN 用户名 |
 | `room.turn-password` | `String` | 空串 | TURN 密码 |
 
+### 5.3 逐项配置示例（按功能分组）
+
+以下示例均可直接用于 `application.yml`；「默认值」与源码字段初始化一致。
+
+#### （1）基础开关与端点（`plugin.websocket`）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.websocket.enable` | 总开关；`false` 时整个自动配置跳过，不注册端点与 Bean | `false` |
+| `plugin.websocket.endpoints` | 端点路径列表，逐个注册到同一个 `DelegatingWebSocketHandler`，与应用同端口 | `["/ws"]` |
+| `plugin.websocket.allowed-origins` | 允许的 Origin；空列表时不调用 `setAllowedOrigins`（交由容器默认） | `["*"]` |
+
+```yaml
+plugin:
+  websocket:
+    enable: true                 # 不开启则整个模块不装配
+    endpoints:
+      - /ws                      # 默认端点
+      # - /ws/v2                 # 可注册多个端点
+    allowed-origins:
+      - "*"                      # 生产环境建议收敛为具体 Origin
+```
+
+#### （2）SockJS 回退
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.websocket.sock-js` | 是否启用 SockJS 回退（老浏览器/受限网络） | `false` |
+| `plugin.websocket.heartbeat-interval` | SockJS 心跳间隔（ms）；仅 `sock-js=true` 时写入 `setHeartbeatTime` | `25000` |
+
+```yaml
+plugin:
+  websocket:
+    sock-js: true
+    heartbeat-interval: 25000    # 0 表示禁用心跳（按字段注释口径，本模块原样透传）
+```
+
+#### （3）缓冲与超时
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.websocket.max-message-size` | 文本/二进制帧缓冲上限（字节），写入 `ServletServerContainerFactoryBean` | `65536` |
+| `plugin.websocket.send-time-limit` | 发送超时（ms）；当前实现用作会话空闲超时：`maxSessionIdleTimeout = 2 × send-time-limit` | `10000` |
+| `plugin.websocket.send-buffer-size-limit` | 发送缓冲上限（字节）；字段存在但当前自动装配未使用 | `524288` |
+
+```yaml
+plugin:
+  websocket:
+    max-message-size: 1048576    # 1MB，按最大单帧业务报文评估
+    send-time-limit: 10000       # 会话空闲超时 = 2 × 10000 = 20000ms
+    send-buffer-size-limit: 524288
+```
+
+#### （4）房间信令（`room.*`，WebRTC P2P）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `room.enable` | 文档性开关；当前不控制任何 Bean 创建 | `false` |
+| `room.endpoint` | 文档性端点描述；实际端点由 `plugin.websocket.endpoints` 决定 | `/api/rooms/{roomId}/ws` |
+| `room.max-peers` | 每房间最大参与端点数（P2P 即 2）；当前仅用于 `RoomServer` 启动日志 | `2` |
+| `room.timeouts.lease-expires-ms` | 端点心跳续期时间，超时判定掉线 | `30000` |
+| `room.timeouts.remove-empty-room-ms` | 无活跃端点房间的回收时间 | `240000` |
+| `room.stun-server` | STUN 服务器（内网发现）；当前源码未消费，预留 | 空串 |
+| `room.turn-server` | TURN 服务器 URI（中继失败时备用）；当前源码未消费，预留 | 空串 |
+| `room.turn-user` | TURN 用户名；当前源码未消费，预留 | 空串 |
+| `room.turn-password` | TURN 密码；当前源码未消费，预留 | 空串 |
+
+```yaml
+room:
+  enable: true
+  endpoint: /api/rooms/{roomId}/ws
+  max-peers: 2
+  timeouts:
+    lease-expires-ms: 30000
+    remove-empty-room-ms: 240000
+  stun-server: "stun:stun.example.com:3478"
+  turn-server: "turn:turn.example.com:3478"
+  turn-user: "your-turn-user"
+  turn-password: "change-me"     # 占位符，勿写真实凭据
+```
+
+> 提示：`room.*` 的 STUN/TURN 当前为预留字段，模块不会消费或下发它们；ICE 协商地址需由业务侧自行处理。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
@@ -182,6 +265,47 @@ public class EchoHandler implements WebSocketMessageHandler {
 启动后连接 `ws://localhost:8080/ws` 即可收发文本帧；`sock-js=true` 时改用 SockJS 客户端连接同一路径。
 
 常用发送 API（`WebSocketTemplate`，无链式调用）：`send(sessionId, message)`、`sendToUser(userId, message)`（需先 `bindUser`）、`broadcast(message)`、`bindUser` / `unbindUser` / `getOnlineCount()`。
+
+### 6.4 完整 YAML 配置示例（生产参考）
+
+```yaml
+plugin:
+  websocket:
+    enable: true                       # 必开：否则整个模块不装配
+    endpoints:
+      - /ws                            # 与前端连接地址保持一致
+    allowed-origins:                   # 生产环境收敛为白名单，勿用 "*"
+      - "https://www.example.com"
+    sock-js: true                      # 需要兼容老浏览器/受限网络时开启
+    heartbeat-interval: 25000          # SockJS 心跳，仅 sock-js=true 生效
+    max-message-size: 1048576          # 1MB，按最大单帧业务报文评估
+    send-time-limit: 15000             # 会话空闲超时 = 2 × 15000 = 30000ms
+    send-buffer-size-limit: 524288
+
+room:                                  # 房间信令（WebRTC P2P）可选，不用房间功能可整段省略
+  enable: true
+  max-peers: 2
+  timeouts:
+    lease-expires-ms: 30000            # 心跳续期窗口，建议 ≥ 2 × 客户端心跳间隔
+    remove-empty-room-ms: 240000
+  stun-server: "stun:stun.example.com:3478"
+  turn-server: "turn:turn.example.com:3478?transport=tcp"
+  turn-user: "your-turn-user"
+  turn-password: "change-me"           # 占位符，请替换为凭据管理系统下发的值
+```
+
+> `room.*` 需要宿主自行注册 `RoomProperties`（见第 9 节 Q2），仅用普通消息收发时可整段省略。
+
+### 6.5 生产注意事项
+
+1. **先开总开关**：`plugin.websocket.enable=false`（默认）时端点与 Bean 都不会装配，端点 404 先查这一项。
+2. **Origin 白名单**：`allowed-origins: ["*"]` 仅适合开发环境；生产按前端域名收敛，避免跨站 WebSocket 劫持。
+3. **消息体大小**：`max-message-size` 过小会拒绝大帧、过大放大内存占用；结合网关/负载均衡的请求体限制一起评估。
+4. **连接鉴权**：模块未注册 `HandshakeInterceptor`，握手鉴权（token 校验）需自行添加握手拦截器，或在 `onConnect` 中校验后关闭会话。
+5. **集群部署**：`WebSocketSessionManager` 是单机内存会话表（`ConcurrentHashMap`），`sendToUser` / `broadcast` 只覆盖本实例连接；多实例需自行接 Redis/MQ 广播桥，或使用粘性会话。
+6. **房间信令凭据**：`room.turn-password` 等请从配置中心/密钥管理注入，不要把真实凭据提交到仓库；STUN/TURN 字段当前为预留，模块不消费。
+7. **SockJS 与反向代理**：经 Nginx 等反代时，确保端点路径透传 `Upgrade` / `Connection` 头；SockJS 的 XHR 流式传输需关闭代理缓冲。
+8. **优雅停机与断线**：会话表为进程内数据，实例下线时客户端需依赖 `resumeToken`（240s 有效期）重连续接，或自行做重连补偿。
 
 ## 7. 使用场景
 

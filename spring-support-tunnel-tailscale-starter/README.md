@@ -118,6 +118,80 @@ flowchart TD
 
 相关环境变量：`TS_AUTHKEY`（认证 Key 兜底）、`TAILSCALE_BIN`（二进制定位兜底）。关联配置来自依赖 `spring-support-tunnel-starter` 的 `TunnelProperties`（前缀 `plugin.tunnel`），影响统一入口与持久化根目录，详见该模块文档。
 
+### 5.1 逐项配置示例
+
+按功能分组给出每个配置项的含义、默认值与 YAML 写法。
+
+**开关与生命周期**
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `enable` | 模块总开关，`false` 时整个自动配置不装配 | `true` |
+| `auto-start` | 启动期是否自动为 `server.port` 建一条默认隧道；`false` 时仅跳过默认隧道，`/ms/tunnel` 与持久化仍可用 | `true` |
+| `auto-start-stored` | 启动期是否恢复上次标记为「自动启动」的持久化映射 | `true` |
+| `fail-fast` | 启动失败时是否中断应用；`false` 只打 ERROR 日志继续启动 | `false` |
+
+```yaml
+plugin:
+  tailscale:
+    enable: true              # 总开关
+    auto-start: true          # 启动期为 server.port 自动建隧道
+    auto-start-stored: true   # 恢复「自动启动」的持久化映射
+    fail-fast: false          # 启动失败是否中断应用
+```
+
+**进程与认证**
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `binary` | `tailscale` 可执行文件路径；相对路径会转为绝对路径 | 空 = 自动定位：`TAILSCALE_BIN` → PATH → 常见安装目录 |
+| `auth-key` | 设备认证 Key（设备级凭据）；解析顺序「配置文件 → 环境变量 `TS_AUTHKEY`」 | 空 = 读环境变量 `TS_AUTHKEY`；仍无则设备需先 `tailscale up` |
+| `start-timeout` | 启动后等待公网 URL 输出的超时；超时终止子进程并抛 `IllegalStateException` | `60s` |
+
+```yaml
+plugin:
+  tailscale:
+    binary: /usr/local/bin/tailscale   # 不在 PATH 时显式指定
+    auth-key: ${TS_AUTHKEY}            # 推荐环境变量注入，避免明文落盘
+    start-timeout: 90s
+```
+
+**持久化**
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `store-dir` | 映射持久化目录，一条映射一个 JSON 文件 | 空 = 由 tunnel-starter 按 `<plugin.tunnel.store-dir 或 ~/.chua/tunnel>/tailscale` 解析，即 `~/.chua/tunnel/tailscale` |
+
+```yaml
+plugin:
+  tailscale:
+    store-dir: /data/app/tunnel/tailscale
+```
+
+### 5.2 完整配置示例（YAML）
+
+一份可直接落地的完整示例（含隧道标准层 `plugin.tunnel` 的关键项）：
+
+```yaml
+server:
+  port: 8080
+
+plugin:
+  tunnel:
+    enable: true                  # 统一入口 /ms/tunnel 总开关
+    # providers: [tailscale]      # 多隧道实现共存时裁剪暴露的提供方
+    store-dir: /data/app/tunnel   # 持久化根目录，tailscale 映射位于其 tailscale/ 子目录
+  tailscale:
+    enable: true                         # 本模块总开关
+    binary: /usr/local/bin/tailscale     # 可执行文件；缺省自动定位
+    auth-key: ${TS_AUTHKEY}              # 设备认证 Key；缺省读环境变量 TS_AUTHKEY
+    start-timeout: 90s                   # 等待公网 URL 的超时
+    fail-fast: false                     # 启动失败是否中断应用
+    auto-start: true                     # 启动期自动建默认隧道
+    auto-start-stored: true              # 恢复持久化映射
+    # store-dir: /data/app/tunnel/tailscale  # 缺省 <plugin.tunnel.store-dir>/tailscale
+```
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
@@ -211,3 +285,13 @@ curl -X POST http://127.0.0.1:8080/ms/tunnel \
 
 **Q4：与 Spring Boot 4 的兼容性？**
 本模块按 Boot 3+/4 机制注册：仅提供 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`（内容为 `com.chua.starter.tailscale.support.TailscaleAutoConfiguration`），没有 `spring.factories` 自动配置条目；生命周期回调使用 `jakarta.annotation.PreDestroy`。另注意 `auto-start=true` 与页面建映射会各起一个 `funnel` 子进程，同时使用页面时建议 `auto-start: false`。
+
+## 10. 生产注意事项
+
+- **公网暴露面**：Funnel 地址是公网可达的 `*.ts.net` 域名，任何能上网的人都能访问——务必在上游应用侧启用认证/鉴权，只暴露确需公开的端点；不要把未加防护的管理端口 Funnel 出去。
+- **凭据管理**：`auth-key` 是设备级凭据，等价于整台设备的 tailnet 身份。推荐用环境变量 `TS_AUTHKEY` 或密钥管理系统注入，避免明文写入配置文件、镜像或配置中心；一旦泄露立即在 Tailscale 管理台吊销并轮换。
+- **进程与资源**：每条映射独占一个 `tailscale` 子进程；`auto-start=true` 的默认隧道与页面创建的映射会各起一个进程——同时使用页面时建议 `auto-start: false`。容器/受限环境需保证 `tailscale` CLI 与 `tailscaled` 守护进程可用，且 CLI 版本 ≥ 1.50。
+- **带宽与配额**：Funnel 流量经 Tailscale 边缘节点转发，有带宽与配额限制；生产对外服务请用正规网关/负载均衡（见 7.2）。
+- **持久化目录**：`store-dir` 建议指向挂载盘并纳入备份；容器化部署必须挂载该目录，否则重启后持久化映射丢失，`auto-start-stored` 无从恢复。
+- **失败策略**：默认 `fail-fast=false`，启动失败只打 ERROR 日志、应用照常起来——若隧道是关键依赖，生产建议 `fail-fast: true` 让启动立刻失败，并配套告警。
+- **变更管理**：升级宿主机 `tailscale` CLI 或调整 `binary`/`auth-key` 后，需重启应用进程使新配置生效；滚动发布时先摘流量再重启，避免隧道空窗。

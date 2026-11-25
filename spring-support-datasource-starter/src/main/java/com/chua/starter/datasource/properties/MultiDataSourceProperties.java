@@ -13,6 +13,10 @@ import java.util.List;
  * 条目同时具备 {@code name} 与 {@code url} 时才会注册为数据源；{@code name} 形如
  * {@code 组名_数字} 的条目自动归入同一负载均衡组。
  * </p>
+ * <p><b>默认数据源（master）规则</b>：只配置单个数据源（{@code plugin.datasource.url}）时
+ * 自动注册为 {@code master}；列表方式配置时，名为 {@code master} 的条目作为默认数据源；
+ * 若没有任何条目叫 {@code master}，则按配置顺序<b>第一个注册的条目</b>自动充当默认数据源
+ * （master 角色）。多数据源场景建议显式命名一个 {@code master}，避免依赖回退顺序。</p>
  * 配置示例:
  * <pre>
  * plugin:
@@ -57,6 +61,8 @@ public class MultiDataSourceProperties {
      * 数据源条目列表（Spring Boot {@link DataSourceProperties} 条目）
      * <p>条目需同时具备 {@code name} 与 {@code url} 才会注册为数据源；
      * {@code name} 形如 {@code 组名_数字} 时自动归入同一负载均衡组。</p>
+     * <p>默认数据源：条目名 {@code master} 优先；若没有任何条目叫 {@code master}，
+     * 则按本列表顺序第一个注册的条目充当默认数据源（master 角色）。</p>
      * 示例: plugin.multi-datasource.data-source[0].name=master
      */
     private List<DataSourceProperties> dataSource;

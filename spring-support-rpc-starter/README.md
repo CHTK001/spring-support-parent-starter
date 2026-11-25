@@ -153,6 +153,102 @@ flowchart TB
 
 **注册中心 `plugin.rpc.registry[n]`（`RpcRegistryConfig`）**：`address`、`username`、`password`、`port`、`protocol`（`zookeeper` / `nacos` / `redis` / `multicast` / `direct`）、`timeout`、`sessionTimeout`、`group`、`version`、`check`、`dynamic`、`register`、`subscribe`、`weight`、`parameters`（Map）、`file`。
 
+### 5.1 逐项配置示例（按功能分组）
+
+下列示例按功能分组，逐项给出含义与默认值；键名遵循 Spring Boot 宽松绑定（如 `accessKey` 写作 `access-key`）。`consumer.*` 中包装类型项未配置时为 `null`，由 `autoConfig()` 或底层协议兜底。
+
+**总开关、协议与扫描：**
+
+```yaml
+plugin:
+  rpc:
+    enable: true                      # 总开关，默认 false；false 时仅登记服务信息标志
+    type: DUBBO                       # 协议类型枚举，默认 DUBBO；可选 DUBBO/SOFA/JSON/SPRINGBEAN/NONE
+    application-name: order-service   # 应用名，默认 ${spring.application.name:app}
+    scan:                             # @RpcService 扫描包集合，缺省扫 @SpringBootApplication 主类所在包
+      - com.example.order.api
+      - com.example.user.api
+```
+
+**安全凭据与令牌：**
+
+```yaml
+plugin:
+  rpc:
+    access-key: your-access-key       # 访问 AK，默认空串；参与派生 consumer.token，严禁硬编码
+    secret-key: your-secret-key       # 访问 SK，默认空串；参与派生 consumer.token，严禁硬编码
+    service-key: your-service-key     # 服务序列，默认内置示例值，生产必须外部覆盖
+    crypto: aes                       # 加密算法，默认 aes
+    consumer:
+      token: your-token               # 服务治理令牌（请求头 X-RPC-Token）；未配置时派生 md5(accessKey:secretKey:serviceKey)
+```
+
+**注册中心（registry[n]）：**
+
+```yaml
+plugin:
+  rpc:
+    registry:
+      - address: zookeeper://localhost:2181   # 注册中心地址
+        protocol: zookeeper                   # zookeeper/nacos/redis/multicast/direct
+        username: your-username               # 登录用户名，可空
+        password: your-password               # 登录密码，可空
+        timeout: 3000                         # 连接超时（毫秒），可空
+        session-timeout: 60000                # 会话超时（毫秒），ZooKeeper 等使用，可空
+        group: default                        # 服务分组，可空
+        check: true                           # 启动时检查连通性，可空
+        register: true                        # 服务端是否注册，可空
+        subscribe: true                       # 客户端是否订阅，可空
+```
+
+**服务端协议（protocols[n]，装配时只取第一个）：**
+
+```yaml
+plugin:
+  rpc:
+    protocols:
+      - name: dubbo                 # 协议名（dubbo/http/sofa 等）
+        host: 0.0.0.0               # 监听地址，0.0.0.0 表示所有网卡
+        port: 20880                 # 监听端口
+        payload: 8388608            # 最大载荷（字节），默认 8MB
+        threads: 200                # 业务线程数，可空
+        io-threads: 8               # IO 线程数，可空
+        accepts: 10000              # 最大接入连接数，可空
+        queues: 256                 # 等待队列大小，可空
+        serialization: hessian2     # 序列化协议（hessian2/java/kryo/protobuf），可空
+        heartbeat: 30000            # 心跳间隔（毫秒），可空
+        register: true              # 是否向注册中心注册此协议，可空
+        ssl: false                  # 是否启用 SSL/TLS，可空
+```
+
+**消费端调优与重试（consumer.*）：**
+
+```yaml
+plugin:
+  rpc:
+    consumer:
+      auto: true                    # 自动调优开关，默认 true；autoConfig() 按 CPU/堆计算 timeout/connect-timeout/connections/retry-delay
+      timeout: 3000                 # 调用超时（毫秒），未配置为 null；auto 公式 clamp(CPU×1500, 3000, 15000)
+      connect-timeout: 1000         # 连接超时（毫秒），未配置为 null；auto 公式 max(timeout/3, 1000)
+      retries: 2                    # 重试次数，未配置为 null
+      retry-enabled: true           # 重试开关，未配置为 null；仅 spring 协议调用链消费
+      retry-delay: 500              # 重试初始间隔（毫秒），未配置为 null；auto 公式 堆≥4G 取 200 否则 500
+      load-balance: random          # random/roundrobin/leastactive/consistenthash/shortestresponse
+      cluster: failover             # failover/failfast/failsafe/failback/forking/broadcast
+      async: false                  # 异步开关，未配置为 null
+      invoke-type: sync             # sync/async/future/callback/oneway
+      connections: 64               # 最大连接数，未配置为 null；auto 公式 max(CPU×8, 16)
+      sticky: false                 # 粘性连接，未配置为 null
+      serialization: hessian        # 序列化协议，模块常量 DEFAULT_SERIALIZATION=hessian
+      check: true                   # 启动时检查服务端可用，未配置为 null
+      lazy: false                   # 延迟连接，未配置为 null
+      inline: false                 # 同 JVM 直调（本机已注册该服务时跳过网络），未配置为 null
+      access-log: false             # 访问日志，未配置为 null
+      url: ""                       # 直连地址，可空
+      version: "1.0.0"              # 默认服务版本，可空
+      group: default                # 默认服务分组，可空
+```
+
 ## 6. 使用方式
 
 ```xml
@@ -215,6 +311,63 @@ public RpcMonitorController rpcMonitorController(ApplicationContext context, Obj
 ```
 
 本模块无链式 Builder API：`RpcServiceBean` / `RpcResourceBean` 由框架动态注册，配置只能通过 `plugin.rpc.*` 与注解属性表达。
+
+### 6.1 完整 YAML 使用示例（生产参考）
+
+提供端与消费端同应用、Dubbo 协议 + ZooKeeper 注册中心的生产级参考（各项含义与默认值见第 5 节与 5.1 节）：
+
+```yaml
+spring:
+  application:
+    name: order-service
+
+plugin:
+  rpc:
+    enable: true
+    type: DUBBO
+    application-name: ${spring.application.name}
+    scan:
+      - com.example.order.rpc
+    access-key: ${RPC_ACCESS_KEY}        # 从环境变量/配置中心注入，严禁硬编码
+    secret-key: ${RPC_SECRET_KEY}
+    service-key: ${RPC_SERVICE_KEY}
+    crypto: aes
+    registry:
+      - address: zookeeper://zk-1:2181
+        protocol: zookeeper
+        timeout: 3000
+        session-timeout: 60000
+        check: true
+    protocols:
+      - name: dubbo
+        host: 0.0.0.0
+        port: 20880
+        payload: 8388608
+        serialization: hessian2
+    consumer:
+      auto: false               # 生产建议固定参数，避免跨环境漂移
+      timeout: 3000
+      connect-timeout: 1000
+      retries: 2
+      retry-enabled: true
+      retry-delay: 500
+      load-balance: random
+      cluster: failover
+      connections: 64
+      serialization: hessian
+      check: true
+```
+
+### 6.2 生产注意事项
+
+- `plugin.rpc.enable` 默认 `false`：忘记打开时 `@RpcService` / `@RpcResource` 静默不生效（仅登记服务信息标志）。
+- `access-key` / `secret-key` / `service-key` 严禁硬编码：从配置中心或环境变量注入；`service-key` 的内置默认值仅作示例，生产必须覆盖。`consumer.token` 未显式配置时按 `md5(accessKey:secretKey:serviceKey)` 派生，轮换 AK/SK 会改变派生令牌，需与服务端校验规则同步。
+- `scan` 未配置时只扫 `@SpringBootApplication` 主类所在包；多模块 / 多包结构必须显式列出，否则服务导出或引用会静默缺失。
+- `type=JSON` 会真实监听 HTTP 端口；纯消费端（无任何 `@RpcService`）不启动服务端，不会白占端口。
+- `consumer.auto=true` 时 `timeout` / `connect-timeout` / `connections` / `retry-delay` 按 CPU 与堆自动计算，跨环境性能基线会漂移；压测或容量规划场景建议 `auto: false` 并显式固定参数。
+- 重试（`retry-*`）仅对 `spring` 协议调用链生效（见第 9 节 Q3）；业务异常不重试、不降级。熔断分支当前不可达（无 `circuit-breaker-enabled` 配置项）。
+- 降级目标默认 `springbean`（本地 Bean 直调）：依赖本地存在对应实现，跨应用纯消费端请显式评估降级可用性。
+- `/v2/rpc/monitor/*` 端点需自行注册 `RpcMonitorController` Bean 才存在（见第 6 节示例）。
 
 ## 7. 使用场景
 

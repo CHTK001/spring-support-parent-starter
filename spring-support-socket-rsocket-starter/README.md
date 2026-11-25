@@ -99,8 +99,9 @@ flowchart LR
 |---|---|---|---|
 | `plugin.socket.enable` | `boolean` | `false` | 总开关；`true` 时才创建模板 Bean（抽象层消费） |
 | `plugin.socket.auto-start` | `boolean` | `true` | 容器启动阶段是否自动 `start()`（抽象层消费） |
-| `plugin.socket.protocol` | `SocketProtocol` 枚举 | `SSE` | 协议别名 `socketio`/`rsocket`/`sse`/`sse-server`；设 `rsocket` 选中本模块（抽象层消费） |
+| `plugin.socket.protocol` | `SocketProtocol` 枚举 | `SSE` | 协议别名 `socketio`/`rsocket`/`sse`/`sse-server`/`ndjson`（兼容 `jsonl`）；设 `rsocket` 选中本模块（抽象层消费） |
 | `plugin.socket.protocols[]` | `List<ProtocolConfig>` | `[]` | 多协议列表；非空时忽略单一 `protocol`/`room` |
+| `plugin.socket.protocols[].protocol` | `SocketProtocol` 枚举 | `SOCKETIO` | 该协议条目的协议类型 |
 | `plugin.socket.protocols[].room[]` | `List<Room>` | `[]` | 该协议的房间列表 |
 | `plugin.socket.room[]` | `List<Room>` | `[]` | 单协议模式房间列表 |
 | `plugin.socket.room[].client-id` | `String` | `default` | 房间标识（与本模块按路径提取的 `clientId` 是两回事） |
@@ -129,6 +130,163 @@ plugin:
     protocol: rsocket
     auto-start: true
 ```
+
+### 5.1 逐项配置示例
+
+本模块无自有配置类，以下均为上游 `SocketProperties`（前缀 `plugin.socket`）的配置项。标注「本模块不消费」的项由抽象层或其它协议实现使用，对本实现无影响。
+
+#### 总开关与协议
+
+**`enable`** — Socket 总开关，`true` 时抽象层才创建 `SocketSessionTemplate` Bean。
+
+- 含义：是否启用 socket 家族能力
+- 默认值：`false`
+
+```yaml
+plugin:
+  socket:
+    enable: true
+```
+
+**`auto-start`** — 容器启动阶段是否自动调用 `start()`。关闭后模板 Bean 仍会创建，但不随应用启动自动拉起。
+
+- 含义：是否随容器启动自动启动
+- 默认值：`true`
+
+```yaml
+plugin:
+  socket:
+    auto-start: true
+```
+
+**`protocol`** — 协议别名，可选 `socketio` / `rsocket` / `sse` / `sse-server` / `ndjson`（兼容 `jsonl`）。设为 `rsocket` 即选中本模块。
+
+- 含义：单协议模式下使用的协议
+- 默认值：`sse`
+
+```yaml
+plugin:
+  socket:
+    protocol: rsocket
+```
+
+**`protocols[]`** — 多协议列表；非空时忽略单一 `protocol` 与 `room`。每个条目可带独立 `protocol`（默认 `socketio`）与 `room[]`，`protocol: rsocket` 的条目由本实现承接。
+
+- 含义：同时启用多种协议
+- 默认值：空列表
+
+```yaml
+plugin:
+  socket:
+    protocols:
+      - protocol: rsocket
+        room:
+          - client-id: default
+```
+
+#### 房间与端口（本模块不消费）
+
+**`room[].client-id`** — 房间/实例标识。默认 `default`。注意：与本模块按连接路径提取的 `clientId` 是两回事。
+
+**`room[].context-path`** — 房间上下文路径。默认 `/socket.io`。
+
+**`room[].port`** — 正数为独立端口；`-1` 用主端口；`-2` 起为主端口偏移。默认 `-1`。本模块不监听独立端口，无生效路径。
+
+**`room[].host`** — 房间独立地址。默认未设置。本模块无生效路径。
+
+**`room[].auth-factory`** — 房间独立鉴权工厂类名。默认未设置。本模块无握手鉴权，不消费。
+
+**`room[].enable`** — 是否启用该房间。默认 `true`。
+
+```yaml
+plugin:
+  socket:
+    room:
+      - client-id: default
+        context-path: /socket.io
+        port: -1
+        enable: true
+```
+
+#### 传输与线程（本模块不消费）
+
+**`host`** — 监听地址。默认 `0.0.0.0`。本模块不绑定端口，无生效路径。
+
+**`boss-count`** — Boss 线程数。默认 `1`。
+
+**`work-count`** — 工作线程数。默认 `100`。
+
+**`use-linux-native-epoll`** — 是否使用 Linux Native Epoll。默认 `false`。
+
+```yaml
+plugin:
+  socket:
+    host: 0.0.0.0
+    boss-count: 1
+    work-count: 100
+    use-linux-native-epoll: false
+```
+
+#### 消息与心跳（本模块不消费）
+
+**`codec-type`** — 编解码器类型。默认 `json`。本模块硬编码 Jackson JSON，不读取该项。
+
+**`max-frame-size`** — 最大帧大小（字节）。默认 `1048576`（1MB）。本模块不消费；大消息限制取决于所选 WebSocket 容器。
+
+**`allow-custom-requests`** — 是否允许自定义请求。默认 `true`。
+
+**`ping-timeout`** — Ping 超时（毫秒）。默认 `60000`。本模块不实现心跳。
+
+**`ping-interval`** — Ping 间隔（毫秒）。默认 `25000`。本模块不实现心跳。
+
+**`auth-factory`** — 鉴权工厂类名。默认未设置。本模块无握手鉴权，不消费。
+
+```yaml
+plugin:
+  socket:
+    codec-type: json
+    max-frame-size: 1048576
+    allow-custom-requests: true
+    ping-timeout: 60000
+    ping-interval: 25000
+    # auth-factory: com.example.MyAuthFactory
+```
+
+### 5.2 完整 YAML 使用示例
+
+```yaml
+server:
+  port: 8080                # WebSocket 端点挂在 Web 容器端口上（本模块不独立监听端口）
+
+plugin:
+  socket:
+    enable: true            # 总开关：true 才会创建 SocketSessionTemplate Bean
+    protocol: rsocket       # 选中本模块（rSocket 协议别名实现）
+    auto-start: true        # 容器启动时自动 start()（本实现仅翻转运行标记，不绑定端口）
+    # 以下项对本模块不生效，按需省略；此处给出完整形态便于对照
+    host: 0.0.0.0
+    codec-type: json
+    max-frame-size: 1048576
+    boss-count: 1
+    work-count: 100
+    allow-custom-requests: true
+    ping-timeout: 60000
+    ping-interval: 25000
+    use-linux-native-epoll: false
+```
+
+配套的两个代码步骤（缺一不可）：在宿主应用补 SPI 登记文件（见 6.2 第二步），并注册 WebSocket 端点（见 6.2 第三步）。
+
+### 5.3 生产注意事项
+
+1. **端点必须自行注册**：本模块无自动装配入口，`start()` 不绑定端口；若不在宿主注册 `WebSocketConfigurer` 端点（6.2 第三步），客户端无处可连且应用不报任何错。
+2. **补 SPI 登记文件**：本模块没有 `META-INF/extensions` 目录，宿主应用必须提供 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，内容为 `rsocket=com.chua.rsocket.support.spi.RSocketProvider`，否则启动即抛 `IllegalStateException`（见 Q1）。
+3. **会话不共享**：`sessionCache` 是本地 `ConcurrentHashMap`，多实例部署时会话不互通，广播只达本实例；需要会话粘滞的负载均衡或外部共享方案。
+4. **无握手鉴权**：`auth-factory` 对本实现无效；接入公网前请子类化 `RSocketSessionTemplateImpl#afterConnectionEstablished` 校验握手参数（如 token），或在网关层拦截。
+5. **并发发送需自行串行化**：底层 `WebSocketSession.sendMessage` 非线程安全，同一会话并发写可能抛异常；必要时用 `ConcurrentWebSocketSessionDecorator` 包装或业务侧加锁。
+6. **消息协议严格**：入站必须是 `{"event":"...","data":...}` 形态的 JSON；非 JSON 或缺 `event` 只记日志、不触发回调。大消息防护依赖 WebSocket 容器缓冲上限或业务层校验（`max-frame-size` 本模块不消费）。
+7. **心跳与端口项是摆设**：`ping-*`、`room[].port`、`host`、`boss-count`/`work-count` 等对本实现均无生效路径，不要指望它们改变行为。
+8. **内存会话**：服务重启会话全部丢失；`stop()` 会关闭并清空全部本地会话。
 
 ## 6. 使用方式
 

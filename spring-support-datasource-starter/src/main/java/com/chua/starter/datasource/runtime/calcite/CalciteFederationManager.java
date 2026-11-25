@@ -107,12 +107,16 @@ public class CalciteFederationManager {
             if (named.isEmpty()) {
                 // 无启用联邦：从注册表摘除聚合数据源，路由回退
                 DataSourceContextSupport.DATA_SOURCE_MAP.remove(BEAN_NAME);
+                // 联邦源摘除后注销默认源候选，默认源自动还原为原业务数据源
+                DataSourceContextSupport.unregisterCompositeDefaultSource(BEAN_NAME);
                 activeFederations.set(List.of());
                 activeMemberCount = 0;
                 lastRefreshResult = "无启用联邦，聚合数据源已摘除";
             } else {
                 DataSource federated = conversion.convertNamed(named);
                 DataSourceContextSupport.addDatasource(BEAN_NAME, federated);
+                // 单业务数据源场景下，联邦源接管默认源（业务免 @DS 直走联邦）
+                DataSourceContextSupport.registerCompositeDefaultSource(BEAN_NAME);
                 activeFederations.set(List.copyOf(federations));
                 activeMemberCount = named.size();
                 lastRefreshResult = "生效成员 " + named.size() + " 个: " + named.keySet();

@@ -66,7 +66,8 @@ flowchart LR
 | 主机运维 | `HostOperations` + `HostOperationsProvider` SPI（Posix/Windows/Mac） | `/ms/server/host/**` |
 | 网络抓包 | `TsharkCaptureController`、`TsharkCaptureService`、`TsharkRuntime` | `/ms/monitor/tshark` |
 | 数据同步 | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
-| Agent 部署 | `AgentDeployController`、`AgentDeployServiceImpl`、`AgentTcpServerConfiguration` | 部署编排 `/ms/server/host/agent`（agent 侧上报端点在 `/ms/monitor/agent`）；TCP `19390` |
+| Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentHttpClient`、`AgentOfflineChecker` | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
+| 数据库备份 | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/monitor/database-backup`，`plugin.monitor.database-backup.enabled`（缺省开） |
 | AI 诊断 / 大屏 | `MonitorController` 注入 `ObjectProvider<AiChatFacadeService>`；`#dashboardOverview` | `/ms/monitor/ai/status`、`/ai/analyze`、`/ai/host/{id}/analyze`、`/ms/monitor/dashboard/overview` |
 | 端口映射 | tunnel-starter 统一编排（ngrok/cloudflared/tailscale 为 SPI 实现） | `/ms/tunnel` |
 | 服务发现查询 | `ServerDiscoveryController`（`@ConditionalOnClass DiscoveryService`）/ `DiscoveryFallbackController`（`@ConditionalOnMissingClass`） | `/ms/monitor/discovery` |
@@ -96,7 +97,7 @@ flowchart LR
 | `productionAuthGuard` | `ProductionAuthGuard` | `@ConditionalOnProperty plugin.oauth.require-auth=true` | 可 | 生产启动期鉴权校验 |
 | `debugBeanTrace` | `DebugBeanTrace`（`BeanPostProcessor`） | 无条件 | 可 | Bean 装配追踪（排障） |
 | `monitorScheduler` / `providerRegistry` | `MonitorScheduler` / `ProviderRegistry` | `@Component`，无条件 | 可 | 调度入口 / SPI 双键索引 |
-| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`SyncTaskServiceImpl`、`AgentDeployServiceImpl`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
+| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`SyncTaskServiceImpl`、`DatabaseBackupService`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
 
 > 本模块没有 `spring.factories`，自动配置只经 `AutoConfiguration.imports` 注册（Spring Boot 4 口径）。
 
@@ -141,23 +142,26 @@ plugin:
 
 ### 5.3 `plugin.monitor.agent`（`AgentDeployProperties`，`@Component` 注册；末行 `tcp-port` 例外为 `@Value`）
 
+> Agent 安装/卸载/升级等部署能力已下线（监控采集由 monitor 通道承担），历史版本中的 `jar-path`、`jar-url`、`*-service-name`、`remote-dir-name`、`health-wait-seconds`、`java-command`、`report-url`、`apm-*` 等配置项已从 `AgentDeployProperties` 移除，配置它们不再生效；本表仅保留平台访问已部署 Agent 所需的运行时参数。
+
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `plugin.monitor.agent.jar-path` | `String` | 空（按候选路径探测，全落空则明确报错终止） | agent.jar 路径 |
-| `plugin.monitor.agent.jar-url` | `String` | `""` | 平台包下载地址；WinRM 大文件必须走目标机自拉 |
-| `plugin.monitor.agent.linux-service-name` / `.windows-service-name` | `String` | `monitor-agent` / `MonitorAgent` | systemd / nssm 服务名 |
-| `plugin.monitor.agent.remote-dir-name` | `String` | `monitor-agent` | 远端安装目录名 |
-| `plugin.monitor.agent.port` | `int` | `19876` | agent 默认 HTTP 端口 |
-| `plugin.monitor.agent.token` | `String` | `""` | 写入远端 agent.yml 的接口令牌；空=不启用校验 |
-| `plugin.monitor.agent.health-wait-seconds` | `int` | `30` | 启动后等待 /health 就绪秒数 |
+| `plugin.monitor.agent.port` | `int` | `19876` | agent 默认 HTTP 端口（主机未单独配置时使用） |
+| `plugin.monitor.agent.token` | `String` | `""` | 访问 agent /exec 等端点的接口令牌；空=不启用令牌校验，平台侧访问时自动带上同值 |
 | `plugin.monitor.agent.request-timeout-seconds` | `int` | `8` | 单次 agent HTTP 请求超时 |
-| `plugin.monitor.agent.java-command` | `String` | `""` | 远端 java 路径；空则自动探测（command -v java / where java） |
-| `plugin.monitor.agent.report-url` | `String` | `""` | 平台回写地址（agent.yml 预留） |
-| `plugin.monitor.agent.apm-jar-url` / `.apm-jar-path` | `String` | `""` | APM RuntimeAgent jar 下载地址 / 本地路径（优先于探测） |
-| `plugin.monitor.agent.apm-remote-name` | `String` | `apm-agent.jar` | 远端 APM jar 文件名 |
-| `plugin.monitor.agent.apm-options` | `String` | `port=4567` | javaagent options（不含 `-javaagent:jar=` 前缀） |
-| `plugin.monitor.agent.apm-linux-profile` / `.apm-windows-env-name` | `String` | `/etc/profile.d/apm-javaagent.sh` / `JAVA_TOOL_OPTIONS` | APM 注入状态探针（Linux / Windows） |
 | `plugin.monitor.agent.tcp-port` | `int` | `19390` | Agent TCP 上报端口（`@Value` 注入 `AgentTcpServerConfiguration`） |
+
+逐项 YAML 示例（值均为默认值，token 建议改为长随机串）：
+
+```yaml
+plugin:
+  monitor:
+    agent:
+      port: 19876                  # agent 默认 HTTP 端口
+      token: change-me             # 访问 agent 端点的接口令牌；留空则不启用校验
+      request-timeout-seconds: 8   # 单次 agent HTTP 请求超时
+      tcp-port: 19390              # Agent TCP 上报端口（@Value 注入）
+```
 
 ### 5.4 `plugin.monitor.tshark`（`TsharkInstallProperties`，`@Component` 注册）
 
@@ -172,6 +176,26 @@ plugin:
 | `plugin.monitor.tshark.tls-keylog-file` | `String` | `""` | TLS keylog 文件，配置后带 `-o tls.keylog_file:` 解密 |
 | `plugin.monitor.tshark.json-restore` | `boolean` | `true` | 解析 pcap 时回填 `rawData` / `restoredText`（协议还原） |
 
+逐项 YAML 示例（值均为默认值，内网离线部署用 `package-path`，有内网文件服务用 `package-url`）：
+
+```yaml
+plugin:
+  monitor:
+    tshark:
+      bin: ""                        # 显式指定 tshark 路径；空则按 TSHARK_BIN → 本项 → 自动安装目录 → 系统路径 → PATH 探测
+      auto-install: true             # 探测不到时自动下载便携包（不装 Npcap 驱动）
+      install-dir: ""                # 便携版解压目录；空回退 ~/spring-support/tshark
+      package-url: ""                # 便携包下载地址（zip；Linux 支持 tar.gz/tar.xz/deb）
+      package-url-windows: ""        # Windows 专用地址，优先于 package-url
+      package-url-linux: ""          # Linux 专用地址，优先于 package-url
+      package-path: ""               # 本地便携包路径（离线部署），优先于 package-url
+      package-path-windows: ""       # Windows 专用本地包路径
+      package-path-linux: ""         # Linux 专用本地包路径
+      timeout-seconds: 600           # 下载 + 解压 + 自检总超时
+      tls-keylog-file: ""            # TLS keylog 文件；仅自有环境排障短期使用，勿与抓包文件同放
+      json-restore: true             # 解析 pcap 时回填 rawData / restoredText（协议还原）
+```
+
 ### 5.5 `plugin.monitor.tshark.retention`（`TsharkRetentionProperties`，`@Component` 注册）
 
 | 配置路径 | 类型 | 默认值 | 说明 |
@@ -180,15 +204,122 @@ plugin:
 | `plugin.monitor.tshark.retention.size-mb` | `int` | `512` | 抓包目录空间上限（MB），任一规则满足即清理 |
 | `plugin.monitor.tshark.retention.enabled` | `boolean` | `true` | 是否自动清理（关闭只统计不删） |
 
-### 5.6 其它键（`@Value` / 运行时表）
+逐项 YAML 示例（值均为默认值；过期清理与空间清理各成一条独立规则，任一满足即删）：
+
+```yaml
+plugin:
+  monitor:
+    tshark:
+      retention:
+        days: 7        # 抓包文件保留天数上限
+        size-mb: 512   # 抓包目录空间上限（MB）
+        enabled: true  # 关闭后只统计空间、不删文件
+```
+
+### 5.6 `plugin.monitor.database-backup`（`DatabaseBackupProperties`，`@Component` 注册）
+
+数据库备份中心配置；数据库连接信息不从这里配置，而是从宿主当前 Spring `DataSource` 解析，保证备份的「当前库」与业务库一致。
+
+| 配置路径 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `plugin.monitor.database-backup.enabled` | `boolean` | `true` | 是否启用备份中心（关闭后 Controller 返回 HTTP 200 与业务错误码「备份中心未启用」，由前端提示未装配） |
+| `plugin.monitor.database-backup.backup-dir` | `String` | 空（回退 `{user.home}/monitor-backup/database`） | 备份根目录 |
+| `plugin.monitor.database-backup.retention-days` | `int` | `30` | 备份保留天数，超过则清理历史备份 |
+| `plugin.monitor.database-backup.max-backup-count` | `int` | `0` | 最大备份份数（按 `database-*` 脚本计数，超出从最旧清理）；`0`=不按份数清理 |
+| `plugin.monitor.database-backup.consistent-snapshot` | `boolean` | `true` | 备份期间用单连接事务包住全表导出，保证多表数据取自同一快照 |
+| `plugin.monitor.database-backup.write-manifest` | `boolean` | `true` | 在备份目录写入 `manifest.json`（每脚本字节数与 SHA-256 校验和），供恢复前校验 |
+
+逐项 YAML 示例（值均为默认值）：
+
+```yaml
+plugin:
+  monitor:
+    database-backup:
+      enabled: true                  # 关闭后备份接口返回「备份中心未启用」业务错误码
+      backup-dir: ""                 # 备份根目录；空回退 {user.home}/monitor-backup/database
+      retention-days: 30             # 备份保留天数
+      max-backup-count: 0            # 最大份数；0 表示不按份数清理
+      consistent-snapshot: true      # 单连接事务一致性快照导出
+      write-manifest: true           # 写 manifest.json（字节数 + SHA-256）
+```
+
+### 5.7 其它键（`@Value` / 运行时表）
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `monitor.file-storage.local-path` | `String` | `${user.dir}/.data/filesystem-local` | 文件资产落地目录（`MonitorFileStorageConfig` 的 `@Value`，同步注入 `filesystem.temp.path`） |
 | `monitor.cleanup.cron` | `String` | `0 0 * * * ?` | 指标保留清理调度（`@Scheduled(cron="${monitor.cleanup.cron:0 0 * * * ?}")`） |
 | `monitor.collect.interval.ms` / `monitor.data.retention.days` | `long` / `int` | `10000` / `30` | **运行时配置**，存 `ms_monitor_config` 表（页面可改）：采集节奏 / 指标保留天数 |
+| `monitor.history.retention-days` | `int` | `7` | 主机历史指标时序保留天数（`HostMetricHistoryServiceImpl` 的 `@Value`，写入/清理走 SeriesEngine） |
 | `spring.sql.init.*` | — | — | `SqlInitializationProperties` 随自动配置启用；本模块自带 `application.yml` 里 `mode: never`，建表统一走 `plugin.datasource.script`（FlywayLike） |
 | `plugin.filesystem.*` | — | — | 文件网关启用 filesystem-starter 的 `FileStorageProperties` / `FileStorageServerProperties`，字段定义属该模块，此处不罗列 |
+
+### 5.8 完整配置示例（可直接粘贴后按需裁剪）
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/monitor?useUnicode=true&characterEncoding=utf8
+    username: root
+    password: your-password        # 占位符，请替换为真实口令
+  sql:
+    init:
+      mode: never                  # 建表统一走 plugin.datasource.script（FlywayLike），勿重复执行脚本
+
+plugin:
+  monitor:
+    influx:                        # InfluxDB 双写（可整体省略 = 全默认关闭）
+      enabled: false
+      url: http://127.0.0.1:8086
+      database: monitor
+    timeseries:                    # 时序引擎：先用 datasource 零外部组件跑通
+      engine: datasource           # influxdb / redis / datasource / none
+      url: http://127.0.0.1:8086
+      database: monitor
+    ssh:                           # SSH/终端采集通道超时（慢链路调大）
+      connect-timeout-seconds: 15
+      session-timeout-seconds: 30
+      exec-timeout-seconds: 60
+    agent:                         # 已部署 Agent 的运行时接入参数
+      port: 19876
+      token: change-me             # 留空则不启用令牌校验
+      request-timeout-seconds: 8
+      tcp-port: 19390              # Agent TCP 上报端口
+    tshark:                        # 网络抓包：tshark 自动补齐与解析
+      auto-install: true
+      install-dir: ""              # 空回退 ~/spring-support/tshark
+      package-url: ""              # 内网文件服务地址；离线用 package-path
+      timeout-seconds: 600
+      json-restore: true
+      retention:                   # 抓包数据保留策略
+        days: 7
+        size-mb: 512
+        enabled: true
+    database-backup:               # 数据库备份中心
+      enabled: true
+      backup-dir: ""               # 空回退 {user.home}/monitor-backup/database
+      retention-days: 30
+      max-backup-count: 0
+      consistent-snapshot: true
+      write-manifest: true
+
+monitor:                           # 模块内 @Value / 运行时键
+  cleanup:
+    cron: "0 0 * * * ?"            # 指标保留清理调度
+  history:
+    retention-days: 7              # 主机历史指标时序保留天数
+  # collect.interval.ms / data.retention.days 存 ms_monitor_config 表，页面可改，无需写死在 yml
+```
+
+生产注意事项：
+
+1. **数据库与缓存先就位**：MySQL（`ms_*` 表由 `plugin.datasource.script` 启动建表）必备；Redis 用于缓存 / 告警静默期 / 可选时序引擎。`@Cacheable` 缓存名（`monitorTask` 等）依赖 cache-starter 多级缓存管理器，保持 `plugin.cache.enabled=true` 且 `levels` 含 `caffeine`。
+2. **时序引擎选型**：默认 `influxdb` 需要外部 InfluxDB 且要同时开 `plugin.monitor.influx.enabled=true`；只装了 MySQL 用 `datasource`；小规模可用 `redis`；只要明细表不要时序用 `none`。`none`/引擎类缺失时回落 `NoopSeriesEngine`，不会启动失败。
+3. **Agent 通道**：`token` 生产环境务必配置为长随机串并同步到 agent 侧；`tcp-port`（默认 19390）需在防火墙放行 agent → 平台方向的上报连接。
+4. **抓包能力边界**：tshark 自动补齐只装本体、不装 Npcap 驱动，实时抓包需目标机自行装驱动；`tls-keylog-file` 是解密钥匙，仅限自有环境短期排障，勿长期开启、勿与抓包文件同放。
+5. **备份目录**：`database-backup.backup-dir` 指到有足够磁盘空间的盘，并配合 `retention-days` / `max-backup-count` 防止写满；`write-manifest` 生成的 `manifest.json` 在恢复前先校验 SHA-256。
+6. **覆盖模块 Bean 需开开关**：`seriesEngine`、`agentTcpSyncServer` 等没有 `@ConditionalOnMissingBean`，Boot 4 默认禁止覆盖，替换需 `spring.main.allow-bean-definition-overriding=true`。
+7. **独立监控台**：打成 `*-exec.jar` 后 `java -jar` 启动（默认端口 8082）；自动配置经 antrun 复制到 `BOOT-INF/classes`，薄 jar 不要直接 `java -jar`。
 
 ## 6. 使用方式
 
@@ -230,7 +361,7 @@ plugin:
 
 - 要「资产台账 + 定时采集 + 时序存储 + 告警 + 运维操作」一体化监控台，且希望只靠 MySQL 跑通（InfluxDB/Redis 可选）。
 - 要采集异构目标：本机（OSHI）、SSH 终端、HTTP exporter、Prometheus，以及 Redis / MySQL / PostgreSQL / Oracle / SQL Server / MQ 七类服务。
-- 要附带能力：WebRTC 远控、端口映射、网络抓包、Agent 部署、数据同步、AI 诊断、文件资产。
+- 要附带能力：WebRTC 远控、端口映射、网络抓包、数据同步、AI 诊断、文件资产。
 
 不适用 / 慎用：
 

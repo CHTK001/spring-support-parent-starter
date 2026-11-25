@@ -5,10 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.service.SysAiModelPriceService;
 import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.manage.store.SysAiModelMetrics;
+import com.chua.starter.ai.support.manage.store.SysAiModelPrice;
 import com.chua.starter.ai.support.manage.store.SysAiProviderMetric;
 import com.chua.starter.ai.support.service.SysAiPricingService;
+import com.chua.starter.ai.support.util.AiModelMetricKeys;
 import com.chua.starter.datasearch.provider.model.ProviderModelInfo;
 import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +52,11 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
      * 全量指标库服务（计费取价回退，预估值）
      */
     private final SysAiModelMetricsService modelMetricsService;
+
+    /**
+     * 模型价格服务（价格拆分后的权威落库价，优先于指标库旧列）
+     */
+    private final SysAiModelPriceService modelPriceService;
 
     /**
      * 厂商指标系数服务（计费取价最终回退，一厂商一系数）
@@ -105,7 +113,29 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             return dbPricing;
         }
 
-        // 3. 回退全量指标表（按模型名关联，价格为预估值）
+        // 3. 回退价格库（价格拆分后的权威落库价，USD/百万 token → USD/千 token）
+        SysAiModelPrice priceRow = modelPriceService.findByKey(
+                AiModelMetricKeys.normalizeKey(model));
+        if (priceRow != null && (priceRow.getPriceInput() != null
+                || priceRow.getPriceOutput() != null)) {
+            SysAiPricing priced = new SysAiPricing();
+            priced.setProvider(provider);
+            priced.setModel(model);
+            BigDecimal inputPer1k = priceRow.getPriceInput() == null ? null
+                    : priceRow.getPriceInput()
+                            .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            BigDecimal outputPer1k = priceRow.getPriceOutput() == null ? null
+                    : priceRow.getPriceOutput()
+                            .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP);
+            priced.setInputPricePer1k(inputPer1k == null ? null : inputPer1k.doubleValue());
+            priced.setOutputPricePer1k(outputPer1k == null ? null : outputPer1k.doubleValue());
+            priced.setCurrency("USD");
+            priced.setEffectiveDate(LocalDateTime.now());
+            priced.setSource("model_price");
+            return priced;
+        }
+
+        // 3.5. 回退全量指标表旧价格列（价格拆分前的历史数据，按模型名关联，价格为预估值）
         SysAiModelMetrics metric = modelMetricsService.findForEstimate(model);
         if (metric != null && metric.getPriceInputPerMusd() != null
                 && metric.getPriceOutputPerMusd() != null) {

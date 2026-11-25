@@ -127,6 +127,143 @@ sequenceDiagram
 | `plugin.socket.room[n].auth-factory` | `String` | 空 | 覆盖主 `auth-factory` |
 | `plugin.socket.room[n].enable` | `boolean` | `true` | 是否启用该房间 |
 
+### 5.1 配置来源与读取口径
+
+- 配置类是上游 `spring-support-socket-starter` 的 `com.chua.socket.support.properties.SocketProperties`（`@ConfigurationProperties(prefix = "plugin.socket")`）；本模块自身没有 `*Properties` 配置类，也没有 `plugin.sse.*` 前缀。
+- 单协议模式（只配 `protocol`）时，`sse` / `sse-server` 读取顶层 `plugin.socket.room`；多协议模式（配了 `protocols`）时，每个协议项读到的是**该项自己的** `room`（上游 `SocketConfiguration` 会用 `protocols[n].room` 覆盖顶层 `room` 再传给 SPI），此时顶层 `room` 对 SSE 不生效。
+- `@Primary socketSessionTemplate` 指向 `protocols` / `protocol` 中**第一个**生效协议的模板；业务侧要拿 SSE 模板，建议从 `Map<String, SocketSessionTemplate>` 按 `sse` / `sse-server` 键取。
+
+### 5.2 逐项配置示例（按功能分组）
+
+#### A. 总开关与生命周期
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.enable` | Socket/SSE 总开关；`false` 时不创建会话模板、不注册 `/sse/**` 端点 | `false` |
+| `plugin.socket.auto-start` | 是否随容器启动自动 `start()`（嵌入模式拉起心跳线程，独立模式开始监听端口）；`false` 时 Bean 仍会创建，需自行调用 `start()` | `true` |
+
+```yaml
+plugin:
+  socket:
+    enable: true        # 必须显式开启，默认 false
+    auto-start: true    # 默认 true，一般无需修改
+```
+
+#### B. 协议选择
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.protocol` | 单协议模式；可选 `socketio` / `rsocket` / `sse` / `sse-server` / `ndjson`（本模块提供 `sse`、`sse-server` 两个 SPI 实现） | `sse` |
+| `plugin.socket.protocols[n].protocol` | 多协议模式下第 n 项的协议类型 | `socketio` |
+| `plugin.socket.protocols[n].room` | 该协议项的房间（实例）列表；配置 `protocols` 后覆盖顶层 `protocol` 与 `room` | `[]` |
+
+```yaml
+plugin:
+  socket:
+    enable: true
+    protocol: sse       # 本模块默认值就是 sse，可不写
+```
+
+#### C. 嵌入式 SSE（protocol: sse）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.ping-timeout` | 嵌入模式 `SseEmitter` 连接超时（毫秒），到期触发超时回调关闭连接；`<=0`（含未配置）回落 30 分钟。SSE 心跳固定 15s，与本项无关 | `60000` |
+
+```yaml
+plugin:
+  socket:
+    enable: true
+    protocol: sse
+    ping-timeout: 28800000   # 8 小时；默认 60000（1 分钟）偏短，生产建议调大
+```
+
+> 注意：`ping-timeout: 0` 不表示「永不超时」，0 与负数都会回落 30 分钟；想要长连接请给足够大的正整数。
+
+#### D. 独立端口 SSE（protocol: sse-server）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.socket.host` | 独立服务监听地址（SSE 仅 `sse-server` 读取） | `0.0.0.0` |
+| `plugin.socket.room[n].port` | 独立监听端口；`sse-server` 取第一个 `>0` 的房间端口，全部 `-1`/未配置时回落 `29612`（不跟随主应用端口） | `-1` |
+| `plugin.socket.room[n].client-id` | 实例标识 | `default` |
+| `plugin.socket.room[n].context-path` | 上下文路径 | `/socket.io`（SSE 不使用） |
+| `plugin.socket.room[n].host` | 通用语义为覆盖主 `host`；SSE 实际不读取，监听地址恒取主 `host` | 空 |
+| `plugin.socket.room[n].auth-factory` | 通用语义为覆盖主 `auth-factory`；SSE 未接线 | 空 |
+| `plugin.socket.room[n].enable` | 是否启用该房间 | `true` |
+
+```yaml
+plugin:
+  socket:
+    enable: true
+    protocol: sse-server
+    host: 0.0.0.0
+    room:
+      - client-id: sse-node-1
+        port: 29612           # 不配置则默认 29612
+```
+
+#### E. SSE 不读取的项（配了不报错，但对 SSE 无效）
+
+| 配置项 | 默认值 | 说明 |
+|---|---|---|
+| `plugin.socket.ping-interval` | `25000` | Socket.IO 心跳间隔；SSE 心跳固定 15s 硬编码 |
+| `plugin.socket.codec-type` | `json` | 编解码器；SSE 固定 JSON 输出 |
+| `plugin.socket.max-frame-size` | `1048576` | Netty 帧上限；SSE 不经 Netty |
+| `plugin.socket.boss-count` / `work-count` | `1` / `100` | Netty 线程数；SSE 不经 Netty |
+| `plugin.socket.allow-custom-requests` | `true` | Socket.IO 选项 |
+| `plugin.socket.auth-factory` | 空 | SSE 未接线；鉴权请在自建 Controller 或网关处理 |
+| `plugin.socket.use-linux-native-epoll` | `false` | Netty epoll 开关；SSE 不经 Netty |
+
+### 5.3 完整 YAML 示例
+
+三种典型形态，可直接粘贴到 `application.yml`：
+
+```yaml
+# 形态一：嵌入式 SSE（最常用）——复用主应用 Servlet 端口，不新增端口
+plugin:
+  socket:
+    enable: true
+    protocol: sse
+    ping-timeout: 28800000      # 连接最长 8 小时（默认 60s 太短）
+
+# 形态二：独立端口 SSE——SSE 长连接与主应用 Tomcat 分离
+plugin:
+  socket:
+    enable: true
+    protocol: sse-server
+    host: 0.0.0.0
+    room:
+      - client-id: sse-node-1
+        port: 29612
+
+# 形态三：多协议共存——socket.io 双向交互 + SSE 单向推送
+plugin:
+  socket:
+    enable: true
+    auto-start: true
+    protocols:
+      - protocol: socketio
+        room:
+          - client-id: default
+            port: 9090
+      - protocol: sse-server
+        room:
+          - client-id: sse-node-1
+            port: 29612
+```
+
+### 5.4 生产注意事项
+
+1. **连接时长**：嵌入模式连接最长存活 `ping-timeout` 毫秒（默认 60 秒；`<=0` 回落 30 分钟，没有「永不超时」取值），到期触发 `onTimeout`，前端需具备重连逻辑。
+2. **网关/代理**：控制器与独立服务均已发送 `Cache-Control: no-cache`、`X-Accel-Buffering: no`，但 nginx 仍建议 `proxy_buffering off;`，且 `proxy_read_timeout` 必须大于 15s（心跳间隔硬编码 15s，不可配）。
+3. **鉴权**：`/sse/connect` 为 POST，令牌建议放 `Authorization` / `x-oauth-token` 请求头（不进 URL 与网关访问日志）；`plugin.socket.auth-factory` 对 SSE 未接线，认证需在自建 Controller 或网关层完成。
+4. **EventSource 兼容**：原生 `EventSource` 只发 GET，连不上内置 POST 端点；改用 `@microsoft/fetch-event-source`、`fetch` 流式解析，或按第 6 节自建 GET 桥接端点。
+5. **水平扩展**：会话表是单机内存（嵌入模板为实例级 `ConcurrentHashMap`，事件总线 `DefaultSseEventBusConfigurer` 还是 `static` 缓存），多实例部署必须做会话粘滞或跨实例广播，否则广播只达本实例连接。
+6. **独立端口**：`sse-server` 监听独立端口（默认 29612），防火墙/安全组需放行；该端口已内置 CORS（放行 `Content-Type`、`Authorization`、`x-oauth-token` 头，来源默认 `*`），经网关转发时需透传这些自定义头。
+7. **优雅停机**：`stop()` 会关闭心跳线程并断开全部会话；`auto-start: false` 时模板 Bean 仍会创建，但生命周期由调用方负责。
+8. **配置前缀**：本模块没有 `plugin.sse.*`，所有配置都在 `plugin.socket.*` 下；前缀写错不会报错，只会静默不生效。
+
 ## 6. 使用方式
 
 ```xml

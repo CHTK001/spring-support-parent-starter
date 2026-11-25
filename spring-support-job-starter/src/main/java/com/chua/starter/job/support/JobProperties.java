@@ -271,6 +271,8 @@ public class JobProperties {
          * <p>本值是<b>作业归属</b>口径: Leader 只扫描 {@code sys_job_group = group} 的任务行,
          * 与 {@code sys_job.sys_job_group} 对齐。不要拿它当选主租约的键, 见 {@link #electionNamespace}。</p>
          *
+         * <p>默认值：{@code "default"}。</p>
+         *
          * <p>YAML 示例: {@code plugin.job.cluster.group: payment}</p>
          */
         private String group = "default";
@@ -353,6 +355,8 @@ public class JobProperties {
 
         /**
          * 兼容旧配置项；设置为 true 时明确拒绝启动，不提供内存同步伪实现。
+         *
+         * <p>默认值：{@code false}。</p>
          *
          * <p>YAML 示例: {@code plugin.job.sync.in-memory: false}</p>
          */

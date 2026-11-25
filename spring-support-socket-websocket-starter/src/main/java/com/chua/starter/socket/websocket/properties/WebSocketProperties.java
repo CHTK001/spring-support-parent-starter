@@ -8,6 +8,26 @@ import java.util.List;
 
 /**
  * webSocket 配置属性
+ * <p>
+ * 配置前缀为 {@code plugin.websocket}（见 {@link #PREFIX}），经 {@code @EnableConfigurationProperties}
+ * 在 {@code WebSocketAutoConfiguration} 中注册；总开关 {@code plugin.websocket.enable=false}（默认）时
+ * 整个自动配置跳过，不注册端点与 Bean。
+ * </p>
+ * <p>完整 YAML 配置示例：</p>
+ * <pre>{@code
+ * plugin:
+ *   websocket:
+ *     enable: true                    # 总开关，默认 false，不开则整个模块不装配
+ *     endpoints:                      # 端点路径列表，默认 ["/ws"]，与应用同端口
+ *       - /ws
+ *     allowed-origins:                # 允许的 Origin，默认 ["*"]；空列表时不设置跨域
+ *       - "*"
+ *     sock-js: false                  # 是否启用 SockJS 回退，默认 false
+ *     heartbeat-interval: 25000       # SockJS 心跳间隔（毫秒），仅 sock-js=true 时生效，默认 25000
+ *     max-message-size: 65536         # 文本/二进制帧缓冲上限（字节），默认 65536
+ *     send-time-limit: 10000          # 发送超时（毫秒），默认 10000；会话空闲超时 = 2 × send-time-limit
+ *     send-buffer-size-limit: 524288  # 发送缓冲上限（字节），默认 524288；当前自动装配未使用
+ * }</pre>
  *
  * @since 2025-12-25
  * @author CH
@@ -22,45 +42,118 @@ public class WebSocketProperties {
     public static final String PREFIX = "plugin.websocket";
 
     /**
-     * 是否启用
+     * 是否启用 WebSocket 自动配置
+     * <p>
+     * 默认 {@code false}；为 {@code false} 时整个自动配置跳过，不注册端点与 Bean。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     enable: true
+     * }</pre>
      */
     private boolean enable = false;
 
     /**
      * webSocket 端点路径列表
+     * <p>
+     * 默认 {@code ["/ws"]}；列表中的路径逐个注册到同一个委托处理器，与应用同端口。
+     * 显式配置为空列表时不会注册任何端点（代码无回落值）。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     endpoints:
+     *       - /ws
+     *       - /ws/v2
+     * }</pre>
      */
     private List<String> endpoints = new ArrayList<>(List.of("/ws"));
 
     /**
      * 允许的源（跨域资源共享）
+     * <p>
+     * 默认 {@code ["*"]}；空列表时不调用 {@code setAllowedOrigins}，跨域策略交由容器默认处理。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     allowed-origins:
+     *       - "https://www.example.com"
+     * }</pre>
      */
     private List<String> allowedOrigins = new ArrayList<>(List.of("*"));
 
     /**
      * 是否启用 SockJS 支持
+     * <p>
+     * 默认 {@code false}；为 {@code true} 时端点以 SockJS 回退方式注册，
+     * 并把 {@code heartbeat-interval} 写入 SockJS 心跳时间。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     sock-js: true
+     * }</pre>
      */
     private boolean sockJs = false;
 
     /**
      * 心跳间隔（毫秒），0 表示禁用
+     * <p>
+     * 默认 {@code 25000}；仅 {@code sock-js=true} 时透传给 SockJS {@code setHeartbeatTime}，
+     * {@code sock-js=false} 时不生效。本模块不校验取值，{@code <=0} 原样透传（按 0 禁用心跳口径）。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     heartbeat-interval: 25000
+     * }</pre>
      */
     // [P3C A20 豁免]
     private long heartbeatInterval = 25000;
 
     /**
      * 消息大小限制（字节）
+     * <p>
+     * 默认 {@code 65536}；写入容器的文本/二进制帧缓冲上限（{@code ServletServerContainerFactoryBean}）。
+     * 本模块不校验取值，{@code <=0} 原样透传给 Servlet 容器。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     max-message-size: 65536
+     * }</pre>
      */
     // [P3C A20 豁免]
     private int maxMessageSize = 65536;
 
     /**
      * 发送缓冲区大小限制（字节）
+     * <p>
+     * 默认 {@code 524288}；当前自动装配未消费该字段，为预留配置。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     send-buffer-size-limit: 524288
+     * }</pre>
      */
     // [P3C A20 豁免]
     private int sendBufferSizeLimit = 524288;
 
     /**
      * 发送超时时间（毫秒）
+     * <p>
+     * 默认 {@code 10000}；当前自动装配中用作会话空闲超时：
+     * {@code maxSessionIdleTimeout = sendTimeLimit * 2}（默认 20000ms），未作为实际发送超时使用。
+     * 本模块不校验取值，{@code <=0} 时计算结果原样写入容器，具体语义以 Servlet 容器实现为准。
+     * </p>
+     * <pre>{@code
+     * plugin:
+     *   websocket:
+     *     send-time-limit: 10000
+     * }</pre>
      */
     // [P3C A20 豁免]
     private int sendTimeLimit = 10000;

@@ -215,6 +215,22 @@ public class ApiProviderController {
     private final com.chua.starter.ai.support.manage.service.ProviderCatalogSyncService providerCatalogSyncService;
 
     /**
+     * 渠道同步异步任务注册表：/sync 提交即返 task_id，状态经任务端点轮询
+     */
+    private final com.chua.starter.ai.support.manage.service.ProviderSyncTaskService providerSyncTaskService;
+
+    /**
+     * 模型价格服务（价格拆分后，模型卡片价格优先取 {@code sys_ai_model_price}）
+     */
+    private final com.chua.starter.ai.support.manage.service.SysAiModelPriceService modelPriceService;
+
+    /**
+     * 自代理：异步线程里经代理调 {@code runProviderSync}，保住 {@code @Transactional} 语义
+     * （自调用会绕过事务切面，必须经容器代理进入）。
+     */
+    private final ObjectProvider<ApiProviderController> selfProvider;
+
+    /**
      * 站内消息服务：余额低量告警的投递出口。
      *
      * <p>依赖在 pom 里声明为 optional，宿主没接 common-system-starter 时容器里
@@ -7302,15 +7318,36 @@ public class ApiProviderController {
             return;
         }
         Map<String, SysAiModelMetrics> index = metricsLibraryIndex();
+        // 价格拆分后价格键以价格库为权威（先放），指标库旧列只补缺、不覆盖
+        applyPriceRow(metrics, modelPriceService.findByKey(key));
         applyMetricsRow(metrics, index.get(key));
         if (key.endsWith(FREE_MODEL_SUFFIX)) {
             // 指标库里常常同时存在「-free 行」和「上游模型行」：前者多为全空壳，
             // 后者才有速度/智能/HLE。两行都取，精确行优先，缺的键由上游行补。
             String upstreamKey = key.substring(0, key.length() - FREE_MODEL_SUFFIX.length());
             if (!upstreamKey.isEmpty()) {
+                applyPriceRow(metrics, modelPriceService.findByKey(upstreamKey));
                 applyMetricsRow(metrics, index.get(upstreamKey));
             }
         }
+    }
+
+    /**
+     * 把价格库里的一行并入模型指标（只补缺）。
+     *
+     * <p>价格拆分后 {@code sys_ai_model_price} 是价格字段的权威来源；指标库旧价格列
+     * 不再更新，仅作历史数据回退，因此价格键先于指标行走本方法。</p>
+     *
+     * @param metrics 模型指标映射（就地写入）
+     * @param price   价格库行，可为空
+     */
+    private void applyPriceRow(Map<String, Object> metrics,
+                               com.chua.starter.ai.support.manage.store.SysAiModelPrice price) {
+        if (price == null) {
+            return;
+        }
+        putIfAbsentMetric(metrics, "price_input_per_musd", price.getPriceInput());
+        putIfAbsentMetric(metrics, "price_output_per_musd", price.getPriceOutput());
     }
 
     /**
@@ -10079,19 +10116,20 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     }
 
     /**
-     * 供应商「同步」：限制 + 计费标准 + 模型描述一次完成。
+     * 供应商「同步」：限制 + 计费标准 + 模型描述一次完成（异步任务）。
      *
-     * <p>与原「同步价格」的差别：</p>
+     * <p>全量同步耗时可达分钟级，本端点只做校验与提交：立即返回 {@code task_id}，
+     * 前端轮询 {@code GET /api/provider-sync-tasks/{task_id}} 取进度与结果。同步内容包括：</p>
      * <ul>
      *   <li><b>限制</b>：走 {@link ProviderLimitCollector} 的三段链路（手动配置 → 官方文档预设
      *       → 上游响应头），结果落到 {@code sys_account_channel.extra.provider_limits}；</li>
      *   <li><b>计费标准</b>：官方指标源（{@link ChatClientIndicator}）与上游
-     *       {@code /models} 自带 pricing 两条都写进 {@code sys_ai_model_metrics}；</li>
+     *       {@code /models} 自带 pricing 两条都落库，价格入价格库 {@code sys_ai_model_price}；</li>
      *   <li><b>模型描述</b>：把上游目录里的 description / summary 补到已配置模型行，
      *       默认只补空值（{@code overwrite_descriptions=true} 才覆盖），缺失的再由
      *       公开目录（models.dev）补位；</li>
      *   <li><b>公开目录</b>：models.dev 的说明 / 上下文 / 多模态 / 能力位 / 计费标准，
-     *       价格写入 {@code sys_ai_model_metrics}，其余只补空值。</li>
+     *       其余只补空值。</li>
      * </ul>
      *
      * <p>上游只请求一次 {@code GET /models}：描述与计费共用这份目录，限制复用同一次
@@ -10100,17 +10138,72 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      *
      * @param providerId 提供商标识
      * @param body       可选 { try_fix, overwrite_descriptions }
-     * @return 各分节同步结果
+     * @return { provider_id, task_id, status, submitted_at }
      */
     @Permission("admin")
     @PostMapping("/providers/{provider_id}/sync")
-    @Transactional(rollbackFor = Exception.class)
     public ApiResult<Map<String, Object>> syncProvider(@PathVariable("provider_id") String providerId,
                                                        @RequestBody(required = false) Map<String, Object> body) {
-        SysAccountChannel entity = requireProvider(providerId);
+        // 渠道不存在时同步失败（快速失败，不进异步队列）
+        requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         boolean overwriteDescriptions = body != null
                 && Boolean.TRUE.equals(body.get("overwrite_descriptions"));
+        // 经自代理调 runProviderSync，保住 @Transactional（自调用会绕过事务切面）
+        ApiProviderController self = selfProvider.getObject();
+        com.chua.starter.ai.support.manage.service.ProviderSyncTaskService.SyncTask task =
+                providerSyncTaskService.submit(providerId,
+                        () -> self.runProviderSync(providerId, tryFix, overwriteDescriptions));
+        Map<String, Object> out = new LinkedHashMap<>(8);
+        out.put("provider_id", providerId);
+        out.put("task_id", task.getTaskId());
+        out.put("status", task.getStatus().name());
+        out.put("submitted_at", task.getSubmittedAt());
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 渠道同步任务状态查询（前端轮询端点）。
+     *
+     * @param taskId 任务 id
+     * @return 状态与结果：SUCCESS 附 result（各分节同步结果），FAILED 附 error
+     */
+    @Permission("admin")
+    @GetMapping("/provider-sync-tasks/{task_id}")
+    public ApiResult<Map<String, Object>> providerSyncTask(@PathVariable("task_id") String taskId) {
+        com.chua.starter.ai.support.manage.service.ProviderSyncTaskService.SyncTask task =
+                providerSyncTaskService.get(taskId);
+        if (task == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "同步任务不存在或已过期: " + taskId);
+        }
+        Map<String, Object> out = new LinkedHashMap<>(10);
+        out.put("task_id", task.getTaskId());
+        out.put("provider_id", task.getProviderId());
+        out.put("status", task.getStatus().name());
+        out.put("submitted_at", task.getSubmittedAt());
+        out.put("started_at", task.getStartedAt());
+        out.put("finished_at", task.getFinishedAt());
+        if (task.getResult() != null) {
+            out.put("result", task.getResult());
+        }
+        if (task.getError() != null) {
+            out.put("error", task.getError());
+        }
+        return ApiResult.ok(out);
+    }
+
+    /**
+     * 渠道同步主流程（原同步端点逻辑，供异步任务经容器代理调用以保事务）。
+     *
+     * @param providerId            提供商标识
+     * @param tryFix                拉取失败时是否尝试修正 base_url 等配置
+     * @param overwriteDescriptions 是否用上游文本覆盖已有模型描述
+     * @return 各分节同步结果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> runProviderSync(String providerId, boolean tryFix,
+                                               boolean overwriteDescriptions) {
+        SysAccountChannel entity = requireProvider(providerId);
         long now = System.currentTimeMillis();
         Map<String, Object> out = new LinkedHashMap<>(10);
         out.put("provider_id", providerId);
@@ -10148,7 +10241,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         if (fetchError != null) {
             out.put("fetch_error", fetchError);
         }
-        return ApiResult.ok(out);
+        return out;
     }
 
     /**
