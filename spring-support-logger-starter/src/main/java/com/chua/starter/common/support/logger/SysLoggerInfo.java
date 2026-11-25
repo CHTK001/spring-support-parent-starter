@@ -73,7 +73,7 @@ public class SysLoggerInfo extends ApplicationEvent {
 
     /**
      * 查询参数
-     * <p>示例: "?userId=123&name=John", "username=admin&password=****"</p>
+     * <p>示例: "?userId=123&amp;name=John", "username=admin&amp;password=****"</p>
      */
     private String logParam;
 

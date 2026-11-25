@@ -15,9 +15,6 @@ package com.chua.starter.common.support.serviceinfo;
  *         registry.registerFlag("my-flag", "我的分组", true, "开关说明");
  *     };
  * }
- * }</pre>分组", true, "开关说明");
- *     };
- * }
  * }</pre>
  *
  * @since 4.0.0.42

@@ -15,7 +15,6 @@ import java.util.Objects;
  * <pre>{@code
  * ServiceInfoRegistry.getInstance().registerEndpoint("分片上传", "文件系统", "POST /chunk/create", "...");
  * ServiceInfoRegistry.getInstance().registerFlag("OSS", "存储", true, "阿里云 OSS 已启用");
- * }</pre>true, "阿里云 OSS 已启用");
  * }</pre>
  *
  * <h3>线程安全与生命周期</h3>
@@ -204,10 +203,7 @@ public final class ServiceInfoRegistry {
 
         /**
          * 创建 端点信息 实例
-         * @param group 群体
-         * @param group 字符串
-         * @param group 字符串
-         * @param group 字符串
+         * @param group 分组
          * @param name 名称
          * @param url url
          * @param description description

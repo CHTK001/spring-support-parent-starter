@@ -22,7 +22,6 @@ import org.springframework.context.annotation.Bean;
  *     <li>参数日志过滤器 - 记录请求参数、响应时间等</li>
  *     <li>MDC 过滤器 - 链路追踪</li>
  * </ul>
- * </p>
  *
  * <h3>配置示例：</h3>
  * <pre>

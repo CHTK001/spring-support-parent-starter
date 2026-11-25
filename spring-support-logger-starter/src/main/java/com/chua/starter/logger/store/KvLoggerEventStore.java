@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *   <li>应用登记：{@code logger-app:{app}}</li>
  *   <li>实例登记：{@code logger-inst:{app}:{instanceHash}}（TTL 2h）</li>
  *   <li>计数：{@code logger-cnt:{app}:total|error}</li>
- * </ul></p>
+ * </ul>
  *
  * @author CH
  * @since 4.0.0.51

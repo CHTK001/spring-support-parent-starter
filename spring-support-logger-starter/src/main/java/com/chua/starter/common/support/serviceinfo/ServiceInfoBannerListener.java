@@ -38,7 +38,6 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
      * 创建 服务信息banner监听器 实例
      * @param detector detector
      * @param properties 服务信息属性
-     * @param properties 属性
      */
     public ServiceInfoBannerListener(ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         this.detector = detector;

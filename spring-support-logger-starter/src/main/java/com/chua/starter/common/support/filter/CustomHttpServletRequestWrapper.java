@@ -43,7 +43,6 @@ public class CustomHttpServletRequestWrapper extends HttpServletRequestWrapper {
     /**
      * 创建 习俗httpservlet请求包装器 实例
      * @param request 请求
-     * @param body 字符串
      * @param body 主体
      */
     public CustomHttpServletRequestWrapper(HttpServletRequest request, String body) {

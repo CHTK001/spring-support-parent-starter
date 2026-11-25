@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
  *     <li>host:port - 青色高亮</li>
  *     <li>开启/关闭 - 绿色/红色高亮</li>
  * </ul>
- * </p>
  *
  * @since 2024-12-28
  * @author CH

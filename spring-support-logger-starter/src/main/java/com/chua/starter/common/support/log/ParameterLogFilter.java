@@ -42,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
  *     <li>客户端 IP 地址</li>
  *     <li>请求耗时统计</li>
  * </ul>
- * </p>
  *
  * <h3>配置项：</h3>
  * <pre>
