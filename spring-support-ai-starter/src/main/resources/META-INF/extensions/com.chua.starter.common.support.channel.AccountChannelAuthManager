@@ -14,3 +14,4 @@ com.chua.starter.ai.support.spi.impl.EacAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.WorkBuddyAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.ScnetAccountChannelAuthManager
 com.chua.starter.ai.support.spi.impl.QwenAccountChannelAuthManager
+com.chua.starter.ai.support.spi.impl.CopilotAccountChannelAuthManager

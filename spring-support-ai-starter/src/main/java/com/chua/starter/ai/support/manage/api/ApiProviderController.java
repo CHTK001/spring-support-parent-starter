@@ -2596,11 +2596,37 @@ public class ApiProviderController {
             return splitCreditKeys(String.valueOf(configured));
         }
         List<String> inherited = extractAllKeys(entity.getCredentials());
+        if (inherited.isEmpty() && isCopilotProvider(entity)) {
+            // Copilot 渠道行没有 API Key：设备码授权的 ghu_ 长效令牌落在绑定连接
+            // （连接表 credentials.refresh_token），从最近一条连接促升为余额密钥。
+            inherited = copilotConnectionKeys(entity);
+        }
         if (inherited.isEmpty()) {
             return List.of();
         }
         promoteCreditKey(entity, extra, inherited);
         return inherited;
+    }
+
+    /**
+     * 从 Copilot 最近一次绑定连接取长效令牌（ghu_）作余额密钥候选。
+     *
+     * <p>Copilot 不接受 PAT，配额接口（{@code copilot_internal/v2/token}）认 OAuth
+     * 设备码授权换来的 {@code ghu_} 长效令牌；绑定成功后凭据由账号模块落在连接表
+     * （{@code credentials.refresh_token}），渠道行本身没有 API Key。这里只读最近一条
+     * 绑定连接的 {@code refresh_token} 作为候选，促升与落库交给
+     * {@link #promoteCreditKey}（经 {@code updateExtra} 合规写路径）。</p>
+     *
+     * @param entity 供应商行
+     * @return ghu_ 长效令牌列表（无绑定连接或凭据缺失时为空）
+     */
+    private List<String> copilotConnectionKeys(SysAccountChannel entity) {
+        SysAccountChannelConnection conn = accountChannelConnectionService.findLatest(entity.getProviderId());
+        if (conn == null || conn.getCredentials() == null) {
+            return List.of();
+        }
+        String token = str(conn.getCredentials(), "refresh_token");
+        return token == null || token.isBlank() ? List.of() : List.of(token);
     }
 
     /**
@@ -2787,6 +2813,7 @@ public class ApiProviderController {
             case "100milionseek" -> "100milionseek 每日配额";
             case "tokenrhythm" -> "基元律动余额";
             case "qianfan" -> "百度千帆控制台余额";
+            case "copilot" -> "GitHub Copilot 配额";
             default -> kind;
         };
     }
@@ -4454,7 +4481,7 @@ public class ApiProviderController {
                     || "volc-plan".equals(candidate)
                     || "ppio".equals(candidate) || "anthropic".equals(candidate)
                     || "xai".equals(candidate) || "sensenova".equals(candidate)
-                    || "qianfan".equals(candidate);
+                    || "qianfan".equals(candidate) || "copilot".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
             // 出网代理：供应商配了 proxy 按供应商的走；没配时 CreditHttp 回落 JVM 全局代理属性
@@ -4668,6 +4695,11 @@ public class ApiProviderController {
         // 只对 MiniMax 官方站点有意义，放通用探测之前（kind 用 minimax-platform，避开 account 旧渠道体系已占用的 minimax）
         if (isMinimaxProvider(entity)) {
             kinds.add("minimax-platform");
+        }
+        // GitHub Copilot 配额：copilot_internal/v2/token 认设备码授权的 ghu_ 长效令牌
+        // （Bearer），实现自带地址；只对 Copilot 站点有意义，放通用探测之前
+        if (isCopilotProvider(entity)) {
+            kinds.add("copilot");
         }
         // ModelScope（魔搭）没有独立余额端点：发一次 max_tokens=1 的最小对话请求，
         // 从响应头读当日限流配额；只对魔搭官方站点有意义，放通用探测之前
@@ -5055,10 +5087,11 @@ public class ApiProviderController {
                 || "minimax-platform".equals(kind) || "zai".equals(kind) || "opencode".equals(kind)
                 || "opencode-console".equals(kind) || "ppio".equals(kind)
                 || "anthropic".equals(kind) || "xai".equals(kind) || "tokenrhythm".equals(kind)
-                || "qianfan".equals(kind)) {
+                || "qianfan".equals(kind) || "copilot".equals(kind)) {
             // Moss / MiniMax / OpenCode / Anthropic 控制台认 Cookie 会话（opencode-console 为
             // __Host-console_session、anthropic 为 sessionKey，由各自实现包装成 Cookie 头）、
             // Agnes / DeepSeek / sub2api / z.ai / OpenCode / PPIO / xAI 官方 API 认 Bearer、
+            // Copilot 配额接口认设备码授权的 ghu_ 长效令牌（Bearer，实现自带地址与 UA）、
             // TokenRhythm / 百度千帆控制台认会话 Cookie（由实现包装成 Cookie 头）：
             // 令牌原值交给各自实现 / 请求出口包装，不走渠道鉴权前缀，避免与余额接口的实际口径错位
             query.setToken(key);
@@ -5227,6 +5260,27 @@ public class ApiProviderController {
         }
         String host = hostOf(entity.getBaseUrl());
         return host != null && host.endsWith("sensenova.cn");
+    }
+
+    /**
+     * 是否是 GitHub Copilot 站点：只有它才值得试 Copilot 配额接口与「账号登录」。
+     *
+     * <p>Copilot 的个人版网关在 {@code api.individual.githubcopilot.com}（企业版
+     * {@code api.business.githubcopilot.com}），平台名（github-copilot / copilot）与
+     * githubcopilot.com 域名都认；域名后缀天然排除 {@code copilot.tencent.com}
+     * （腾讯 WorkBuddy，不是 GitHub Copilot）。</p>
+     *
+     * @param entity 供应商
+     * @return Copilot 站点为 true
+     */
+    private static boolean isCopilotProvider(SysAccountChannel entity) {
+        String platform = entity.getPlatform() == null
+                ? "" : entity.getPlatform().trim().toLowerCase(Locale.ROOT);
+        if ("github-copilot".equals(platform) || "copilot".equals(platform)) {
+            return true;
+        }
+        String host = hostOf(entity.getBaseUrl());
+        return host != null && host.endsWith("githubcopilot.com");
     }
 
     /**
