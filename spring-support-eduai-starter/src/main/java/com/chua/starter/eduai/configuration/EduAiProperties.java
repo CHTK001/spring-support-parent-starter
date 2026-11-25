@@ -385,7 +385,7 @@ public class EduAiProperties {
         private boolean enabled = true;
 
         /**
-         * AI 服务商（与 对话客户端registry 中的 提供者 一致）。
+         * AI 服务商（与对话客户端注册表中的提供者一致）。
          *
          * <p>默认未配置（{@code null}）；当前主代码未读取。
          * YAML：{@code plugin.eduai.ai.provider: your-provider}。</p>
@@ -538,7 +538,7 @@ public class EduAiProperties {
          */
         private boolean enabled = false;
         /**
-         * Webhook 地址（支持钉钉/企微/飞书等标准卡片格式）。
+         * Webhook 地址（告警以钉钉兼容的 text 文本消息格式 POST 推送）。
          *
          * <p>默认未配置（{@code null}）；留空时即使 {@code enabled=true} 也不发送。
          * YAML：{@code plugin.eduai.alert.webhook-url: https://your-webhook.example.com/eduai-alert}。</p>

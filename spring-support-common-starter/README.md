@@ -519,7 +519,7 @@ plugin:
 9. **验证码**：端点前缀 `plugin.captcha.context-path` 修改后需同步前端与网关路由；`ttl` 过长会增加缓存占用，过短影响用户体验。
 10. **请求指纹**：`include-body` 上限默认 1MB，大报文接口可调小 `include-body-max-bytes` 或用 `body-methods` 排除。
 11. **null 序列化**：`plugin.jackson.include-null=false` 时响应省略 null 字段，前端判空逻辑需兼容「字段缺失」与「字段为 null」两种形态。
-12. **信息暴露面**：`/service-info` 与启动横幅会展示服务、连接与线程池信息，生产建议同时开启过滤器注册开关 `plugin.service-info.auth.enable=true` 与运行时门控 `plugin.service-info.auth-enable=true`（并配置 `auth-username` / `auth-password`）；只配嵌套键时过滤器不会进入执行链，端点仍匿名可读。
+12. **信息暴露面**：`/service-info` 与启动横幅会展示服务、连接与线程池信息，生产建议同时开启过滤器注册开关 `plugin.service-info.auth.enable=true` 与运行时门控 `plugin.service-info.auth-enable=true`（并配置 `auth-username` / `auth-password`）。两个开关只配其一端点仍匿名可读：只配嵌套键时过滤器已注册进链但运行时门控为 `false` 直接放行；只配扁平键时过滤器不会注册。
 
 ## 九、使用方式
 
@@ -631,7 +631,7 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 `plugin.api.cors.enable=true` 时 `allowed-origins` 为空则不放行任何跨域来源；把前端域名加入白名单（支持端口通配），不要使用 `*` 与 `allow-credentials=true` 组合。
 
 **Q：如何查看当前生效了哪些开关？**
-访问 `GET /service-info`（公网环境请同时开启注册开关 `plugin.service-info.auth.enable=true` 与门控开关 `plugin.service-info.auth-enable=true`，并配置 `auth-username` / `auth-password`），或查看应用启动横幅。
+访问 `GET /service-info`（公网环境请同时开启注册开关 `plugin.service-info.auth.enable=true` 与门控开关 `plugin.service-info.auth-enable=true`，并配置 `auth-username` / `auth-password`；只配其一仍会匿名放行），或查看应用启动横幅。
 
 **Q：`@Watch` 的链路和日志里的 traceId 是一回事吗？**
 不是。traceId 由 `MdcHandlerFilter` 在 HTTP 边界写入 MDC；`@Watch` 的 linkId 由 `TrackContext` 在方法边界管理。两者仅在 `@Watch` 切面入口用同一个 UUID 关联，跨线程传播也各走各的（MDC 走 `MdcWrap`/`MdcTaskDecorator`，Span 栈是 ThreadLocal、最外层结束即清空）。

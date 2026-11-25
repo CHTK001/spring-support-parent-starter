@@ -26,11 +26,11 @@ import java.util.Set;
  *
  * <p>使用 {@link ServiceInfoProperties} 配置:
  * <ul>
- *     <li>{@code plugin.service-info.auth.enable} = true 开启认证 (默认 false)</li>
- *     <li>{@code plugin.service-info.auth.username} / {@code password}</li>
- *     <li>{@code plugin.service-info.auth.ip-whitelist} IP 白名单 (CIDR 支持)</li>
+ *     <li>注册开关：{@code plugin.service-info.auth.enable} = true 时本过滤器才注册 (默认 false)</li>
+ *     <li>运行时门控：{@code plugin.service-info.auth-enable} = true 才执行认证 (默认 false)</li>
+ *     <li>{@code plugin.service-info.auth-username} / {@code plugin.service-info.auth-password}</li>
+ *     <li>{@code plugin.service-info.auth-ip-whitelist} IP 白名单 (CIDR 支持)</li>
  * </ul>
- * </p>
  *
  * @since 4.0.0.42
  * @author CH

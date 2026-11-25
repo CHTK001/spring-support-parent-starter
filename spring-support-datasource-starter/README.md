@@ -586,6 +586,16 @@ plugin:
 public class App { ... }
 ```
 
+**默认数据源路由（不标 `@DS` 时的走向）**
+
+业务方法不标 `@DS` 时，默认数据源按以下优先级确定（`strict` 默认 `false`，`@DS` 写错名也回退默认源而非抛异常）：
+
+1. **运行期聚合源接管**：开启分片/联邦且**业务数据源恰好一个**时，`shardingDataSource` / `calciteDataSource` 临时充当默认源——业务免 `@DS` 直走分片/联邦；聚合源摘除（分片规则删空 / 联邦停用）后，默认源**自动还原**为原业务数据源。多业务源场景不接管。
+2. 名为 `master` 的数据源。
+3. 按注册顺序的**第一个**数据源（单 url 配置自动命名 `master`，即命中本条）。
+
+带 `@DS` 时按注解名在注册表中**精确匹配，优先于默认路由**。因此单业务源 + 分片开启时：不标 `@DS` 走分片源；`@DS("master")` 仍直连原 master 物理源（绕过分片）；`@DS("shardingDataSource")` 显式走分片。**"接管"替换的只是默认路由位，原 master 数据源仍在注册表中，可正常按名使用。**
+
 ### 6.1 分库分表（ShardingSphere）
 
 `plugin.datasource.sharding.enabled=true` 时，模块把**已注册的普通数据源**（排除动态路由数据源与分片数据源自身）交给 `ShardingV5Conversion`（底层 ShardingSphere 5.5.2）构建名为 `shardingDataSource` 的分片数据源。有两条配置路径：
@@ -622,7 +632,7 @@ plugin:
 
 **方式二：运行期规则（`ds_sharding_rule` 表，分片数/分库成员可参数化）**
 
-`ds_sharding_rule` 一条记录 = 一个逻辑表的规则（算法 MOD/INTERVAL、分片列、分片数、分库成员 JSON——支持 url 直连或引用已注册数据源名）。`ShardingRuleManager` 在启动（`loadOnStartup`）或 `POST /ms/ds-runtime/sharding/refresh` 时构建/替换分片数据源，**不重启生效**。管理端点：`GET/POST /ms/ds-runtime/sharding`、`DELETE /ms/ds-runtime/sharding/{id}`、`POST /ms/ds-runtime/sharding/route-preview`（SQL 落点预览）、`POST /ms/ds-runtime/sharding/query`；全量配置可经 `GET /ms/ds-runtime/config/export` / `POST /ms/ds-runtime/config/import` 导入导出。
+`ds_sharding_rule` 一条记录 = 一个逻辑表的规则（算法 MOD/INTERVAL、分片列、分片数、分库成员 JSON——支持 url 直连或引用已注册数据源名）。`ShardingRuleManager` 在启动（`loadOnStartup`）或 `POST /ms/ds-runtime/sharding/refresh` 时构建/替换分片数据源，**不重启生效**。管理端点：`GET/POST /ms/ds-runtime/sharding`、`DELETE /ms/ds-runtime/sharding/{id}`、`POST /ms/ds-runtime/sharding/route-preview`（SQL 落点预览）、`POST /ms/ds-runtime/sharding/query`；全量配置可经 `GET /ms/ds-runtime/config/export` / `POST /ms/ds-runtime/config/import` 导入导出。当业务数据源恰好一个时，分片源同时**接管默认路由**（业务免 `@DS`，见 §6 开头「默认数据源路由」）；删除全部规则后默认路由自动还原为原业务数据源。
 
 ### 6.2 分区路由与分区表自动创建（独立于分库分表）
 
@@ -669,7 +679,7 @@ plugin:
 
 **方式二：运行期联邦（`ds_calcite_federation` 表）**
 
-动态增删联邦成员时，用 `DsCalciteFederation` 描述成员数据源与模式映射；`CalciteFederationManager` 在启动（`ApplicationReadyEvent`）与配置变更时把它物化为 Calcite schema，不重启生效。管理端点（`/ms/ds-runtime/calcite`）：
+动态增删联邦成员时，用 `DsCalciteFederation` 描述成员数据源与模式映射；`CalciteFederationManager` 在启动（`ApplicationReadyEvent`）与配置变更时把它物化为 Calcite schema，不重启生效。当业务数据源恰好一个时，联邦源同样**接管默认路由**（业务免 `@DS`），停用/删除联邦配置后自动还原（见 §6 开头「默认数据源路由」）。管理端点（`/ms/ds-runtime/calcite`）：
 
 | 端点 | 说明 |
 | --- | --- |
