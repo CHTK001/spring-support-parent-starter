@@ -478,3 +478,71 @@ CREATE TABLE IF NOT EXISTS `pay_coupon` (
   INDEX `idx_pay_coupon_order_no` (`pay_coupon_order_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户优惠券表';
 
+CREATE TABLE IF NOT EXISTS `pay_profit_sharing_receiver` (
+  `pay_profit_sharing_receiver_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_profit_sharing_receiver_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_profit_sharing_receiver_channel_type` VARCHAR(16) NOT NULL COMMENT '渠道类型: WECHAT/ALIPAY',
+  `pay_profit_sharing_receiver_name` VARCHAR(128) NOT NULL COMMENT '接收方名称',
+  `pay_profit_sharing_receiver_account` VARCHAR(128) NOT NULL COMMENT '接收方账号(商户号/支付宝用户号/登录账号)',
+  `pay_profit_sharing_receiver_type` VARCHAR(16) NOT NULL DEFAULT 'MERCHANT_ID' COMMENT '账号类型: MERCHANT_ID-商户号/PERSONAL_OPENID-个人openid/LOGIN_NAME-登录账号',
+  `pay_profit_sharing_receiver_relation_type` VARCHAR(32) NOT NULL DEFAULT 'PARTNER' COMMENT '与商户关系类型: PARTNER-合作方/SERVICE_PROVIDER-服务商/STORE-门店/STAFF-员工',
+  `pay_profit_sharing_receiver_ratio` DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '分账比例(%)',
+  `pay_profit_sharing_receiver_status` VARCHAR(16) NOT NULL DEFAULT 'ENABLED' COMMENT '状态: ENABLED-启用/DISABLED-停用',
+  `pay_profit_sharing_receiver_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `pay_profit_sharing_receiver_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `pay_profit_sharing_receiver_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_profit_sharing_receiver_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX `idx_pay_profit_sharing_receiver_merchant` (`pay_profit_sharing_receiver_merchant_id`),
+  INDEX `idx_pay_profit_sharing_receiver_channel` (`pay_profit_sharing_receiver_channel_type`),
+  INDEX `idx_pay_profit_sharing_receiver_status` (`pay_profit_sharing_receiver_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分账接收方配置表';
+
+CREATE TABLE IF NOT EXISTS `pay_profit_sharing_order` (
+  `pay_profit_sharing_order_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_profit_sharing_order_no` VARCHAR(64) NOT NULL COMMENT '分账单号',
+  `pay_profit_sharing_order_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_profit_sharing_order_channel_id` BIGINT DEFAULT NULL COMMENT '支付渠道ID',
+  `pay_profit_sharing_order_channel_type` VARCHAR(16) DEFAULT NULL COMMENT '渠道类型: WECHAT/ALIPAY',
+  `pay_profit_sharing_order_order_id` BIGINT DEFAULT NULL COMMENT '支付订单ID',
+  `pay_profit_sharing_order_order_no` VARCHAR(64) NOT NULL COMMENT '支付订单号',
+  `pay_profit_sharing_order_third_party_order_no` VARCHAR(128) DEFAULT NULL COMMENT '第三方交易号',
+  `pay_profit_sharing_order_total_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '订单实付金额',
+  `pay_profit_sharing_order_sharing_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '分账总金额',
+  `pay_profit_sharing_order_receivers` TEXT DEFAULT NULL COMMENT '分账接收方明细(JSON)',
+  `pay_profit_sharing_order_status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING-待分账/PROCESSING-分账中/SUCCEEDED-成功/FAILED-失败/RETURNED-已回退',
+  `pay_profit_sharing_order_channel_order_no` VARCHAR(128) DEFAULT NULL COMMENT '渠道分账单号',
+  `pay_profit_sharing_order_fail_reason` VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
+  `pay_profit_sharing_order_finish_at` DATETIME DEFAULT NULL COMMENT '完成时间',
+  `pay_profit_sharing_order_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `pay_profit_sharing_order_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `pay_profit_sharing_order_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_profit_sharing_order_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_pay_profit_sharing_order_no` (`pay_profit_sharing_order_no`),
+  UNIQUE KEY `uk_pay_profit_sharing_order_order_no` (`pay_profit_sharing_order_order_no`),
+  INDEX `idx_pay_profit_sharing_order_merchant` (`pay_profit_sharing_order_merchant_id`),
+  INDEX `idx_pay_profit_sharing_order_status` (`pay_profit_sharing_order_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分账单表';
+
+CREATE TABLE IF NOT EXISTS `pay_profit_sharing_return` (
+  `pay_profit_sharing_return_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_profit_sharing_return_no` VARCHAR(64) NOT NULL COMMENT '回退单号',
+  `pay_profit_sharing_return_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_profit_sharing_return_sharing_order_id` BIGINT NOT NULL COMMENT '分账单ID',
+  `pay_profit_sharing_return_sharing_order_no` VARCHAR(64) NOT NULL COMMENT '分账单号',
+  `pay_profit_sharing_return_order_no` VARCHAR(64) DEFAULT NULL COMMENT '原支付订单号',
+  `pay_profit_sharing_return_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '回退金额',
+  `pay_profit_sharing_return_receiver_account` VARCHAR(128) DEFAULT NULL COMMENT '回退接收方账号',
+  `pay_profit_sharing_return_reason` VARCHAR(500) DEFAULT NULL COMMENT '回退原因',
+  `pay_profit_sharing_return_status` VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING-处理中/SUCCEEDED-成功/FAILED-失败',
+  `pay_profit_sharing_return_channel_return_no` VARCHAR(128) DEFAULT NULL COMMENT '渠道回退单号',
+  `pay_profit_sharing_return_fail_reason` VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
+  `pay_profit_sharing_return_finish_at` DATETIME DEFAULT NULL COMMENT '完成时间',
+  `pay_profit_sharing_return_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `pay_profit_sharing_return_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_profit_sharing_return_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_pay_profit_sharing_return_no` (`pay_profit_sharing_return_no`),
+  INDEX `idx_pay_profit_sharing_return_sharing_order` (`pay_profit_sharing_return_sharing_order_id`),
+  INDEX `idx_pay_profit_sharing_return_merchant` (`pay_profit_sharing_return_merchant_id`),
+  INDEX `idx_pay_profit_sharing_return_status` (`pay_profit_sharing_return_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分账回退单表';
+

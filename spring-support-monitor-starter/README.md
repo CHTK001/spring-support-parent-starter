@@ -116,6 +116,21 @@ flowchart LR
 | `plugin.monitor.timeseries.url` | `String` | `http://127.0.0.1:8086` | redis 引擎下配成 `redis://`（或 `host:port`）时覆盖 `spring.data.redis.*` |
 | `plugin.monitor.timeseries.database` | `String` | `monitor` | 库名（redis 引擎下为逻辑库下标） |
 
+逐项 YAML 示例（值均为默认值，按需修改）：
+
+```yaml
+plugin:
+  monitor:
+    influx:                     # 是否启用 InfluxDB 写入/查询（默认 false）
+      enabled: false
+      url: http://127.0.0.1:8086        # InfluxDB v1 兼容端点
+      database: monitor                 # 库名
+    timeseries:                 # 时序双写引擎选择
+      engine: influxdb          # influxdb / redis / datasource / none
+      url: http://127.0.0.1:8086        # redis 引擎时可写 redis://host:port
+      database: monitor                 # redis 引擎下为逻辑库下标
+```
+
 ### 5.2 `plugin.monitor.ssh`（`MonitorSshProperties`，`@Component` 注册）
 
 | 配置路径 | 类型 | 默认值 | 说明 |

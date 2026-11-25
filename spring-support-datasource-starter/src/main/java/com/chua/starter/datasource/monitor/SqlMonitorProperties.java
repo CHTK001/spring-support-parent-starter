@@ -16,6 +16,21 @@ import static com.chua.starter.datasource.monitor.SqlMonitorProperties.PRE;
  *
  * <p>纯 JDBC 层 SQL 监听，数据源无关，不依赖 druid/p6spy/mybatis。</p>
  *
+ * <p>配置示例:</p>
+ * <pre>
+ * plugin:
+ *   datasource:
+ *     monitor:
+ *       enabled: true                   # 是否启用；缺省按激活环境自动判断
+ *       auto-enable-environments: dev,test,uat,local  # 自动启用的环境
+ *       slow-sql-threshold-ms: 1000     # 慢 SQL 阈值(毫秒)
+ *       max-sql-length: 2000            # SQL 记录最大长度(字符)
+ *       record-sql: true                # 是否记录 SQL 文本
+ *       publish-event: true             # 是否发布 Spring 事件
+ *       max-tracked-data-sources: 1000  # 统计跟踪的数据源数量上限
+ *       overflow-policy: REJECT         # 溢出策略: REJECT / EVICT_ELDEST
+ * </pre>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -32,34 +47,46 @@ public class SqlMonitorProperties {
      * 是否启用 SQL 监听
      * <p>未设置（null）时根据 Spring 环境自动切换：匹配 {@link #autoEnableEnvironments}
      * 中任一环境（dev/测试/uat/本地）则启用，否则关闭。显式设置后以设置为准。</p>
+     * 默认值: null（按 auto-enable-environments 自动判断）
+     * 示例: plugin.datasource.monitor.enabled=true
      */
     private Boolean enabled = null;
 
     /**
      * 自动启用监听的环境列表
      * <p>仅当 {@code enabled} 未显式设置时生效。任一激活 profile 命中该列表即启用。</p>
+     * 默认值: dev,test,uat,local
+     * 示例: plugin.datasource.monitor.auto-enable-environments=dev,test,uat,local
      */
     private List<String> autoEnableEnvironments = Arrays.asList("dev", "test", "uat", "local");
 
     /**
      * 慢 SQL 阈值（毫秒），超过该阈值的 SQL 视为慢 SQL
+     * 默认值: 1000
+     * 示例: plugin.datasource.monitor.slow-sql-threshold-ms=1000
      */
     // [P3C A20 豁免]
     private long slowSqlThresholdMs = 1000L;
 
     /**
      * SQL 记录最大长度，超过部分截断，防止大 SQL 占用内存
+     * 默认值: 2000
+     * 示例: plugin.datasource.monitor.max-sql-length=2000
      */
     // [P3C A20 豁免]
     private int maxSqlLength = 2000;
 
     /**
      * 是否记录 SQL 文本，关闭后事件只携带统计信息，减少内存开销
+     * 默认值: true
+     * 示例: plugin.datasource.monitor.record-sql=true
      */
     private boolean recordSql = true;
 
     /**
      * 是否发布 Spring 事件，关闭后只更新统计与慢 SQL 日志
+     * 默认值: true
+     * 示例: plugin.datasource.monitor.publish-event=true
      */
     private boolean publishEvent = true;
 
@@ -67,6 +94,8 @@ public class SqlMonitorProperties {
      * 统计跟踪的数据源数量上限
      * <p>防止数据源名称动态增长导致内存无限膨胀。达到上限后，新数据源的行为由
      * {@link #overflowPolicy} 决定。单个统计对象仅约 80 字节，默认 1000 个约 80KB。</p>
+     * 默认值: 1000
+     * 示例: plugin.datasource.monitor.max-tracked-data-sources=1000
      */
     // [P3C A20 豁免]
     private int maxTrackedDataSources = 1000;
@@ -76,6 +105,8 @@ public class SqlMonitorProperties {
      * <p>默认 {@link OverflowPolicy#REJECT}：达到上限后不再跟踪新数据源（慢 SQL 日志与
      * 事件仍正常），已跟踪数据源不受影响。也可配置为 {@link OverflowPolicy#EVICT_ELDEST}
      * 自动淘汰最早跟踪的数据源。</p>
+     * 默认值: REJECT
+     * 示例: plugin.datasource.monitor.overflow-policy=REJECT
      */
     private OverflowPolicy overflowPolicy = OverflowPolicy.REJECT;
 

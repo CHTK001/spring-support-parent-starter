@@ -6,7 +6,25 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Actuator配置属性
+ * Actuator 端点加固配置属性。
+ *
+ * <p>前缀 {@code plugin.actuator}。为 Spring Boot Actuator 端点提供基础认证、
+ * IP 白名单与路径排除等防护能力。</p>
+ *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   actuator:
+ *     enable: false            # 是否启用加固（字段默认 false；端点装配 matchIfMissing=true）
+ *     enable-auth: false       # 是否开启基础认证（默认 false；需显式开启）
+ *     username: admin          # 认证用户名（默认空）
+ *     password: your-password  # 认证密码（生产从环境变量注入）
+ *     ip-whitelist:            # IP 白名单（支持精确/通配符/CIDR）
+ *       - 127.0.0.1
+ *       - 192.168.0.0/16
+ *     exclude-paths:           # 不参与加固的路径
+ *       - /actuator/health
+ * </pre>
  *
  * @since 2024/6/21
  * @author CH
@@ -14,33 +32,41 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "plugin.actuator", ignoreInvalidFields = true)
 public class ActuatorProperties {
     /**
-     * 是否启用
+     * 是否启用 Actuator 加固。
+     * <p>YAML：{@code plugin.actuator.enable}，字段默认 {@code false}；端点装配条件为
+     * {@code matchIfMissing = true}（未配置时默认装配）。</p>
      */
     private boolean enable = false;
 
 
     /**
-     * 是否开启认证
+     * 是否开启基础认证。
+     * <p>YAML：{@code plugin.actuator.enable-auth}，默认 {@code false}；开启后需同时配置
+     * {@code username} 与 {@code password}。</p>
      */
     private boolean enableAuth = false;
 
     /**
-     * 用户名
+     * 基础认证用户名。
+     * <p>YAML：{@code plugin.actuator.username}，默认空字符串。</p>
      */
     private String username = "";
 
     /**
-     * 密码
+     * 基础认证密码。
+     * <p>YAML：{@code plugin.actuator.password}，默认空字符串；生产环境建议从环境变量注入。</p>
      */
     private String password = "";
 
     /**
-     * IP白名单
+     * IP 白名单，命中后放行（支持精确匹配、通配符、CIDR）。
+     * <p>YAML：{@code plugin.actuator.ip-whitelist}，默认空集合。</p>
      */
     private Set<String> ipWhitelist = new LinkedHashSet<>();
 
     /**
-     * 排除的路径
+     * 排除的路径，这些路径不参与加固。
+     * <p>YAML：{@code plugin.actuator.exclude-paths}，默认空集合。</p>
      */
     private Set<String> excludePaths = new LinkedHashSet<>();
 

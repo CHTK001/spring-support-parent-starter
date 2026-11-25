@@ -207,6 +207,7 @@ flowchart LR
 | `plugin.nonce.sign.secret-key` | 内置默认值 | 回退环境变量 `PLUGIN_NONCE_SIGN_SECRET_KEY`、前缀 `nonce.sign` |
 | `plugin.service-info.enable` / `banner` | `true` / `true` | `/service-info` 端点与启动横幅 |
 | `plugin.service-info.auth.enable` / `auth.username` / `auth.password` | `false` / `admin` / 空 | 端点认证 |
+| `plugin.service-info.auth.ip-whitelist` | 空 | 端点认证 IP 白名单（命中跳过认证；支持精确/通配符/CIDR） |
 | `plugin.service-info.infrastructure` | `true` | 横幅展示 Redis/JDBC/Kafka 等已配置的连接信息 |
 | `plugin.ip.enable` / `database-file` / `ip-type` | `false` / `classpath:qqwry.dat` / `ip2region` | IP 归属地 |
 | `plugin.notice.enable` / `email.smtp-host` / `email.from` | `false` / `smtp.qq.com` / 无 | 邮件通知 |
@@ -340,6 +341,7 @@ plugin:
       enable: false                  # 端点认证（默认 false）
       username: admin                # 认证用户名（默认 admin）
       password: "${SERVICE_INFO_PASSWORD:change-me}"  # 认证密码（默认空）
+      ip-whitelist: []               # 认证 IP 白名单，命中跳过认证（默认空）
   jackson:
     include-null: false              # 是否输出 null 字段（默认 false；无装配开关，恒生效）
   message:
@@ -481,6 +483,7 @@ plugin:
       enable: true
       username: ops
       password: "${SERVICE_INFO_PASSWORD:change-me}"
+      ip-whitelist: [ "10.0.0.0/8" ]
   async:
     enable: true
   thread:

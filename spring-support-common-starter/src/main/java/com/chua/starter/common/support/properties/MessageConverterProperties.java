@@ -8,7 +8,23 @@ import org.springframework.http.MediaType;
 import java.util.List;
 
 /**
- * 消息转换器属性
+ * 消息转换器配置属性。
+ *
+ * <p>前缀 {@code plugin.message}。控制 Web 消息转换增强：日期格式化、脱敏、
+ * 加解密及生效的媒体类型。</p>
+ *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   message:
+ *     enable: false                    # 是否启用（默认 false）
+ *     data-format: yyyy-MM-dd HH:mm:ss # 日期格式（默认 yyyy-MM-dd HH:mm:ss）
+ *     open-desensitize: true           # 脱敏（默认 true）
+ *     open-crypto: true                # 加解密（默认 true）
+ *     media-types:                     # 生效媒体类型（默认 application/json、text/xml）
+ *       - application/json
+ *       - text/xml
+ * </pre>
  *
  * @author CH
  * @since 4.0.0
@@ -16,7 +32,8 @@ import java.util.List;
 @ConfigurationProperties(prefix = MessageConverterProperties.PRE, ignoreInvalidFields = true)
 public class MessageConverterProperties {
     /**
-     * 是否启用
+     * 是否启用消息转换增强。
+     * <p>YAML：{@code plugin.message.enable}，默认 {@code false}。</p>
      */
     private boolean enable = false;
 
@@ -27,22 +44,26 @@ public class MessageConverterProperties {
     public static final String PRE = "plugin.message";
 
     /**
-     * 日期默认格式
+     * 日期默认格式。
+     * <p>YAML：{@code plugin.message.data-format}，默认 {@code yyyy-MM-dd HH:mm:ss}。</p>
      */
     private String dataFormat = "yyyy-MM-dd HH:mm:ss";
 
 
     /**
-     * 开启脱敏
+     * 是否开启脱敏。
+     * <p>YAML：{@code plugin.message.open-desensitize}，默认 {@code true}。</p>
      */
     private boolean openDesensitize = true;
 
     /**
-     * 开启加解密
+     * 是否开启加解密。
+     * <p>YAML：{@code plugin.message.open-crypto}，默认 {@code true}。</p>
      */
     private boolean openCrypto = true;
     /**
-     * 媒体类型
+     * 生效的媒体类型。
+     * <p>YAML：{@code plugin.message.media-types}，默认 {@code application/json}、{@code text/xml}。</p>
      */
     private List<MediaType> mediaTypes = Lists.newArrayList(MediaType.APPLICATION_JSON,
             MediaType.TEXT_XML

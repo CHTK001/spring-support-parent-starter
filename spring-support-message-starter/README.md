@@ -142,6 +142,70 @@ plugin:
 
 其余运行参数不在 yaml：防抖间隔在提供商行 `sys_message_provider_interval`（分钟，实体默认 1，`0` 表示不限制，仅 `SUCCESS` 日志参与判定）；SMTP/AK/SK/Webhook 等凭据全部在 `sys_message_provider` 行内，由各渠道 `MessagePush` 实现自行读取。日志写入标了 `@Async(Constant.DEFAULT_EXECUTOR_TASK)`（限定符即 `taskExecutor`）：该执行器 Bean 不由本模块或 common-starter 提供，且调用点为同类自调用（不过 AOP 代理），故当前日志实际在调用线程同步落库；宿主若要真异步，需自行注册名为 `taskExecutor` 的执行器并改为跨 Bean 调用。
 
+### 5.1 逐项配置示例
+
+#### 邮件阅读追踪（`plugin.message.track.*`，唯一一组 YAML 配置）
+
+| 配置项 | 含义 | 默认值 | 为空/未配置时的行为 |
+|---|---|---|---|
+| `plugin.message.track.enabled` | 邮件阅读追踪总开关：`true` 时对 `email`/`smtp` 渠道、内容类型为 `html`/`text/html`/`EMAIL` 的消息在末尾注入 1x1 透明追踪图，并生成 `track_token` | `false` | 关闭：不生成 `track_token`、不注入追踪图，日志 `read_status` 恒为空 |
+| `plugin.message.track.base-url` | 追踪图基础地址，拼成 `{base-url}/v2/message/track/{token}`（末尾多余 `/` 会被去除） | 空（null） | **不注入追踪图，邮件内容原样发送**（代码不回退当前服务地址，见 `SysMessageServiceImpl#buildContentWithTrack`） |
+
+```yaml
+# 开启追踪（两个键通常成对配置）
+plugin:
+  message:
+    track:
+      enabled: true
+      base-url: "https://msg.example.com"
+```
+
+```yaml
+# 明确关闭追踪（与直接省略该段等价）
+plugin:
+  message:
+    track:
+      enabled: false
+```
+
+#### 数据库行运行参数（不在 YAML）
+
+以下参数存放在 `sys_message_provider` 提供商行内，经 `/v2/message/provider/save|update` 维护，不走 YAML：
+
+| 行字段 | 含义 | 默认/回落 |
+|---|---|---|
+| `sys_message_provider_interval` | 防抖间隔（分钟）：间隔内同一接收人同模板/同内容已有 `SUCCESS` 日志则跳过发送 | 行内未配置按 `1` 分钟；显式 `0`（或负数）表示不防抖 |
+| `sys_message_provider_status` | 渠道启停：`1` 启用、`0` 停用（停用后发送/模板同步直接拒绝） | 新增时未填默认 `1` |
+| `sys_message_provider_vender` / `sys_message_provider_type` | 渠道路由：优先取 `vender`，为空取 `type`，交给 `MessagePush.create(channel)` | 无默认；两者皆空解析不出有效渠道，发送报「暂不支持的消息渠道」 |
+| `sys_message_provider_smtp_*` / `app_id` / `app_secret` / `webhook_url` / `endpoint` 等 | 渠道凭据与端点，由对应渠道 `MessagePush` 实现自行读取 | 无模块级默认 |
+
+### 5.2 完整 YAML 示例
+
+```yaml
+# application.yml —— spring-support-message-starter 完整 YAML 配置
+# 本模块可用的 YAML 配置只有 plugin.message.track 一组键；
+# 渠道凭据与防抖间隔在 sys_message_provider 表行内维护（见 5.1），
+# 数据源等宿主公共配置由 mybatis-starter 侧既有体系提供，不在此展开。
+
+plugin:
+  message:
+    track:
+      # 邮件阅读追踪总开关（默认 false）
+      enabled: true
+      # 追踪图基础地址：{base-url}/v2/message/track/{token}
+      # 必须是收件人邮件客户端可访问的地址；留空则不注入追踪图
+      base-url: "https://msg.example.com"
+```
+
+### 5.3 生产注意事项
+
+1. **追踪地址必须外网可达**：`base-url` 要写成收件人邮件客户端能访问到的地址；写内网地址或留空，追踪图不会加载，`read_status` 永远停在 0（`track_token` 仍会写日志，仅影响已读回执）。
+2. **防抖按提供商行配置**：`interval` 未配置默认 1 分钟；验证码等高频消息建议显式置 `0` 或按需调大，避免联调/重试被「间隔内已发送，防抖跳过」吞掉。只有 `SUCCESS` 日志参与判定，失败可立即重发。
+3. **日志表增长与落库时延**：每次发送每个接收人写一条 `sys_message_log`，需定期调 `POST /v2/message/log/clean`（传 `beforeTime`）清理；当前日志为同步落库（见本节开头 `@Async` 说明），数据库抖动会直接拖慢发送接口，建议日志表单独规划容量与归档。
+4. **凭据安全**：SMTP 口令、AK/SK、Webhook 地址等全部存于 `sys_message_provider` 表，注意库表访问权限；向统一模板库上报提供商时（`MessageProviderSource`）ak/sk 会被置空，但提供商管理接口的返回体仍含凭据字段，前端展示需脱敏。代码、配置、文档中一律使用占位符（如 `your-password`），禁止写入真实凭据。
+5. **启动前提**：宿主需补 `@ComponentScan("com.chua.starter.message.support.service")`（或等价 `@Import`/`@Bean`），否则容器缺 `SysMessageService` Bean、启动即失败；不要与 `spring-api-support-common-system-starter` 同时引入（同名 Bean 扫描冲突）。
+6. **渠道包按需引入**：classpath 缺渠道包时该渠道发送报「暂不支持的消息渠道」，不影响其它渠道与管理接口；上线前用 `GET /v2/message/channel/list` 核对实际可用渠道清单。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标

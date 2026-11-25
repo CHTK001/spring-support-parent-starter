@@ -660,7 +660,7 @@ plugin:
       default-schema: db_main        # SQL 不带模式前缀时落在这里
 ```
 
-- `bean-name`：聚合数据源的 Bean 名。规范名固定为 `calciteDataSource`（联邦管理器、热替换注册表与 `@ConditionalOnMissingBean` 均挂在该名上），**建议保持默认**；配置为其它名（如 `myCalciteDs`）时，模块会以该名作为**别名**注册到同一个聚合数据源 Bean，`@Qualifier("myCalciteDs")` 与规范名 `calciteDataSource` 均可注入。
+- `bean-name`：聚合数据源的 Bean 名。规范名固定为 `calciteDataSource`（联邦管理器、热替换注册表与 `@ConditionalOnMissingBean` 均挂在该名上），**建议保持默认**；配置为其它名（如 `myCalciteDs`）时，模块会以该名作为**别名**注册到同一个聚合数据源 Bean，`@Qualifier("myCalciteDs")` 与规范名 `calciteDataSource` 均可注入。配置名等于规范名、与既有 Bean 定义同名、或已被其它 Bean 注册为别名时**静默跳过**（不覆盖既有定义、不抢占他人别名）。
 - `register-mode`：聚合数据源的注册模式。
   - `replace`（**默认**）：把聚合数据源 Bean 标记为 primary，同时把其它被标记 primary 的 `DataSource` Bean 定义降级——宿主按类型注入 `DataSource` 时命中聚合数据源，原动态路由数据源仍可按名称或 `@Qualifier` 注入；此模式下无可聚合数据源或创建失败会**直接抛异常**（fail-fast），避免主数据源静默缺失。
   - `derive`：保持历史行为，聚合数据源作为**额外 Bean** 派生注册，不改动任何 primary 标记，主数据源仍是动态路由数据源；此模式**必须**同时配置 `bean-name`，否则启动期抛 `IllegalStateException`。

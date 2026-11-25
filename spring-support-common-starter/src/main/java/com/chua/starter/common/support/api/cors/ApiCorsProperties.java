@@ -16,10 +16,13 @@ import java.util.Set;
  * plugin:
  *   api:
  *     cors:
- *       enable: true           # 是否开启跨域
- *       pattern:               # 跨域路径匹配规则
+ *       enable: true               # 是否开启跨域（字段默认 false；装配 matchIfMissing=true）
+ *       pattern:                   # 跨域路径匹配规则（空 = 匹配所有路径 /**）
  *         - /api/**
  *         - /v2/**
+ *       allowed-origins:           # 允许的来源域名白名单（空 = 不放行任何跨域来源）
+ *         - https://example.com
+ *       allow-credentials: false   # 是否允许携带凭证（默认 false；开启前必须配好来源白名单）
  * </pre>
  *
  * @since 2024/12/07
@@ -29,15 +32,18 @@ import java.util.Set;
 public class ApiCorsProperties {
 
     /**
-     * 开启跨域
+     * 是否开启跨域。
+     * <p>YAML：{@code plugin.api.cors.enable}，字段默认 {@code false}；配置类装配条件为
+     * {@code matchIfMissing = true}（未配置时默认装配）。</p>
      */
     private boolean enable = false;
 
     /**
-     * 跨域路径白名单
+     * 跨域路径白名单。
      * <p>
      * 如果为空，默认匹配所有路径 /**
      * </p>
+     * <p>YAML：{@code plugin.api.cors.pattern}，默认空集合（等价 {@code /**}）。</p>
      */
     private Set<String> pattern = new HashSet<>();
 
@@ -54,6 +60,7 @@ public class ApiCorsProperties {
      * 等于任意网站都能带着用户凭证读接口响应（2026-10-01 实测确认该行为）。
      * </p>
      * <p>支持端口通配，形如 {@code http://192.168.50.*:8096}（Spring 原生支持）。</p>
+     * <p>YAML：{@code plugin.api.cors.allowed-origins}，默认空集合（不放行任何跨域来源）。</p>
      */
     private Set<String> allowedOrigins = new HashSet<>();
 
@@ -62,6 +69,7 @@ public class ApiCorsProperties {
      * <p>
      * 默认 false。打开前必须确认 {@link #allowedOrigins} 已配好白名单。
      * </p>
+     * <p>YAML：{@code plugin.api.cors.allow-credentials}，默认 {@code false}。</p>
      */
     private boolean allowCredentials = false;
 

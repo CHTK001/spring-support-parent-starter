@@ -76,6 +76,13 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
     private final ConcurrentMap<String, List<Object>> publishedByBundle = new ConcurrentHashMap<>();
 
     /**
+     * 宿主 ServiceProvider 入口桥：把 bundle 发布的 SPI 实现同步登记给宿主侧
+     * 消费入口（NativeServices / ServiceProvider.of(type).getExtension），并在
+     * bundle 停止 / 卸载 / 更新时同步摘除，避免宿主残留幽灵实现。
+     */
+    private final HostSpiRegistryBridge hostBridge = new HostSpiRegistryBridge();
+
+    /**
      * 构造自动发布器。
      *
      * @param launcher  Felix osgi 启动器
@@ -118,6 +125,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      */
     public void destroy() {
         launcher.removeListener(this);
+        hostBridge.unregisterAll();
     }
 
     @Override
@@ -168,6 +176,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
         // 幂等：重复 STARTED 先清理旧注册
         List<Object> previous = publishedByBundle.remove(symbolicName);
         unpublishAll(previous);
+        hostBridge.unregister(symbolicName);
         Bundle bundle = nativeBundle(symbolicName);
         if (bundle == null) {
             return;
@@ -195,6 +204,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
             for (Class<?> type : SpiPublishSupport.publishableInterfaces(impl)) {
                 if (publishSafely(symbolicName, type, instance)) {
                     registered = true;
+                    hostBridge.register(symbolicName, type, instance);
                 }
             }
             if (registered) {
@@ -218,6 +228,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
         }
         List<Object> instances = publishedByBundle.remove(symbolicName);
         unpublishAll(instances);
+        hostBridge.unregister(symbolicName);
     }
 
     /**

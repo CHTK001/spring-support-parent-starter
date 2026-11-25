@@ -8,6 +8,20 @@ import org.springframework.core.env.Environment;
 
 /**
  * SQL 物理化路由配置。
+ * <p>
+ * 支持通过 {@code plugin.datasource.materialized.*} 配置（legacy：{@code spring.datasource.materialized.*}）。
+ * </p>
+ * 配置示例:
+ * <pre>
+ * plugin:
+ *   datasource:
+ *     materialized:
+ *       enabled: true                        # 是否启用 SQL 物理化路由
+ *       default-threshold: 1000              # 默认表行数阈值
+ *       refresh-interval-seconds: 0          # 内存副本自动刷新间隔(秒)，&lt;=0 关闭自动刷新
+ *       skip-query-in-transaction: true      # 事务中是否跳过查询物理化
+ *       cache-data-source-prefix: materialized#  # 物理化数据源名称前缀
+ * </pre>
  *
  * @since 2026/4/2
  * @author CH
@@ -27,11 +41,15 @@ public class MaterializedRouteProperties {
 
     /**
      * 是否启用。
+     * 默认值: false
+     * 示例: plugin.datasource.materialized.enabled=true
      */
     private boolean enabled = false;
 
     /**
      * 默认表行数阈值。
+     * 默认值: 1000
+     * 示例: plugin.datasource.materialized.default-threshold=1000
      */
     // [P3C A20 豁免]
     private long defaultThreshold = 1000L;
@@ -39,17 +57,23 @@ public class MaterializedRouteProperties {
     /**
      * 内存副本自动刷新间隔，单位秒。
      * 小于等于 0 时表示关闭自动刷新。
+     * 默认值: 0
+     * 示例: plugin.datasource.materialized.refresh-interval-seconds=0
      */
     private long refreshIntervalSeconds = 0L;
 
     /**
      * 事务中是否跳过查询物理化。
      * 默认跳过，避免与事务连接绑定冲突。
+     * 默认值: true
+     * 示例: plugin.datasource.materialized.skip-query-in-transaction=true
      */
     private boolean skipQueryInTransaction = true;
 
     /**
      * 物理化数据源名称前缀。
+     * 默认值: materialized#
+     * 示例: plugin.datasource.materialized.cache-data-source-prefix=materialized#
      */
     private String cacheDataSourcePrefix = "materialized#";
 

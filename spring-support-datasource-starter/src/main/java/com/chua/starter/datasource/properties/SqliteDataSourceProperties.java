@@ -27,21 +27,29 @@ public class SqliteDataSourceProperties {
 
     /**
      * 是否启用 sqlite 引擎自动配置
+     * 默认值: false
+     * 示例: plugin.sqlite.enable=true
     */
     private boolean enable = false;
 
     /**
      * sqlite 数据库文件路径，如 {@code ./data/app.sqlite} 或绝对路径
+     * 默认值: ./data/app.sqlite
+     * 示例: plugin.sqlite.path=./data/app.sqlite
     */
     private String path = "./data/app.sqlite";
 
     /**
-     * SQL 初始化脚本路径，支持 类路径: 前缀，如 {@code classpath:db/init/sqlite}
+     * SQL 初始化脚本路径，支持 {@code classpath:} 前缀，如 {@code classpath:db/init/sqlite}
+     * 默认值: ""
+     * 示例: plugin.sqlite.init-sql=classpath:db/init/sqlite
     */
     private String initSql = "";
 
     /**
-     * 最大连接数（默认 5）
+     * 最大连接数
+     * 默认值: 5
+     * 示例: plugin.sqlite.max-pool-size=5
     */
     private int maxPoolSize = 5;
 }

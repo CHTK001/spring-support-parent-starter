@@ -59,12 +59,12 @@ public class DataSourceScriptProperties {
     /**
      * 默认扫描路径
      * <p>
-     * 推荐各业务模块将结构初始化脚本与初始化数据脚本统一放在 db/初始化 目录：
+     * 推荐各业务模块将结构初始化脚本与初始化数据脚本统一放在 db/init 目录：
      * <ul>
      *   <li>V1.0__init_xxx_complete.sql</li>
      *   <li>V1.0__initdata_xxx.sql</li>
      * </ul>
-     * migration / 同步 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 初始化 目录。
+     * migration / sync 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 init 目录。
      */
     public static final String DEFAULT_SCRIPT_PATH =
             "classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql";
@@ -79,48 +79,48 @@ public class DataSourceScriptProperties {
     /**
      * 表结构脚本扫描模式
      * <p>
-     * 无   : 不扫描
+     * NONE   : 不扫描
      * ONCE   : 仅当当前数据库没有任何业务表时扫描一次
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ONCE
-     * 示例: plugin.datasource.script.扫描-mode=ALWAYS
+     * 示例: plugin.datasource.script.scan-mode=ALWAYS
      */
     private ScanMode scanMode = ScanMode.ONCE;
 
     /**
      * 升级补丁脚本扫描模式
      * <p>
-     * 无   : 不扫描
+     * NONE   : 不扫描
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ALWAYS
-     * 示例: plugin.datasource.script.migration-扫描-mode=无
+     * 示例: plugin.datasource.script.migration-scan-mode=NONE
      */
     private RepeatableScanMode migrationScanMode = RepeatableScanMode.ALWAYS;
 
     /**
      * 初始化数据脚本扫描模式
      * <p>
-     * 无   : 不扫描
+     * NONE   : 不扫描
      * ONCE   : 仅当当前数据库不存在业务数据时扫描一次
      * ALWAYS : 每次启动都扫描
      * </p>
      * 默认值: ONCE
-     * 示例: plugin.datasource.script.数据-扫描-mode=ALWAYS
+     * 示例: plugin.datasource.script.data-scan-mode=ALWAYS
      */
     private ScanMode dataScanMode = ScanMode.ONCE;
 
     /**
      * 是否继续执行脚本，如果某个脚本执行失败，是否继续执行下一个脚本
-     * 默认值: false
-     * 示例: plugin.datasource.script.继续-on-错误=true
+     * 默认值: true
+     * 示例: plugin.datasource.script.continue-on-error=false
      */
     private boolean continueOnError = true;
     /**
-     * 是否忽略失败的掉落语句
+     * 是否忽略失败的 DROP 语句
      * 默认值: true
-     * 示例: plugin.datasource.script.ignore-失败-掉落=true
+     * 示例: plugin.datasource.script.ignore-failed-drops=true
      */
     private boolean ignoreFailedDrops = true;
 
@@ -135,17 +135,17 @@ public class DataSourceScriptProperties {
     /**
      * 脚本编码
      * 默认值: UTF-8
-     * 示例: plugin.datasource.script.编码=UTF-8
+     * 示例: plugin.datasource.script.sql-script-encoding=UTF-8
      */
     private String sqlScriptEncoding = "UTF-8";
     /**
      * 数据源脚本路径
      * <p>
      * 支持多个路径，使用英文逗号、分号或换行分隔。
-     * 推荐值：类路径*:db/初始化/*.SQL
+     * 推荐值：classpath*:db/init/*.sql
      * </p>
-     * 默认值: 类路径*:db/初始化/*.SQL,类路径*:db/migration/*.SQL,类路径*:db/同步/*.SQL
-     * 示例: plugin.datasource.script.script-路径=类路径*:db/初始化/*.SQL
+     * 默认值: classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql
+     * 示例: plugin.datasource.script.script-path=classpath*:db/init/*.sql
      */
     private String scriptPath = DEFAULT_SCRIPT_PATH;
 
@@ -153,7 +153,7 @@ public class DataSourceScriptProperties {
      * 数据库类型
      * 用于指定特定数据库的脚本目录
      * 默认值: 空 (不指定数据库类型)
-     * 示例: plugin.datasource.script.database-类型=MySQL
+     * 示例: plugin.datasource.script.database-type=mysql
      */
     private String databaseType;
 
@@ -167,21 +167,21 @@ public class DataSourceScriptProperties {
     /**
      * 是否禁用清理
      * 默认: true
-     * 示例: plugin.datasource.script.clean-已禁用=false
+     * 示例: plugin.datasource.script.clean-disabled=false
      */
     private boolean cleanDisabled = true;
 
     /**
      * 版本记录表名
-     * 默认值: sys_database_版本
-     * 示例: plugin.datasource.script.版本-table=Flyway_模式_历史
+     * 默认值: sys_database_version
+     * 示例: plugin.datasource.script.version-table=sys_database_version
      */
     private String versionTable = "sys_database_version";
 
     /**
      * 基线版本号
      * 默认值: 1.0.0
-     * 示例: plugin.datasource.script.baseline-版本=1.0.0
+     * 示例: plugin.datasource.script.baseline-version=1.0.0
      */
     private String baselineVersion = "1.0.0";
 
@@ -195,42 +195,42 @@ public class DataSourceScriptProperties {
     /**
      * 脚本文件名前缀
      * 默认值: V
-     * 示例: plugin.datasource.script.script-前缀=V
+     * 示例: plugin.datasource.script.script-prefix=V
      */
     private String scriptPrefix = "V";
 
     /**
      * 脚本文件名后缀
-     * 默认值: .SQL
-     * 示例: plugin.datasource.script.script-后缀=.SQL
+     * 默认值: .sql
+     * 示例: plugin.datasource.script.script-suffix=.sql
      */
     private String scriptSuffix = ".sql";
 
     /**
      * 版本分隔符
      * 默认值: __
-     * 示例: plugin.datasource.script.版本-separator=__
+     * 示例: plugin.datasource.script.version-separator=__
      */
     private String versionSeparator = "__";
 
     /**
      * 是否验证脚本校验和
      * 默认值: true
-     * 示例: plugin.datasource.script.校验-校验和=false
+     * 示例: plugin.datasource.script.validate-checksum=false
      */
     private boolean validateChecksum = true;
 
     /**
      * 是否允许混合模式（允许非版本化脚本）
      * 默认值: false
-     * 示例: plugin.datasource.script.混合=true
+     * 示例: plugin.datasource.script.mixed=true
      */
     private boolean mixed = false;
 
     /**
      * 脚本执行超时时间（秒）
      * 默认值: 0（无超时）
-     * 示例: plugin.datasource.script.超时=300
+     * 示例: plugin.datasource.script.timeout=300
      */
     private int timeout = 0;
 
@@ -244,15 +244,15 @@ public class DataSourceScriptProperties {
     /**
      * 允许执行的版本类型
      * 默认值: STABLE（只执行正式版本）
-     * 示例: plugin.datasource.script.release-类型=st
-     * 可选值: SNAPSHOT, ALPHA, BETA, RC, st, 全部
+     * 示例: plugin.datasource.script.release-type=STABLE
+     * 可选值: SNAPSHOT, ALPHA, BETA, RC, STABLE, ALL
      */
     private ReleaseType releaseType = ReleaseType.STABLE;
 
     /**
      * 允许执行的版本类型集合（用于更精细控制）
-     * 当设置此属性时，会覆盖 release类型 的配置
-     * 示例: plugin.datasource.script.allowed-release-类型=st,RC
+     * 当设置此属性时，会覆盖 release-type 的配置
+     * 示例: plugin.datasource.script.allowed-release-types=STABLE,RC
      */
     private Set<ReleaseType> allowedReleaseTypes;
 
@@ -267,19 +267,19 @@ public class DataSourceScriptProperties {
     /**
      * 初始化数据脚本(initdata)的等待超时时间（分钟）
      * 默认值: 5
-     * 示例: plugin.datasource.script.initdata-超时-minutes=10
+     * 示例: plugin.datasource.script.initdata-timeout-minutes=10
      */
     private int initdataTimeoutMinutes = 5;
 
     /**
      * 数据库初始化脚本的安装判断范围
      * <p>
-     * table（默认）: 基于业务表判断 — 在 是否database空() 中排除已知系统表前缀（如 sys_），
+     * table（默认）: 基于业务表判断 — 空库判断时排除已知系统表前缀（如 sys_），
      *               避免其他模块创建的系统表导致初始化脚本被跳过。
-     * 文件: 基于表全量判断 — 保持原行为，仅在数据库完全为空时执行初始化脚本。
+     * file: 基于表全量判断 — 保持原行为，仅在数据库完全为空时执行初始化脚本。
      * </p>
      * 默认值: table
-     * 示例: plugin.datasource.script.scope=文件
+     * 示例: plugin.datasource.script.scope=file
      */
     private String scope = "table";
 
@@ -287,7 +287,7 @@ public class DataSourceScriptProperties {
      * 空库判断时排除的表名前缀列表
      * 仅在 scope=table 时生效
      * 默认值: ["sys_"]
-     * 示例: plugin.datasource.script.exclude-table-前缀=sys_,行为_
+     * 示例: plugin.datasource.script.exclude-table-prefixes=sys_,act_
      */
     private String[] excludeTablePrefixes = {"sys_"};
 

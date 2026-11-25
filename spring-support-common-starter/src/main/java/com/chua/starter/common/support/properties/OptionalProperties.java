@@ -8,6 +8,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 用于配置系统中的可选功能开关。
  * </p>
  *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   optional:
+ *     enable: true   # 是否启用可选功能（字段默认 true；装配条件 matchIfMissing=false，需显式开启）
+ * </pre>
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -20,7 +27,9 @@ public class OptionalProperties {
     public static final String PRE = "plugin.optional";
 
     /**
-     *  是否打开
+     * 是否启用可选功能。
+     * <p>YAML：{@code plugin.optional.enable}，字段默认 {@code true}；装配条件为
+     * {@code matchIfMissing = false}，需显式配置 {@code plugin.optional.enable=true} 才会装配。</p>
      */
     private boolean enable = true;
 

@@ -119,6 +119,10 @@ sequenceDiagram
 
 前缀 `plugin.job`（`JobProperties.PRE`），经 `@EnableConfigurationProperties(JobProperties.class)` 绑定；嵌套结构：`ClusterConfig` / `SyncConfig`（内含 `SchedulerConfig`、`ExecutorConfig`）/ `PoolConfig` / `LogConfig` / `ManageConfig` / `CacheConfig`。
 
+### 5.1 配置总表
+
+下表与 `JobProperties` 源码逐项核对一致（默认值即字段初始化值）。
+
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `plugin.job.enable` | `boolean` | `true` | 模块总开关（`matchIfMissing=true`，引入即启用） |
@@ -151,6 +155,191 @@ sequenceDiagram
 | `plugin.job.manage.enable` | `boolean` | `false` | 是否暴露 `/v2/job/**` 治理接口 |
 | `plugin.job.cache.enabled` | `boolean` | `false` | 是否启用扫描结果缓存 |
 | `plugin.job.cache.ttl-ms` | `long` | `5000` | 缓存 TTL；开启后扫描相位最多滞后 TTL，要求严格相位精度请保持关闭 |
+
+### 5.2 逐项配置示例
+
+按功能分组给出每项的含义、默认值与 YAML 示例（键均为 `plugin.job` 下的真实字段）。
+
+#### ① 基础开关与节点身份
+
+```yaml
+plugin:
+  job:
+    enable: true            # 是否启用模块；默认 true，引入即启用（matchIfMissing）
+    role: SINGLE            # 进程角色；默认 SINGLE。可选 SCHEDULER / EXECUTOR / SINGLE
+    node-id: job-node-1     # 节点唯一标识；默认留空，按「JVM 运行时名称(pid@主机名)-随机后缀」自动推导
+```
+
+#### ② 集群与选主（cluster.*）
+
+```yaml
+plugin:
+  job:
+    cluster:
+      group: payment              # 作业归属分组，对应 sys_job.sys_job_group；默认 default。Leader 只扫同组任务
+      resolver: mysql             # 选主实现 SPI 键（大小写不敏感）；默认 mysql。留空或取不到时回落数据库实现
+      election-namespace: payment-app   # 选主租约命名空间；留空按 spring.application.name → group → default 推导
+      scan-interval-ms: 1000      # 扫描间隔毫秒；默认 1000，运行下限 100ms（JobLeaderLoop 兜底）
+      pre-read-ms: 5000           # 预读时间窗毫秒；默认 5000，扫描窗上界 = 当前数据库相位 + 本值
+      lease-seconds: 15           # Leader 租约秒数；默认 15，心跳按 lease/3 续约（下限 1 秒）
+```
+
+#### ③ 长链同步（sync.*，集群模式专用）
+
+```yaml
+plugin:
+  job:
+    sync:
+      in-memory: false            # 兼容字段；默认 false。设 true 直接抛 UnsupportedOperationException 拒绝启动
+      scheduler:                  # 调度端（role=SCHEDULER 时真实监听；SINGLE 仅占位）
+        listen-host: 0.0.0.0      # 监听主机；默认 0.0.0.0
+        listen-port: 8081         # 监听端口；默认 8081，独立于 Web 端口
+        protocol: tcp             # 长链协议；默认 tcp。可选 tcp/websocket/udp/http/rsocket
+      executor:                   # 执行器端（role=EXECUTOR 时生效）
+        server-url: tcp://10.0.0.11:8081   # 调度中心地址；EXECUTOR 必填，scheme 须与 scheduler.protocol 一致
+        reconnect-base-ms: 500    # 重连退避起点毫秒；默认 500
+        reconnect-max-ms: 30000   # 重连退避上限毫秒；默认 30000
+```
+
+#### ④ 执行线程池（pool.*）
+
+```yaml
+plugin:
+  job:
+    pool:
+      virtual: true       # 默认 true：虚拟线程执行器（JDK 21+，无 max/queue 限制）；false 回退平台线程池
+      core-size: 16       # 核心线程数；默认 16，同时决定 jobTaskScheduler 池大小
+      max-size: 64        # 最大线程数；默认 64，仅平台线程池（virtual=false）生效
+      queue-size: 128     # 任务队列容量；默认 128，仅平台线程池（virtual=false）生效
+```
+
+#### ⑤ 执行日志（log.*）
+
+```yaml
+plugin:
+  job:
+    log:
+      enabled: false                # 是否追加文件日志 sink；默认 false。仅 MyBatis 分支生效
+      base-path: ./logs/job         # 文件日志根目录；默认 ./logs/job
+      async: true                   # 是否异步写入；默认 true。DB+File 双 sink 组合固定异步
+      queue-size: 4096              # 异步队列容量；默认 4096
+      cleanup-enabled: false        # 日志自动清理开关；默认 false。声明项：本模块未装配定时清理任务
+      cleanup-retention-days: 30    # 日志保留天数；默认 30，供清理入口 POST /v2/job/log/cleanup 使用
+      cleanup-cron: "0 0 0 * * ?"   # 清理 cron；默认每日 0 点（声明项，同上未装配定时任务）
+```
+
+#### ⑥ 治理接口（manage.*）
+
+```yaml
+plugin:
+  job:
+    manage:
+      enable: false   # 是否暴露 /v2/job/** 治理 HTTP 接口；默认 false。需 Servlet Web + spring-webmvc 同时在位
+```
+
+#### ⑦ 扫描缓存（cache.*）
+
+```yaml
+plugin:
+  job:
+    cache:
+      enabled: false   # 扫描结果缓存开关；默认 false（每拍真实查库，相位最准）
+      ttl-ms: 5000     # 缓存 TTL 毫秒；默认 5000。≤0 或未开启 enabled 时视为未启用（回落 NoopScanCache）
+```
+
+### 5.3 完整 YAML 示例
+
+单机 `SINGLE` 模式（默认角色，零中间件即可运行；下面列出全部可调项，实际只需覆盖与默认不同的部分）：
+
+```yaml
+spring:
+  application:
+    name: order-service
+
+plugin:
+  job:
+    enable: true
+    role: SINGLE
+    node-id: ""                 # 留空自动推导；多实例共享日志排查时建议显式指定
+    cluster:
+      group: default            # 与 @Job(group=...) 保持一致
+      resolver: mysql           # 有 MyBatis-Plus 时默认数据库行锁选主
+      election-namespace: ""    # 留空按 spring.application.name 推导
+      scan-interval-ms: 1000
+      pre-read-ms: 5000
+      lease-seconds: 15
+    sync:
+      in-memory: false
+      scheduler:
+        listen-host: 0.0.0.0
+        listen-port: 8081
+        protocol: tcp
+      executor:
+        server-url: ""
+        reconnect-base-ms: 500
+        reconnect-max-ms: 30000
+    pool:
+      virtual: true
+      core-size: 16
+      max-size: 64
+      queue-size: 128
+    log:
+      enabled: true
+      base-path: ./logs/job
+      async: true
+      queue-size: 4096
+      cleanup-enabled: false
+      cleanup-retention-days: 30
+      cleanup-cron: "0 0 0 * * ?"
+    manage:
+      enable: true              # 开启后暴露 /v2/job/**，务必置于鉴权之后
+    cache:
+      enabled: false
+      ttl-ms: 5000
+```
+
+集群 `SCHEDULER` + `EXECUTOR` 拆分示例（两端 `cluster.group` 必须一致；执行器 `server-url` 的 scheme 须与调度端 `protocol` 一致）：
+
+```yaml
+# ---- 调度中心（只扫描 + 派发，不执行）----
+plugin:
+  job:
+    role: SCHEDULER
+    cluster:
+      group: payment
+      lease-seconds: 15
+    sync:
+      scheduler:
+        listen-port: 8081
+        protocol: tcp
+---
+# ---- 执行器（只消费命令 + 上行日志，可多实例）----
+plugin:
+  job:
+    role: EXECUTOR
+    cluster:
+      group: payment
+    sync:
+      executor:
+        server-url: tcp://10.0.0.11:8081
+        reconnect-base-ms: 500
+        reconnect-max-ms: 30000
+    pool:
+      virtual: true
+```
+
+### 5.4 生产注意事项
+
+- **Mapper 必须显式扫描**：接 MyBatis-Plus 时，主启动类加 `@MapperScan(JobAutoConfiguration.MAPPER_PACKAGE)`（即 `com.chua.starter.job.support.store`），否则 `JobMapper` / `JobLogMapper` / `ClusterMapper` 缺失导致装配失败。
+- **治理接口默认关闭是有意设计**：`sys_job` 是全局资源（无归属列），`/v2/job/**` 整组要求管理员权限；`manage.enable=true` 必须配合网关/会话鉴权使用，不要裸暴露。
+- **两处「分组」不要混**：作业分组 `cluster.group`（对应 `sys_job.sys_job_group`，`@Job(group=...)` 必须与之相等，否则任务登记成功却永不被派发）与选主租约键 `cluster.election-namespace`（同一集群所有节点必须一致，通常留空按应用名推导）是两个概念；后者不一致会分裂成多个各自当 Leader 的集群。
+- **协议两端一致**：调度端 `sync.scheduler.protocol` 与执行器 `server-url` 的 scheme 必须一致，否则执行器「连得上但注册不进去」，调度端执行器列表恒为空。
+- **相位精度取舍**：`scan-interval-ms` 运行下限 100ms；开启 `cache.enabled` 后扫描相位最多滞后 `cache.ttl-ms`，强实时（秒级以内）场景请保持缓存关闭。
+- **虚拟线程需要 JDK 21+**：`pool.virtual=true`（默认）在低版本 JDK 上不可用或需限流时，显式设 `false` 回退平台线程池（core/max/queue 生效）。
+- **日志清理是手动入口**：`log.cleanup-*` 仅是声明配置，本模块未装配定时清理任务；生产上请自建定时任务或周期调用 `POST /v2/job/log/cleanup?retentionDays=30`（需 `manage.enable=true`）。
+- **节点标识稳定性**：`node-id` 留空时每次重启都会生成新随机后缀；若需要跨重启稳定的节点身份（日志追溯、执行器台账），请显式配置固定值并保证集群内唯一。
+- **不要配置 `sync.in-memory: true`**：该兼容字段会直接抛 `UnsupportedOperationException` 拒绝启动，集群同步必须使用真实 `SyncServer` / `SyncClient` 协议实现。
+- **数据表自建**：`sys_job` / `sys_job_log` / `sys_job_cluster` 由 `db/init/V2.0__init_all_job.sql` 启动时自动创建（MySQL 8 / PostgreSQL 12 / Oracle 12c 自兼容），无需手工导 DDL。
 
 ## 6. 使用方式
 
@@ -202,7 +391,7 @@ plugin:
         server-url: tcp://10.0.0.11:8081
 ```
 
-开启 `plugin.job.manage.enable=true` 后暴露 `JobManageController`（`@RequestMapping("/v2/job")`，整组管理员权限）：`GET /v2/job/page | /list | /detail/{jobKey} | /summary | /executors | /nodes | /log/page | /log/content | /glue/engines`，`POST /v2/job/save | /trigger | /log/cleanup`，`PUT /v2/job/schedule | /status`，`DELETE /v2/job/{jobKey}`。
+开启 `plugin.job.manage.enable=true` 后暴露 `JobManageController`（`@RequestMapping("/v2/job")`，整组管理员权限）：`GET /v2/job/page | /list | /detail/{jobKey} | /summary | /executors | /nodes | /metrics | /log/page | /log/content | /log/trend | /log/failure-top | /log/duration-stats | /log/cleanup/preview | /glue/engines`，`POST /v2/job/save | /trigger | /log/cleanup`，`PUT /v2/job/schedule | /status`，`DELETE /v2/job/{jobKey}`。
 
 可选依赖说明（源自 pom.xml）：
 

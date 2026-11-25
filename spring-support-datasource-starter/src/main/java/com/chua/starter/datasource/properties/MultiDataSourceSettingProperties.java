@@ -4,7 +4,19 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * 事务配置
+ * 多数据源行为配置
+ * <p>
+ * 与 {@link MultiDataSourceProperties} 共用前缀 {@code plugin.multi-datasource}
+ * （legacy：{@code spring.multi-datasource}），承载数据源路由与负载均衡行为开关。
+ * </p>
+ * 配置示例:
+ * <pre>
+ * plugin:
+ *   multi-datasource:
+ *     load-balance: round_robin      # 负载均衡策略: round_robin(轮询) / random(随机)
+ *     strict: false                  # 严格模式：@DS 指向不存在的数据源时抛异常
+ *     force-annotation: true         # 无可用数据源时仍按注解值处理
+ * </pre>
  *
  * @since 2021-07-19
  * @author CH
@@ -13,7 +25,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = MultiDataSourceSettingProperties.PRE, ignoreInvalidFields = true)
 public class MultiDataSourceSettingProperties {
     /**
-     * 是否启用
+     * 是否启用多数据源自动配置
+     * 默认值: false
+     * 示例: plugin.multi-datasource.enable=true
      */
     private boolean enable = false;
 
@@ -24,18 +38,24 @@ public class MultiDataSourceSettingProperties {
     public static final String PRE = "plugin.multi-datasource";
 
     /**
-     * 是否强制使用注解上的数据源
+     * 是否强制使用注解上的数据源（无可用数据源时仍按注解值处理）
+     * 默认值: true
+     * 示例: plugin.multi-datasource.force-annotation=true
      */
     private boolean forceAnnotation = true;
 
     /**
      * 严格模式
      * <p>开启后，如果指定数据源不存在则抛出异常，不回退到默认数据源。</p>
+     * 默认值: false
+     * 示例: plugin.multi-datasource.strict=true
      */
     private boolean strict = false;
 
     /**
-     * 负载均衡策略：round_robin（轮询）/ 随机（随机）
+     * 负载均衡策略：round_robin（轮询）/ random（随机）
+     * 默认值: round_robin
+     * 示例: plugin.multi-datasource.load-balance=random
      */
     private String loadBalance = "round_robin";
 

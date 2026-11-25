@@ -39,16 +39,21 @@ public class ShardingDataSourceProperties {
 
     /**
      * 是否启用分片
+     * 默认值: false
+     * 示例: plugin.datasource.sharding.enabled=true
      */
     private boolean enabled = false;
 
     /**
-     * 是否显示SQL
+     * 是否显示SQL（打印改写后的 SQL）
+     * 默认值: false
+     * 示例: plugin.datasource.sharding.show-sql=true
      */
     private boolean showSql = false;
 
     /**
      * 分表配置列表
+     * 示例: plugin.datasource.sharding.tables[0].logic-table=t_order
      */
     private List<ShardingTableConfig> tables;
 
@@ -57,6 +62,7 @@ public class ShardingDataSourceProperties {
      *
      * <p>列表数量大于 1 时启用分库：对每个逻辑表按其分片列对库数取模（db_mod 算法）路由，
      * 分库与分表使用同一个分片列；只有 1 个或未配置时不分库。</p>
+     * 示例: plugin.datasource.sharding.databases[0]=db_order_0
      */
     private List<String> databases;
 
@@ -68,12 +74,14 @@ public class ShardingDataSourceProperties {
     @Data
     public static class ShardingTableConfig {
         /**
-         * 逻辑表名
+         * 逻辑表名（同时作为物理表前缀）
+         * 示例: plugin.datasource.sharding.tables[0].logic-table=t_order
          */
         private String logicTable;
 
         /**
          * 分片列（分片键）
+         * 示例: plugin.datasource.sharding.tables[0].sharding-column=user_id
          */
         private String shardingColumn;
 
@@ -87,6 +95,7 @@ public class ShardingDataSourceProperties {
          *
          * <p>未配置（null/空）时走 MOD 取模分片，物理表名为
          * {@code 逻辑表_0 .. 逻辑表_15}（固定 16 片）。</p>
+         * 示例: plugin.datasource.sharding.tables[0].time-unit=MONTH
          */
         private String timeUnit;
 
@@ -96,6 +105,8 @@ public class ShardingDataSourceProperties {
          * <p>当前仅解析该字段、未参与路由判定：是否分库由
          * {@link ShardingDataSourceProperties#getDatabases()} 的数量是否大于 1 决定，
          * 分表始终按 logic-table / sharding-column / time-unit 生效。</p>
+         * 默认值: TABLE
+         * 示例: plugin.datasource.sharding.tables[0].strategy=TABLE
          */
         private String strategy = "TABLE";
 

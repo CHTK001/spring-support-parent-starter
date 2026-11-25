@@ -11,12 +11,12 @@ flowchart TB
     end
     subgraph MODULE["spring-support-hotsport-starter 内部分层"]
         direction TB
-        subgraph AUTO["自动装配层（AutoConfiguration.imports 4 条）"]
-            AC["SlowCallAutoConfiguration / ApmHandlerTimingConfiguration<br/>ApmLogCaptureAutoConfiguration / AgentAttachFallbackConfiguration"]
+        subgraph AUTO["自动装配层（AutoConfiguration.imports 5 条）"]
+            AC["SlowCallAutoConfiguration / ApmHandlerTimingConfiguration<br/>ApmLogCaptureAutoConfiguration / AgentAttachFallbackConfiguration<br/>HotsportApiAutoConfiguration（@Import API 与服务 Bean）"]
         end
         subgraph CORE["核心服务 / 模板层"]
             API["ApmController（/api/apm/* REST）"]
-            SVC["ApmQueryService / JvmMetricsService / JvmMemoryService<br/>AlertMonitorService / AlertStore"]
+            SVC["ApmQueryService / ApmIngestService / JvmMetricsService / JvmMemoryService<br/>AlertMonitorService / AlertStore / HotsportTcpServer"]
             CAP["SlowCallFilter / ApmHandlerTimingInterceptor / ApmLogAppender"]
         end
         subgraph SPI["SPI / 存储实现"]
@@ -51,12 +51,13 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    A["Spring Boot 启动<br/>HotsportApplication（排除 DataSourceAutoConfiguration）"] --> B["加载 AutoConfiguration.imports<br/>装配 4 个自动配置"]
+    A["Spring Boot 启动<br/>HotsportApplication（排除 DataSourceAutoConfiguration）"] --> B["加载 AutoConfiguration.imports<br/>装配 5 个自动配置"]
+    B --> B1["HotsportApiAutoConfiguration 生效<br/>@ConditionalOnWebApplication(SERVLET)<br/>@ConditionalOnProperty api.enabled（缺省 true）<br/>@Import(ApmController / 各 Service / HotsportTcpServer)"]
     B --> C["绑定 HotsportProperties<br/>plugin.hotsport.*"]
     B --> D["SlowCallAutoConfiguration 生效<br/>@ConditionalOnWebApplication(SERVLET)<br/>@ConditionalOnProperty request-record.enabled（缺省 true）"]
     B --> E["ApmHandlerTimingConfiguration 生效<br/>addInterceptors 注册耗时拦截器"]
     B --> F["ApmLogCaptureAutoConfiguration 生效<br/>@ConditionalOnClass(ILoggingEvent)<br/>@ConditionalOnProperty log-capture.enabled（缺省 true）"]
-    B --> G["AgentAttachFallbackConfiguration<br/>仅 @EnableConfigurationProperties(AgentAttachProperties)"]
+    B --> G["AgentAttachFallbackConfiguration<br/>@EnableConfigurationProperties(AgentAttachProperties)<br/>agent 自动配置缺席时补禁用态 AgentAttachService"]
     C --> H["ApmQueryService @PostConstruct<br/>虚拟线程 hotsport-apm 异步执行"]
     H --> I["agentAttachService.attach()<br/>Agent 自注入（不阻塞端口开放）"]
     H --> J["startLocalApmEngine：<br/>JdbcStorage.register() → new ApmBootstrap<br/>→ storageConfigProvider(currentStorageConfig)<br/>→ 注册 8 个 Handler → start()"]
@@ -81,6 +82,7 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | JVM 内存诊断 | `JvmMemoryService` | `GET /jvm/memory/pools`、`POST /jvm/gc`、`GET /jvm/class-loading` |
 | 线程池 / 连接池 / 资源 | `ApmQueryService` | `GET /thread-pools`、`/connection-pools`、`/resources` |
 | 告警（规则 / 渠道 / 事件） | `AlertMonitorService`、`AlertStore` | `GET|POST /alerts/rules`、`POST /alerts/rules/toggle`、`DELETE /alerts/rules/{metric}`、`GET|POST /alerts/channels`、`POST /alerts/channels/toggle`、`DELETE /alerts/channels/{id}`、`GET /alerts`、`/alerts/history`、`/alerts/persistence`、`POST /alerts/{id}/acknowledge|mute|ignore` |
+| 数据上报接入（HTTP / TCP） | `ApmIngestService`、`HotsportTcpServer` | `POST /api/apm/ingest`（JSON 数组 / 单条 / 混合对象，可选 `x-hotsport-token` 鉴权）；TCP 接收端 `plugin.hotsport.apm.tcp.*`（默认关闭） |
 | Agent 管理 | `AgentAttachService`（agent-starter） | `GET /agent/status`、`GET|POST /agent/config`、`POST /agent/enabled`、`GET /agent/self`、`/agent/trace-hotspots`、`/agent/trace-phases`、`GET /agent/skywalking/export` |
 | 存储管理 | `StorageManager`、`HotsportProperties` | `GET /storage/status`、`POST /storage/config`、`POST /storage/reload` |
 | 实时数据流 | `ApmQueryService`（SSE） | `GET /stream`、`GET /stream/logs`（`text/event-stream`） |
@@ -89,17 +91,18 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 
 ## 4. Bean 能力矩阵
 
-自动装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 共 4 个条目（无 spring.factories）：`SlowCallAutoConfiguration`、`ApmHandlerTimingConfiguration`、`AgentAttachFallbackConfiguration`、`ApmLogCaptureAutoConfiguration`。
+自动装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 共 5 个条目（无 spring.factories）：`HotsportApiAutoConfiguration`、`SlowCallAutoConfiguration`、`ApmHandlerTimingConfiguration`、`ApmLogCaptureAutoConfiguration`、`AgentAttachFallbackConfiguration`。
 
 | Bean 名 | 类型 | 装配条件（含默认值） | 可否覆盖 | 典型用途 |
 |:--------|:-----|:---------------------|:---------|:---------|
-| `hotsportProperties` | `HotsportProperties` | `@Component` + `@ConfigurationProperties(prefix="plugin.hotsport")`，组件扫描，无条件 | 可用同类型 `@Bean` + `@Primary` 替换 | 全模块配置入口；存储参数由 `getApm().toStorageConfig()` 展开 |
-| `apmController` | `ApmController`（`@RestController`，`@RequestMapping("/api/apm")`） | 组件扫描，无条件 | 同上 | 观测 REST API |
-| `apmQueryService` | `ApmQueryService`（`@Service`） | 组件扫描，无条件 | 同上 | 查询编排、本进程 APM 引擎装配 |
-| `jvmMetricsService` | `JvmMetricsService`（`@Service`） | 组件扫描，无条件 | 同上 | JVM 指标定时采样 |
-| `jvmMemoryService` | `JvmMemoryService`（`@Service`） | 组件扫描，无条件 | 同上 | JVM 内存诊断 |
-| `alertMonitorService` | `AlertMonitorService`（`@Service`） | 组件扫描，无条件 | 同上 | 告警监控与通知 |
-| `alertStore` | `AlertStore`（`@Component`） | 组件扫描，无条件；内部仅 `type=mysql` 且 url 非空时激活落库 | 同上 | 告警规则/渠道/事件持久化 |
+| `hotsportApiAutoConfiguration` | `HotsportApiAutoConfiguration`（`@AutoConfiguration`） | `AutoConfiguration.imports` 装配；`@ConditionalOnWebApplication(SERVLET)` + `@ConditionalOnProperty(prefix="plugin.hotsport.api", name="enabled", havingValue="true", matchIfMissing=true)`；`@Import(ApmController / ApmQueryService / ApmIngestService / JvmMetricsService / JvmMemoryService / AlertMonitorService / AlertStore / HotsportProperties / HotsportTcpServer)`，`@EnableScheduling` 驱动 JVM 周期采样 | 用 `plugin.hotsport.api.enabled=false` 整体关闭 | 嵌入宿主时注册 `/api/apm/*` 全部 REST/服务 Bean（不依赖宿主包扫描） |
+| `hotsportProperties` | `HotsportProperties` | `@Component` + `@ConfigurationProperties(prefix="plugin.hotsport")`，组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import` | 可用同类型 `@Bean` + `@Primary` 替换 | 全模块配置入口；存储参数由 `getApm().toStorageConfig()` 展开 |
+| `apmController` | `ApmController`（`@RestController`，`@RequestMapping("/api/apm")`） | 组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import`（见上行条件） | 同上 | 观测 REST API |
+| `apmQueryService` | `ApmQueryService`（`@Service`） | 组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import` | 同上 | 查询编排、本进程 APM 引擎装配 |
+| `jvmMetricsService` | `JvmMetricsService`（`@Service`） | 组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import` | 同上 | JVM 指标定时采样 |
+| `jvmMemoryService` | `JvmMemoryService`（`@Service`） | 组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import` | 同上 | JVM 内存诊断 |
+| `alertMonitorService` | `AlertMonitorService`（`@Service`） | 组件扫描；同时被 `hotsportApiAutoConfiguration` `@Import` | 同上 | 告警监控与通知 |
+| `alertStore` | `AlertStore`（`@Component`） | 组件扫描（亦被 `@Import`）；内部仅 `type=mysql` 且 url 非空时激活落库 | 同上 | 告警规则/渠道/事件持久化 |
 | `spaWebConfig` | `SpaWebConfig`（`@Configuration` implements `WebMvcConfigurer`） | 组件扫描，无条件 | 同上 | SPA 路由回退到 `index.html` |
 | `slowCallFilter` | `FilterRegistrationBean<SlowCallFilter>` | `@ConditionalOnWebApplication(type=SERVLET)` + `@ConditionalOnProperty(prefix="plugin.hotsport.request-record", name="enabled", havingValue="true", matchIfMissing=true)`；阈值 `@Value("${plugin.hotsport.request-record.threshold-ms:0}")` | 无 `@ConditionalOnMissingBean`；同名覆盖需 `allow-bean-definition-overriding`，常规用开关关闭 | 记录真实 HTTP 请求 |
 | （非 Bean）`ApmHandlerTimingInterceptor` | `WebMvcConfigurer#addInterceptors` 注册，`order(Integer.MAX_VALUE)` | `@AutoConfiguration(after = SlowCallAutoConfiguration.class)` + 同一 `request-record.enabled` 开关 | 通过 `request-record.enabled=false` 整体关闭 | 还原「HTTP → class.method」层级 |
@@ -108,11 +111,11 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | `disabledAgentAttachService` | `AgentAttachService` | **源码现状**：`AgentAttachFallbackConfiguration#disabledAgentAttachService` 方法未标注 `@Bean`（也无 `@ConditionalOnMissingBean`），Javadoc 描述的「`plugin.agent.enabled=false` 时兜底」语义**当前不生效**，不会注册 Bean | — | 设计意图：关闭 agent 时提供禁用态占位，避免 `ApmQueryService` 依赖缺失导致启动失败 |
 | `hotsportApplication` | `HotsportApplication`（主类） | 独立运行入口 | — | 打包为可执行 jar |
 
-> 注意：上表带 `@Component`/`@Service`/`@RestController`/`@Configuration` 的 Bean 依赖**组件扫描**。独立运行（`HotsportApplication`）必然生效；嵌入宿主时，只有宿主启动类的包扫描能覆盖 `com.chua.starter.hotsport.support`（或显式 `@ComponentScan`）才会注册，详见第 6 节。
+> 注意：上表带 `@Component`/`@Service`/`@RestController` 的 Bean 有两条注册路径：独立运行（`HotsportApplication`）靠包扫描；嵌入宿主时由 `hotsportApiAutoConfiguration` 的 `@Import` 显式注册（开关 `plugin.hotsport.api.enabled`，缺省 true），**不依赖宿主包扫描**。唯一例外是 `SpaWebConfig`：它只走组件扫描、刻意不进 `@Import`，避免 SPA 路由回退劫持宿主页面路由，详见第 7 节。
 
 ## 5. 完整配置
 
-`HotsportProperties` 绑定前缀 `plugin.hotsport`，含 `Agent`、`Apm`（其内 `Storage`）三个嵌套类（单位如无说明为毫秒）：
+`HotsportProperties` 绑定前缀 `plugin.hotsport`，含 `Agent`、`Apm` 两个一级嵌套类（`Apm` 内再分 `Storage`、`Ingest`、`Tcp` 三个子配置；单位如无说明为毫秒）：
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |:---------|:-----|:-------|:-----|
@@ -131,11 +134,18 @@ REST 基础路径 `/api/apm`（`ApmController`），按能力域分组：
 | `plugin.hotsport.apm.storage.async` | Boolean | `null` | 写入模式；`null`（未配置）沿用 APM 侧默认异步 |
 | `plugin.hotsport.apm.storage.maintenance-interval-ms` | long | `0` | 自维护周期（0=实现默认 60 秒，下限 5 秒） |
 | `plugin.hotsport.apm.storage.flush-timeout-ms` | long | `0` | 关闭时等待异步队列落盘时长（0=实现默认） |
+| `plugin.hotsport.apm.ingest.token` | String | `""` | HTTP 上报共享密钥；非空时校验请求头 `x-hotsport-token`（不匹配 401），空=不校验 |
+| `plugin.hotsport.apm.ingest.max-batch` | int | `1000` | `POST /api/apm/ingest` 单批每种类型最大条数（超出截断丢弃；≤0 走兜底 1000） |
+| `plugin.hotsport.apm.tcp.enabled` | boolean | `false` | TCP 接收端开关（HTTP `/ingest` 始终可用；`HotsportTcpServer` 以 `havingValue="true"` 判定，缺省关闭） |
+| `plugin.hotsport.apm.tcp.host` | String | `0.0.0.0` | TCP 监听地址（空/空白回退 `0.0.0.0`） |
+| `plugin.hotsport.apm.tcp.port` | int | `19392` | TCP 监听端口（≤0 回退 19392） |
+| `plugin.hotsport.apm.tcp.topic` | String | `hotsport-events` | 订阅主题名，采集端按主题投递（空白回退 `hotsport-events`） |
 
 以下配置不在 `HotsportProperties` 中，由各自动配置 / 服务以 `@ConditionalOnProperty`、`@Value`、`@Scheduled` 占位符直接绑定：
 
 | 配置路径 | 类型 | 默认值 | 说明 | 绑定位置 |
 |:---------|:-----|:-------|:-----|:---------|
+| `plugin.hotsport.api.enabled` | boolean | `true`（matchIfMissing） | REST API 与服务 Bean 总开关（`HotsportApiAutoConfiguration` 的 `@Import` 整体生效/关闭） | `HotsportApiAutoConfiguration` 的 `@ConditionalOnProperty` |
 | `plugin.hotsport.request-record.enabled` | boolean | `true`（matchIfMissing） | 请求采集开关（SlowCallFilter + 耗时拦截器） | 两个自动配置的 `@ConditionalOnProperty` |
 | `plugin.hotsport.request-record.threshold-ms` | long | `0` | 慢调用记录阈值，0=记录全部 | `SlowCallAutoConfiguration#slowCallFilter` 的 `@Value` |
 | `plugin.hotsport.log-capture.enabled` | boolean | `true`（matchIfMissing） | 应用日志采集开关（需 Logback） | `ApmLogCaptureAutoConfiguration` 的 `@ConditionalOnProperty` |

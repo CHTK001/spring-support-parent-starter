@@ -11,6 +11,21 @@ import java.util.Set;
  * <p>前缀 {@code plugin.service-info}。用于配置 {@code /service-info} 端点的认证、
  * 横幅渲染等行为。</p>
  *
+ * <p><b>完整 YAML 配置示例：</b></p>
+ * <pre>{@code
+ * plugin:
+ *   service-info:
+ *     enable: true              # 是否启用 /service-info 端点与横幅（默认 true）
+ *     banner: true              # 启动时是否输出横幅（默认 true）
+ *     auth-enable: false        # 是否启用端点认证（默认 false，内网场景）
+ *     auth-username: admin      # 认证用户名
+ *     auth-password: change-me  # 认证密码（占位符，请替换）
+ *     auth-ip-whitelist:        # IP 白名单（精确/通配符/CIDR），命中跳过认证
+ *       - 127.0.0.1
+ *       - 192.168.0.0/16
+ *     infrastructure: true      # 横幅是否展示基础设施连接信息（默认 true）
+ * }</pre>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -20,18 +35,42 @@ public class ServiceInfoProperties {
     /**
      * 是否启用 服务信息 端点 ({@code /service-info}) 和横幅渲染。
      * 默认 true。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     enable: true
+     * }</pre>
      */
     private boolean enable = true;
 
     /**
      * 是否在启动时输出横幅到 stdout。
      * 默认 true。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     banner: true
+     * }</pre>
      */
     private boolean banner = true;
 
     /**
      * 是否对 {@code /service-info} 端点启用认证。
      * 默认 false (内网场景)。
+     *
+     * <p>认证过滤器的注册条件为 {@code plugin.service-info.auth.enable=true}；
+     * 认证方式为基础用户名/密码，命中 IP 白名单时跳过。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     auth-enable: true
+     * }</pre>
      */
     private boolean authEnable = false;
 
@@ -40,21 +79,57 @@ public class ServiceInfoProperties {
      *
      * <p>默认 true, 但仅展示 {@link Environment} 中真实配置了的条目;
      * 未配置的中间件不会出现在横幅中。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     infrastructure: true
+     * }</pre>
      */
     private boolean infrastructure = true;
 
     /**
      * 基础 认证 用户名。
+     *
+     * <p>默认 {@code admin}。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     auth-username: admin
+     * }</pre>
      */
     private String authUsername = "admin";
 
     /**
      * 基础 认证 密码（通过配置文件覆盖）。
+     *
+     * <p>默认 {@code ""}；启用认证时必须显式配置（示例值均为占位符）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     auth-password: change-me
+     * }</pre>
      */
     private String authPassword = "";
 
     /**
      * IP 白名单, 命中后跳过认证。支持精确匹配、通配符、CIDR。
+     *
+     * <p>默认空集合（不放行任何 IP，全部走认证）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   service-info:
+     *     auth-ip-whitelist:
+     *       - 127.0.0.1
+     *       - 192.168.0.0/16
+     * }</pre>
      */
     private Set<String> authIpWhitelist = new LinkedHashSet<>();
 

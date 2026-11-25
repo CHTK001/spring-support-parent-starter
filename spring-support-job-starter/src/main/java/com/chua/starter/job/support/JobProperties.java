@@ -13,6 +13,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   <li>{@link ClusterConfig} - 集群身份与单秒扫描间隔</li>
  *   <li>{@link SyncConfig} - 长链同步,再拆 {@code scheduler} 与 {@code executor}</li>
  *   <li>{@link PoolConfig} - 执行线程池</li>
+ *   <li>{@link LogConfig} - 执行日志 sink 与异步写入队列</li>
+ *   <li>{@link ManageConfig} - HTTP 治理接口 {@code /v2/job/**} 开关</li>
+ *   <li>{@link CacheConfig} - 扫描结果缓存开关与 TTL</li>
  * </ul>
  *
  * <h3>三模式拓扑</h3>
@@ -26,30 +29,44 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <pre>
  * plugin:
  *   job:
- *     enable: true
- *     role: SINGLE
- *     node-id: ""
+ *     enable: true              # 总开关, 缺省即启用 (引入即用)
+ *     role: SINGLE              # 进程角色: SCHEDULER / EXECUTOR / SINGLE
+ *     node-id: ""               # 节点唯一标识, 留空按 运行时名称-随机后缀 自动推导
  *     cluster:
- *       group: payment
- *       scan-interval-ms: 1000
- *       pre-read-ms: 5000
- *       lease-seconds: 15
+ *       group: payment          # 作业归属分组, 对应 sys_job.sys_job_group
+ *       resolver: mysql         # 选主 SPI 键, 留空或取不到时回落数据库实现
+ *       election-namespace: ""  # 选主租约键, 留空按 spring.application.name 推导
+ *       scan-interval-ms: 1000  # 扫描间隔 (毫秒), 运行下限 100ms
+ *       pre-read-ms: 5000       # 预读时间窗 (毫秒)
+ *       lease-seconds: 15       # Leader 租约 (秒), 心跳按 lease/3 续约
  *     sync:
- *       in-memory: false
+ *       in-memory: false        # 兼容字段, 设 true 直接抛异常拒绝启动
  *       scheduler:
  *         listen-host: 0.0.0.0
  *         listen-port: 8081
+ *         protocol: tcp         # 长链协议, 须与执行器 server-url 的 scheme 一致
  *       executor:
- *         server-url: ""
+ *         server-url: ""        # EXECUTOR 必填, 如 tcp://10.0.0.11:8081
  *         reconnect-base-ms: 500
  *         reconnect-max-ms: 30000
  *     pool:
- *       virtual: true
+ *       virtual: true           # 虚拟线程执行器 (JDK 21+), false 回退平台线程池
  *       core-size: 16
  *       max-size: 64
  *       queue-size: 128
+ *     log:
+ *       enabled: false          # 是否追加文件日志 sink (仅 MyBatis 分支生效)
+ *       base-path: ./logs/job
+ *       async: true
+ *       queue-size: 4096
+ *       cleanup-enabled: false  # 声明项: 本模块未装配定时清理任务
+ *       cleanup-retention-days: 30
+ *       cleanup-cron: "0 0 0 * * ?"
  *     manage:
- *       enable: false   # 开启后暴露 /v2/job/** 任务治理接口 (仅管理员)
+ *       enable: false           # 开启后暴露 /v2/job/** 任务治理接口 (仅管理员)
+ *     cache:
+ *       enabled: false          # 扫描结果缓存, 开启后扫描相位最多滞后 ttl-ms
+ *       ttl-ms: 5000
  * </pre>
  *
  * @since 4.0.0.42
@@ -65,17 +82,27 @@ public class JobProperties {
     public static final String PRE = "plugin.job";
 
     /**
-     * 是否启用调度模块,默认 true,引入即开箱即用
+     * 是否启用调度模块,默认 true,引入即开箱即用。
+     *
+     * <p>YAML 示例: {@code plugin.job.enable: true}</p>
      */
     private boolean enable = true;
 
     /**
-     * 进程角色,默认 单个 (单机自闭环,开箱即用)
+     * 进程角色,默认 单个 (单机自闭环,开箱即用)。
+     *
+     * <p>可选值: SCHEDULER (调度中心) / EXECUTOR (执行器) / SINGLE (单机)。</p>
+     *
+     * <p>YAML 示例: {@code plugin.job.role: SINGLE}</p>
      */
     private Role role = Role.SINGLE;
 
     /**
-     * 当前节点唯一标识,留空时自动按 主机名称-pid 推导
+     * 当前节点唯一标识,留空时自动按 主机名称-pid-随机后缀 推导。
+     *
+     * <p>留空时每次重启都会生成新的随机后缀; 需要跨重启稳定的节点身份时请显式配置, 并保证集群内唯一。</p>
+     *
+     * <p>YAML 示例: {@code plugin.job.node-id: job-node-1}</p>
      */
     private String nodeId;
 
@@ -118,10 +145,19 @@ public class JobProperties {
      * <h3>代价说明</h3>
      * <p>开启后每拍 <b>不重新读数据库时钟</b>，所以：
      * 扫描窗的上界（{@code now + preReadMs}）在 TTL 内不更新；
-     * 速度快elps 1 秒内的错过判定（misfire）可能少触发一次；
-      * 扫描窗的上界和错过判定（misfire）最多滚后约 TTL 秒；
+     * 相位滞后时, 1 秒内的错过判定（misfire）可能少触发一次；
+     * 扫描窗的上界和错过判定（misfire）最多滚后约 TTL 秒；
      * 是滞后为 TTL 的相位，下一拍从每个槽位重新算起时仍自洽。</p>
      * <p>如果您需要严格的相位精度，请保持关闭；如果您需要尽可能削减扫描读库，请开启。</p>
+     *
+     * <p>YAML 示例:</p>
+     * <pre>
+     * plugin:
+     *   job:
+     *     cache:
+     *       enabled: false   # 默认关闭, 行为与历史一致
+     *       ttl-ms: 5000
+     * </pre>
      *
      * @since 4.0.0.51
      * @author CH
@@ -130,15 +166,21 @@ public class JobProperties {
     public static class CacheConfig {
 
         /**
-         * 是否启用查询缓存（默认关闭，行为与历史一致）
+         * 是否启用查询缓存（默认关闭，行为与历史一致）。
+         *
+         * <p>YAML 示例: {@code plugin.job.cache.enabled: false}</p>
          */
         private boolean enabled = false;
 
         /**
-         * 扫描结果缓存有效期（毫秒），默认 5000
+         * 扫描结果缓存有效期（毫秒），默认 5000。
          *
-          * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
+         * <p>允许阈值与 {@link ClusterConfig#DEFAULT_PRE_READ_MS} 同号：候选窗口越宽，
          * 这个窗口的扫描结果越稳定，越值得复用。</p>
+         *
+         * <p>小于等于 0 或未开启 {@link #enabled} 时视为未启用（回落无缓存实现）。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.cache.ttl-ms: 5000}</p>
          */
         private long ttlMs = 5000L;
     }
@@ -228,17 +270,21 @@ public class JobProperties {
          *
          * <p>本值是<b>作业归属</b>口径: Leader 只扫描 {@code sys_job_group = group} 的任务行,
          * 与 {@code sys_job.sys_job_group} 对齐。不要拿它当选主租约的键, 见 {@link #electionNamespace}。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.group: payment}</p>
          */
         private String group = "default";
 
-    /**
-     * 选主实现（SPI 键, 大小写不敏感）: 默认 {@code mysql} 走数据库租约;
-     * 注册在 {@code META-INF/extensions/com.chua.starter.job.support.cluster.LeaderElectionResolver}。
-     *
-     * <p>留空或取不到该键时<b>回落</b>数据库实现, 保证默认路径与历史行为一致 ——
-     * 选非 DB 实现的人自带其基础设施（如 Redis），不强制单机用户引入额外中间件。</p>
-     */
-    private String resolver = "mysql";
+        /**
+         * 选主实现（SPI 键, 大小写不敏感）: 默认 {@code mysql} 走数据库租约;
+         * 注册在 {@code META-INF/extensions/com.chua.starter.job.support.cluster.LeaderElectionResolver}。
+         *
+         * <p>留空或取不到该键时<b>回落</b>数据库实现, 保证默认路径与历史行为一致 ——
+         * 选非 DB 实现的人自带其基础设施（如 Redis），不强制单机用户引入额外中间件。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.resolver: mysql}</p>
+         */
+        private String resolver = "mysql";
 
         /**
          * 选主租约命名空间, 留空时按 {@link #resolveElectionNamespace(String)} 推导。
@@ -249,6 +295,8 @@ public class JobProperties {
          * 作业分组允许跨部署重名, 选主命名空间不允许, 因此必须是独立配置项。</p>
          *
          * <p>同一集群内所有节点的取值必须一致 (通常都用默认推导), 否则会分裂成两个各自当 Leader 的集群。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.election-namespace: payment-app}</p>
          */
         private String electionNamespace;
 
@@ -273,17 +321,23 @@ public class JobProperties {
         }
 
         /**
-         * 单秒扫描间隔, 默认 1000ms
+         * 单秒扫描间隔, 默认 1000ms; 运行下限 100ms (过小值会被兜底抬升)。
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.scan-interval-ms: 1000}</p>
          */
         private long scanIntervalMs = DEFAULT_SCAN_INTERVAL_MS;
 
         /**
-         * 预读时间窗, 默认 5000ms
+         * 预读时间窗, 默认 5000ms; 扫描窗上界 = 当前数据库相位 + 本值。
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.pre-read-ms: 5000}</p>
          */
         private long preReadMs = DEFAULT_PRE_READ_MS;
 
         /**
-         * Leader 抢占租约时长, 默认 15s
+         * Leader 抢占租约时长, 默认 15s; 心跳按 {@code lease/3} 周期续约 (下限 1 秒)。
+         *
+         * <p>YAML 示例: {@code plugin.job.cluster.lease-seconds: 15}</p>
          */
         private int leaseSeconds = DEFAULT_LEASE_SECONDS;
     }
@@ -299,6 +353,8 @@ public class JobProperties {
 
         /**
          * 兼容旧配置项；设置为 true 时明确拒绝启动，不提供内存同步伪实现。
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.in-memory: false}</p>
          */
         private boolean inMemory = false;
 
@@ -336,19 +392,26 @@ public class JobProperties {
         public static final String DEFAULT_PROTOCOL = "tcp";
 
         /**
-         * 监听主机
+         * 监听主机, 默认 0.0.0.0 (所有网卡)。
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.scheduler.listen-host: 0.0.0.0}</p>
          */
         private String listenHost = "0.0.0.0";
 
         /**
-         * 监听端口
+         * 监听端口, 默认 8081; 独立于宿主 Web 端口。
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.scheduler.listen-port: 8081}</p>
          */
         private int listenPort = DEFAULT_LISTEN_PORT;
 
         /**
-         * 长链协议 (tcp / websocket / udp / http / rsocket)
+         * 长链协议 (tcp / websocket / udp / http / rsocket), 默认 tcp。
          *
-         * <p>按本值优先挑 SyncServer SPI 实现，挑不到再按内置兜底顺序回退。</p>
+         * <p>按本值优先挑 SyncServer SPI 实现，挑不到再按内置兜底顺序回退。
+         * 必须与执行器 {@code sync.executor.server-url} 的 scheme 一致。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.scheduler.protocol: tcp}</p>
          */
         private String protocol = DEFAULT_PROTOCOL;
     }
@@ -373,17 +436,29 @@ public class JobProperties {
         public static final int DEFAULT_RECONNECT_MAX_MS = 30000;
 
         /**
-         * 调度中心长链 URL, 例如 ws://10.0.0.11:8081
+         * 调度中心长链 URL, 例如 {@code tcp://10.0.0.11:8081}; 默认空。
+         *
+         * <p>角色为 EXECUTOR 时必填, scheme 须与调度端 {@code sync.scheduler.protocol} 一致。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.executor.server-url: tcp://10.0.0.11:8081}</p>
          */
         private String serverUrl;
 
         /**
-         * 重连退避起点
+         * 重连退避起点, 默认 500 (毫秒)。
+         *
+         * <p>预留参数: 当前内置重连循环按固定周期执行, 暂未读取该值。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.executor.reconnect-base-ms: 500}</p>
          */
         private int reconnectBaseMs = DEFAULT_RECONNECT_BASE_MS;
 
         /**
-         * 重连退避上限
+         * 重连退避上限, 默认 30000 (毫秒)。
+         *
+         * <p>预留参数: 当前内置重连循环按固定周期执行, 暂未读取该值。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.sync.executor.reconnect-max-ms: 30000}</p>
          */
         private int reconnectMaxMs = DEFAULT_RECONNECT_MAX_MS;
     }
@@ -413,17 +488,23 @@ public class JobProperties {
         public static final int DEFAULT_QUEUE_CAPACITY = 128;
 
         /**
-         * 核心线程数
+         * 核心线程数, 默认 16; 同时决定 {@code jobTaskScheduler} 的池大小。
+         *
+         * <p>YAML 示例: {@code plugin.job.pool.core-size: 16}</p>
          */
         private int coreSize = DEFAULT_CORE_SIZE;
 
         /**
-         * 最大线程数
+         * 最大线程数, 默认 64; 仅平台线程池 ({@code virtual=false}) 生效。
+         *
+         * <p>YAML 示例: {@code plugin.job.pool.max-size: 64}</p>
          */
         private int maxSize = DEFAULT_MAX_SIZE;
 
         /**
-         * 任务队列容量
+         * 任务队列容量, 默认 128; 仅平台线程池 ({@code virtual=false}) 生效。
+         *
+         * <p>YAML 示例: {@code plugin.job.pool.queue-size: 128}</p>
          */
         private int queueSize = DEFAULT_QUEUE_CAPACITY;
 
@@ -431,8 +512,10 @@ public class JobProperties {
          * 是否启用虚拟线程执行器, 默认开启。
          *
          * <p>开启时使用 {@code Executors.newVirtualThreadPerTaskExecutor()}
-         * (每任务一个虚拟线程, 阻塞型任务大幅提升吞吐, 无 最大/队列 限制);
+         * (每任务一个虚拟线程, 阻塞型任务大幅提升吞吐, 无 最大/队列 限制, 需 JDK 21+);
          * 关闭时回退到 {@link ThreadPoolExecutor} (核心/最大/队列 平台线程池)。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.pool.virtual: true}</p>
          */
         private boolean virtual = true;
     }
@@ -467,37 +550,58 @@ public class JobProperties {
         public static final String DEFAULT_CLEANUP_CRON = "0 0 0 * * ?";
 
         /**
-         * 是否启用文件日志
+         * 是否启用文件日志, 默认 false。
+         *
+         * <p>仅 MyBatis 分支生效: 无 MyBatis-Plus 时只有 stdout sink, 本开关不产生额外 sink。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.log.enabled: false}</p>
          */
         private boolean enabled = false;
 
         /**
-         * 日志根目录
+         * 日志根目录, 默认 ./logs/job。
+         *
+         * <p>YAML 示例: {@code plugin.job.log.base-path: ./logs/job}</p>
          */
         private String basePath = DEFAULT_BASE_PATH;
 
         /**
-         * 是否启用异步写入
+         * 是否启用异步写入, 默认 true; DB+File 双 sink 组合固定异步。
+         *
+         * <p>YAML 示例: {@code plugin.job.log.async: true}</p>
          */
         private boolean async = true;
 
         /**
-         * 异步队列容量
+         * 异步队列容量, 默认 4096。
+         *
+         * <p>YAML 示例: {@code plugin.job.log.queue-size: 4096}</p>
          */
         private int queueSize = DEFAULT_QUEUE_SIZE;
 
         /**
-         * 是否启用日志自动清理
+         * 是否启用日志自动清理, 默认 false。
+         *
+         * <p>声明项: 本模块未装配定时清理任务; 实际清理入口为
+         * {@code POST /v2/job/log/cleanup} (需 {@code manage.enable=true})。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.log.cleanup-enabled: false}</p>
          */
         private boolean cleanupEnabled = false;
 
         /**
-         * 日志保留天数 (超过该天数的日志将被清理)
+         * 日志保留天数 (超过该天数的日志将被清理), 默认 30。
+         *
+         * <p>YAML 示例: {@code plugin.job.log.cleanup-retention-days: 30}</p>
          */
         private int cleanupRetentionDays = DEFAULT_RETENTION_DAYS;
 
         /**
-         * 日志清理定时 cron 表达式
+         * 日志清理定时 cron 表达式, 默认 {@code 0 0 0 * * ?} (每日 0 点)。
+         *
+         * <p>声明项: 本模块未装配定时清理任务, 本值暂未被消费。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.log.cleanup-cron: "0 0 0 * * ?"}</p>
          */
         private String cleanupCron = DEFAULT_CLEANUP_CRON;
     }
@@ -515,7 +619,12 @@ public class JobProperties {
     public static class ManageConfig {
 
         /**
-         * 是否暴露任务治理 HTTP 接口, 默认 false (需应用显式开启)
+         * 是否暴露任务治理 HTTP 接口, 默认 false (需应用显式开启)。
+         *
+         * <p>需 Servlet Web 应用且 classpath 含 {@code spring-webmvc}; 开启后
+         * {@code /v2/job/**} 整组要求管理员权限, 请勿裸暴露。</p>
+         *
+         * <p>YAML 示例: {@code plugin.job.manage.enable: false}</p>
          */
         private boolean enable = false;
     }

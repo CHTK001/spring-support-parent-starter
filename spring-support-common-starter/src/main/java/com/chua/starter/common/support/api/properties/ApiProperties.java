@@ -94,28 +94,25 @@ import java.util.Map;
     public static final String PRE = "plugin.api";
 
     /**
-     * 忽略返回格式（针对返回格式不进行统计处理）
+     * 忽略返回格式（针对返回格式不进行统计处理）。
+     * <p>YAML：{@code plugin.api.ignore-format-packages}，默认未设置（null）。</p>
      */
     private String[] ignoreFormatPackages;
 
     /**
-     * 版本控制配置
+     * 版本控制配置（{@code @ApiVersion} 版本路由）。
+     * <p>YAML：{@code plugin.api.version.enable}，默认 {@code true}。</p>
      */
     @Valid
     @NotNull(message = "版本配置不能为空")
-    /**
-     * 版本
-    */
     private Version version = new Version();
 
     /**
-     * 平台配置
+     * 平台配置（{@code @ApiPlatform} 平台标识）。
+     * <p>YAML 前缀 {@code plugin.api.platform}，默认 {@code enable=true}、{@code name=SYSTEM}。</p>
      */
     @Valid
     @NotNull(message = "平台配置不能为空")
-    /**
-     * Platform
-    */
     private Platform platform = new Platform();
 
     /**
@@ -128,18 +125,17 @@ import java.util.Map;
     }
 
     /**
-     * 自动统一返回结构
+     * 自动统一返回结构。
+     * <p>YAML：{@code plugin.api.uniform}，默认 {@code true}。</p>
      */
     private boolean uniform = true;
     
     /**
-     * 响应编码配置
+     * 响应编码配置。
+     * <p>YAML 前缀 {@code plugin.api.encode}，默认 {@code enable=false}、{@code codec-type=aes}。</p>
      */
     @Valid
     @NotNull(message = "响应编码配置不能为空")
-    /**
-     * Encode
-    */
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
     /**
@@ -152,13 +148,11 @@ import java.util.Map;
     }
 
     /**
-     * 请求解码配置
+     * 请求解码配置。
+     * <p>YAML 前缀 {@code plugin.api.decode}，默认 {@code enable=false}、{@code codec-type=aes}。</p>
      */
     @Valid
     @NotNull(message = "请求解码配置不能为空")
-    /**
-     * Decode
-    */
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
     /**
@@ -171,12 +165,10 @@ import java.util.Map;
     }
 
     /**
-     * SPI 配置
+     * SPI 配置（短名映射）。
+     * <p>YAML 前缀 {@code plugin.api.spi}，默认 {@code enable=true}。</p>
      */
     @Valid
-    /**
-     * SPI
-    */
     private SpiConfig spi = new SpiConfig();
 
     /**
@@ -189,13 +181,11 @@ import java.util.Map;
     }
 
     /**
-     * Mock 配置
+     * Mock 配置。
+     * <p>YAML 前缀 {@code plugin.api.mock}，默认 {@code enable=false}、{@code profiles=dev,test}。</p>
      */
     @Valid
     @NotNull(message = "Mock配置不能为空")
-    /**
-     * 模拟
-    */
     private MockConfig mock = new MockConfig();
 
     /**
@@ -208,7 +198,8 @@ import java.util.Map;
     }
 
     /**
-     * 废弃接口配置
+     * 废弃接口配置。
+     * <p>YAML 前缀 {@code plugin.api.deprecated}，默认 {@code enable=true}、{@code add-warning-header=true}。</p>
      */
     private DeprecatedConfig deprecated = new DeprecatedConfig();
 
@@ -222,7 +213,8 @@ import java.util.Map;
     }
 
     /**
-     * 内部接口配置
+     * 内部接口配置（{@code @ApiInternal} 内部接口控制）。
+     * <p>YAML 前缀 {@code plugin.api.internal}，默认 {@code enable=true}、白名单为空。</p>
      */
     private InternalConfig internal = new InternalConfig();
 
@@ -236,13 +228,11 @@ import java.util.Map;
     }
 
     /**
-     * 功能开关配置
+     * 功能开关配置。
+     * <p>YAML 前缀 {@code plugin.api.feature}，默认 {@code enable=false}、{@code path=/api/features}。</p>
      */
     @Valid
     @NotNull(message = "功能开关配置不能为空")
-    /**
-     * 特征
-    */
     private FeatureConfig feature = new FeatureConfig();
 
     /**
@@ -255,13 +245,11 @@ import java.util.Map;
     }
 
     /**
-     * 灰度发布配置
+     * 灰度发布配置。
+     * <p>YAML 前缀 {@code plugin.api.gray}，默认 {@code enable=true}、{@code header-name=X-Gray-Hit}、{@code default-percentage=0}。</p>
      */
     @Valid
     @NotNull(message = "灰度发布配置不能为空")
-    /**
-     * Gray
-    */
     private GrayConfig gray = new GrayConfig();
 
     /**
@@ -293,7 +281,8 @@ import java.util.Map;
     public static class Version {
 
         /**
-         * 是否开启版本控制
+         * 是否开启版本控制。
+         * <p>YAML：{@code plugin.api.version.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
@@ -387,17 +376,21 @@ import java.util.Map;
     public static class Platform {
 
         /**
-         * 是否开启平台标识
+         * 是否开启平台标识。
+         * <p>YAML：{@code plugin.api.platform.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
         /**
-         * 平台类型（枚举，优先级高于 别名名称）
+         * 平台类型（枚举，优先级高于 别名名称）。
+         * <p>YAML：{@code plugin.api.platform.name}，默认 {@code SYSTEM}；
+         * 可选值 system/tenant/monitor/scheduler/oauth。</p>
          */
         private PlatformType name = PlatformType.SYSTEM;
 
         /**
-         * 平台别名（当 名称 无法满足需求时使用自定义名称）
+         * 平台别名（当 名称 无法满足需求时使用自定义名称）。
+         * <p>YAML：{@code plugin.api.platform.alias-name}，默认未设置；{@code name} 优先级更高。</p>
          */
         private String aliasName;
 
@@ -479,37 +472,37 @@ import java.util.Map;
     public static class ResponseEncodeProperties {
 
         /**
-         * 是否开启加密功能
+         * 是否开启加密功能。
+         * <p>YAML：{@code plugin.api.encode.enable}，默认 {@code false}。</p>
          */
         private boolean enable = false;
 
         /**
-         * 是否开启响应加密
+         * 是否开启响应加密。
+         * <p>YAML：{@code plugin.api.encode.response-enable}，默认 {@code false}。</p>
          */
         private boolean responseEnable = false;
 
         /**
-         * 是否由其它对象注入参数
+         * 是否由其它对象注入参数。
+         * <p>YAML：{@code plugin.api.encode.ext-inject}，默认 {@code false}。</p>
          */
         private boolean extInject = false;
 
         /**
-         * 编解码器类型（sm2/aes/rsa等）
+         * 编解码器类型（sm2/aes/rsa等）。
+         * <p>YAML：{@code plugin.api.encode.codec-type}，默认 {@code aes}；
+         * 可选值 sm2/sm4/aes/rsa/des/keylog。</p>
          */
         @NotNull(message = "编解码器类型不能为空")
         @Pattern(regexp = "^(sm2|sm4|aes|rsa|des|keylog)$", message = "编解码器类型必须为sm2/sm4/aes/rsa/des/keylog之一")
-        /**
-         * Codec类型
-        */
         private String codecType = "aes";
 
         /**
-         * 白名单（不需要加密的接口路径）
+         * 白名单（不需要加密的接口路径）。
+         * <p>YAML：{@code plugin.api.encode.white-list}，默认空列表。</p>
          */
         @NotNull(message = "白名单不能为null，可以为空列表")
-        /**
-         * White列表
-        */
         private List<String> whiteList = Collections.emptyList();
 
         /**
@@ -613,33 +606,36 @@ import java.util.Map;
     public static class RequestDecodeProperties {
 
         /**
-         * 是否开启请求解密
+         * 是否开启请求解密。
+         * <p>YAML：{@code plugin.api.decode.enable}，默认 {@code false}。</p>
          */
         private boolean enable = false;
 
         /**
-         * 请求解密密钥
+         * 请求解密密钥。
+         * <p>YAML：{@code plugin.api.decode.codec-request-key}，默认未设置。</p>
          */
         private String codecRequestKey;
 
         /**
-         * 是否由其它对象注入参数
+         * 是否由其它对象注入参数。
+         * <p>YAML：{@code plugin.api.decode.ext-inject}，默认 {@code false}。</p>
          */
         private boolean extInject = false;
 
         /**
-         * 解码器类型（sm4/aes等）
+         * 解码器类型（sm4/aes等）。
+         * <p>YAML：{@code plugin.api.decode.codec-type}，默认 {@code aes}；
+         * 可选值 sm4/aes/des/keylog。</p>
          */
         @NotNull(message = "解码器类型不能为空")
         @Pattern(regexp = "^(sm4|aes|des|keylog)$", message = "解码器类型必须为sm4/aes/des/keylog之一")
-        /**
-         * Codec类型
-        */
         private String codecType = "aes";
 
         /**
          * keylog 服务端长期密钥文件路径（内容 pair:公钥hex:私钥hex）。
          * 同机多个服务指向同一文件时共用同一对长期密钥；空表示进程内生成。
+         * <p>YAML：{@code plugin.api.decode.keylog-key-file}，默认未设置（进程内生成）。</p>
          */
         private String keylogKeyFile;
 
@@ -757,6 +753,7 @@ import java.util.Map;
          * true: 解密失败时抛出异常，拒绝请求
          * false: 解密失败时返回原始数据（默认，保证业务连续性）
          * </p>
+         * <p>YAML：{@code plugin.api.decode.reject-on-decode-failure}，默认 {@code false}。</p>
          */
         private boolean rejectOnDecodeFailure = false;
         
@@ -765,11 +762,9 @@ import java.util.Map;
          * <p>
          * 支持Ant风格路径匹配，如: /api/公共/**, /健康
          * </p>
+         * <p>YAML：{@code plugin.api.decode.white-list}，默认空列表。</p>
          */
         @NotNull(message = "白名单不能为null，可以为空列表")
-        /**
-         * White列表
-        */
         private List<String> whiteList = Collections.emptyList();
     }
 
@@ -781,7 +776,8 @@ import java.util.Map;
     public static class SpiConfig {
 
         /**
-         * 是否开启虚拟映射
+         * 是否开启虚拟映射。
+         * <p>YAML：{@code plugin.api.spi.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
@@ -789,8 +785,9 @@ import java.util.Map;
          * 虚拟映射
          * <p>
          * 用于将简短的类型名称映射到完整的类名。
-         * 例如：{"captcha": "com.chua.通用.支持.captcha.Captcha"}
+         * 例如：{"captcha": "com.chua.common.support.captcha.Captcha"}
          * </p>
+         * <p>YAML：{@code plugin.api.spi.mapping}，默认未设置。</p>
          */
         private Map<String, String> mapping;
 
@@ -830,17 +827,16 @@ import java.util.Map;
     public static class MockConfig {
 
         /**
-         * 是否开启 Mock 功能
+         * 是否开启 Mock 功能。
+         * <p>YAML：{@code plugin.api.mock.enable}，默认 {@code false}。</p>
          */
         private boolean enable = false;
 
         /**
-         * Mock 生效的环境（逗号分隔）
+         * Mock 生效的环境（逗号分隔）。
+         * <p>YAML：{@code plugin.api.mock.profiles}，默认 {@code dev,test}。</p>
          */
         @NotNull(message = "Mock生效环境不能为空")
-        /**
-         * 配置文件
-        */
         private String profiles = "dev,test";
 
         /**
@@ -888,18 +884,17 @@ import java.util.Map;
     public static class FeatureConfig {
 
         /**
-         * 是否开启功能开关
+         * 是否开启功能开关。
+         * <p>YAML：{@code plugin.api.feature.enable}，默认 {@code false}。</p>
          */
         private boolean enable = false;
 
         /**
-         * 功能开关管理接口路径
+         * 功能开关管理接口路径。
+         * <p>YAML：{@code plugin.api.feature.path}，默认 {@code /api/features}。</p>
          */
         @NotNull(message = "功能开关管理接口路径不能为空")
         @Pattern(regexp = "^/.*", message = "接口路径必须以/开头")
-        /**
-         * 路径
-        */
         private String path = "/api/features";
 
         /**
@@ -947,17 +942,20 @@ import java.util.Map;
     public static class InternalConfig {
 
         /**
-         * 是否开启内部接口控制
+         * 是否开启内部接口控制。
+         * <p>YAML：{@code plugin.api.internal.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
         /**
-         * 全局IP白名单（适用于所有内部接口）
+         * 全局IP白名单（适用于所有内部接口）。
+         * <p>YAML：{@code plugin.api.internal.global-allowed-ips}，默认空列表。</p>
          */
         private List<String> globalAllowedIps = Collections.emptyList();
 
         /**
-         * 全局服务白名单（适用于所有内部接口）
+         * 全局服务白名单（适用于所有内部接口）。
+         * <p>YAML：{@code plugin.api.internal.global-allowed-services}，默认空列表。</p>
          */
         private List<String> globalAllowedServices = Collections.emptyList();
 
@@ -1024,12 +1022,14 @@ import java.util.Map;
     public static class DeprecatedConfig {
 
         /**
-         * 是否开启废弃接口提示
+         * 是否开启废弃接口提示。
+         * <p>YAML：{@code plugin.api.deprecated.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
         /**
-         * 是否在响应头中添加废弃警告
+         * 是否在响应头中添加废弃警告。
+         * <p>YAML：{@code plugin.api.deprecated.add-warning-header}，默认 {@code true}。</p>
          */
         private boolean addWarningHeader = true;
 
@@ -1080,6 +1080,7 @@ import java.util.Map;
         /**
          * 是否开启灰度发布功能
          * <p>默认开启（非实验性功能，遵循"默认开关默认开启"约定）</p>
+         * <p>YAML：{@code plugin.api.gray.enable}，默认 {@code true}。</p>
          */
         private boolean enable = true;
 
@@ -1088,11 +1089,9 @@ import java.util.Map;
          * <p>
          * 请求命中灰度后，会在响应头中添加此头
          * </p>
+         * <p>YAML：{@code plugin.api.gray.header-name}，默认 {@code X-Gray-Hit}。</p>
          */
         @NotNull(message = "灰度标识请求头名称不能为空")
-        /**
-         * 头部名称
-        */
         private String headerName = "X-Gray-Hit";
 
         /**
@@ -1100,11 +1099,9 @@ import java.util.Map;
          * <p>
          * 这些用户始终进入灰度版本
          * </p>
+         * <p>YAML：{@code plugin.api.gray.global-users}，默认空列表。</p>
          */
         @NotNull(message = "全局灰度用户白名单不能为null，可以为空列表")
-        /**
-         * 全局用户
-        */
         private List<String> globalUsers = Collections.emptyList();
 
         /**
@@ -1112,11 +1109,9 @@ import java.util.Map;
          * <p>
          * 这些IP始终进入灰度版本
          * </p>
+         * <p>YAML：{@code plugin.api.gray.global-ips}，默认空列表。</p>
          */
         @NotNull(message = "全局灰度IP白名单不能为null，可以为空列表")
-        /**
-         * 全局IPS
-        */
         private List<String> globalIps = Collections.emptyList();
 
         /**
@@ -1124,11 +1119,9 @@ import java.util.Map;
          * <p>
          * 拥有这些角色的用户始终进入灰度版本
          * </p>
+         * <p>YAML：{@code plugin.api.gray.global-roles}，默认空列表。</p>
          */
         @NotNull(message = "全局灰度角色白名单不能为null，可以为空列表")
-        /**
-         * 全局角色
-        */
         private List<String> globalRoles = Collections.emptyList();
 
         /**
@@ -1136,12 +1129,10 @@ import java.util.Map;
          * <p>
          * 注解未指定百分比时使用此默认值
          * </p>
+         * <p>YAML：{@code plugin.api.gray.default-percentage}，默认 {@code 0}（取值 0~100）。</p>
          */
         @Min(value = 0, message = "灰度百分比不能小于0")
         @Max(value = 100, message = "灰度百分比不能大于100")
-        /**
-         * 默认percentage
-        */
         private int defaultPercentage = 0;
 
         /**

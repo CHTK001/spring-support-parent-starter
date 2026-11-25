@@ -46,22 +46,30 @@ public class DocumentProperties {
     /**
      * 是否启用
      * <p>默认 true；非 Web 环境（无 DispatcherServlet）会自动跳过装配</p>
+     * 默认值: true
+     * 示例: plugin.datasource.document.enable=true
      */
     private boolean enable = true;
 
     /**
      * 暴露路径前缀
      * <p>默认 {@code /plugin/datasource/document}</p>
+     * 默认值: /plugin/datasource/document
+     * 示例: plugin.datasource.document.base-path=/plugin/datasource/document
      */
     private String basePath = "/plugin/datasource/document";
 
     /**
      * 文档标题
+     * 默认值: 数据库设计文档
+     * 示例: plugin.datasource.document.title=数据库设计文档
      */
     private String title = "数据库设计文档";
 
     /**
      * 文档版本号
+     * 默认值: 1.0.0
+     * 示例: plugin.datasource.document.version=1.0.0
      */
     private String version = "1.0.0";
 
@@ -73,32 +81,44 @@ public class DocumentProperties {
      *     <li>{@code SWAGGER}  —— Swagger 风格</li>
      * </ul>
      * 注意：实际可用模板由类路径下 {@code DocumentTemplate} SPI 决定；如未引入对应实现将回退到 {@code DEFAULT}
+     * 默认值: DEFAULT
+     * 示例: plugin.datasource.document.template=DEFAULT
      */
     private String template = "DEFAULT";
 
     /**
      * 表名白名单（逗号分隔，{@code *} 通配）
+     * 默认值: 未设置（不限制）
+     * 示例: plugin.datasource.document.include-tables=t_order,t_user*
      */
     private String includeTables;
 
     /**
      * 表名黑名单（逗号分隔，{@code *} 通配）
+     * 默认值: flyway_schema_history,sys_database_version
+     * 示例: plugin.datasource.document.exclude-tables=flyway_schema_history,sys_database_version
      */
     private String excludeTables = "flyway_schema_history,sys_database_version";
 
     /**
      * 模式 白名单（逗号分隔，{@code *} 表示全部）
+     * 默认值: 未设置（全部 schema）
+     * 示例: plugin.datasource.document.include-schemas=*
      */
     private String includeSchemas;
 
     /**
      * 是否在请求时强制刷新（apply 接口始终刷新；preview 接口若缓存存在则不刷新）
+     * 默认值: true
+     * 示例: plugin.datasource.document.cacheable=true
      */
     private boolean cacheable = true;
 
     /**
      * 透传给 文档parser 的扩展参数
      * <p>例如：{@code all=true} 表示跨 catalog 导出</p>
+     * 默认值: 空 Map
+     * 示例: plugin.datasource.document.options.all=true
      */
     private Map<String, Object> options = new LinkedHashMap<>();
 

@@ -8,6 +8,19 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <p>默认关闭：只有 {@code plugin.log.portal.enabled=true} 才会装配汇聚 Appender。
  * 关闭时对宿主零影响（不分配缓冲、不起线程、不改任何现有 appender）。</p>
  *
+ * <p><b>完整 YAML 配置示例：</b></p>
+ * <pre>{@code
+ * plugin:
+ *   log:
+ *     portal:
+ *       enabled: true                 # 是否启用（默认 false，true 才装配）
+ *       file: ./logs/trace-portal.log # 汇聚块输出文件路径
+ *       max-events-per-trace: 200     # 单链路最大缓冲条数，达到即收口
+ *       idle-millis: 3000             # 链路空闲多久（毫秒）自动收口
+ *       max-pending-traces: 512       # 最大待收口链路数，超过淘汰最老的
+ *       sweep-interval-millis: 1000   # 空闲清扫周期（毫秒）
+ * }</pre>
+ *
  * @author CH
  * @since 4.0.0
  */
@@ -16,31 +29,81 @@ public class TracePortalProperties {
 
     /**
      * 是否启用链路日志汇聚。
+     *
+     * <p>默认 {@code false}；{@code true} 才装配汇聚 Appender。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       enabled: true
+     * }</pre>
      */
     private boolean enabled = false;
 
     /**
      * 汇聚块输出文件路径，默认 ./logs/trace-portal.log。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       file: ./logs/trace-portal.log
+     * }</pre>
      */
     private String file = "./logs/trace-portal.log";
 
     /**
      * 单链路最大缓冲条数，达到即收口，默认 200。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       max-events-per-trace: 200
+     * }</pre>
      */
     private int maxEventsPerTrace = 200;
 
     /**
      * 链路空闲多久（毫秒）自动收口，默认 3000。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       idle-millis: 3000
+     * }</pre>
      */
     private long idleMillis = 3000L;
 
     /**
      * 最大待收口链路数，超过淘汰最老的，默认 512。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       max-pending-traces: 512
+     * }</pre>
      */
     private int maxPendingTraces = 512;
 
     /**
      * 空闲清扫周期（毫秒），默认 1000。
+     *
+     * <p>YAML 示例：</p>
+     * <pre>{@code
+     * plugin:
+     *   log:
+     *     portal:
+     *       sweep-interval-millis: 1000
+     * }</pre>
      */
     private long sweepIntervalMillis = 1000L;
 

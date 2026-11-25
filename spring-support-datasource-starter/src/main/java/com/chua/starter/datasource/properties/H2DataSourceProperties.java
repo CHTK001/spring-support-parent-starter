@@ -28,36 +28,51 @@ public class H2DataSourceProperties {
 
     /**
      * 是否启用 H2 引擎自动配置
+     * 默认值: false
+     * 示例: plugin.h2.enable=true
     */
     private boolean enable = false;
 
     /**
      * H2 JDBC URL，如 {@code jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1}
+     * 默认值: jdbc:h2:mem:springh2db;DB_CLOSE_DELAY=-1
+     * 示例: plugin.h2.url=jdbc:h2:mem:appdb;DB_CLOSE_DELAY=-1
     */
     private String url = "jdbc:h2:mem:springh2db;DB_CLOSE_DELAY=-1";
 
     /**
-     * 用户名（默认 sa）
+     * 用户名
+     * 默认值: sa
+     * 示例: plugin.h2.username=sa
     */
     private String username = "sa";
 
     /**
-     * 密码（默认空）
+     * 密码
+     * 默认值: ""（空）
+     * 示例: plugin.h2.password=
     */
     private String password = "";
 
     /**
-     * 迁移脚本路径，支持 类路径: 前缀，如 {@code classpath:db/migration/h2}
+     * 迁移脚本路径，支持 {@code classpath:} 前缀，如 {@code classpath:db/migration/h2}；
+     * 配置后启动时自动执行迁移
+     * 默认值: ""
+     * 示例: plugin.h2.script-path=classpath:db/migration/h2
     */
     private String scriptPath = "";
 
     /**
      * 是否在应用关闭时清理所有用户表（仅测试环境建议开启）
+     * 默认值: false
+     * 示例: plugin.h2.cleanup-after-shutdown=false
     */
     private boolean cleanupAfterShutdown = false;
 
     /**
      * 是否在测试结束后清理数据（通过 Spring 测试 生命周期绑定）
+     * 默认值: false
+     * 示例: plugin.h2.cleanup-after-test=true
     */
     private boolean cleanupAfterTest = false;
 }

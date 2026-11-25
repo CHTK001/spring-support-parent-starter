@@ -10,9 +10,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <pre>
  * plugin:
  *   transaction:
- *     enable: true                                    # 是否启用声明式事务
- *     timeout: 30                                     # 事务超时时间(秒)
- *     tx-mapper: "com.example.**.service.impl.*"      # 事务切入点表达式
+ *     enable: true                                    # 是否启用声明式事务(默认 false)
+ *     timeout: 10                                     # 事务超时时间(秒，默认 10)
+ *     tx-mapper: "com.example.**.service.impl.*"      # 事务切入点表达式(缺省按主包生成)
  *     read-only: "get*,query*,find*,select*,list*"    # 只读事务方法前缀(逗号分隔)
  *     no-tx: "log*,async*"                            # 无事务方法前缀(逗号分隔)
  *     write-only: "save*,insert*,add*,update*,delete*,remove*" # 写事务方法前缀(逗号分隔)
@@ -25,7 +25,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = TransactionProperties.PREFIX, ignoreInvalidFields = true)
 public class TransactionProperties {
     /**
-     * 是否启用
+     * 是否启用声明式事务
+     * 默认值: false
+     * 示例: plugin.transaction.enable=true
      */
     private boolean enable = false;
 
@@ -35,24 +37,38 @@ public class TransactionProperties {
     */
     public static final String PREFIX = "plugin.transaction";
     /**
-     * 事务超时时间
+     * 事务超时时间（秒）
+     * 默认值: 10
+     * 示例: plugin.transaction.timeout=10
      */
     // [P3C A20 豁免]
     private Integer timeout = 10;
     /**
-     * 事务位置
+     * 事务切点表达式
+     * <p>缺省时按主包自动生成 {@code execution(* <主包>..*..*(..))}。</p>
+     * 默认值: ""
+     * 示例: plugin.transaction.tx-mapper=execution(* com.example.service..*..*(..))
      */
     private String txMapper = "";
     /**
-     * 只读事务前缀
+     * 只读事务方法名前缀（逗号分隔）
+     * <p>缺省时内置 {@code get*,query*,find*,list*,count*,exist*,search*,fetch*}。</p>
+     * 默认值: ""
+     * 示例: plugin.transaction.read-only=get*,query*,find*,list*
      */
     private String readOnly = "";
     /**
-     * 无事务
+     * 无事务方法名前缀（逗号分隔）
+     * <p>缺省时内置 {@code noTx*}。</p>
+     * 默认值: ""
+     * 示例: plugin.transaction.no-tx=noTx*
      */
     private String noTx = "";
     /**
-     * 写事务
+     * 写事务方法名前缀（逗号分隔）
+     * <p>缺省时内置 {@code add*,save*,insert*,update*,modify*,delete*,remove*}。</p>
+     * 默认值: ""
+     * 示例: plugin.transaction.write-only=add*,save*,insert*,update*,delete*
      */
     private String writeOnly = "";
 

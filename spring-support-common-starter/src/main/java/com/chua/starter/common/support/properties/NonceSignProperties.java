@@ -6,10 +6,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.core.env.Environment;
 
 /**
- * Nonce 签名配置（与前端 获取配置().secretKey 一致）
- * <p>
- * 支持多路径解析：plugin.nonce.标志.secret-Key、nonce.标志.secret-Key、环境变量 PLUGIN_NONCE_标志_SECRET_Key
- * </p>
+ * Nonce 签名配置。
+ *
+ * <p>前缀 {@code plugin.nonce.sign}（备用前缀 {@code nonce.sign}）。签名密钥需与前端
+ * 获取配置接口返回的 {@code secretKey} 保持一致，否则 nonce 校验将失败。</p>
+ *
+ * <p>密钥解析顺序（{@link #resolveSecretKey(Environment)}）：</p>
+ * <ol>
+ *     <li>{@code plugin.nonce.sign.secret-key}</li>
+ *     <li>{@code plugin.nonce.sign.secretKey}</li>
+ *     <li>{@code nonce.sign.secret-key}</li>
+ *     <li>环境变量 {@code PLUGIN_NONCE_SIGN_SECRET_KEY}</li>
+ *     <li>字段默认值（开发兜底 {@link #DEFAULT_SECRET}）</li>
+ * </ol>
+ *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   nonce:
+ *     sign:
+ *       secret-key: ${NONCE_SIGN_SECRET:change-me}  # 生产从环境变量注入，禁止使用内置兜底值
+ * </pre>
  *
  * @since 2025/01/15
  * @author CH
@@ -30,14 +47,16 @@ public class NonceSignProperties {
     public static final String PRE_ALT = "nonce.sign";
 
     /**
-     * 默认签名密钥，与前端 默认_SECRET_Key 保持一致。
+     * 默认签名密钥（开发兜底值，与前端默认密钥保持一致）。
      * 仅用于开发或未显式配置时的兜底，生产环境请通过配置覆盖。
      */
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /**
-     * 签名密钥，需与前端 获取配置().secretKey 一致。
-     * 优先读取环境变量 PLUGIN_NONCE_标志_SECRET_Key，未设置时使用开发兜底值 默认_SECRET。
+     * 签名密钥，需与前端获取配置接口返回的 {@code secretKey} 一致。
+     * <p>YAML：{@code plugin.nonce.sign.secret-key}。字段初始化时优先读取环境变量
+     * {@code PLUGIN_NONCE_SIGN_SECRET_KEY}，未设置时使用开发兜底值 {@link #DEFAULT_SECRET}；
+     * 生产环境必须显式覆盖，禁止依赖内置默认密钥。</p>
      */
     private String secretKey = System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") != null
         ? System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") : DEFAULT_SECRET;

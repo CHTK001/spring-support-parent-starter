@@ -111,6 +111,46 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | `plugin.lowcode.enable` | `boolean` | `true` | 功能总开关。关闭后本模块任何能力（自动配置、Controller、Service、Mapper）都不装配，已保存的 Schema 保留在库里不动 |
 
+### 5.1 逐项配置示例
+
+#### 功能开关：`plugin.lowcode.enable`
+
+- **含义**：低代码模块装配总开关。`true`（或缺省）时 `LowcodeAutoConfiguration` 生效，宿主获得 `/v2/lowcode/**` 全套接口；`false` 时自动配置整体不生效，Controller / Service / Mapper 一律不注册，已保存的 Schema 保留在库里不动。
+- **类型**：`boolean`
+- **默认值**：`true`（字段初始化值；`@ConditionalOnProperty` 为 `matchIfMissing = true`，不配置该键也视为开启）
+- **YAML 示例**：
+
+```yaml
+plugin:
+  lowcode:
+    enable: true
+```
+
+### 5.2 完整 YAML 使用示例
+
+```yaml
+plugin:
+  lowcode:
+    enable: true
+
+spring:
+  datasource:
+    url: jdbc:mysql://your-mysql-host:3306/your-database?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: your-username
+    password: your-password
+```
+
+生产注意事项：
+
+- **凭据不落代码库**：`username` / `password` 只应出现占位符或环境变量引用（如 `password: ${MYSQL_PASSWORD}`），真实值经环境变量、启动参数或配置中心注入。
+- **数据库方言**：`db/init` DDL 使用 MySQL 8 语法（`COMMENT` / `ENGINE` / `ON DUPLICATE KEY UPDATE`）；H2 需开 MySQL 模式（`MODE=MySQL`），仅建议评估环境使用，生产用 MySQL 8。
+- **建表与种子**：`V1.0__init_lowcode.sql`（建表）与 `V1.0__initdata_lowcode.sql`（种子，异步幂等写入默认目录 `id=1`）由 `spring-support-datasource-starter` 的脚本通道执行；种子未完成前新增的表单/页面可能短暂落成「孤儿目录引用」。
+- **接口前缀**：所有接口随宿主 Web 端口暴露在 `/v2/lowcode/**`；若设置 `server.servlet.context-path`，外部访问需把它拼在最前。
+- **不要重复扫描**：宿主不要再对 `com.chua.starter.lowcode` 做 `@ComponentScan` / `@MapperScan`，否则同名 Bean 冲突；确需手工装配先设 `plugin.lowcode.enable=false`，再用 `LowcodeAutoConfiguration.BASE_PACKAGE` / `MAPPER_PACKAGE` 常量。
+- **审计填充**：`createBy` / `updateBy` 等人名字段依赖容器中存在 `AuthService` Bean；缺席时只填时间字段，不填人名（见第 8 节）。
+- **关闭需重启生效**：`enable=false` 是装配级开关，在启动期判定；改配置后需重启才能摘除/恢复能力。
+
 没有其它本模块配置项。`db/init` 脚本是否执行、以何种模式执行，由 `spring-support-datasource-starter` 的脚本通道决定，见该模块文档；审计人名是否可填充取决于容器中是否存在 `AuthService` Bean（见第 8 节）。
 
 ## 6. 使用方式
