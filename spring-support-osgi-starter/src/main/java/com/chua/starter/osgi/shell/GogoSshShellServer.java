@@ -18,16 +18,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -570,6 +573,14 @@ public class GogoSshShellServer {
                 printServices(console);
                 return true;
             }
+            if (command.equals("invoke") || command.startsWith("invoke ")) {
+                handleInvoke(command.substring(Math.min(command.length(), "invoke ".length())).trim(), console);
+                return true;
+            }
+            if (command.equals("impls") || command.startsWith("impls ")) {
+                printImpls(command.substring(Math.min(command.length(), "impls ".length())).trim(), console);
+                return true;
+            }
             if (!command.startsWith("bundle:")) {
                 return false;
             }
@@ -687,6 +698,8 @@ public class GogoSshShellServer {
             console.println("  bundle:uninstall <符号名|编号>       卸载");
             console.println("  stats                                框架统计（bundle 状态分布/服务数）");
             console.println("  services                             服务注册表");
+            console.println("  impls <接口FQN>                      某接口在注册表中的实现服务");
+            console.println("  invoke <接口FQN> <方法名> [参数...]  真实调用注册表中的服务方法并回传输出");
             console.println("  felix:* / gogo:* 等                  经 Gogo 命令处理器执行");
             console.println("  exit                                 结束当前 SSH 会话（框架保持运行）");
             console.println("注：shutdown/system:exit 等停机命令已在 SSH shell 中禁用。");
@@ -744,6 +757,263 @@ public class GogoSshShellServer {
                         + " | bundle=" + (owner == null ? "?" : owner.getSymbolicName())
                         + " | ranking=" + ref.getProperty(Constants.SERVICE_RANKING));
             }
+        }
+
+        /**
+         * 打印某接口在服务注册表中的实现服务清单。
+         *
+         * @param fqn     接口全限定名
+         * @param console 控制台
+         */
+        private void printImpls(String fqn, PrintStream console) {
+            if (fqn.isEmpty()) {
+                console.println("用法: impls <接口FQN>");
+                return;
+            }
+            List<ServiceReference<?>> matches = findServiceReferences(fqn);
+            if (matches.isEmpty()) {
+                console.println("接口 " + fqn + " 当前无实现服务（0 项）");
+                return;
+            }
+            console.println("接口 " + fqn + " 的实现服务 " + matches.size() + " 项：");
+            for (ServiceReference<?> ref : matches) {
+                Bundle owner = ref.getBundle();
+                console.println("  [" + ref.getProperty(Constants.SERVICE_ID) + "] "
+                        + String.join(",", objectClassOf(ref))
+                        + " | bundle=" + (owner == null ? "?" : owner.getSymbolicName())
+                        + " | ranking=" + ref.getProperty(Constants.SERVICE_RANKING));
+            }
+        }
+
+        /**
+         * 调用注册表中某接口服务的真实方法并回传运行输出。
+         *
+         * <p>外部 bundle 发布的服务实现类与宿主类加载器类身份不同，不能按宿主
+         * classpath 加载接口后强转；这里按服务实例自身的 classloader 加载接口、
+         * 反射定位方法并调用，把返回值/异常原样回显到 SSH 控制台，用于验证
+         * 「安装上去的 SPI 服务真实可用」。多个候选服务时按 service id 从小到大
+         * 逐个尝试，首个成功调用即返回。</p>
+         *
+         * @param rest    命令参数：接口FQN 方法名 [参数...]
+         * @param console 控制台
+         */
+        private void handleInvoke(String rest, PrintStream console) {
+            String[] parts = rest.isEmpty() ? new String[0] : rest.split("\\s+");
+            if (parts.length < 2) {
+                console.println("用法: invoke <接口FQN> <方法名> [参数...]（参数按 字符串/整数/小数/布尔 自动识别）");
+                return;
+            }
+            String fqn = parts[0];
+            String methodName = parts[1];
+            String[] rawArgs = parts.length > 2 ? Arrays.copyOfRange(parts, 2, parts.length) : new String[0];
+            List<ServiceReference<?>> matches = findServiceReferences(fqn);
+            Exception lastError = null;
+            for (ServiceReference<?> ref : matches) {
+                Object service;
+                try {
+                    service = bundleContext.getService(ref);
+                } catch (Exception e) {
+                    lastError = e;
+                    continue;
+                }
+                if (service == null) {
+                    continue;
+                }
+                Class<?> iface = loadServiceInterface(service, fqn);
+                if (iface == null) {
+                    continue;
+                }
+                try {
+                    Object result = invokeServiceMethod(service, iface, methodName, rawArgs);
+                    console.println("[" + fqn + "." + methodName + "] -> " + stringifyResult(result));
+                    return;
+                } catch (Exception e) {
+                    lastError = e;
+                }
+            }
+            if (lastError != null) {
+                Throwable root = (lastError instanceof InvocationTargetException ite && ite.getCause() != null)
+                        ? ite.getCause() : lastError;
+                console.println("调用失败: " + root.getClass().getName() + ": " + root.getMessage());
+            } else {
+                console.println("服务未找到: " + fqn);
+            }
+        }
+
+        /**
+         * 按接口全限定名查找注册表中的全部服务引用（按 service id 升序）。
+         *
+         * @param fqn 接口全限定名
+         * @return 匹配的服务引用列表
+         */
+        private List<ServiceReference<?>> findServiceReferences(String fqn) {
+            List<ServiceReference<?>> result = new ArrayList<>();
+            try {
+                ServiceReference<?>[] refs = bundleContext.getAllServiceReferences(null, null);
+                if (refs != null) {
+                    for (ServiceReference<?> ref : refs) {
+                        if (Arrays.asList(objectClassOf(ref)).contains(fqn)) {
+                            result.add(ref);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // 注册表枚举失败按无服务处理，由调用方给出「服务未找到」
+            }
+            result.sort(Comparator.comparingInt(ref -> {
+                Object id = ref.getProperty(Constants.SERVICE_ID);
+                return id instanceof Number number ? number.intValue() : Integer.MAX_VALUE;
+            }));
+            return result;
+        }
+
+        /**
+         * 用服务实例自身的 classloader 加载接口类型（跨 bundle 类空间）。
+         *
+         * @param service 服务实例
+         * @param fqn     接口全限定名
+         * @return 接口类型；加载失败或实例不匹配时返回 {@code null}
+         */
+        private Class<?> loadServiceInterface(Object service, String fqn) {
+            try {
+                ClassLoader loader = service.getClass().getClassLoader();
+                Class<?> candidate = Class.forName(fqn, false, loader);
+                if (candidate.isInterface() && candidate.isInstance(service)) {
+                    return candidate;
+                }
+            } catch (Throwable e) {
+                // 回退到实例接口层级匹配
+            }
+            for (Class<?> iface : allInterfacesOf(service.getClass())) {
+                if (iface.getName().equals(fqn) && iface.isInstance(service)) {
+                    return iface;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * 收集类的全部接口（含父类与父接口，去重由调用方语义保证）。
+         *
+         * @param clazz 起始类
+         * @return 接口列表
+         */
+        private List<Class<?>> allInterfacesOf(Class<?> clazz) {
+            List<Class<?>> result = new ArrayList<>();
+            for (Class<?> current = clazz; current != null && current != Object.class; current = current.getSuperclass()) {
+                for (Class<?> iface : current.getInterfaces()) {
+                    result.add(iface);
+                    result.addAll(allInterfacesOf(iface));
+                }
+            }
+            return result;
+        }
+
+        /**
+         * 在接口上按名称与参数个数定位方法并反射调用。
+         *
+         * @param service    服务实例
+         * @param iface      接口类型（服务实例自身 classloader 加载）
+         * @param methodName 方法名
+         * @param rawArgs    字符串形式的方法参数
+         * @return 方法返回值
+         * @throws Exception 方法不存在、参数不匹配或调用抛出异常
+         */
+        private Object invokeServiceMethod(Object service, Class<?> iface, String methodName, String[] rawArgs)
+                throws Exception {
+            Method chosen = null;
+            Object[] chosenArgs = null;
+            for (Method method : iface.getMethods()) {
+                if (!method.getName().equals(methodName)) {
+                    continue;
+                }
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                if (parameterTypes.length != rawArgs.length) {
+                    continue;
+                }
+                Object[] args = new Object[rawArgs.length];
+                boolean matched = true;
+                for (int i = 0; i < rawArgs.length; i++) {
+                    Object converted = convertInvokeArg(rawArgs[i], parameterTypes[i]);
+                    if (converted == null) {
+                        matched = false;
+                        break;
+                    }
+                    args[i] = converted;
+                }
+                if (matched) {
+                    chosen = method;
+                    chosenArgs = args;
+                    break;
+                }
+            }
+            if (chosen == null) {
+                throw new IllegalArgumentException("方法未找到: " + iface.getName() + "." + methodName
+                        + "（参数个数 " + rawArgs.length + "）");
+            }
+            try {
+                return chosen.invoke(service, chosenArgs);
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                throw new IllegalStateException("方法执行异常: " + cause.getClass().getName() + ": " + cause.getMessage(), cause);
+            }
+        }
+
+        /**
+         * 把字符串参数转换为方法形参类型（字符串/布尔/整型/浮点，其余按字符串兜底）。
+         *
+         * @param raw  原始字符串参数
+         * @param type 形参类型
+         * @return 转换结果；无法转换返回 {@code null}
+         */
+        private Object convertInvokeArg(String raw, Class<?> type) {
+            if (type == String.class || type == Object.class || type.isAssignableFrom(String.class)) {
+                return raw;
+            }
+            if (type == boolean.class || type == Boolean.class) {
+                return Boolean.valueOf(raw);
+            }
+            if (type == int.class || type == Integer.class) {
+                return Integer.valueOf(raw);
+            }
+            if (type == long.class || type == Long.class) {
+                return Long.valueOf(raw);
+            }
+            if (type == double.class || type == Double.class) {
+                return Double.valueOf(raw);
+            }
+            if (type == float.class || type == Float.class) {
+                return Float.valueOf(raw);
+            }
+            if (type == short.class || type == Short.class) {
+                return Short.valueOf(raw);
+            }
+            if (type == byte.class || type == Byte.class) {
+                return Byte.valueOf(raw);
+            }
+            if (type == char.class || type == Character.class) {
+                return raw.length() == 1 ? raw.charAt(0) : null;
+            }
+            return null;
+        }
+
+        /**
+         * 结果转可读文本（数组展开、null 显式化）。
+         *
+         * @param result 调用结果
+         * @return 展示文本
+         */
+        private String stringifyResult(Object result) {
+            if (result == null) {
+                return "null";
+            }
+            if (result instanceof Object[] array) {
+                return Arrays.toString(array);
+            }
+            if (result instanceof byte[] bytes) {
+                return Arrays.toString(bytes);
+            }
+            return String.valueOf(result);
         }
 
         /**
@@ -835,12 +1105,4 @@ public class GogoSshShellServer {
             return switch (state) {
                 case Bundle.UNINSTALLED -> "UNINSTALLED";
                 case Bundle.INSTALLED -> "INSTALLED";
-                case Bundle.RESOLVED -> "RESOLVED";
-                case Bundle.STARTING -> "STARTING";
-                case Bundle.STOPPING -> "STOPPING";
-                case Bundle.ACTIVE -> "ACTIVE";
-                default -> String.valueOf(state);
-            };
-        }
-    }
-}
+                case Bundle.RESOLVED -> "
