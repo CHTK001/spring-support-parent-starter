@@ -18,6 +18,7 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
 import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -29,6 +30,7 @@ import java.time.format.DateTimeFormatter;
    * @author CH
    * @since 4.0.0
    */
+@Component
 public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
       /**

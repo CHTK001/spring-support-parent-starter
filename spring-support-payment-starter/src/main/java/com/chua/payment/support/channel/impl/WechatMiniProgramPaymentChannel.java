@@ -10,12 +10,14 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatOrderResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 
 /**
  * 微信小程序支付
  * @author CH
  * @since 4.0.0
  */
+@Component
 public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
     /**

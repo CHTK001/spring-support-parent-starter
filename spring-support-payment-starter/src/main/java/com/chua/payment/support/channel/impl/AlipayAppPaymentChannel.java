@@ -8,6 +8,7 @@ import com.chua.payment.support.provider.PaymentProviderGatewayRegistry;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
@@ -16,6 +17,7 @@ import java.util.Map;
  * @author CH
  * @since 4.0.0
  */
+@Component
 public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
     /**

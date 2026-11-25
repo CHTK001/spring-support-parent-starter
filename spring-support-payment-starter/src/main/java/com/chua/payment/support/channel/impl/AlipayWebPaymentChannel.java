@@ -17,6 +17,7 @@ import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayRefundResponse;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayTradeQueryResponse;
 import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
@@ -24,6 +25,7 @@ import org.springframework.util.StringUtils;
    * @author CH
    * @since 4.0.0
    */
+@Component
 public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
       /**

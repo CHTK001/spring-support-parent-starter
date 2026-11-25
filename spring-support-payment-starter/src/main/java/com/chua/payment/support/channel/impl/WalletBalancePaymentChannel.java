@@ -14,12 +14,14 @@ import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.service.WalletAccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 
 /**
  * 钱包余额支付
  * @author CH
  * @since 4.0.0
  */
+@Component
 public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
     /**
