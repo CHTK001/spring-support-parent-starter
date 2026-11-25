@@ -105,9 +105,11 @@ sequenceDiagram
 | `scatter` | `Scatter`（实际类型 `ManagedScatter`） | `scatter.enabled=true`；`destroyMethod=close` | 可以 | 业务注入：`discovery()` 查询/登记成员、`getPort()` 拿组网端口 |
 | `selfBalanceFilter` | `FilterRegistrationBean<SelfBalanceFilter>` | `scatter.enabled=true` 且 `scatter.self-balance=true`（缺省 `true`，`matchIfMissing=true`） | 可以 | 自动注册到 `/*`，顺序 `scatter.filter-order` |
 
-## 5. 完整配置
+## 5. 完整配置（含逐项示例）
 
 配置类 `ScatterProperties`，前缀 `scatter.`。以下字段全部来自源码（YAML 用 kebab-case）。
+
+### 5.1 配置总表
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
