@@ -1,5 +1,7 @@
 package com.chua.payment.support.dto;
 
+import java.io.Serializable;
+
 /**
  * 订单发起支付 DTO
  *
@@ -16,5 +18,7 @@ public record OrderPayDTO(
         String payerOpenId,
         String clientIp,
         String deviceId,
-        String userAgent) {
+        String userAgent) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

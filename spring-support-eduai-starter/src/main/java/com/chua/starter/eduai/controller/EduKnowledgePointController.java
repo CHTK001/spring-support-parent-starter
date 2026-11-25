@@ -216,11 +216,8 @@ public class EduKnowledgePointController {
 
     /**
      * 按相对路径读取附件字节流（iframe / img 直链预览）
-    /**
-     * 按相对路径读取附件字节流（iframe / img 直链预览）
      * @param path data/knowledge-files 下的相对路径
      * @param response 响应
-     * @return 返回值
      * @throws IOException 异常
     */
     public void file(@RequestParam String path, HttpServletResponse response) throws IOException {

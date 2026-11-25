@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -46,6 +47,15 @@ public class DataSourceContextSupport {
      * 多数据源场景不接管，默认源仍为 {@code master}/第一个注册源。</p>
      */
     public static final List<String> COMPOSITE_DEFAULT_CANDIDATES = new CopyOnWriteArrayList<>();
+
+    /**
+     * 静态注册的分片数据源 Bean 名（列表化 {@code plugin.datasource.sharding[*].name}，
+     * 含缺省 {@code shardingDataSource}）。
+     * <p>用于分片成员收集过滤：分片数据源之间不互为成员。运行期动态建源
+     * （ShardingRuleManager）仍走 {@link #registerCompositeDefaultSource(String)} /
+     * {@link #unregisterCompositeDefaultSource(String)}。</p>
+     */
+    public static final Set<String> SHARDING_BEAN_NAMES = ConcurrentHashMap.newKeySet();
 
     /**
      * 默认数据源
@@ -126,6 +136,17 @@ public class DataSourceContextSupport {
     public static void registerCompositeDefaultSource(String name) {
         if (name != null && !COMPOSITE_DEFAULT_CANDIDATES.contains(name)) {
             COMPOSITE_DEFAULT_CANDIDATES.add(name);
+        }
+    }
+
+    /**
+     * 登记静态分片数据源 Bean 名（列表化配置注册 Bean 时调用）
+     *
+     * @param name 分片数据源 Bean 名
+     */
+    public static void registerShardingBeanName(String name) {
+        if (name != null && !name.isBlank()) {
+            SHARDING_BEAN_NAMES.add(name);
         }
     }
 

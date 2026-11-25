@@ -44,7 +44,7 @@ import java.util.UUID;
  *       {@code /v2/edu/student-avatar/file}，让 {@code <img src>} 能直接取到。</li>
  * </ul>
  * 预览路径只接受 {@code data/student-avatars} 下的**相对路径**并做穿越校验，
- * 文件名是随机 UUID、扩展名走白名单，故放行不构成任意文件读取。</p>
+ * 文件名是随机 UUID、扩展名走白名单，故放行不构成任意文件读取。
  *
  * @since 4.0.0.42
  * @author CH

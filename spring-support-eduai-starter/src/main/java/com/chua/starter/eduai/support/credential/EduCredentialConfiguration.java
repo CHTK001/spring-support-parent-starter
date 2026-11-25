@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
  *     <li>{@link LoginHandler}（注册名 {@code STUDENT} / {@code TEACHER}）负责「登录分发口认这个
  *     账号来源」——{@code POST /v2/user/login} 先按 {@code loginType-accountType} 取处理器，
  *     取不到会直接抛空指针（对外固定 500），连口令校验都到不了。</li>
- * </ul></p>
+ * </ul>
  *
  * <p><b>为什么必须用显式注册 + 资源索引，而不能只靠 {@code @Spi} 注解</b>：eduai 位于另一个模块、
  * 另一个包，默认的两个扫描器

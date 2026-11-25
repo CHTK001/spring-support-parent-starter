@@ -3,16 +3,14 @@ package com.chua.starter.datasource.configuration;
 
 import com.chua.shardingv5.support.conversion.ShardingV5Conversion;
 import com.chua.datasource.support.engine.DataSourceConversion;
-import com.chua.datasource.support.engine.DataSourceEnvironment;
 import com.chua.starter.datasource.properties.ShardingDataSourceProperties;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
 import java.util.ArrayList;
@@ -23,8 +21,10 @@ import java.util.Map;
 /**
  * 分库分表sphere 分库分表自动配置。
  * <p>
- * 当 {@code plugin.datasource.sharding.enabled=true} 时，
- * 自动基于配置创建 分库分表sphere 分片数据源。
+ * {@code plugin.datasource.sharding} 支持列表形态：每个配置项注册为独立的
+ * 分片数据源 Bean（{@code name} 指定 Bean 名，缺省 {@code shardingDataSource}），
+ * 由 {@link ShardingDataSourceRegistrar} 在 Bean 定义阶段完成注册；
+ * 兼容旧的单对象写法（等价于单元素列表）。
  * </p>
  *
  * <p>
@@ -38,8 +38,6 @@ import java.util.Map;
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(ShardingV5Conversion.class)
-@ConditionalOnProperty(prefix = "plugin.datasource.sharding", name = "enabled", havingValue = "true")
-@EnableConfigurationProperties(ShardingDataSourceProperties.class)
 public class ShardingAutoConfiguration {
 
     /**
@@ -57,36 +55,19 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-     * 创建 分库分表sphere 分片数据源 Bean。
+     * 注册分库分表数据源注册器。
      *
-     * @param shardingV5Conversion 分库分表转换器
-     * @param properties           分片数据源配置
-     * @return 分片数据源；未注册数据源或创建失败返回 {@code null}
+     * <p>静态 {@code @Bean} + {@link org.springframework.beans.factory.config.BeanFactoryPostProcessor}：
+     * 在 Bean 定义加载阶段把 {@code plugin.datasource.sharding} 列表逐项注册为
+     * 独立数据源 Bean，支持 {@code name} 自定义 Bean 名、同名冲突告警跳过、
+     * {@code enabled=false} 跳过；旧的单对象写法等价于单元素列表。</p>
+     *
+     * @param environment 环境配置
+     * @return 分片数据源注册器
      */
     @Bean
-    @ConditionalOnMissingBean(name = "shardingDataSource")
-    public DataSource shardingDataSource(
-            DataSourceConversion shardingV5Conversion,
-            ShardingDataSourceProperties properties) {
-
-        List<DataSource> dataSources = collectDataSources();
-        if (dataSources.isEmpty()) {
-            log.warn("[Sharding] 没有找到已注册的数据源，跳过分片配置");
-            return null;
-        }
-
-        try {
-            ShardingV5Conversion conversion = configureSharding(shardingV5Conversion, properties);
-            DataSourceEnvironment environment = new DataSourceEnvironment();
-            environment.setDatabaseType("ShardingSphere");
-
-            DataSource shardingDataSource = conversion.convert(dataSources, environment);
-            log.info("[Sharding] 分片数据源创建成功，已配置 {} 个数据源", dataSources.size());
-            return shardingDataSource;
-        } catch (Exception e) {
-            log.error("[Sharding] 创建分片数据源失败: {}", e.getMessage(), e);
-            return null;
-        }
+    public static ShardingDataSourceRegistrar shardingDataSourceRegistrar(Environment environment) {
+        return new ShardingDataSourceRegistrar(environment);
     }
 
     /**
@@ -95,7 +76,7 @@ public class ShardingAutoConfiguration {
      * @param properties 属性
      * @return configure分库分表的结果
      */
-    private ShardingV5Conversion configureSharding(DataSourceConversion conversion, ShardingDataSourceProperties properties) {
+    static ShardingV5Conversion configureSharding(DataSourceConversion conversion, ShardingDataSourceProperties properties) {
         if (!(conversion instanceof ShardingV5Conversion)) {
             log.warn("[Sharding] 转换器不是 ShardingV5Conversion 类型，使用默认配置");
             /**
@@ -163,7 +144,7 @@ public class ShardingAutoConfiguration {
      * @param timeUnit 时间unit
      * @return 获取时间分区模式的结果
      */
-    private String getTimePartitionPattern(String timeUnit) {
+    private static String getTimePartitionPattern(String timeUnit) {
         switch (timeUnit.toUpperCase()) {
             case "YEAR":
                 return "yyyy";
@@ -186,7 +167,7 @@ public class ShardingAutoConfiguration {
      * 收集所有已注册的数据源（过滤动态路由数据源和分片数据源）
      * @return collect数据源的结果
      */
-    private List<DataSource> collectDataSources() {
+    static List<DataSource> collectDataSources() {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
         List<DataSource> result = new ArrayList<>();
 
@@ -194,8 +175,8 @@ public class ShardingAutoConfiguration {
             String name = entry.getKey();
             DataSource ds = entry.getValue();
 
-            // 跳过分片数据源自身
-            if ("shardingDataSource".equals(name)) {
+            // 跳过分片数据源自身（含列表化自定义 Bean 名）
+            if ("shardingDataSource".equals(name) || DataSourceContextSupport.SHARDING_BEAN_NAMES.contains(name)) {
                 continue;
             }
 

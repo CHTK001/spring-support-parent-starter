@@ -1,5 +1,6 @@
 package com.chua.payment.support.vo;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -25,5 +26,7 @@ public record WalletAccountVO(
         BigDecimal frozenBalance,
         Integer status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt) {
+        LocalDateTime updatedAt) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

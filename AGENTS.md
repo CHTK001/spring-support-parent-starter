@@ -37,10 +37,11 @@
 
 新增 `@Spi` 扩展实现（如 `GlobalSettingProvider`）且未标 `@AutoSpi` 时，必须手工在 `src/main/resources/META-INF/extensions/<SPI 接口全限定名>` 追加实现类全限定名。该文件是 git 跟踪的源码资源，编译期不会为纯 `@Spi` 类自动生成索引；漏加则编译绿但启动时静默不注册（如设置分组永不初始化）。
 
-## Javadoc 注释双坑（2026-11-25 实证）
+## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
 - 但 `{@code}` / `{@literal}` 体内**不解析 HTML 实体**（JDK 25 javadoc 实测原样输出 `&#47;`），实体方案只对普通 HTML 上下文（`<code>`、纯 `<pre>`）有效；含实体或裸 `<=` 的示例块应脱壳为普通 `<pre>`，并把 `<=` 转义为 `&lt;=`。
+- 严格 javadoc 检查（-Xdoclint）跑整模块时：`-J-*` 启动器参数**不能进 @argfile**（放命令行）；@argfile 里超长单行 `-classpath`（约 59K / 数百 jar）会被 javadoc **静默丢弃**——全部第三方 import 报「程序包不存在」、100 错误上限中断，doclint 没跑到语法检查，结论是假阴性。可靠做法 = pathing jar（MANIFEST `Class-Path` 列全部 jar，`-classpath` 只放该 jar 一个短路径；样例 `temp/doc-verify/build-pathing.ps1`）。
 
 ## 提交
 

@@ -1,5 +1,7 @@
 package com.chua.payment.support.dto;
 
+import java.io.Serializable;
+
 /**
  * 支付订单分页查询请求参数对象。
  *
@@ -17,5 +19,7 @@ public record PaymentOrderPageRequest(
         Long merchantId,
         String orderNo,
         String status
-) {
+) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

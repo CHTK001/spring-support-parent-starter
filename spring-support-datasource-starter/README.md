@@ -96,7 +96,7 @@ flowchart TD
 | `h2Engine` / `h2Flyway` / `h2CleanupPlugin` / `h2DataSource` | H2 引擎与数据源 | `@ConditionalOnClass(H2Engine)` + `plugin.h2.enable=true` + `@ConditionalOnMissingBean`；`h2DataSource` 另要求容器无 `DataSource` | ✅ 宿主已有数据源时让位 | Lambda 链式查询/迁移/注入 `DataSource` |
 | `sqliteEngine` / `sqliteDataSource` / `sqliteEngineEndpoint` | SQLite 引擎/数据源/端点 | `@ConditionalOnClass(SqliteEngine)` + `plugin.sqlite.enable=true` + `@ConditionalOnMissingBean` | ✅ | 注入 `SqliteEngine`/`DataSource`；`GET /actuator/sqlite` |
 | `calciteDataSourceConversion` / `calciteDataSource` | `DataSourceConversion` / 聚合数据源 | `@ConditionalOnClass(CalciteDataSourceConversion)` + `calcite.enabled=true` + `@ConditionalOnMissingBean(name=...)`；`register-mode=replace`（默认）时无已注册数据源或创建失败直接抛异常；`derive` 时返回 null | ✅ 同名覆盖 | 跨库联邦查询 |
-| `shardingV5Conversion` / `shardingDataSource` | `DataSourceConversion` / 分片数据源 | `@ConditionalOnClass(ShardingV5Conversion)` + `sharding.enabled=true` + `@ConditionalOnMissingBean(name=...)`；无已注册数据源时返回 null | ✅ 同名覆盖 | 分库分表 |
+| `shardingV5Conversion` / `shardingDataSource` 等列表自定义名 | `DataSourceConversion` / 分片数据源 | `@ConditionalOnClass(ShardingV5Conversion)`；`plugin.datasource.sharding` 列表经 `ShardingDataSourceRegistrar`（BFPP）逐项注册，`name` 指定 Bean 名（缺省 `shardingDataSource`），同名冲突告警跳过、`enabled=false` 跳过；无已注册数据源时返回 null | ✅ 同名覆盖 | 分库分表 |
 | `materializedRouteProperties` / `defaultAdvisorAutoProxyCreator` / `materializedRouteAdvisor` / `materializedRefreshAdvisor` / `materializedSqlRouter` | 物化路由组件 | 自定义 `Condition`：`materialized.enabled=true`（默认 `false`，兼容 `spring.datasource.materialized`）+ `@ConditionalOnMissingBean` | ✅ | `@MaterializedRoute` / `@MaterializedRefresh` |
 | `concurrentEndpoint` | `ConcurrentEndpoint` | 自动装配；`@ConditionalOnClass` 6 个类（3 Flow + 3 Repository） | ⚠️ 不建议覆盖 | `/actuator/concurrent` |
 | `passwordDecryptor` | `AesPasswordDecryptor` | `DatasourceP2AutoConfiguration`（需 `@Import`）+ `enc.enabled=true`（默认 `false`）+ `@ConditionalOnMissingBean(PasswordDecryptor)` | ✅ 推荐自定义 | 解密 `ENC(...)` 密码 |
@@ -141,9 +141,11 @@ flowchart TD
 | `plugin.datasource.calcite.register-mode` | `String` | `replace` | 注册模式：`replace`（默认）＝聚合数据源升为 primary 主数据源，其余 primary 的 `DataSource` Bean 让位（按类型注入命中聚合数据源，原数据源仍可按名称/`@Qualifier` 注入），无可聚合成员或创建失败直接抛异常；`derive`＝历史行为，作为额外 Bean 派生注册，主数据源不变，**必须同时配置 `bean-name`**；其它取值启动期抛 `IllegalStateException` |
 | `plugin.datasource.calcite.data-sources` | `List<String>` | —（聚合全部） | 参与聚合的数据源名单；未配置时聚合全部普通数据源，名单中未注册的名称告警跳过，全部未命中则不创建聚合数据源 |
 | `plugin.datasource.calcite.schema-mapping / default-schema` | `Map`/`String` | — | 数据源→模式名映射 / 默认模式名 |
-| `plugin.datasource.sharding.enabled / show-sql` | `Boolean` | `false` / `false` | 分片开关 / 打印改写后 SQL |
-| `plugin.datasource.sharding.tables[*].logic-table / sharding-column / time-unit / strategy` | `String` | — / — / — / `TABLE` | 逻辑表（同时为物理表前缀）/ 分片列 / 时间单位 `YEAR`·`QUARTER`·`MONTH`·`WEEK`·`DAY`·`HOUR`（配置后走 `INTERVAL` 固定 12 片，物理表 `逻辑表_yyyy…`；缺省走 `MOD` 固定 16 片，物理表 `逻辑表_0..15`）/ 策略（`TABLE`/`DB`，当前仅解析、不参与路由） |
-| `plugin.datasource.sharding.databases` | `List<String>` | — | 分库列表；数量 > 1 时启用分库（每表按分片列对库数取模 `db_mod`） |
+| `plugin.datasource.sharding` | `List<ShardingDataSourceProperties>` | — | 分片配置**列表**：每个元素注册为独立的分片数据源 Bean（经 `ShardingDataSourceRegistrar` 在 Bean 定义阶段注册）；兼容旧的单对象写法（等价单元素列表） |
+| `plugin.datasource.sharding[*].name` | `String` | `shardingDataSource` | 该配置注册的数据源 Bean 名（可按名注入/`@Qualifier`）；与已有 Bean 同名时告警跳过、保留已有 Bean |
+| `plugin.datasource.sharding[*].enabled / show-sql` | `Boolean` | `false` / `false` | 分片开关（逐项生效）/ 打印改写后 SQL |
+| `plugin.datasource.sharding[*].tables[*].logic-table / sharding-column / time-unit / strategy` | `String` | — / — / — / `TABLE` | 逻辑表（同时为物理表前缀）/ 分片列 / 时间单位 `YEAR`·`QUARTER`·`MONTH`·`WEEK`·`DAY`·`HOUR`（配置后走 `INTERVAL` 固定 12 片，物理表 `逻辑表_yyyy…`；缺省走 `MOD` 固定 16 片，物理表 `逻辑表_0..15`）/ 策略（`TABLE`/`DB`，当前仅解析、不参与路由） |
+| `plugin.datasource.sharding[*].databases` | `List<String>` | — | 分库列表；数量 > 1 时启用分库（每表按分片列对库数取模 `db_mod`） |
 | `plugin.datasource.partition.auto-create-enabled` | `Boolean` | `false` | 分区表自动创建开关（启动预热 + 周期检查；服务自管守护线程，不开启全局 `@EnableScheduling`）；关闭时仍可 `POST /ms/ds-runtime/partition/create-current` 手动触发 |
 | `plugin.datasource.partition.check-interval-minutes` | `Long` | `60` | 自动检查间隔（分钟，最小 1）；每次只为「当前周期」补建缺失的分区表 |
 | `plugin.datasource.partition.tables[*].source-table / prefix / granularity` | `String` | — / — / `MONTH` | yaml 分区配置（推荐）：源表 / 分区表前缀（表名 `prefix_yyyyMM` 或 `prefix_yyyyMMdd`，经 `SqlName` 白名单校验）/ 粒度 `MONTH`·`DAY`；未配置时只读回退 `pay_partition_config` 中 `auto_create_enabled=true` 的行 |
@@ -382,9 +384,12 @@ plugin:
 
 #### 8) 分库分表（`plugin.datasource.sharding`）
 
+列表配置：每个元素是一个独立的分片数据源，`name` 指定注册的 Bean 名（缺省 `shardingDataSource`；与已有 Bean 同名时告警跳过、保留已有 Bean），`enabled=false` 的项不注册；兼容旧的单对象写法（等价单元素列表）。
+
 | 配置键 | 默认值 | 说明 |
 | --- | --- | --- |
-| `enabled` | `false` | 分片开关 |
+| `name` | `shardingDataSource` | 注册的数据源 Bean 名 |
+| `enabled` | `false` | 分片开关（逐项生效） |
 | `show-sql` | `false` | 打印改写后 SQL |
 | `tables[*].logic-table` | — | 逻辑表名（同时为物理表前缀） |
 | `tables[*].sharding-column` | — | 分片列 |
@@ -396,17 +401,18 @@ plugin:
 plugin:
   datasource:
     sharding:
-      enabled: true
-      show-sql: false
-      tables:
-        - logic-table: t_order
-          sharding-column: user_id        # MOD：物理表 t_order_0..15
-        - logic-table: t_order_log
-          sharding-column: create_time
-          time-unit: MONTH                # INTERVAL：物理表 t_order_log_yyyyMM
-      databases:
-        - db_order_0
-        - db_order_1
+      - name: sharding-order          # 缺省 shardingDataSource；与已有 Bean 同名时告警跳过
+        enabled: true
+        show-sql: false
+        tables:
+          - logic-table: t_order
+            sharding-column: user_id        # MOD：物理表 t_order_0..15
+          - logic-table: t_order_log
+            sharding-column: create_time
+            time-unit: MONTH                # INTERVAL：物理表 t_order_log_yyyyMM
+        databases:
+          - db_order_0
+          - db_order_1
 ```
 
 #### 9) 分区表自动创建（`plugin.datasource.partition`）
@@ -519,7 +525,8 @@ plugin:
       enable: true
       template: DEFAULT
     sharding:
-      enabled: false                  # 需要分库分表时置 true 并配 tables/databases
+      - name: shardingDataSource      # 列表形态：每项注册一个分片数据源 Bean，name 缺省 shardingDataSource
+        enabled: false                # 需要分库分表时置 true 并配 tables/databases
     partition:
       auto-create-enabled: false
     materialized:

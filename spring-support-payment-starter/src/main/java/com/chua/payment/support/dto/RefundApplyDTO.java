@@ -1,5 +1,6 @@
 package com.chua.payment.support.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -14,5 +15,7 @@ import java.math.BigDecimal;
 public record RefundApplyDTO(
         BigDecimal refundAmount,
         String refundReason,
-        String operator) {
+        String operator) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

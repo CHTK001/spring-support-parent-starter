@@ -1,5 +1,6 @@
 package com.chua.payment.support.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -22,5 +23,7 @@ public record WalletRechargeDTO(
         String notifyUrl,
         BigDecimal amount,
         String operator,
-        String remark) {
+        String remark) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

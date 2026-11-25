@@ -45,3 +45,5 @@ com.chua.starter.datasearch.credit.spi.impl.HmilionSeekCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.TokenRhythmCreditQueryProvider
 # 百度千帆(百度智能云)控制台余额(控制台同源接口;Cookie 会话鉴权,credit_key 口径为 bce-user-info值#bce-sessionid值)
 com.chua.starter.datasearch.credit.spi.impl.QianfanCreditQueryProvider
+# GitHub Copilot 配额采样(Bearer ghu_ OAuth 令牌调 copilot_internal/v2/token,读 limited_user_quotas 剩余配额;单位为请求次数,上限只来自 429 响应头)
+com.chua.starter.datasearch.credit.spi.impl.CopilotCreditQueryProvider

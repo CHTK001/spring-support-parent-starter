@@ -80,7 +80,7 @@ public class EduPaperTemplateSyncer implements SourceSyncer {
     /**
      * 注册：将组卷模板行映射到统一模板库
      *
-     * @param template 来源模板行
+     * @param request 来源模板请求
      * @return 注册后的模板信息
      */
     @Override

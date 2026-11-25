@@ -66,6 +66,14 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-springboot-starter</artifactId>
         </dependency>
+        <!-- RPC 提供者（Dubbo 3.3.6 / 事件协议）：把支付订单与钱包能力经 rpc 子包门面暴露为 RPC 接口，
+             消费方用 @RpcResource 注入代理，RPC 断连时自动熔断降级到本应用的本地 Bean
+             （degrade = "springbean"），实现「Bean 即 RPC」的永久降级。
+             默认关闭：plugin.rpc.enable 必须显式为 true 才注册服务项目。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-rpc-starter</artifactId>
+        </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-xml</artifactId>

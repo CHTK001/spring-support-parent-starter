@@ -43,7 +43,7 @@ import java.util.Set;
  *     让首次用工号登录的教师从此有稳定身份。</li>
  * </ul>
  * 老师端其它接口按 {@code teacher_account = 登录态 userId} 定位档案
- * （{@code EduTeacherCenterServiceImpl#findMyTeacher}），两种情形都能命中。</p>
+ * （{@code EduTeacherCenterServiceImpl#findMyTeacher}），两种情形都能命中。
  *
  * <p><b>角色只给 TEACHER</b>：不含 ADMIN / SUPER_ADMIN，管理端接口一律拒绝；
  * 也不含任何 permission，避免误挂到按权限名声明的注解上。</p>

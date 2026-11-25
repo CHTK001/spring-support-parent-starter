@@ -1,5 +1,6 @@
 package com.chua.payment.support.channel;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -31,5 +32,7 @@ public record PaymentResult(
         Map<String, Object> sdkParams,
         BigDecimal paidAmount,
         String status,
-        String rawResponse) {
+        String rawResponse) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

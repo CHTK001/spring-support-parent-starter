@@ -1,5 +1,6 @@
 package com.chua.payment.support.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -21,5 +22,7 @@ public record WalletPayRequest(
         String orderNo,
         String operator,
         String remark
-) {
+) implements Serializable {
+
+    private static final long serialVersionUID = 1L; // 序列化版本uid
 }

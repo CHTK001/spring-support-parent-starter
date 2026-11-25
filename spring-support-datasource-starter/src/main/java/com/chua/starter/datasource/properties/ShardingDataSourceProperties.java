@@ -1,29 +1,36 @@
 package com.chua.starter.datasource.properties;
 
 import lombok.Data;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 
 /**
- * 分库分表sphere分库分表配置属性
+ * 分库分表sphere分库分表配置属性。
+ *
+ * <p>支持列表形态：{@code plugin.datasource.sharding} 配置为列表时，每个元素是
+ * 一个独立的分片数据源配置，{@code name} 指定该配置注册的数据源 Bean 名
+ * （缺省 {@code shardingDataSource}）；多个配置项重名、或与已注册数据源同名时，
+ * 后者告警跳过（保留已有 Bean），{@code enabled=false} 的项不注册。
+ * 兼容旧的单对象写法（未写成列表时按单个分片数据源处理）。</p>
+ *
  * <p>
- * 配置示例:
+ * 配置示例（列表形态）:
  * <pre>
  * plugin:
  *   datasource:
  *     sharding:
- *       enabled: true
- *       show-sql: true
- *       tables:
- *         - logic-table: t_order_log
- *           sharding-column: create_time
- *           time-unit: MONTH          # 配置后走 INTERVAL 时间分片，物理表 t_order_log_yyyyMM
- *         - logic-table: t_user
- *           sharding-column: user_id  # 不配 time-unit 走 MOD 取模，物理表 t_user_0..t_user_15
- *       databases:                    # 数量大于 1 时启用分库（按同一分片列对库数取模）
- *         - db_order_0
- *         - db_order_1
+ *       - name: sharding-order        # 注册的数据源 Bean 名，缺省 shardingDataSource
+ *         enabled: true
+ *         show-sql: true
+ *         tables:
+ *           - logic-table: t_order_log
+ *             sharding-column: create_time
+ *             time-unit: MONTH        # 配置后走 INTERVAL 时间分片，物理表 t_order_log_yyyyMM
+ *           - logic-table: t_user
+ *             sharding-column: user_id  # 不配 time-unit 走 MOD 取模，物理表 t_user_0..t_user_15
+ *         databases:                  # 数量大于 1 时启用分库（按同一分片列对库数取模）
+ *           - db_order_0
+ *           - db_order_1
  * </pre>
  * <p>
  * 物理表不会自动创建：规则先行生效（缺失的物理表按分片数合成数据节点），
@@ -34,8 +41,18 @@ import java.util.List;
  * @author CH
  */
 @Data
-@ConfigurationProperties(prefix = "plugin.datasource.sharding")
 public class ShardingDataSourceProperties {
+
+    /**
+     * 分片数据源注册的 Bean 名。
+     *
+     * <p>列表形态下每个分片配置项可指定自己的 Bean 名，便于按名注入
+     * （{@code @Qualifier} / {@code @DS}）或与其它数据源区分；多个配置项重名、
+     * 或与已注册数据源同名时，后者告警跳过（保留已有 Bean）。</p>
+     * 默认值: shardingDataSource
+     * 示例: plugin.datasource.sharding[0].name=sharding-order
+     */
+    private String name = "shardingDataSource";
 
     /**
      * 是否启用分片
@@ -156,6 +173,15 @@ public class ShardingDataSourceProperties {
      */
     public boolean isShowSql() {
         return showSql;
+    }
+
+    /**
+     * 获取分片数据源 Bean 名
+     *
+     * @return 分片数据源 Bean 名
+     */
+    public String getName() {
+        return name;
     }
 
     /**
