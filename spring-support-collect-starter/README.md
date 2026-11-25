@@ -130,7 +130,12 @@ flowchart TB
 | `plugin.collect.ai.trust-header` | `String` | `x-nomi-local-trust` | 本地信任头名（ai-starter `LocalTrustAuthFilter` 约定） |
 | `plugin.collect.ai.trust-value` | `String` | `collect-designer` | 本地信任头的值（服务端只要求非空） |
 | `plugin.collect.ai.timeout-ms` | `int` | `180000` | 单次生成总超时毫秒（整图 JSON 生成较慢） |
-| `plugin.collect.agent.enable` | `boolean` | `true`（未配置即开启） | Agent 节点开关。注意：**不在** `CollectProperties` 中，仅由 `CollectAgentExecutor` 的 `@ConditionalOnProperty` 读取；该执行器还要求类路径存在 `com.chua.starter.ai.support.registry.AgentRegistry` |
+| `plugin.collect.agent.enable` | `boolean` | `true`（未配置即开启） | Agent 节点开关（`CollectProperties.Agent`）。`CollectAgentExecutor` 以 `@ConditionalOnProperty` 读取（`matchIfMissing=true`），并要求类路径存在 `com.chua.starter.ai.support.registry.AgentRegistry`，缺类时自动不注册 |
+| `plugin.collect.agent.timeout-ms` | `long` | `120000` | Agent 调用兜底超时毫秒，节点 `callTimeoutMs` 留空时使用；`0` 表示不限制。超时只中断等待并按失败策略处置，不保证底层 Agent 立即停止 |
+| `plugin.collect.agent.failure-strategy` | `String` | `fail` | Agent 调用失败默认策略：`fail` 中断流程 / `skip` 记警告后跳过 / `defaultValue` 写入兜底值继续；节点参数优先于本配置 |
+| `plugin.collect.persistence.type` | `String` | `database` | 内置结果持久化实现：`database` 数据库落库 / `none` 只跑流程不落结果；经 `CollectSinkFactory` 选择，宿主替换工厂 Bean 后本项不再参与选择 |
+| `plugin.collect.persistence.search-enabled` | `boolean` | `true` | 是否维护 `collect_record` 的 Lucene 全文索引；关闭后 `GET /v2/collect/record/search` 降级为数据库 LIKE 模糊查询 |
+| `plugin.collect.persistence.search-index-path` | `String` | 空（回落 `java.io.tmpdir/collect-search-index`） | Lucene 索引目录；索引可经 `POST /v2/collect/record/search/rebuild` 从结果表全量重建，生产建议显式指向稳定盘 |
 
 ### 5.2 相关联动配置（非本模块前缀，但直接影响本模块）
 
@@ -141,6 +146,104 @@ flowchart TB
 | `spring.mail.host` 等 | Spring Boot 邮件自动配置 | 未配置时 `CollectEmailNotifyChannel` 仍在渠道列表，但发送返回「未配置邮件账号」的可读失败原因 |
 
 > 运行期可用 `GET /v2/collect/settings/list` 读取全部参数定义（类型、范围、缺省值、是否重启生效），`PUT /v2/collect/settings` 在线修改（写 `collect_setting` 表立即生效），`POST /v2/collect/settings/reset` 恢复 yml 缺省。
+
+### 5.3 逐项配置示例（按功能分组）
+
+> 全部键都属于 `plugin.collect.*`（`CollectProperties`），注释即「含义 + 默认值」。YAML 一律空格缩进。
+
+#### ① 总开关与执行引擎
+
+控制平台是否装配、流程并发与抓取默认行为。
+
+```yaml
+plugin:
+  collect:
+    enable: true               # 平台总开关，默认 true；false 时控制器/服务/引擎/调度全部不装配
+    default-thread-count: 4    # 流程默认并行线程数，默认 4；流程未配置或 ≤0 时回落此值
+    request-timeout-ms: 30000  # 单次抓取默认超时毫秒，默认 30000；节点超时留空或 ≤0 时回落此值
+    request-retry-times: 1     # 默认重试次数，默认 1；节点配置为负时执行侧钳到 0
+    user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"  # 默认 UA
+```
+
+#### ② SQL 与结果保护
+
+SQL 节点安全边界与任务级失控保护。
+
+```yaml
+plugin:
+  collect:
+    sql-allow-write: false      # SQL 节点是否允许写语句，默认 false；写库走 database 节点
+    task-timeout-ms: 1800000    # 单任务最长执行毫秒，默认 1800000（30 分钟）
+    max-record-per-task: 100000 # 单任务最多落库记录数，默认 100000，超出丢弃并写任务日志
+    preview-length: 500         # 节点出参预览字符数，默认 500（执行侧最小按 32 生效）
+    node-output-limit: 2000     # 节点产出留存条数上限，默认 2000；0 或负数不限
+    exists-batch-size: 500      # 「查已存在」IN 查询每片条数，默认 500（执行侧最小按 1 生效）
+```
+
+#### ③ 脚本 / 函数 / 子流程
+
+节点类型级开关：关闭后对应执行器不注册，存量流程校验报「类型未注册」。
+
+```yaml
+plugin:
+  collect:
+    script:
+      enable: true             # 脚本节点开关，默认 true
+    function:
+      enable: true             # 自定义函数库开关，默认 true；关闭后 ${'$'}{} 与脚本只剩内置函数
+    process:
+      enable: true             # 子流程节点开关，默认 true
+      max-depth: 5             # 子流程嵌套层数上限，默认 5；配置 ≤0 时按 1 层生效
+```
+
+> 注意：`function.enable=false` 时 `CollectFunctionServiceImpl` 不再装配，而函数管理接口（`CollectFunctionController`）强依赖该服务实现，关闭前需一并处理该接口的装配，否则启动失败。
+
+#### ④ 执行通知
+
+```yaml
+plugin:
+  collect:
+    notify:
+      enable: true             # 执行通知开关，默认 true；false 时任务终态不投递，试发直接失败
+```
+
+#### ⑤ AI 生成流程
+
+设计器「AI 生成」把自然语言描述发给 ai-starter（OpenAI 兼容接口）产出流程 DSL。
+
+```yaml
+plugin:
+  collect:
+    ai:
+      enable: true                      # 开关，默认 true；还要求类路径有 AiChatFacadeService
+      base-url: http://127.0.0.1:8787   # ai-starter 地址，默认本机回环（同机部署）
+      model: deepseek-v4.1-flash        # 模型名，须为 ai-starter 已启用模型
+      trust-header: x-nomi-local-trust  # 本地信任头名
+      trust-value: collect-designer     # 本地信任头的值（服务端只要求非空）
+      timeout-ms: 180000                # 单次生成总超时毫秒，默认 180000
+```
+
+#### ⑥ Agent 节点
+
+```yaml
+plugin:
+  collect:
+    agent:
+      enable: true             # Agent 节点开关，默认 true（未配置即开启）；还要求类路径有 AgentRegistry
+      timeout-ms: 120000       # Agent 调用兜底超时毫秒，默认 120000；0 表示不限制
+      failure-strategy: fail   # 失败默认策略：fail / skip / defaultValue，节点参数优先
+```
+
+#### ⑦ 结果持久化
+
+```yaml
+plugin:
+  collect:
+    persistence:
+      type: database           # 内置实现：database=数据库落库 / none=只跑流程不落结果
+      search-enabled: true     # collect_record 的 Lucene 全文索引开关，默认 true
+      search-index-path: ""    # 索引目录；留空用 java.io.tmpdir/collect-search-index
+```
 
 ## 6. 使用方式
 
@@ -212,6 +315,73 @@ curl 'http://localhost:8080/v2/collect/task/page?current=1&size=10'
 | `utils-support-crawler-starter` / `jsoup` | 必带 | 抓取与 DOM 解析能力 |
 | `spring-support-datapool-starter` | 必带 | SQL / 入库节点的数据源台账来源（`datasource_info`），迁移期回落老 `collect_datasource` |
 | `spring-support-ai-starter` | **非 Maven 依赖** | 仅「AI 生成流程」经 HTTP 调用（`plugin.collect.ai.*`）；默认只在采集后端与 ai-starter 同机部署时可用（本地信任头回环放行） |
+
+### 6.4 完整配置示例（application.yml）
+
+一份可直接粘贴的完整配置（键与默认值均来自 `CollectProperties`，逐项含义见 5.1 / 5.3）：
+
+```yaml
+plugin:
+  collect:
+    enable: true
+    default-thread-count: 4
+    request-timeout-ms: 30000
+    request-retry-times: 1
+    sql-allow-write: false
+    task-timeout-ms: 1800000
+    max-record-per-task: 100000
+    preview-length: 500
+    node-output-limit: 2000
+    exists-batch-size: 500
+    script:
+      enable: true
+    function:
+      enable: true
+    notify:
+      enable: true
+    process:
+      enable: true
+      max-depth: 5
+    ai:
+      enable: true
+      base-url: http://127.0.0.1:8787
+      model: deepseek-v4.1-flash
+      trust-header: x-nomi-local-trust
+      trust-value: collect-designer
+      timeout-ms: 180000
+    agent:
+      enable: true
+      timeout-ms: 120000
+      failure-strategy: fail
+    persistence:
+      type: database
+      search-enabled: true
+      search-index-path: /data/collect/search-index   # 生产建议显式指向稳定盘
+
+# 相关联动配置（非本模块前缀，但直接影响本模块）：
+plugin:
+  datasource:
+    script: true            # 扫描执行 classpath*:db/init/*.sql 建表（ONCE 语义，空库才建）
+
+spring:
+  mail:                     # 邮件通知渠道需要；未配置时 email 渠道发送返回可读失败原因
+    host: smtp.example.com  # 示例地址，按实际 SMTP 服务填写
+    username: your-account
+    password: your-password # 占位符，勿写真实凭据
+```
+
+生产注意事项：
+
+- **`sql-allow-write` 保持 `false`**：SQL 节点支持 `${'$'}{}` 插值且无语句白名单，插值内容可能来自被抓取页面；写库一律走 `database` 节点（PreparedStatement 绑定）。
+- **任务失控保护按数据量评估**：`task-timeout-ms`（默认 30 分钟）与 `max-record-per-task`（默认 10 万条）配合使用——超时防线程挂死，记录上限防结果表被撑爆；分片型大任务适当调大前者。
+- **`persistence.search-index-path` 指向稳定盘**：默认落在 `java.io.tmpdir/collect-search-index`，临时目录可能被清理；索引虽可经 `POST /v2/collect/record/search/rebuild` 从结果表重建，但重建有成本。
+- **跨机部署时调整 `ai.base-url`**：默认 `http://127.0.0.1:8787` 只适用于采集后端与 ai-starter 同机的形态；分机部署改成可达地址并确认网络与鉴权策略。
+- **通知渠道按需启用**：邮件渠道需要 `spring.mail.host` 等配置（示例中的账号口令均为占位符）；webhook 渠道地址在通知渠道管理页配置；站内渠道依赖容器中的消息中心，缺失时自动不注册。
+- **Agent 节点失败策略按业务选择**：不允许中断流程的场景用 `skip` 或 `defaultValue`（配合节点 `failureValue`），默认 `fail` 中断流程。
+- **`exists-batch-size` 与目标库 `max_allowed_packet` 匹配**：默认 500，目标库包限较小时调小，避免「查已存在」IN 语句超包。
+- **生产建议 MySQL**：pom 自带 h2（runtime）便于免外部库启动，仅适合开发与演示；建表由 `plugin.datasource.script` 扫描 `classpath*:db/init/*.sql` 完成（`CREATE TABLE IF NOT EXISTS`，ONCE 语义）。
+- **需要定时排期时显式引入 `spring-support-job-starter`**：不引入（或 `plugin.job.enable=false`）时排期落到 `LocalOnlyFlowSchedulePort` 兜底，流程可手动执行但无定时触发。
+- **优先用运行参数接口调参**：`GET /v2/collect/settings/list` → `PUT /v2/collect/settings` 写 `collect_setting` 立即生效；直接改 yml 需重启生效。
 
 ## 7. 使用场景
 

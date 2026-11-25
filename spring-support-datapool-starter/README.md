@@ -233,7 +233,7 @@ flowchart LR
 | `plugin.datapool.connection-ttl-minutes` | `long` | `10` | JDBC 连接空闲存活时长（分钟），超时自动关闭（小于 1 按 1 处理）；`ExpireValue` 惰性过期 + 后台清扫 | 生效（连接缓存 TTL） |
 | `plugin.datapool.connection-sweep-interval-ms` | `long` | `60000` | 空闲连接后台清扫周期（毫秒） | **仅声明，运行期未读取**（清扫节拍写死在 `JdbcDatasourceSupport#sweepExpiredJdbcConnections` 的 `@Scheduled(fixedDelay=60_000L)`） |
 | `plugin.datapool.probe-timeout-ms` | `int` | `5000` | 连通性探测超时（毫秒） | 生效 |
-| `plugin.datapool.connect-timeout-seconds` | `int` | `30` | JDBC 建连超时（秒）；实现按驱动族换算单位（MySQL/MariaDB/Oracle 毫秒、PostgreSQL 秒、SQL Server `loginTimeout`） | 生效 |
+| `plugin.datapool.connect-timeout-seconds` | `int` | `30` | JDBC 建连超时（秒）；实现按驱动族换算单位（MySQL/MariaDB/Oracle 毫秒、PostgreSQL 秒、SQL Server `loginTimeout`）；配置 ≤0 按 1 秒处理 | 生效 |
 | `plugin.datapool.query-timeout-seconds` | `int` | `60` | SQL 执行超时（秒），0 = 不设上限；只约束语句级执行（`Statement.setQueryTimeout`），不影响建连 | 生效 |
 | `plugin.datapool.driver-jar-dir` | `String` | `data/jdbc-driver`（按 `File.separator`） | 上传的 JDBC 驱动 jar 落盘目录（工作目录下，文件名加内容指纹） | 生效 |
 | `plugin.datapool.driver-jar-max-bytes` | `long` | `67108864`（64MB） | 驱动 jar 单个上限（字节） | 生效 |
@@ -248,6 +248,129 @@ flowchart LR
 - `monitor.nginx.collect-interval-ms`：`NginxMetricScheduler` 注释中的设计键，**未接入**注解，采集周期固定 30s；
 - 全部调度周期 / cron（指标 60s、SSE 心跳 20s、nginx 30s、操作日志清理 04:40、指标清理 04:20）均为编译期常量，不走配置（宿主经 collect-starter 传递依赖引入时，早期创建链上 `${...}` 解析器未就绪会炸启动，故刻意不用占位符）；
 - 建表脚本由 `spring-support-datasource-starter` 的脚本机制执行：`plugin.datasource.script.enable=true`（其 `DataSourceEnvironmentPostProcessor` 缺省置 true），自动跑 `db/init/V3.1__init_all_datapool.sql` 建 `datasource_info` 等 10 张表（幂等）。
+
+### 5.1 逐项配置示例（按功能分组）
+
+键名与 `DatapoolProperties` 字段一一对应（relaxed binding，推荐连字符风格）。以下片段均可直接粘进 `application.yaml`。
+
+#### 面板开关
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `plugin.datapool.enabled` | 服务信息面板「数据源中心」展示旗标；**非模块开关**，置 false 只藏旗标、不关模块 | `true` |
+
+```yaml
+plugin:
+  datapool:
+    enabled: true
+```
+
+#### 连接与超时
+
+| 配置项 | 含义 | 默认值（含回落） |
+|:-------|:-----|:-----------------|
+| `plugin.datapool.connection-ttl-minutes` | JDBC 连接空闲存活时长（分钟），过期自动关闭；TTL 内复用同一物理连接 | `10`；≤0 按 `1` 处理 |
+| `plugin.datapool.connection-sweep-interval-ms` | 空闲连接后台清扫周期（毫秒）。**声明项**：清扫节拍当前写死 60s（`@Scheduled(fixedDelay=60_000L)`），改值暂不生效 | `60000` |
+| `plugin.datapool.probe-timeout-ms` | 连通性探测超时（毫秒），台账测活与指标采集共用 | `5000` |
+| `plugin.datapool.connect-timeout-seconds` | JDBC 建连超时（秒），按驱动族换算单位（MySQL/MariaDB/Oracle 毫秒、PostgreSQL/SQL Server 秒） | `30`；≤0 按 `1` 处理 |
+| `plugin.datapool.query-timeout-seconds` | SQL 执行超时（秒），语句级；只约束执行、不约束建连 | `60`；`0`（或负数）= 不设上限 |
+
+```yaml
+plugin:
+  datapool:
+    connection-ttl-minutes: 10          # 空闲连接 10 分钟后关闭
+    probe-timeout-ms: 5000              # 探活 5 秒超时
+    connect-timeout-seconds: 30         # 建连 30 秒超时
+    query-timeout-seconds: 60           # 单条 SQL 60 秒超时；0 = 不设上限
+```
+
+#### 上传目录与大小上限
+
+| 配置项 | 含义 | 默认值 |
+|:-------|:-----|:-------|
+| `plugin.datapool.driver-jar-dir` | 上传的 JDBC 驱动 jar 落盘目录（相对工作目录，文件名加内容指纹） | `data/jdbc-driver`（按平台分隔符） |
+| `plugin.datapool.driver-jar-max-bytes` | 驱动 jar 单个上限（字节） | `67108864`（64MB） |
+| `plugin.datapool.file-db-upload-dir` | 文件库（SQLite/DuckDB/H2）库文件上传目录（相对工作目录） | `data/file-db` |
+| `plugin.datapool.file-db-max-bytes` | 文件库库文件单个上限（字节） | `67108864`（64MB） |
+
+```yaml
+plugin:
+  datapool:
+    driver-jar-dir: data/jdbc-driver
+    driver-jar-max-bytes: 67108864      # 64MB
+    file-db-upload-dir: data/file-db
+    file-db-max-bytes: 67108864         # 64MB
+```
+
+#### 文件库路径白名单
+
+| 配置项 | 含义 | 默认值（含回落） |
+|:-------|:-----|:-----------------|
+| `plugin.datapool.file-jdbc-allowed-dirs` | 文件库 JDBC URL（带磁盘路径）允许的根目录白名单；解析后的路径必须落在白名单内才允许建连 | 空列表 → 回落放行工作目录 / 系统临时目录 / 用户主目录 |
+
+```yaml
+plugin:
+  datapool:
+    file-jdbc-allowed-dirs:             # 追加放行的根目录（留空 = 三个默认目录）
+      - /data/dbs
+      - D:/app-data/file-db
+```
+
+#### 口令加密
+
+| 配置项 | 含义 | 默认值（含回落） |
+|:-------|:-----|:-----------------|
+| `plugin.datapool.secret-key` | 数据源口令加密密钥（原文，SHA-256 派生 AES-256）。**配了就不要换**：换钥后旧 `enc:v1:` 密文全部解不开，口令只能重录 | 空串 → 明文入库，进程启动打一次 WARN |
+
+```yaml
+plugin:
+  datapool:
+    secret-key: ${DATASOURCE_SECRET_KEY:change-me}   # 推荐经环境变量注入，避免明文进配置仓库
+```
+
+### 5.2 完整 YAML 使用示例
+
+一份可直接落地的 `application.yaml`（含宿主侧前置条件）：
+
+```yaml
+spring:
+  datasource:
+    # 宿主主数据源（台账表 datasource_info 等建在这里；也是 app 连接复用的容器数据源）
+    url: jdbc:mysql://127.0.0.1:3306/datasource_hub?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+    username: root
+    password: your-password             # 占位符：替换为真实口令
+
+plugin:
+  datasource:
+    script:
+      enable: true                      # 框架数据源脚本机制：启动时执行 db/init/V3.1__init_all_datapool.sql 建 10 张表（幂等）
+  datapool:
+    enabled: true                       # 面板展示旗标（非模块开关）
+    connection-ttl-minutes: 10          # JDBC 连接空闲 TTL（分钟）；≤0 按 1 处理
+    probe-timeout-ms: 5000              # 探活超时（毫秒）
+    connect-timeout-seconds: 30         # 建连超时（秒）；≤0 按 1 处理
+    query-timeout-seconds: 60           # SQL 执行超时（秒）；0 = 不设上限
+    driver-jar-dir: data/jdbc-driver    # 驱动 jar 落盘目录（相对工作目录）
+    driver-jar-max-bytes: 67108864      # 驱动 jar 单个上限（64MB）
+    file-db-upload-dir: data/file-db    # 文件库上传目录（相对工作目录）
+    file-db-max-bytes: 67108864         # 文件库单个上限（64MB）
+    file-jdbc-allowed-dirs:             # 文件库路径白名单（追加项；留空 = 工作目录/临时目录/用户主目录）
+      - /data/dbs
+    secret-key: ${DATASOURCE_SECRET_KEY:change-me}   # 口令加密密钥；留空 = 明文入库；一经配置不要更换
+```
+
+最小可运行配置（只配主数据源 + 建表脚本）见第 6 节「使用方式」；未列出的配置项保持默认即可。
+
+### 5.3 生产注意事项
+
+- **口令安全**：`secret-key` 用环境变量/配置中心注入，不要提交进代码库；一经配置不可更换（旧密文解不开，只能重录口令）；不配则明文入库。REST 接口无内置 `@Permission`，`/ms/datasource/**`、`/ms/monitor/db/**`、`/ms/monitor/middleware/**` 必须置于网关/oauth 之后——台账里存的就是目标库口令。
+- **文件库白名单**：生产上显式把 `file-jdbc-allowed-dirs` 收紧到专用数据目录，不要依赖默认放行的工作目录/临时目录/用户主目录；`file-db-upload-dir` 必须落在白名单内，否则上传成功也建不了连。
+- **落盘目录**：`driver-jar-dir` / `file-db-upload-dir` 放持久磁盘（默认已在工作目录 `data/` 下），不要指向会被系统清理的临时目录——台账里记着 jar/库文件路径，目录被清后数据源就连不上了；关注磁盘配额，单个文件上限默认 64MB，可按需调大。
+- **超时预算**：`connect-timeout-seconds` 加重试次数要小于网关/前端超时；`query-timeout-seconds` 按最慢的报表 SQL 调整，`0 = 不设上限`在共享库上慎用（失控 SQL 会挂死请求直到网关超时）。
+- **调度依赖宿主**：本模块没有 `@EnableScheduling`；指标采集（60s）、连接清扫（60s）、nginx 采集（30s）、操作日志清理（04:40）是否运行取决于宿主是否开启调度。
+- **`connection-sweep-interval-ms` 暂不生效**：清扫节拍当前写死 60s；要调空闲连接回收速度用 `connection-ttl-minutes`。
+- **`monitor.db.tx.*` 不是 yaml**：事务会话的 `idleTimeoutMinutes`/`maxSessions` 是 JVM 系统属性，用 `-Dmonitor.db.tx.idleTimeoutMinutes=10 -Dmonitor.db.tx.maxSessions=8` 传入。
+- **指标历史按订阅产生**：「有人看才采」，无人订阅不产生探测流量；要长期历史曲线就保持订阅或由外部系统定期拉取。
 
 ## 6. 使用方式
 

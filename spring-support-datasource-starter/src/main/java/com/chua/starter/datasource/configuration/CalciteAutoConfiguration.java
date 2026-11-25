@@ -139,13 +139,14 @@ public class CalciteAutoConfiguration {
     }
 
     /**
-     * 注册自定义 Bean 名为规范 Bean 的别名（规范名本身或同名 Bean 定义已存在时跳过）。
+     * 注册自定义 Bean 名为规范 Bean 的别名（规范名本身、同名 Bean 定义或已被其它 Bean 占用的别名均跳过）。
      *
      * @param registry Bean 工厂
      * @param alias    自定义别名
      */
     private static void registerAliasQuietly(ConfigurableListableBeanFactory registry, String alias) {
-        if (CANONICAL_BEAN_NAME.equals(alias) || registry.containsBeanDefinition(alias)) {
+        if (CANONICAL_BEAN_NAME.equals(alias) || registry.containsBeanDefinition(alias)
+                || (registry instanceof org.springframework.core.AliasRegistry aliasRegistry && aliasRegistry.isAlias(alias))) {
             return;
         }
         try {

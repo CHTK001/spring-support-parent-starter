@@ -132,6 +132,157 @@ plugin:
     redis: { ttl: 1800, key-prefix: "cache:" }
 ```
 
+### 5.1 逐项配置示例（按功能分组）
+
+每项含义、默认值与 YAML 示例如下；默认值逐项来自源码 `CacheProperties` 字段初始化，「声明项」表示字段存在但当前无消费方、配置不生效。
+
+#### 总开关与层级
+
+| 配置项 | 类型 | 默认值 | 含义 |
+|---|---|---|---|
+| `plugin.cache.enabled` | `boolean` | `false` | 多级缓存总开关，必须显式开启 |
+| `plugin.cache.levels` | `List<String>` | `[caffeine, redis]` | 层级读取顺序，越靠前越接近调用方；`caffeine`/`redis` 映射到下方 Bean 名，其余值按 Bean 名大写匹配 |
+| `plugin.cache.caffeine-bean` | `String` | `caffeineCacheManager` | 本地层 `CacheManager` Bean 名 |
+| `plugin.cache.redis-bean` | `String` | `redisCacheManager` | 分布式层 `CacheManager` Bean 名 |
+
+```yaml
+plugin:
+  cache:
+    enabled: true
+    levels: [caffeine, redis]
+    caffeine-bean: caffeineCacheManager
+    redis-bean: redisCacheManager
+```
+
+#### 空值策略
+
+| 配置项 | 类型 | 默认值 | 含义 |
+|---|---|---|---|
+| `plugin.cache.cache-null-values` | `boolean` | `false` | 是否缓存空值占位符（防穿透）；同时作用于 Caffeine `allowNullValues`、Redis `disableCachingNullValues` 与 `MultiLevelCache` 空值占位符；关闭时 `null` 结果不落缓存 |
+| `plugin.cache.null-value-ttl` | `long` | `60` | 声明项，不生效；空值占位符实际跟随各层自身 TTL |
+
+```yaml
+plugin:
+  cache:
+    cache-null-values: false
+```
+
+#### Caffeine 本地层
+
+| 配置项 | 类型 | 默认值 | 含义 |
+|---|---|---|---|
+| `plugin.cache.caffeine.initial-capacity` | `int` | `256` | 初始容量 |
+| `plugin.cache.caffeine.maximum-size` | `long` | `10000` | 最大条目数（Caffeine `maximumSize`） |
+| `plugin.cache.caffeine.expire-after-write` | `long` | `300` | 写入后过期（秒）；`<=0` 不设置 |
+| `plugin.cache.caffeine.expire-after-access` | `long` | `0` | 访问后过期（秒）；`<=0` 不设置 |
+| `plugin.cache.caffeine.record-stats` | `boolean` | `true` | Caffeine `recordStats()` |
+| `plugin.cache.caffeine.weak-keys` | `boolean` | `false` | 弱引用 Key |
+| `plugin.cache.caffeine.weak-values` | `boolean` | `false` | 弱引用 Value |
+
+```yaml
+plugin:
+  cache:
+    caffeine:
+      initial-capacity: 256
+      maximum-size: 10000
+      expire-after-write: 300
+      expire-after-access: 0
+      record-stats: true
+      weak-keys: false
+      weak-values: false
+```
+
+#### Redis 分布式层
+
+| 配置项 | 类型 | 默认值 | 含义 |
+|---|---|---|---|
+| `plugin.cache.redis.ttl` | `long` | `600` | 默认 TTL（秒）；`>0` 生效；`=-1` 永不过期；其它 `<=0` 跟随 Spring Data Redis 默认 |
+| `plugin.cache.redis.key-prefix` | `String` | `cache:` | 键前缀；`use-key-prefix=true` 时参与构建，最终前缀为「缓存名 + separator」 |
+| `plugin.cache.redis.separator` | `String` | `:` | 缓存名与键之间的分隔符 |
+| `plugin.cache.redis.use-key-prefix` | `boolean` | `true` | 是否启用键前缀策略 |
+| `plugin.cache.redis.serializer` | `String` | `jackson` | 声明项，不生效；实现固定为 `GenericJackson2JsonRedisSerializer(ObjectMapper)` |
+| `plugin.cache.redis.cache-null-values` | `boolean` | `false` | 声明项，不生效；以顶层 `cache-null-values` 为准 |
+
+```yaml
+plugin:
+  cache:
+    redis:
+      ttl: 1800
+      key-prefix: "cache:"
+      separator: ":"
+      use-key-prefix: true
+```
+
+#### 缓存键策略
+
+| 配置项 | 类型 | 默认值 | 含义 |
+|---|---|---|---|
+| `plugin.cache.key.prefix` | `String` | `cache:` | 业务键统一前缀 |
+| `plugin.cache.key.separator` | `String` | `:` | 声明项，不生效；键拼接固定使用 `:` |
+| `plugin.cache.key.with-application` | `boolean` | `true` | 键中追加应用名（`spring.application.name`，缺省 `app`） |
+| `plugin.cache.key.with-platform` | `boolean` | `true` | 键中追加平台名（`plugin.api.platform.platform-name`，缺省 `default`） |
+| `plugin.cache.key.with-tenant` | `boolean` | `true` | 键中追加租户 ID（`TenantIdProvider` 提供，缺省 `0`） |
+
+```yaml
+plugin:
+  cache:
+    key:
+      prefix: "cache:"
+      with-application: true
+      with-platform: true
+      with-tenant: true
+```
+
+#### 声明项汇总（当前版本配置不生效）
+
+`plugin.cache.expires`（按缓存名细化 TTL，默认空 Map）、`plugin.cache.null-value-ttl`、`plugin.cache.record-stats`（顶层；Caffeine 层请配 `plugin.cache.caffeine.record-stats`）、`plugin.cache.redis.serializer`、`plugin.cache.redis.cache-null-values`、`plugin.cache.key.separator`。这些字段存在于 `CacheProperties`，但源码中无消费方；需要对应能力时须自行定义 `CacheManager` / 键生成逻辑。
+
+### 5.2 生产级完整 YAML 示例
+
+```yaml
+spring:
+  application:
+    name: order-service              # 进入缓存键（key.with-application=true 时）
+  data:
+    redis:                           # Redis 层需宿主自行引入 spring-boot-starter-data-redis
+      host: your-redis-host          # 占位符，替换为真实地址
+      port: 6379
+      password: your-password        # 占位符，替换为真实口令（建议走配置中心/密钥管理）
+
+plugin:
+  cache:
+    enabled: true
+    levels: [caffeine, redis]
+    cache-null-values: false         # 不缓存空值；若要防穿透改 true（注意清理策略）
+    caffeine:                        # L1：短 TTL，控制跨实例脏读窗口
+      initial-capacity: 512
+      maximum-size: 50000
+      expire-after-write: 300
+      expire-after-access: 0
+      record-stats: true
+    redis:                           # L2：长 TTL，承载分布式容量
+      ttl: 1800
+      key-prefix: "cache:"
+      separator: ":"
+      use-key-prefix: true
+    key:
+      prefix: "cache:"
+      with-application: true
+      with-platform: true
+      with-tenant: true
+```
+
+### 5.3 生产注意事项
+
+- **跨实例脏读窗口**：写删只同步本实例看到的层级，没有跨实例 L1 失效广播——实例 A 写入后，实例 B 的 Caffeine 副本要等自己的 `expire-after-write` 到期。多实例部署时 L1 TTL 应远小于 L2 TTL，把脏读窗口压到业务可接受范围；需要强一致失效请自行叠加 Redis Pub/Sub 广播。
+- **L1 容量即堆占用**：`caffeine.maximum-size` × 平均条目大小 ≈ 本地缓存堆上限，按 JVM 堆余量给值，避免缓存挤占业务内存；`record-stats: true` 时可通过 `cacheTemplate.getStats()` 观测命中率与回填量。
+- **L2 序列化约束**：Redis 值固定走 Jackson（`GenericJackson2JsonRedisSerializer`），缓存对象需可被 Jackson 反序列化（保留默认构造器与可写字段）；要换序列化方案需自行覆盖 `redisCacheManager` Bean。
+- **写路径延迟**：`redisCacheManager` 已强制 `immediateWrites(true)` 同步写，`@CacheEvict`/写入会受 Redis RTT 影响；Redis 抖动会传导到写接口（单层异常会被隔离记录，不抛出）。
+- **空值防穿透的代价**：`cache-null-values: true` 会把空结果以占位符写入全部层级，注意配合层级 TTL 与按模式清理（`evictByPattern`）定期回收；`null-value-ttl` 当前不生效。
+- **键形态变更需清缓存**：完整键 = `key.prefix + 应用名 + 平台名 + 租户ID + 参数键`，调整 `key.*` 开关或前缀会让历史键全部失配（表现为「缓存突然全 miss」），变更前先清空相关缓存或安排双读过渡。
+- **别配声明项**：`expires`、`null-value-ttl`、顶层 `record-stats`、`redis.serializer`、`redis.cache-null-values`、`key.separator` 当前不生效，配置了也会被忽略，避免产生「已调优」错觉。
+- **自定义层级的注册时机**：`levels` 引用的 `CacheManager` Bean 必须在 `MultiLevelCacheManager#afterPropertiesSet` 之前完成注册，否则启动日志出现「未找到层级对应的 CacheManager」WARN 并跳过该层。
+
 ## 6. 使用方式
 
 ```xml

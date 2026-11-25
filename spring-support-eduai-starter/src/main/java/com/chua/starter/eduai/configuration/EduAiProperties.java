@@ -6,28 +6,47 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 教育 AI 模块配置。
  *
- * <p>对应 application.yml 中的 {@code plugin.eduai} 配置段：</p>
+ * <p>对应 application.yml 中的 {@code plugin.eduai} 配置段（各字段含义与默认值见嵌套类 Javadoc）：</p>
  * <pre>{@code
  * plugin:
  *   eduai:
  *     marking:
- *       async: true                # 是否异步阅卷
- *       timeout: 1800              # 单个任务总预算（秒），超时中止并释放队列
- *       call-timeout: 90           # 单次模型调用超时（秒），超时即失败重试
- *       max-score: 5               # 单题最大分（兜底）
+ *       async: true                  # 是否异步阅卷（默认 true）
+ *       timeout: 1800                # 单任务总预算（秒），运行时下限 30（默认 1800）
+ *       call-timeout: 90             # 单次模型调用超时（秒）（默认 90）
+ *       max-score: 5                 # 单题最大分兜底（默认 5）
+ *       wrong-score-rate: 0.6        # 判错阈值，0 = 仅 0 分算错（默认 0.6）
+ *       image-dir: ./data/marking    # 扫描图片持久化目录（默认 ./data/marking）
+ *       resume-limit: 50             # 启动续跑未完成任务上限（默认 50）
+ *       max-concurrent: 1            # 后台并发任务上限（默认 1，建议保持串行）
+ *       grade-concurrency: 4         # 单任务判分调用并发，下限 1（默认 4）
+ *       preprocess: true             # 图片预处理（默认 true）
+ *       layout-correction: false     # ONNX 版面矫正（默认 false）
+ *       extract-strategy: whole      # 任意卷识别策略 whole/region（默认 whole）
+ *       submit-grace-seconds: 30     # 在线交卷宽限秒数（默认 30）
  *     paper:
- *       max-total-score: 100       # 试卷最高总分
- *       default-question-count: 20 # 默认题目数量
- *       default-score-per-question: 5
+ *       max-total-score: 100         # 试卷最高总分（默认 100）
+ *       default-question-count: 20   # 默认题目数量（默认 20）
+ *       default-score-per-question: 5 # 默认每题分值（默认 5）
  *     knowledge:
- *       vector-dim: 768            # 向量维度
+ *       vector-dim: 768              # 向量维度（默认 768，当前主代码无读取点）
  *     ai:
- *       provider: openai           # AI 服务商
- *       model: gpt-3.5-turbo
- *       temperature: 0.3
- *       enabled: true              # 关闭后回退到字符串匹配
+ *       enabled: true                # 关闭后回退到本地启发式（默认 true）
+ *       provider: your-provider      # AI 服务商（当前未读取，占位声明）
+ *       model: your-model            # 模型名（当前未读取，占位声明）
+ *       temperature: 0.3             # 温度参数（默认 0.3，当前未读取）
+ *       retry:
+ *         times: 5                   # 最大重试次数，0 = 不重试（默认 5）
+ *         backoff-millis: 1000       # 初始退避毫秒（默认 1000）
+ *         backoff-multiplier: 2.0    # 退避倍数，<=1 按 2 处理（默认 2.0）
+ *         max-backoff-millis: 20000  # 退避上限毫秒，<=0 按 15000 处理（默认 20000）
+ *         retry-on-transient: true   # 除限流 429 外重试瞬时故障（默认 true）
+ *     alert:                         # 顶层字段：前缀是 plugin.eduai.alert，不在 ai 之下
+ *       enabled: true                # 是否启用重试耗尽告警（默认 false）
+ *       webhook-url: https://your-webhook.example.com/eduai-alert
+ *       timeout-millis: 5000         # 告警 HTTP 超时毫秒，<=0 按 5000 处理（默认 5000）
  *     collect:
- *       default-cron: 0 0/30 * * * ?  # 采集任务未填 Cron 时的默认调度周期
+ *       default-cron: "0 */30 * * * ?"  # 采集默认调度周期（当前未读取，兼容声明）
  * }</pre>
  *
  * @since 4.0.0.42
@@ -38,45 +57,88 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class EduAiProperties {
 
     /**
-     * 阅卷配置
+     * 阅卷配置。
+     *
+     * <p>默认 {@code new Marking()}（各字段默认值见 {@link Marking}）。
+     * YAML 前缀：{@code plugin.eduai.marking.*}。</p>
      */
     private Marking marking = new Marking();
 
     /**
-     * 组卷配置
+     * 组卷配置。
+     *
+     * <p>默认 {@code new Paper()}（各字段默认值见 {@link Paper}）。
+     * YAML 前缀：{@code plugin.eduai.paper.*}。</p>
      */
     private Paper paper = new Paper();
 
     /**
-     * 知识库配置
+     * 知识库配置。
+     *
+     * <p>默认 {@code new Knowledge()}（各字段默认值见 {@link Knowledge}）。
+     * YAML 前缀：{@code plugin.eduai.knowledge.*}。</p>
      */
     private Knowledge knowledge = new Knowledge();
 
     /**
-     * AI 引擎配置
+     * AI 引擎配置。
+     *
+     * <p>默认 {@code new Ai()}（各字段默认值见 {@link Ai}）。
+     * YAML 前缀：{@code plugin.eduai.ai.*}。</p>
      */
     private Ai ai = new Ai();
 
     /**
-     * 题库采集配置
+     * 题库采集配置。
+     *
+     * <p>默认 {@code new Collect()}（各字段默认值见 {@link Collect}）。
+     * YAML 前缀：{@code plugin.eduai.collect.*}；当前主代码无读取点（采集已收敛到 collect-starter）。</p>
      */
     private Collect collect = new Collect();
 
     /**
-     * AI 调用失败告警配置
+     * AI 调用失败告警配置。
+     *
+     * <p>默认 {@code new Alert()}（默认关闭；各字段默认值见 {@link Alert}）。
+     * YAML 前缀：{@code plugin.eduai.alert.*}（注意是顶层字段，不在 {@code ai} 之下）。</p>
      */
     private Alert alert = new Alert();
 
     @Data
     /**
-     * Marking类。
+     * 阅卷配置（{@code plugin.eduai.marking.*}）。
+     *
+     * <p>覆盖手工提交、扫描识别、AI 判分、错题归档与启动续跑等行为；
+     * 其中 {@code call-timeout}/{@code preprocess}/{@code layout-correction}/{@code extract-strategy}
+     * 会经 {@code EduAiAutoConfiguration#paperPipelineProperties} 映射给 ai-starter 扫描管线。</p>
+     *
+     * <pre>{@code
+     * plugin:
+     *   eduai:
+     *     marking:
+     *       async: true                  # 手工提交是否异步阅卷（默认 true）
+     *       timeout: 1800                # 单任务总预算（秒），下限 30（默认 1800）
+     *       call-timeout: 90             # 单次模型调用超时（秒）（默认 90）
+     *       max-score: 5                 # 单题最大分兜底（默认 5）
+     *       wrong-score-rate: 0.6        # 判错阈值，0 = 仅 0 分算错（默认 0.6）
+     *       image-dir: ./data/marking    # 扫描图片持久化目录（默认 ./data/marking）
+     *       resume-limit: 50             # 启动续跑未完成任务上限（默认 50）
+     *       max-concurrent: 1            # 后台并发任务上限（默认 1，建议保持串行）
+     *       grade-concurrency: 4         # 单任务判分调用并发，下限 1（默认 4）
+     *       preprocess: true             # 图片预处理（默认 true）
+     *       layout-correction: false     # ONNX 版面矫正（默认 false）
+     *       extract-strategy: whole      # 任意卷识别策略 whole/region（默认 whole）
+     *       submit-grace-seconds: 30     # 在线交卷宽限秒数（默认 30）
+     * }</pre>
      *
      * @author CH
      * @since 4.0.0
      */
     public static class Marking {
         /**
-         * 是否异步阅卷
+         * 是否异步阅卷。
+         *
+         * <p>默认 {@code true}。YAML：{@code plugin.eduai.marking.async: true}。</p>
          */
         private boolean async = true;
 
@@ -88,6 +150,9 @@ public class EduAiProperties {
          * 实测 18 题外来卷需要 1 次补题干 + 18 次判分共 19 次模型调用，跑到 17/18
          * 就被「处理超时（&gt;300s）」整任务判失败，最后一题永远拿不到分数。
          * 单次调用的上限见 {@link #callTimeout}。</p>
+         *
+         * <p>默认 {@code 1800}；运行时下限 30 秒（{@code Math.max(30, timeout)}）。
+         * YAML：{@code plugin.eduai.marking.timeout: 1800}。</p>
          */
         // [P3C A20 豁免]
         private int timeout = 1800;
@@ -99,6 +164,8 @@ public class EduAiProperties {
          * 保证任何一次调用都不会无限挂住；任务总时长由 {@link #timeout} 兜底。
          * 默认 90 秒 —— 实测国产网关正常响应 5~30 秒，90 秒足够覆盖长题干，
          * 又能在网关静默挂死时较快失败并重试。</p>
+         *
+         * <p>默认 {@code 90}。YAML：{@code plugin.eduai.marking.call-timeout: 90}。</p>
          */
         // [P3C A20 豁免]
         private int callTimeout = 90;

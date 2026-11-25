@@ -153,8 +153,200 @@ sequenceDiagram
 | `chua.ai.cache.enabled` | boolean | `true` | AI 缓存自动配置开关 |
 | `chua.ai.actuator.enabled` | boolean | `true` | AI Actuator 端点开关（另需 Actuator 在 classpath） |
 | `plugin.ai.settings.<分组>.<字段>` | String | 无 | 部署级钦定覆盖层（`AiSettingsYamlProperties` 扫 Environment，非 `@ConfigurationProperties`）：命中即优先于用户覆盖与数据库；显式空串=强制清空，键空挂=视同未配置；只认 yaml / properties / `--` 命令行参数 |
+| `plugin.oauth.enable` | boolean | `true` | oauth 客户端总开关（与 oauth-client 的 `AuthClientConfiguration` 同键）；关闭后本模块 `OwnerAccountController` 一并跳过装配 |
+| `ai.usage.database.enabled` | boolean | `false` | `sys_ai_usage` 用量行 SPI 提供者（`SysAiUsageRowProvider`）开关，另需 `DataSource` 在 classpath |
 
 > 数据库设置 `sys_ai_global_setting`：分组由 `GlobalSettingProvider` 的 `@Spi` 实现声明，源码共 **25** 组（`runtime`、`session`、`image`、`ocr`、`face`、`layout`、`rag`、`paper`、`marking`、`compose`、`bot`、`asr`、`tts`、`search`、`memory`、`generate`、`input`、`input_suggest`、`global`、`channel_probe`、`detect`、`image_search`、`security`、`health`、`sim`）；`META-INF/extensions` 登记 24 行，其中 2 行（`ReidGlobalSettingProvider`、`ProtocolServerGlobalSettingProvider`）指向已删除类属失效登记，实际生效 **22** 组；`security` / `health` / `sim` 三组已实现未登记。取值链：YAML 钦定 > 用户覆盖（`sys_ai_user_setting`）> 全局默认（`sys_ai_global_setting`）> 代码默认。
+
+### 5.5 逐项配置示例（按功能分组）
+
+> 每组给出「含义 → 默认值 → YAML 示例」；可空字段留空即走默认。示例中 `${ENV_VAR:}` 均为环境变量占位，密钥不要写死在仓库配置里。
+
+#### （1）对话客户端 `plugin.ai.chat`
+
+含义：用 YAML 声明一个固定参数的对话客户端（Bean 名 `yamlChatClient`），便于按环境替换厂商与网关。
+默认值：`enabled` 默认 `false`，其余字段均可空（空值走实现类内置默认）。
+
+```yaml
+plugin:
+  ai:
+    chat:
+      enabled: true                                  # 默认 false；true 且 app-key 非空才装配客户端
+      provider: zhipu                                # openai / zhipu / glm / zai / siliconflow…；空按 OpenAI 兼容兜底
+      base-url: https://open.bigmodel.cn/api/paas/v4 # 空=厂商内置官方地址
+      app-key: ${AI_CHAT_APP_KEY:}                   # 访问密钥，空则不创建客户端
+      app-secret: ${AI_CHAT_APP_SECRET:}             # 部分厂商需要的 secret
+      model: glm-4-flash                             # 模型名
+      temperature: 0.7                               # 采样温度
+      max-tokens: 4096                               # 单次最大生成 token 数
+      timeout-millis: 60000                          # 调用超时（毫秒）
+      auth-scheme: ""                                # 自定义鉴权方案
+      auth-header: ""                                # 自定义鉴权头名
+      auth-prefix: "Bearer "                         # 鉴权头前缀
+      proxy: ""                                      # 代理地址
+```
+
+#### （2）内容生成 `plugin.ai.generate`
+
+含义：文生图 / 文生视频任务的默认提供者、凭据与出参尺寸 / 时长。
+默认值：`enabled`（装配开关，非 `AiProperties` 绑定字段）默认 `true`；`image.provider` / `video.provider` 默认 `openai`，`image.model` 默认 `dall-e-3`，`video.model` 默认 `sora`，`image.width` / `image.height` 默认 `1024`，`video.duration` 默认 `5`；凭据与地址默认未配置。
+
+```yaml
+plugin:
+  ai:
+    generate:
+      enabled: true                # 生成模块装配开关（AiGenerateAutoConfiguration）
+      image:
+        provider: openai
+        api-key: ${IMAGE_API_KEY:}
+        base-url: ""               # 可空
+        model: dall-e-3
+        width: 1024
+        height: 1024
+      video:
+        provider: openai
+        api-key: ${VIDEO_API_KEY:}
+        base-url: ""               # 可空
+        model: sora
+        duration: 5                # 秒
+```
+
+#### （3）RAG 知识库 `plugin.ai.rag`
+
+含义：RAG 管线的引擎、向量存储、切片与召回默认值；运行期还会被设置分组 `rag` 的用户 / 部署配置接管。
+默认值：全部有代码默认（见注释）。
+
+```yaml
+plugin:
+  ai:
+    rag:
+      enabled: true                       # 默认 true
+      embedding-engine: memory            # 向量化引擎：memory / openai / siliconflow…，默认 memory
+      vector-storage: jvector             # 向量存储：jvector / milvus / memory；默认 jvector，缺 native 依赖自动降级内存
+      embedding-dimensions: 1536          # 向量维度，默认 1536
+      chunk-size: 1000                    # 文本切片大小（字符），默认 1000
+      chunk-overlap: 200                  # 文本切片重叠（字符），默认 200
+      default-top-k: 5                    # 默认召回 Top-K，默认 5
+      default-similarity-threshold: 0.7   # 默认相似度阈值，默认 0.7
+      upload-dir: ./rag-uploads           # 上传目录，默认 ./rag-uploads
+```
+
+#### （4）默认模型 `plugin.ai.default-model`
+
+含义：给 33 个能力键配「页面（DB）未配置时的 yaml 兜底模型」；优先级 页面（DB）> yaml。值格式为 `模型名` 或 `providerId:modelName`。
+默认值：全部未配置（null）。
+
+```yaml
+plugin:
+  ai:
+    default-model:
+      chat: zhipu:glm-4-flash                 # 对话
+      title-summary: zhipu:glm-4-flash        # 标题总结
+      history-compression: zhipu:glm-4-flash  # 历史压缩
+      translation: zhipu:glm-4-flash          # 翻译
+      rag-embedding: bge-large-zh             # RAG 嵌入
+      rerank: bge-reranker-base               # 重排序
+      text-to-image: dall-e-3                 # 文生图
+      text-to-video: sora                     # 文生视频
+      ocr-recognize: onnx:paddleocrv6-rec     # OCR 识别
+      # 其余能力键（visual-assistant / feature / image-* / ocr-* / layout / face-*
+      # / liveness / eye-detect / smile-detect / pedestrian / plate-* / depth…）同形
+```
+
+#### （5）设置覆盖层 `plugin.ai.settings.<分组>.<字段>`
+
+含义：部署级钦定覆盖，命中即优先于「用户覆盖」与「数据库默认」；改 yaml 重启即生效，同名键在设置页的修改不生效。组 / 字段与 `sys_ai_global_setting` 同名。
+默认值：无（键值对形式）。键空挂（有键无值）= 未配置；显式空串 = 强制清空。
+
+```yaml
+plugin:
+  ai:
+    settings:
+      layout:
+        layout-threshold: "0.42"               # 等价于库字段 layout_threshold
+        layout-model: "onnx:pp-doc-layout"     # 等价于库字段 layout_model
+      ocr:
+        recognizer-model: "onnx:paddleocrv6-rec"
+```
+
+#### （6）开关类
+
+含义：各自动装配模块的总开关与运行模式。
+默认值：`plugin.ai.usage.enabled` / `chua.ai.cache.enabled` / `chua.ai.actuator.enabled` / `plugin.oauth.enable` 默认开启；`plugin.protocol.enable` / `ai.usage.database.enabled` 默认关闭。
+
+```yaml
+plugin:
+  ai:
+    usage:
+      enabled: true              # 用量模块，默认 true（另需 SysAiUsageMapper 在 classpath）
+    security:
+      rate-limit-store: local    # 限流存储 local（默认）/ redis；无 Redis 模板回落 local
+  protocol:
+    enable: false                # 协议网关部署级开关，默认 false；另需设置表 runtime.protocol_server_enabled=true
+oauth:
+  enable: true                   # oauth 客户端总开关，默认 true
+
+chua:
+  ai:
+    cache:
+      enabled: true              # AI 缓存自动配置，默认 true
+    actuator:
+      enabled: true              # /actuator/ai-* 只读端点，默认 true（另需 actuator 在 classpath）
+
+ai:
+  usage:
+    database:
+      enabled: false             # sys_ai_usage 用量行 SPI 提供者，默认 false
+```
+
+### 5.6 完整 YAML 示例（生产参考）
+
+一份可直接改环境变量后使用的骨架配置；按需裁剪，未列出的键全部走默认值：
+
+```yaml
+plugin:
+  ai:
+    chat:                        # 对话客户端（渠道数据走 account-starter 时可不配）
+      enabled: true
+      provider: zhipu
+      base-url: https://open.bigmodel.cn/api/paas/v4
+      app-key: ${AI_CHAT_APP_KEY:change-me}
+      model: glm-4-flash
+      timeout-millis: 60000
+    generate:                    # 文生图 / 文生视频
+      enabled: true
+      image:
+        provider: openai
+        api-key: ${IMAGE_API_KEY:change-me}
+        model: dall-e-3
+      video:
+        provider: openai
+        api-key: ${VIDEO_API_KEY:change-me}
+        model: sora
+        duration: 5
+    rag:                         # 知识库
+      enabled: true
+      embedding-engine: memory
+      vector-storage: jvector
+      default-top-k: 5
+      upload-dir: /data/rag-uploads
+    default-model:               # 页面未配置时的兜底模型
+      chat: zhipu:glm-4-flash
+      rag-embedding: bge-large-zh
+    usage:
+      enabled: true              # 用量记录与日聚合
+    security:
+      rate-limit-store: redis    # 多实例部署用 redis；单机可省略（默认 local）
+  protocol:
+    enable: false                # 多协议网关；开启还需设置表 runtime.protocol_server_enabled=true
+
+chua:
+  ai:
+    cache:
+      enabled: true              # AI 缓存（本地 Caffeine + Redis）
+    actuator:
+      enabled: true              # /actuator/ai-* 观测端点
+```
 
 ## 6. 使用方式
 
@@ -248,3 +440,16 @@ AiChatResult result = chatFacade.callForResult(req);
 2. **`plugin.ai.chat` 配了却不生效？** 该前缀默认 `enabled=false`，且 `app-key` 为空时同样不创建 `yamlChatClient`（避免「显示可用、调用必 401」）。两条件都满足才装配，缺密钥时启动日志会打 WARN。
 3. **协议端点开了却 404？** 要两级开关同时为真：`plugin.protocol.enable=true`（YAML，重启生效）**且** `runtime.protocol_server_enabled=true`（设置表）。过滤器在启动时装配，运行期改设置不会摘掉已注册端点。
 4. **Spring Boot 4 / 依赖兼容注意什么？** 本模块按 Boot 4 适配：MyBatis 用 `mybatis-plus-spring-boot4-starter`；`r2dbc-spi` 锁定 0.9.1（防 BOM 升到 1.0.x 移除 `ConnectionFactoryOptions`）；Spring Data Redis 4.x 缓存写需 `immediateWrites(true)`（否则失效不下发 DEL，改配置读到旧值）。Redis 连不上可降级运行，代价是多实例不共享缓存失效。
+
+## 10. 生产注意事项
+
+- **MySQL 是硬前提**：`AiConfiguration` 无条件扫描 `sys_ai_*` Mapper，缺库启动失败；表结构由 `db/init/V7.5__init_all_ai.sql` 幂等初始化，不要手工导库。
+- **Redis 可降级、多实例必配**：缓存读写异常会降级 WARN 并回源 DB（单实例可带病运行）；多实例必须共享 Redis，否则配置热更新的缓存失效不下发，会读到旧值。
+- **密钥一律占位注入**：`app-key` / `api-key` 用 `${ENV_VAR:}` 形式从环境变量注入，仓库里只留 `change-me` 类占位符；密钥写进配置文件等于写进 git 历史。
+- **`plugin.ai.chat` 是双条件装配**：`enabled=true` 且 `app-key` 非空才创建 `yamlChatClient`；只开开关不给密钥不会起客户端（避免「显示可用、调用必 401」）。
+- **协议网关是双开关**：`plugin.protocol.enable=true`（yaml，重启生效）+ 设置表 `runtime.protocol_server_enabled=true` 同时满足；过滤器在启动期装配，运行期改设置不会摘除已注册端点。
+- **`plugin.ai.settings.*` 优先级最高**：yaml 钦定键会压住设置页与用户覆盖；升级或交接时先盘点 yaml 里残留的钦定键，避免「设置页改了不生效」的排查弯路。
+- **`ai-starter.yml` 不要改名成 `application.yml`**：类路径首匹配会顶掉宿主配置；独立启动固定 8787 端口，构建可执行包用 `-Dspring-boot.repackage.skip=false`。
+- **ONNX 模型权重按需引入**：`utils-support-models-onnx-*` 刻意不传递依赖；缺模型的能力报「未配置」，不影响其它能力启动。
+- **`aiCacheManager` 未标 `@Primary`**：注入缓存请按名引用（`@Qualifier("aiCacheManager")`），避免与宿主缓存管理器产生歧义。
+- **Actuator 端点只读**：`/actuator/ai-config`、`/actuator/ai-models`、`/actuator/ai-beans`、`/actuator/ai-cache` 仅用于观测，不要接自动化写操作。

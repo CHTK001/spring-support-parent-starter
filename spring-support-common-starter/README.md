@@ -10,15 +10,15 @@ Spring Boot 通用支撑 Starter：为宿主应用提供 Web 统一响应与全�
 </dependency>
 ```
 
-装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 21 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 17 处 `@ConfigurationProperties` 承担。源码分布在两个包根：`com.chua.starter.common.support`（主包：Web / API / 安全 / 日志 / 渠道契约等）与 `com.chua.common.starter.support`、`com.chua.common.support`、`com.chua.mysql.support`、`com.chua.sharding.v5`、`com.chua.spring.support`（次级根：IP 质量、对象结构、物化路由、binlog、分片、Spring 桥接），完整清单见文末「附录：包结构速览」。本模块依赖底层 `utils-support-common-starter`——它是**纯 Java 工具模块，不是 Spring starter**；`@Spi` / `ServiceProvider` SPI 设施与 JSON/XML 门面、HTTP 执行器、类型转换、表达式解析等底层契约均来自该模块，本模块只做 Spring 侧桥接与复用。
+装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 16 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 18 处 `@ConfigurationProperties` 承担（本模块 14 处，其余 4 处在传递依赖 `spring-support-logger-starter` 中）。源码分布在两个包根：`com.chua.starter.common.support`（主包：Web / API / 安全 / 日志 / 渠道契约等）与 `com.chua.common.starter.support`、`com.chua.common.support`、`com.chua.mysql.support`、`com.chua.sharding.v5`、`com.chua.spring.support`（次级根：IP 质量、对象结构、物化路由、binlog、分片、Spring 桥接），完整清单见文末「附录：包结构速览」。本模块依赖底层 `utils-support-common-starter`——它是**纯 Java 工具模块，不是 Spring starter**；`@Spi` / `ServiceProvider` SPI 设施与 JSON/XML 门面、HTTP 执行器、类型转换、表达式解析等底层契约均来自该模块，本模块只做 Spring 侧桥接与复用。
 
 ## 一、整体架构
 
-模块按「装配层 → 组件层 → 契约/支撑层」组织：装配层由 21 个自动配置类按条件装配；组件层是注册进 Servlet 容器与 MVC 的过滤器、拦截器、Advice、转换器；契约/支撑层提供配置绑定、SPI、`ServiceInfoRegistry`、全局环境，以及供 account / ai 等业务模块实现或消费的渠道契约接口。其中 `ServiceInfoContributorAutoConfiguration` 在 `ContextRefreshedEvent` 时收集容器内所有 `ServiceInfoContributor`，统一写入 `ServiceInfoRegistry`。
+模块按「装配层 → 组件层 → 契约/支撑层」组织：装配层由 16 个自动配置类按条件装配；组件层是注册进 Servlet 容器与 MVC 的过滤器、拦截器、Advice、转换器；契约/支撑层提供配置绑定、SPI、`ServiceInfoRegistry`、全局环境，以及供 account / ai 等业务模块实现或消费的渠道契约接口。其中 `ServiceInfoContributorAutoConfiguration` 在 `ContextRefreshedEvent` 时收集容器内所有 `ServiceInfoContributor`，统一写入 `ServiceInfoRegistry`。
 
 ```mermaid
 graph TB
-    HOST["宿主 Spring Boot 应用"] --> AUTO["AutoConfiguration.imports：21 个自动配置类"]
+    HOST["宿主 Spring Boot 应用"] --> AUTO["AutoConfiguration.imports：16 个自动配置类"]
     AUTO --> WEB["Web 基础：MessageConverterWebMvcConfigurer / ResourceWebMvcConfigurer<br/>TypeConverterRegisterConfiguration / JacksonConfiguration / ProjectConfiguration"]
     AUTO --> APIC["API 治理：ApiConfiguration / ApiFilterConfiguration / ApiCorsConfiguration<br/>PermissionControlConfiguration / ApiFeatureConfiguration"]
     AUTO --> SEC["安全加固：NonceXhrFilter / RequestFingerprintAutoConfiguration<br/>ActuatorConfiguration / ServiceInfoAuthenticationFilter"]
@@ -30,7 +30,7 @@ graph TB
     SEC --> LAYER
     OBS --> REG["ServiceInfoRegistry：开关与端点汇聚 / 启动横幅"]
     ASY --> POOL["asyncExecutor / sharedThreadPoolTaskExecutor / CaptchaProvider"]
-    LAYER --> PROPS["plugin.* 配置绑定（17 处 @ConfigurationProperties）"]
+    LAYER --> PROPS["plugin.* 配置绑定（18 处 @ConfigurationProperties）"]
     REG --> PROPS
     POOL --> PROPS
 ```
@@ -167,13 +167,16 @@ flowchart LR
 | `plugin.api.platform.enable` / `platform.name` | `true` / `SYSTEM` | `@ApiPlatform` 平台标识 |
 | `plugin.api.permission.enable` | `true` | `@Permission` 拦截器 |
 | `plugin.api.internal.enable` | `true` | `@ApiInternal` 内部接口 |
+| `plugin.api.internal.global-allowed-ips` / `global-allowed-services` | `[]` | 内部接口全局 IP / 服务白名单 |
 | `plugin.api.deprecated.enable` / `add-warning-header` | `true` / `true` | 弃用告警与响应头 |
 | `plugin.api.gray.enable` / `header-name` / `default-percentage` | `true` / `X-Gray-Hit` / `0` | 灰度发布 |
+| `plugin.api.gray.global-users` / `global-ips` / `global-roles` | `[]` | 全局灰度白名单（用户 / IP / 角色，始终进入灰度） |
 | `plugin.api.feature.enable` / `feature.path` | `false` / `/api/features` | 功能开关目录端点 |
 | `plugin.api.spi.enable` | `true` | SPI 短名映射 |
 | `plugin.api.mock.enable` / `profiles` | `false` / `dev,test` | Mock 模式与生效环境 |
 | `plugin.api.encode.enable` / `codec-type` / `white-list` | `false` / `aes` / `[]` | 响应加密 |
 | `plugin.api.decode.enable` / `reject-on-decode-failure` | `false` / `false` | 请求解密与失败拒绝 |
+| `plugin.api.decode.codec-request-key` / `keylog-key-file` | 无 | 请求解密密钥 / keylog 长期密钥文件（同机多服务可共用） |
 | `plugin.api.cors.enable` | `false` | 跨域与安全响应头总开关（`ApiCorsConfiguration` 为 `matchIfMissing=true`，未配置也会装配，但来源白名单为空时不放行任何跨域） |
 | `plugin.api.cors.allowed-origins` / `pattern` | `[]` / `[]` | 来源白名单（空=不放行）/ 路径匹配（空=`/**`） |
 | `plugin.api.cors.allow-credentials` | `false` | 携带凭证（必须配好来源白名单） |
@@ -213,9 +216,309 @@ flowchart LR
 
 > 渠道契约（`channel` 包）、物化路由、binlog、Sharding、幂等模板、隧道支撑、IP 质量等能力**没有装配开关**：契约接口不参与自动装配，策略类由使用方直接实例化或经 SPI 发现。
 
+### 8.1 分组配置示例
+
+以下按能力分组给出逐项示例，注释标出默认值与注意点；全部键名均可在对应 `*Properties` 配置类中找到对应字段。
+
+**API 治理（`plugin.api.*`）**
+
+```yaml
+plugin:
+  api:
+    uniform: true                    # 统一响应封装（默认 true）
+    # ignore-format-packages:        # 不参与统一响应包装的包（默认未设置）
+    #   - com.example.legacy
+    version:
+      enable: true                   # @ApiVersion 版本路由与 x-response-version 头（默认 true）
+    platform:
+      enable: true                   # @ApiPlatform 平台标识（默认 true）
+      name: SYSTEM                   # SYSTEM / TENANT / MONITOR（默认 SYSTEM）
+      # alias-name: 自定义平台别名    # 覆盖默认平台名展示
+    permission:
+      enable: true                   # @Permission 权限拦截器（默认 true）
+    internal:
+      enable: true                   # @ApiInternal 内部接口（默认 true）
+      global-allowed-ips: []         # 内部接口全局 IP 白名单（默认空）
+      global-allowed-services: []    # 内部接口全局服务白名单（默认空）
+    deprecated:
+      enable: true                   # @Deprecated 弃用告警（默认 true）
+      add-warning-header: true       # 追加 Warning 响应头（默认 true）
+    gray:
+      enable: true                   # 灰度发布（默认 true）
+      header-name: X-Gray-Hit        # 命中灰度时写入的响应头（默认 X-Gray-Hit）
+      default-percentage: 0          # 默认灰度放量百分比（默认 0）
+      global-users: []               # 全局灰度用户白名单（始终命中，默认空）
+      global-ips: []                 # 全局灰度 IP 白名单（默认空）
+      global-roles: []               # 全局灰度角色白名单（默认空）
+    feature:
+      enable: false                  # 功能开关目录端点（默认 false）
+      path: /api/features            # 端点路径（默认 /api/features）
+    spi:
+      enable: true                   # SPI 短名映射（默认 true）
+      # mapping:                     # 短名 -> 实现名映射（默认空）
+      #   sms: aliSmsService
+    mock:
+      enable: false                  # Mock 模式（默认 false，仅建议 dev/test 开启）
+      profiles: dev,test             # Mock 生效的 profiles（默认 dev,test）
+    encode:
+      enable: false                  # 响应加密（默认 false）
+      response-enable: false         # 响应加密二级开关（默认 false）
+      codec-type: aes                # 加密算法（默认 aes）
+      white-list: []                 # 不加密的路径白名单（默认空）
+    decode:
+      enable: false                  # 请求解密（默认 false）
+      codec-type: aes                # 解密算法（默认 aes）
+      codec-request-key: ""          # 请求解密密钥（生产从环境变量/配置中心注入）
+      keylog-key-file: ""            # keylog 长期密钥文件（同机多服务可共用）
+      reject-on-decode-failure: false  # 解密失败是否拒绝请求（默认 false）
+      white-list: []                 # 不解密的路径白名单（默认空）
+```
+
+**安全加固（`plugin.security.*` / `plugin.actuator.*` / `plugin.nonce.*` / `plugin.api.cors.*` / `plugin.api.security.header.*`）**
+
+```yaml
+plugin:
+  security:
+    fingerprint:
+      enabled: true                  # 请求指纹防重放（默认 false，需显式开启；过滤器恒注册，关闭时直通）
+      algorithm: SHA-256             # sha256 / sha1 / md5 / murmur3_32 / murmur3_128（默认 SHA-256，无法识别回退 murmur3_128）
+      salt: ""                       # 指纹盐值（默认空）
+      include-params: true           # 查询参数参与指纹（默认 true）
+      include-headers: []            # 参与指纹的请求头集合（默认空）
+      include-body: false            # 请求体参与指纹（默认 false）
+      include-body-max-bytes: 1048576  # 参与指纹的请求体上限（默认 1MB）
+      body-methods: [ "POST", "PUT", "PATCH" ]  # 读取请求体的方法（默认 POST/PUT/PATCH）
+      validity-ms: 60000             # 指纹缓存有效期毫秒（默认 60000）
+      reject-duplicate: true         # 重复请求返回 409（默认 false）
+  actuator:
+    enable: true                     # Actuator 加固配置类总开关（字段默认 false，装配条件 matchIfMissing=true）
+    enable-auth: true                # /actuator/* Basic 认证（默认 false，需显式开启）
+    username: actuator               # 认证用户名（默认空）
+    password: "${ACTUATOR_PASSWORD:change-me}"  # 认证密码（默认空，生产用环境变量注入）
+    ip-whitelist: [ "127.0.0.1", "192.168.50.0/24" ]  # IP 白名单，支持 CIDR（默认空）
+    exclude-paths: []                # 不做认证的路径（默认空）
+  nonce:
+    sign:
+      secret-key: "${NONCE_SIGN_SECRET:change-me}"  # 与前端 secretKey 一致；回退环境变量 PLUGIN_NONCE_SIGN_SECRET_KEY、前缀 nonce.sign
+  api:
+    cors:
+      enable: true                   # 跨域总开关（默认 false；配置类 matchIfMissing=true，白名单为空时不放行任何跨域）
+      allowed-origins:               # 来源白名单（空=不放行；禁止 "*"，支持端口通配 http://192.168.50.*:8096）
+        - "https://console.example.com"
+      pattern: [ "/**" ]             # 生效路径（空=/**）
+      allow-credentials: true        # 携带凭证（必须与来源白名单成对配置）
+    security:
+      header:
+        enable: true                 # 安全头开关字段（须 cors.enable=true 才装配过滤器；字段值当前不参与运行时判断）
+        frame-options: SAMEORIGIN    # 默认 SAMEORIGIN（文件预览依赖 iframe，不用 DENY）
+        referrer-policy: strict-origin-when-cross-origin  # 默认值
+        permissions-policy: "camera=(), microphone=(), geolocation=()"  # 默认值
+        csp: ""                      # CSP 默认不输出；内联样式站点需评估后开启
+        hsts-enabled: false          # HSTS 默认关闭（http 部署开启会强制升级 https）
+        hsts-max-age-seconds: 31536000  # HSTS max-age（默认一年）
+```
+
+**可观测与 Web 基础（`plugin.log.*` / `plugin.service-info.*` / `plugin.jackson.*` / `plugin.message.*`）**
+
+```yaml
+plugin:
+  log:
+    enable: true                     # 参数日志过滤器（字段默认 true，装配 matchIfMissing=false，需显式 true）
+    open-interface-log: true         # 接口日志（默认 false）
+    slow-request-threshold-ms: 3000  # 慢请求告警阈值毫秒（默认 3000）
+    portal:
+      enabled: true                  # 链路日志汇聚总开关（默认 false）
+      file: ./logs/trace-portal.log  # 汇聚输出文件（默认 ./logs/trace-portal.log）
+      max-events-per-trace: 200      # 单链路最大事件数（默认 200）
+      idle-millis: 3000              # 链路空闲判定毫秒（默认 3000）
+      max-pending-traces: 512        # 待聚合链路上限（默认 512）
+  service-info:
+    enable: true                     # /service-info 端点与启动横幅（默认 true）
+    banner: true                     # 启动横幅（默认 true）
+    infrastructure: true             # 横幅展示 Redis/JDBC/Kafka 等连接信息（默认 true）
+    auth:
+      enable: false                  # 端点认证（默认 false）
+      username: admin                # 认证用户名（默认 admin）
+      password: "${SERVICE_INFO_PASSWORD:change-me}"  # 认证密码（默认空）
+  jackson:
+    include-null: false              # 是否输出 null 字段（默认 false；无装配开关，恒生效）
+  message:
+    enable: false                    # 消息转换增强展示开关（默认 false；配置类恒装配）
+    data-format: yyyy-MM-dd HH:mm:ss  # 日期格式（默认 yyyy-MM-dd HH:mm:ss）
+    open-desensitize: true           # 脱敏（默认 true）
+    open-crypto: true                # 加解密（默认 true）
+    # media-types:                   # 生效的媒体类型（默认 application/json、text/xml）
+    #   - application/json
+```
+
+**异步线程池（`plugin.async.*` / `plugin.thread.*`）**
+
+```yaml
+plugin:
+  async:
+    enable: true                     # 装配 asyncExecutor / sharedThreadPoolTaskExecutor（默认 true）
+  thread:
+    enable: false                    # 仅影响 /service-info 展示与环境登记；装配开关是 plugin.async.enable
+    core-pool-size: 20               # 核心线程数（默认 20）
+    max-pool-size: 200               # 最大线程数（默认 200）
+    queue-capacity: 100000           # 缓冲队列容量（默认 100000）
+    keep-alive-seconds: 10           # 非核心线程空闲存活秒数（默认 10）
+    wait-for-tasks-to-complete-on-shutdown: false  # 关闭时等待任务完成（默认 false）
+    await-termination-seconds: 60    # 关闭等待秒数，超时强制停止（默认 60）
+    thread-name-prefix: async-thread-pool-%d  # 线程名前缀（默认 async-thread-pool-%d）
+```
+
+**验证码（`plugin.captcha.*`）**
+
+```yaml
+plugin:
+  captcha:
+    enable: true                     # 图形验证码端点（字段默认 true，端点装配 matchIfMissing=false，需显式 true）
+    context-path: /v1/               # 验证码端点前缀（默认 /v1/）
+    type: SPEC                       # 验证码形态（默认 SPEC）
+    ttl: 120                         # 缓存过期秒数（默认 120）
+    length: 4                        # 字符长度（默认 4）
+    width: 120                       # 图片宽度（默认 120）
+    height: 36                       # 图片高度（默认 36）
+    font-name: Verdana               # 字体（默认 Verdana）
+    font-size: 20                    # 字号（默认 20）
+    external:
+      enable: false                  # 外部打码（默认 false；需 classpath 有 CaptchaParser）
+      provider: yescaptcha           # 打码提供者（默认 yescaptcha）
+      api-token: "${CAPTCHA_API_TOKEN:your-token}"  # 打码平台令牌（默认空，配置后才装配 Bean）
+      # api-url: 默认 YesCaptcha 官方地址，可覆盖
+      connect-timeout: 30000         # 连接超时毫秒（默认 30000）
+      read-timeout: 30000            # 读取超时毫秒（默认 30000）
+```
+
+**IP 归属地 / 邮件通知 / 可选端点（`plugin.ip.*` / `plugin.notice.*` / `plugin.optional.*`）**
+
+```yaml
+plugin:
+  ip:
+    enable: true                     # IP 归属地解析（默认 false）
+    database-file: classpath:qqwry.dat  # IP 库文件（默认 classpath:qqwry.dat）
+    ip-type: ip2region               # 解析实现（默认 ip2region）
+  notice:
+    enable: true                     # 邮件通知（默认 false）
+    email:
+      from: no-reply@example.com     # 发件人
+      smtp-host: smtp.qq.com         # SMTP 主机（默认 smtp.qq.com）
+      smtp-port: 25                  # SMTP 端口（默认 25）
+      ssl-smtp-port: "465"           # SSL 端口（默认 465）
+      password: "${SMTP_PASSWORD:your-auth-code}"  # SMTP 授权码
+  optional:
+    enable: true                     # /v1/option 端点（字段默认 true，端点装配 matchIfMissing=false，需显式 true）
+```
+
+### 8.2 生产级完整 YAML 示例
+
+```yaml
+# application-prod.yml —— spring-support-common-starter 生产基线示例
+# 密码/密钥一律走环境变量占位符，严禁明文入库；未列出的配置项保持默认值即可。
+plugin:
+  api:
+    uniform: true
+    version:
+      enable: true
+    permission:
+      enable: true
+    internal:
+      enable: true
+      global-allowed-ips: [ "192.168.50.0/24" ]   # 按部署网段收敛
+    deprecated:
+      enable: true
+    gray:
+      enable: true
+      default-percentage: 0        # 灰度放量走配置中心动态调整，基线不给流量
+    feature:
+      enable: false                # 功能目录端点默认不对公网暴露
+    mock:
+      enable: false                # 生产严禁开启 Mock
+    encode:
+      enable: true
+      codec-type: aes
+    decode:
+      enable: true
+      codec-type: aes
+      codec-request-key: "${CODEC_REQUEST_KEY:change-me}"
+      keylog-key-file: /etc/app/keys/codec-keylog.key
+      reject-on-decode-failure: true   # 生产建议失败即拒，避免明文旁路
+    cors:
+      enable: true
+      allowed-origins:
+        - "https://console.example.com"
+      allow-credentials: true
+    security:
+      header:
+        enable: true
+        hsts-enabled: true         # 仅在 HTTPS 部署下开启
+        hsts-max-age-seconds: 31536000
+  security:
+    fingerprint:
+      enabled: true
+      reject-duplicate: true
+      validity-ms: 60000
+  actuator:
+    enable: true
+    enable-auth: true
+    username: actuator
+    password: "${ACTUATOR_PASSWORD:change-me}"
+    ip-whitelist: [ "127.0.0.1", "192.168.50.0/24" ]
+  nonce:
+    sign:
+      secret-key: "${NONCE_SIGN_SECRET:change-me}"  # 与前端 secretKey 同源轮换
+  log:
+    enable: true
+    open-interface-log: true
+    slow-request-threshold-ms: 3000
+    portal:
+      enabled: true
+      file: /var/log/app/trace-portal.log
+  service-info:
+    enable: true
+    auth:
+      enable: true
+      username: ops
+      password: "${SERVICE_INFO_PASSWORD:change-me}"
+  async:
+    enable: true
+  thread:
+    enable: true
+    core-pool-size: 20
+    max-pool-size: 200
+    queue-capacity: 100000
+  captcha:
+    enable: true
+    ttl: 120
+  jackson:
+    include-null: false
+  ip:
+    enable: false                  # 无 IP 库依赖时保持关闭
+  notice:
+    enable: false                  # 邮件通道按需开启
+  optional:
+    enable: true
+```
+
+### 8.3 生产注意事项
+
+1. **显式开启清单**：`plugin.log.enable`、`plugin.captcha.enable`、`plugin.optional.enable`、`plugin.security.fingerprint.enabled`、`plugin.actuator.enable-auth` 的字段默认值与装配条件不一致（端点/过滤器为 `matchIfMissing=false`），不显式配置即不生效。
+2. **密钥管理**：`plugin.actuator.password`、`plugin.nonce.sign.secret-key`、`plugin.api.decode.codec-request-key`、`plugin.service-info.auth.password`、`plugin.notice.email.password`、`plugin.captcha.external.api-token` 一律走环境变量或配置中心注入，禁止明文写入仓库；Nonce 密钥需与前端保持一致并定期轮换；`keylog-key-file` 指向的长期密钥文件同机多服务可共用一份。
+3. **CORS**：`allowed-origins` 必须显式白名单，禁止填 `*`——Spring 的 `allowedOriginPatterns("*")` 会把请求 Origin 原样反射回响应头，配合 `allow-credentials=true` 等于任意网站都能带凭证读接口响应；`allow-credentials=true` 必须以白名单配置为前提。
+4. **安全响应头**：HSTS 仅在 HTTPS 部署下开启，否则浏览器强制升级 https 导致站点打不开；CSP 默认留空（内联样式与 `@vite/client` 站点贸然启用会打挂页面），需按部署形态逐域评估后再配。
+5. **Actuator 加固**：生产同时开启 `enable-auth` 与 `ip-whitelist` 双重收敛；`exclude-paths` 谨慎使用，避免绕过认证。
+6. **Mock**：`plugin.api.mock.enable` 生产必须为 `false`；`profiles` 限定在 `dev,test`。
+7. **灰度发布**：`default-percentage` 基线保持 `0`，放量通过配置中心动态调整；`global-users/ips/roles` 用于紧急全量命中。
+8. **线程池**：`queue-capacity=100000` 偏大，注意任务积压带来的内存压力；关闭行为默认等待 60 秒后强制停止，优雅停机可开 `wait-for-tasks-to-complete-on-shutdown`。
+9. **验证码**：端点前缀 `plugin.captcha.context-path` 修改后需同步前端与网关路由；`ttl` 过长会增加缓存占用，过短影响用户体验。
+10. **请求指纹**：`include-body` 上限默认 1MB，大报文接口可调小 `include-body-max-bytes` 或用 `body-methods` 排除。
+11. **null 序列化**：`plugin.jackson.include-null=false` 时响应省略 null 字段，前端判空逻辑需兼容「字段缺失」与「字段为 null」两种形态。
+12. **信息暴露面**：`/service-info` 与启动横幅会展示服务、连接与线程池信息，生产建议开启 `plugin.service-info.auth.enable=true`。
+
 ## 九、使用方式
 
-1. 引入依赖（坐标见文首），Spring Boot 自动完成 21 个配置类装配，无需任何 `@Enable*`。
+1. 引入依赖（坐标见文首），Spring Boot 自动完成 16 个配置类装配，无需任何 `@Enable*`。
 2. 按需在 `application.yml` 调整 `plugin.*` 开关，未配置的项使用缺省值：
 
 ```yaml

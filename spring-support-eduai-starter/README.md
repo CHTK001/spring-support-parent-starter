@@ -131,6 +131,7 @@ sequenceDiagram
 | `marking.image-dir` | String | `./data/marking` | 扫描阅卷图片持久化目录（任务可重启续跑） |
 | `marking.resume-limit` | int | `50` | 启动时最多续跑的未完成任务数 |
 | `marking.max-concurrent` | int | `1` | 后台并发阅卷任务上限（默认串行，防 ONNX 原生内存打满触发 OOM） |
+| `marking.grade-concurrency` | int | `4` | 单任务内逐题判分的模型调用并发数（虚拟线程 + 信号量限流），运行时下限 1；自有卷规则判分不调模型、不并发 |
 | `marking.preprocess` | boolean | `true` | 上传图片预处理（照度校正去阴影 + 灰度归一化） |
 | `marking.layout-correction` | boolean | `false` | ONNX 卡片/布局矫正，未检出自动回退原图 |
 | `marking.extract-strategy` | String | `whole` | 任意卷识别策略（ai-starter `AnyExtractStrategy` SPI key）：`whole` 整卷一次识别 / `region` 按版面分块（回退整卷） |
@@ -150,7 +151,157 @@ sequenceDiagram
 | `alert.enabled` | boolean | `false` | 是否启用 AI 调用失败告警（重试耗尽后 POST Webhook），映射给 ai-starter |
 | `alert.webhook-url` | String | 无 | Webhook 地址（钉钉/企微/飞书标准卡片） |
 | `alert.timeout-millis` | int | `5000` | 告警 HTTP 请求超时毫秒（<=0 按 5000 处理） |
-> 前缀易踩坑：`alert` 是 `EduAiProperties` 的**顶层字段**（与 `marking`/`ai` 平级），实际绑定前缀是 `plugin.eduai.alert.*`；类内 Javadoc 示例写的 `ai.alert` 与字段结构不符，以上表为准。
+> 前缀易踩坑：`alert` 是 `EduAiProperties` 的**顶层字段**（与 `marking`/`ai` 平级），实际绑定前缀是 `plugin.eduai.alert.*`，**不是** `plugin.eduai.ai.alert.*`。
+
+### 5.1 逐项配置示例（按功能分组）
+
+每组给出可直接粘贴的 YAML 片段，行内注释即「含义 + 默认值」；默认值与 `EduAiProperties` 字段初始化一致，带回落语义的项已标注运行时实际生效的下限/兜底值。
+
+**阅卷 `plugin.eduai.marking.*`**（消费方：`EduMarkingServiceImpl`、`MarkingMessageListener`、ai-starter 扫描管线）：
+
+```yaml
+plugin:
+  eduai:
+    marking:
+      async: true                # 手工提交是否异步阅卷；默认 true，投递 edu.marking 队列
+      timeout: 1800              # 单任务总预算（秒）；默认 1800，运行时下限 30
+      call-timeout: 90           # 单次模型调用超时（秒）；默认 90，映射给 ai-starter
+      max-score: 5               # 卷面分值缺失时的单题最大分兜底；默认 5
+      wrong-score-rate: 0.6      # 判错阈值（最终分/满分）；默认 0.6，0 = 仅 0 分算错
+      image-dir: ./data/marking  # 扫描图片持久化目录；默认 ./data/marking
+      resume-limit: 50           # 启动时最多续跑的未完成任务数；默认 50
+      max-concurrent: 1          # 后台并发任务上限；默认 1（ONNX 原生内存不受 -Xmx 约束，勿盲目调大）
+      grade-concurrency: 4       # 单任务内逐题判分的模型调用并发；默认 4，运行时下限 1
+      preprocess: true           # 上传图片预处理（照度校正 + 灰度归一化）；默认 true
+      layout-correction: false   # ONNX 卡片/布局矫正；默认 false，未检出自动回退原图
+      extract-strategy: whole    # 任意卷识别策略；默认 whole，可选 region，未知值回落 whole
+      submit-grace-seconds: 30   # 考试到期后的在线交卷宽限秒数；默认 30
+```
+
+**组卷 `plugin.eduai.paper.*`**（消费方：`PaperComposeSettingService`；`sys_ai_global_setting` 的 `compose` 分组已配置时优先于本组）：
+
+```yaml
+plugin:
+  eduai:
+    paper:
+      max-total-score: 100          # 试卷最高总分；默认 100
+      default-question-count: 20    # 默认题目数量；默认 20
+      default-score-per-question: 5 # 默认每题分值；默认 5
+```
+
+**知识库 `plugin.eduai.knowledge.*`**：
+
+```yaml
+plugin:
+  eduai:
+    knowledge:
+      vector-dim: 768            # 向量维度；默认 768（当前主代码无读取点，仅声明）
+```
+
+**AI 引擎与重试 `plugin.eduai.ai.*`**（`enabled`/`retry` 经 `EduAiAutoConfiguration` 映射给 ai-starter `PaperPipelineProperties`）：
+
+```yaml
+plugin:
+  eduai:
+    ai:
+      enabled: true               # 是否启用 AI；默认 true，关闭后回退本地启发式
+      provider: your-provider     # AI 服务商；当前未读取（客户端由 ai-starter 聚合 Bean/控制台配置提供）
+      model: your-model           # 模型名；当前未读取
+      temperature: 0.3            # 温度参数；默认 0.3，当前未读取
+      retry:
+        times: 5                  # 最大重试次数；默认 5，0 = 不重试
+        backoff-millis: 1000      # 初始退避毫秒；默认 1000
+        backoff-multiplier: 2.0   # 退避倍数；默认 2.0，<=1 按 2 处理
+        max-backoff-millis: 20000 # 退避上限毫秒；默认 20000，<=0 按 15000 处理
+        retry-on-transient: true  # 除限流 429 外是否重试瞬时故障（超时/502/503/连接异常）；默认 true
+```
+
+**告警 `plugin.eduai.alert.*`**（注意是顶层字段，不在 `ai` 之下；消费方：ai-starter `PaperAiService` 重试耗尽告警）：
+
+```yaml
+plugin:
+  eduai:
+    alert:
+      enabled: true                                             # 是否启用告警；默认 false
+      webhook-url: https://your-webhook.example.com/eduai-alert # Webhook 地址；默认空，留空时不发送
+      timeout-millis: 5000                                      # 告警 HTTP 超时毫秒；默认 5000，<=0 按 5000 处理
+```
+
+**题库采集兼容项 `plugin.eduai.collect.*`**（采集已收敛到 collect-starter 的 `plugin.collect.*`，本组当前无读取点）：
+
+```yaml
+plugin:
+  eduai:
+    collect:
+      default-cron: "0 */30 * * * ?"   # 采集任务未填 Cron 时的默认调度周期；仅兼容声明
+```
+
+### 5.2 完整 YAML 示例
+
+生产部署参考（地址、账号口令一律用占位符，落盘前替换为本环境真实值并纳入凭据管理）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/eduai?useUnicode=true&characterEncoding=UTF-8&useSSL=false
+    username: your-username
+    password: your-password
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: your-password
+plugin:
+  datasource:
+    script:
+      enable: true
+      scan-mode: ALWAYS        # 建表脚本按「脚本名+版本」去重执行
+      data-scan-mode: ONCE     # 种子数据仅空库灌一次
+  oauth:
+    enable: true
+    protocol: static           # 本地签发令牌必须用 static
+    local-admin-fallback: false
+    temp:
+      user: "admin:change-me"  # 启动参数显式传入，勿提交真实口令
+  queue:
+    enable: true
+    type: local                # 阅卷队列；生产建议换 MQ 实现
+  eduai:
+    marking:
+      async: true
+      timeout: 1800
+      call-timeout: 90
+      max-score: 5
+      wrong-score-rate: 0.6
+      image-dir: /data/eduai/marking
+      resume-limit: 50
+      max-concurrent: 1
+      grade-concurrency: 4
+      preprocess: true
+      layout-correction: false
+      extract-strategy: whole
+      submit-grace-seconds: 30
+    paper:
+      max-total-score: 100
+      default-question-count: 20
+      default-score-per-question: 5
+    knowledge:
+      vector-dim: 768
+    ai:
+      enabled: true
+      retry:
+        times: 5
+        backoff-millis: 1000
+        backoff-multiplier: 2.0
+        max-backoff-millis: 20000
+        retry-on-transient: true
+    alert:
+      enabled: true
+      webhook-url: https://your-webhook.example.com/eduai-alert
+      timeout-millis: 5000
+```
+
+`ai.provider` / `ai.model` / `ai.temperature` 与 `collect.default-cron` 当前主代码未读取，完整示例中省略；需要占位声明时按 5.1 补充。
 
 ## 6. 使用方式
 
@@ -213,6 +364,18 @@ plugin:
 | `utils-support-deeplearning-starter` | 不用扫描阅卷时可移除 | ONNX 模型资产（paddleocrv6-tiny / ppdoclayoutv3 / doc-orientation，约 137MB）**不随 maven 分发**，需按 `-Ddeeplearning.model.root-dir`（默认 `models/onnx`）部署；缺模型时扫描识别不可用 |
 | `spring-support-osgi-starter` | 不需要 SPI 源码热改时可移除 | 未放置 `./osgi-source` 源码时自动跳过，无副作用 |
 | `redisson-spring-boot-starter` | 宿主统一管理 Redisson 时可去版本钉死 | 缺失时按 `spring-support-redis-starter` 内部依赖解析；钉版 4.8.0 规避 Boot 4 不兼容 |
+
+### 6.4 生产注意事项
+
+- **并发与内存**：`marking.max-concurrent` 保持默认 `1` 起步。每个扫描阅卷任务都要跑 ONNX 版面 + OCR，原生/直连内存不受 `-Xmx` 约束，实测 5 路并发触发内核 OOM 后进入「崩溃-重启-续跑」循环；调大 `marking.grade-concurrency` 前先确认下游模型网关限流配额（429 会触发重试退避，反而更慢）。
+- **两个超时别混用**：`marking.timeout` 是单任务总预算（运行时下限 30 秒，超时中止并释放并发闸门），`marking.call-timeout` 是单次模型调用上限；前者防任务卡死，后者防单次请求无限挂住。
+- **图片目录必须持久化**：扫描阅卷任务可重启续跑，`marking.image-dir` 要落到可靠磁盘（容器部署请挂载卷），否则重启后未完成任务无法恢复输入图片。
+- **队列实现**：`plugin.queue.type: local` 的本地队列在进程重启时会丢在途消息；手工提交异步链路在投递失败时会自动回退同步判分，但生产环境建议接入 MQ 实现并开启持久化。
+- **凭据管理**：`plugin.oauth.temp.user`、Redis 口令、`alert.webhook-url` 中的 token 等一律通过启动参数/环境变量/配置中心注入，仓库与日志中只保留占位符（如 `change-me`、`your-webhook.example.com`），不得出现真实凭据。
+- **模型资产部署**：扫描识别依赖的 ONNX 模型（paddleocrv6-tiny / ppdoclayoutv3 / doc-orientation，约 137MB）不随 maven 分发，需按 `-Ddeeplearning.model.root-dir`（默认 `models/onnx`）预先部署；缺模型时扫描识别不可用，手工提交链路不受影响。
+- **CacheManager 唯一性**：本模块以 `@Primary` 提供 Redis 源 CacheManager（TTL 3600s）兜底多候选问题；宿主若另有 `@Primary` CacheManager 会双主冲突，需二选一。
+- **数据库初始化**：`db/init` 建表与种子脚本幂等、首次启动自动执行；不要手工改动脚本对应的表结构，升级以脚本版本为准。
+- **时钟与宽限**：在线交卷超时按服务端「草稿答题卡创建时间 + 考试时长」判定，多实例部署请保证 NTP 对时；`submit-grace-seconds` 只用于吸收网络往返与前端倒计时偏差，不要用它补偿时钟漂移。
 
 ## 7. 使用场景
 

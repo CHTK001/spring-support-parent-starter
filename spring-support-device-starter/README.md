@@ -113,7 +113,7 @@ sequenceDiagram
 | `plugin.device.timeseries.retention-days` | int | `30` | 历史保留天数，`<=0` 不自动清理 |
 | `plugin.device.timeseries.table` | String | `device_series_point` | bean 引擎明细表名（仅字母 / 数字 / 下划线） |
 | `plugin.device.timeseries.url` | String | 无（null） | InfluxDB 服务地址 |
-| `plugin.device.timeseries.database` | String | `device` | InfluxDB 库名；redis 引擎用作逻辑库下标 |
+| `plugin.device.timeseries.database` | String | `device` | InfluxDB 库名；redis 引擎当前不使用该值（redis 逻辑库由宿主 `spring.data.redis.database` 决定） |
 | `plugin.device.timeseries.username` | String | 无（null） | InfluxDB 1.x 用户名 |
 | `plugin.device.timeseries.password` | String | 无（null） | InfluxDB 1.x 密码 |
 | `plugin.device.timeseries.measurement` | String | `device_series` | InfluxDB measurement |
@@ -130,6 +130,147 @@ sequenceDiagram
 | `plugin.device.provider.fallback-mock` | boolean | `false` | 各 `*Provider` 构造器 `Environment.getProperty` | 连接失败回退模拟会话，仅限调试 |
 
 凭据级任务间隔（离线检测 / 事件轮询 / 设备同步 / 组织同步 / 指标采集）保存在 `device_provider_credential`，无全局 yaml 开关；webhook 四个入站路径由 `DeviceWebhookDefaults` 以 `@TokenForIgnore` 声明免登录态，无需写宿主 `plugin.oauth.whitelist`。
+
+### 5.1 逐项配置示例（按功能分组）
+
+以下示例均可直接并入宿主 `application.yml`；`plugin.device.timeseries.*` 各项只影响时序记录，不影响设备台账 / 视频 / 门禁等主链路。
+
+**（1）引擎选择与通用参数**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `engine` | 时序引擎：`bean` / `influxdb` / `redis` / `none`（`off`、`disabled` 等价 `none`；未知值 WARN 后按 `bean`） | `bean` |
+| `retention-days` | 历史保留天数，每天 03:30 自动清理过期点；`<=0` 不自动清理 | `30` |
+| `write-batch-size` | 批量写入分片大小（预留参数：当前引擎实现按整批写入，未按该值分片） | `200` |
+| `http-timeout-seconds` | 时序 HTTP 请求超时（秒），仅 influxdb 引擎使用；`<=1` 按 1 秒生效 | `10` |
+
+```yaml
+plugin:
+  device:
+    timeseries:
+      engine: bean              # bean / influxdb / redis / none
+      retention-days: 30        # <=0 关闭自动清理
+      write-batch-size: 200     # 预留：当前实现按整批写入
+      http-timeout-seconds: 10  # 仅 influxdb 引擎生效
+```
+
+**（2）bean 引擎（默认，落宿主 MySQL 明细表）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `table` | 明细表名，只允许字母 / 数字 / 下划线（防配置注入）；表结构由模块 `db/init` 脚本幂等创建 | `device_series_point` |
+
+```yaml
+plugin:
+  device:
+    timeseries:
+      table: device_series_point
+```
+
+**（3）InfluxDB 引擎（engine: influxdb）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `url` | InfluxDB 1.x 服务地址；未配置时引擎标记为「不可用」并说明原因，不会启动失败 | 无（null，必填） |
+| `database` | InfluxDB 库名；留空时引擎侧回落 `device` | `device` |
+| `username` | InfluxDB 1.x 用户名；留空则不带 Basic 认证 | 无（null） |
+| `password` | InfluxDB 1.x 密码；仅在配置了用户名时参与 Basic 认证 | 无（null） |
+| `measurement` | InfluxDB measurement 名；留空时引擎侧回落 `device_series` | `device_series` |
+
+```yaml
+plugin:
+  device:
+    timeseries:
+      engine: influxdb
+      url: http://influxdb.example.internal:8086
+      database: device
+      username: your-username
+      password: your-password
+      measurement: device_series
+```
+
+**（4）Redis 引擎（engine: redis）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `key-prefix` | Redis 键前缀；留空时引擎侧回落 `device:series` | `device:series` |
+| `max-points-per-series` | 单序列最大点数，超出按时间裁剪最旧点；引擎侧下限 1000 | `100000` |
+
+```yaml
+plugin:
+  device:
+    timeseries:
+      engine: redis
+      key-prefix: device:series
+      max-points-per-series: 100000
+```
+
+> 注意：`database` 对 redis 引擎当前不生效——redis 逻辑库由宿主 `spring.data.redis.database` 决定，配置纯数字的 `plugin.device.timeseries.database` 只会打印一条提示日志。
+
+**（5）非 `plugin.device.timeseries` 前缀的运行参数**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `device.security.secret-key` | 设备密码 / 厂商 SK 的 AES-GCM 加密密钥（密文带 `enc:` 前缀）；未配置时明文入库并打 WARN | 空 |
+| `plugin.device.provider.fallback-mock` | 厂商连接失败时回退模拟会话（返回公开测试流），仅限本地调试 | `false` |
+
+```yaml
+device:
+  security:
+    secret-key: change-me-to-a-long-random-secret
+plugin:
+  device:
+    provider:
+      fallback-mock: false
+```
+
+### 5.2 完整 YAML 示例（生产参考）
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/your-database?useUnicode=true&characterEncoding=utf8
+    username: your-db-user
+    password: your-db-password
+
+plugin:
+  device:
+    timeseries:
+      # 时序后端：bean（默认，宿主 MySQL 明细表）/ influxdb / redis / none
+      engine: bean
+      # 历史保留天数；每天 03:30 自动清理，<=0 表示不清理
+      retention-days: 90
+      # bean 引擎明细表名（仅字母 / 数字 / 下划线）
+      table: device_series_point
+      # ---- 以下按所选引擎按需启用，bean 引擎可全部省略 ----
+      # url: http://influxdb.example.internal:8086   # influxdb 引擎必填
+      # database: device
+      # username: your-username
+      # password: your-password
+      # measurement: device_series
+      # key-prefix: device:series                    # redis 引擎
+      # max-points-per-series: 100000                 # redis 引擎
+      # http-timeout-seconds: 10                      # influxdb 引擎
+    provider:
+      # 连接失败回退模拟会话；生产必须保持 false
+      fallback-mock: false
+
+device:
+  security:
+    # 设备密码 / 厂商 SK 的 AES-GCM 加密密钥；不配置则明文入库（生产必须配置）
+    secret-key: change-me-to-a-long-random-secret
+```
+
+### 5.3 生产注意事项
+
+- **务必配置 `device.security.secret-key`**：不配置时设备密码与厂商 SK 明文落库（启动时有 WARN）；密钥启用后历史明文数据不会自动改写，建议在首批设备录入前定版。
+- **`plugin.device.provider.fallback-mock` 生产保持 `false`**：开启后厂商连接失败会静默回退到模拟会话（返回公开测试流），掩盖真实故障，仅用于本地联调。
+- **时序容量与清理**：`engine=bean` 时明细表随写入持续增长，按写入量估算磁盘并配置合理的 `retention-days`（清理任务每天 03:30 执行）；写入量很大时考虑切 `influxdb` 或 `redis`，业务接口不变。
+- **`retention-days<=0` 表示永不清理**，长期运行需自行评估磁盘水位。
+- **可选依赖降级是「降级不失败」**：`engine=redis` 但宿主没有 `spring-data-redis` / `StringRedisTemplate`，或 `engine=influxdb` 但未配 `url` 时，时序引擎标记为「不可用」并在页面如实提示原因，模块其余功能照常运行。
+- **时序写入是旁路**：写入失败只记 WARN（带分类 / 设备 / 序列键），不阻断设备入库、告警、考勤等主链路；页面查不到数据时先查 `[Device][Series]` 日志。
+- **webhook 免登录态依赖**：`spring-support-oauth-client-starter` 未引入时 `@TokenForIgnore` 静默失效，四个 webhook 入站路径需宿主自行放行；引入后仍要求 appKey 签名校验通过。
+- **凭据与任务节奏**：离线检测 / 事件轮询 / 同步 / 指标采集的开关与间隔都按凭据（`device_provider_credential`）配置，没有全局 yaml 开关；新增凭据后记得触发一次目录同步。
 
 ## 6. 使用方式
 

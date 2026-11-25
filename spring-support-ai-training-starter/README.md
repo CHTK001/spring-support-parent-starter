@@ -133,6 +133,67 @@ plugin:
       upload-path: D:/aias/data/upload/
 ```
 
+### 5.1 逐项配置示例
+
+开关与上传展示：
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `enabled` | 总开关，`false` 时整个训练模块不装配（`matchIfMissing = true`，缺省视为开启） | `true` |
+| `max-size` | 上传大小上限的**展示值**（MB），仅用于服务信息面板，不拦截上传；真实上限取决于宿主 `spring.servlet.multipart.*` | `3000` |
+
+```yaml
+plugin:
+  ai:
+    training:
+      enabled: true      # 置 false 整体关闭训练模块
+      max-size: 3000     # 仅展示用；真实上传上限见 spring.servlet.multipart.*
+```
+
+目录与模型路径（`{base}` = Windows `C:\aias\file`，其他平台 `~/.aias/file`）：
+
+| 配置项 | 含义 | 默认值 |
+| --- | --- | --- |
+| `model-path` | `resnet50` 冷启动预训练模型（ZIP 或目录），必须真实存在，否则训练启动失败 | `{base}/resnet50_dl4j_inference.v3.zip` |
+| `data-root-path` | 数据解压根目录，每次解压在其下建 UUID 子目录 | `{base}/image_root/` |
+| `save-path` | 新训练模型保存目录；yolo 场景兼作 Python 子进程 `/start` 的 `project` 参数 | `{base}/modelv2/` |
+| `upload-path` | 上传 ZIP 落盘目录，保存时自动创建 | `{base}/` |
+
+```yaml
+plugin:
+  ai:
+    training:
+      model-path: D:/aias/models/resnet50_dl4j_inference.v3.zip
+      data-root-path: D:/aias/data/image_root/
+      save-path: D:/aias/models/modelv2/
+      upload-path: D:/aias/data/upload/
+```
+
+### 5.2 完整 application.yml 示例
+
+生产环境建议同时收紧宿主 multipart 上限，并把本模块目录显式指到独立数据盘：
+
+```yaml
+spring:
+  servlet:
+    multipart:
+      max-file-size: 2GB        # 真实上传拦截上限（本模块 max-size 仅展示）
+      max-request-size: 2GB
+
+plugin:
+  ai:
+    training:
+      enabled: true
+      max-size: 3000
+      model-path: D:/aias/models/resnet50_dl4j_inference.v3.zip
+      data-root-path: D:/aias/data/image_root/
+      save-path: D:/aias/models/modelv2/
+      upload-path: D:/aias/data/upload/
+```
+
+注意：yolo 的 Python 路径与外部脚本不是 YAML 配置项，须以 JVM 系统属性传入（见下表），例如
+`-Dplugin.ai.training.yolo.python=D:/tools/python311/python.exe -Dplugin.ai.training.yolo.script=D:/aias/scripts/yolo_train_service.py`。
+
 另有 `YoloTrainProvider` 读取的两个 **JVM 系统属性**（非 `@ConfigurationProperties` 项，需 `-D` 传入）：
 
 | 系统属性 | 默认行为 | 说明 |
@@ -258,3 +319,14 @@ public class TrainWatcher {
 **Q3：与 Spring Boot 4 的兼容性？** 基线为 Spring Boot 4.1.2（父 POM `spring-boot-starter-parent:4.1.2`）+ Java 25；注册方式为 `@AutoConfiguration` + `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`（无 `spring.factories`）；Servlet 栈为 `jakarta.*`；`@Permission`、`ServiceInfoContributor` 来自 `spring-support-common-starter`，DL4J 契约由 `utils-support-deeplearning-dl4j-starter` 提供。
 
 **Q4：常见报错与已知限制？** `文件内容不是有效的 ZIP 格式`：魔数校验失败（仅接受 `PK\x03\x04` / 空包 `\x05\x06` / 分卷 `\x07\x08`）；`仅支持 ZIP 格式文件`：文件名后缀非 `.zip`；`未接入 type=xxx 的训练引擎（已接入: resnet50, yolo）`：type 拼写错误或未注册 SPI，任务保持 PENDING；`任务状态为 RUNNING，不可修改超参数（仅 PENDING 可修改）` / `不可启动（仅 PENDING 可启动）`：状态机守卫；`YOLO 训练需要 Ultralytics 布局数据集（images/ + labels/ + data.yaml）...`：解压目录（含子目录，深度 ≤3）内未找到 `data.yaml`，且 yolo 依赖本机可执行 Python 与 `ultralytics`。已知限制：任务只在内存，进程重启后 `GET /v2/train/status` 返回 `任务不存在`；没有取消端点，`TrainTask#cancel()` 仅在训练线程收到 `InterruptedException` 时触发；`resnet50` 依赖 `model-path` 真实存在，模块不做提前校验；事件监听异常被吞，不会中断训练也不会通知调用方。
+
+## 10. 生产注意事项
+
+- **真实上传上限要落在宿主侧**：`plugin.ai.training.max-size` 只用于服务信息展示，不拦截上传；生产环境应通过 `spring.servlet.multipart.max-file-size` / `max-request-size` 设置真实上限，并确认 `upload-path` / `data-root-path` / `save-path` 所在磁盘余量充足（解压后的明文数据体积可能远超 ZIP 本身）。
+- **任务态只在内存**：`TrainServiceImpl` 用 `ConcurrentHashMap` 保存任务，进程重启/发布后任务与进度全部丢失，`GET /v2/train/status` 返回 `任务不存在`；需要可追溯时应在宿主侧订阅 `TrainLifecycleEvent` 自行落库，不要假设任务可恢复。
+- **无取消端点、无线程池**：每个训练任务一个裸守护线程（线程名 `train-type-taskId`），没有并发上限与主动取消端点；`TrainTask#cancel()` 仅在训练线程收到 `InterruptedException` 时触发。生产上应通过入口限流/排队避免大量任务并发启动；yolo 训练轮询硬超时 6 小时。
+- **`resnet50` 依赖 `model-path` 真实存在**：模块不做提前校验，路径失效会在训练启动时才失败；迁移/升级部署时把预训练模型文件与目录一并迁移。
+- **yolo 依赖本机 Python 环境**：需要本机可执行 Python（Windows `python`，其他平台 `python3`，可用 `-Dplugin.ai.training.yolo.python` 覆盖）及 `ultralytics` 依赖；子进程 HTTP 端口随机协商（脚本把 `PORT=xxx` 打到 stdout 首行，Java 侧等待上限 60 秒），无需也无法用配置固定；容器化部署需保证镜像内具备 Python 运行时。
+- **鉴权取决于宿主装配**：训练端点均标注 `@Permission("admin")`，但注解是否实际拦截取决于宿主是否装配了对应鉴权体系；公网暴露前务必确认鉴权链路真实生效。
+- **事件监听异常被吞**：`TrainLifecycleEvent` 监听器抛出的 `RuntimeException` 仅 `log.warn`，不会中断训练也不会通知调用方；监控/告警逻辑不要依赖异常传播，需在监听器内部自行兜底。
+- **目录权限与默认路径**：`upload-path` 保存时自动创建，`data-root-path` / `save-path` 需进程可写；Windows 默认落在 `C:\aias\file`，Linux/Mac 默认落在 `~/.aias/file`，生产建议显式配置到独立数据盘并纳入备份/清理策略。

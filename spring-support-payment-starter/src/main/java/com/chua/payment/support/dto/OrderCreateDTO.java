@@ -21,6 +21,7 @@ import java.math.BigDecimal;
  * @param returnUrl       返回值URL
  * @param expireMinutes   过期分钟数
  * @param remark          备注
+ * @param couponNo        优惠券号（可选，传入则下单时核销抵扣）
  * @since 2026-03-18
  * @author CH
  */
@@ -39,7 +40,8 @@ public record OrderCreateDTO(
         String notifyUrl,
         String returnUrl,
         Integer expireMinutes,
-        String remark) implements Serializable {
+        String remark,
+        String couponNo) implements Serializable {
 
     private static final long serialVersionUID = 1L; // 序列化版本uid
 }

@@ -90,7 +90,7 @@ flowchart TB
 
 ## 5. 完整配置
 
-**本模块没有 `@ConfigurationProperties` 配置类**：入参全部来自 HTTP 请求与 SPI 登记。唯一配置项由 `@ConditionalOnProperty` 直接读取：
+**本模块没有 `@ConfigurationProperties` 配置类**：入参全部来自 HTTP 请求与 SPI 登记。唯一 Spring 配置项由 `DataSearchServiceConfiguration` 类级 `@ConditionalOnProperty` 直接读取（下表已与源码逐项核对一致）：
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -108,6 +108,91 @@ flowchart TB
 | 汇率外呼超时 / 历史缓存 | 8 秒；10 分钟、上限 64 条 | `ExchangeRateDataServiceImpl` |
 | 节假日年份合法区间 | 1900–2200，越界或缺省取当年 | `HolidayDataServiceImpl` |
 | IP 归属地进程内缓存 / 默认解析器 | 2048 条（满后清空重建）；`ip2region` | `IpLookupDataServiceImpl` |
+
+### 5.1 逐项配置示例
+
+本模块配置面极小：Spring 配置项只有 1 个总开关，另有 6 个 JVM 系统属性只影响余额查询内核的外呼代理。逐项如下（均可在源码中核对）。
+
+**A. 模块总开关（Spring Boot 配置项，写 `application.yml`）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `plugin.datasearch.enabled` | 数据检索服务化整体开关；`false` 时 6 个 `/v2/**` 控制器与 5 个数据服务 Bean 全部不注册 | `true`（`matchIfMissing = true`，不配置也生效） |
+
+开启（默认即开启，可整段省略）：
+
+```yaml
+plugin:
+  datasearch:
+    enabled: true
+```
+
+整体关闭（宿主不想要这套 `/v2/**` 接口与数据服务时）：
+
+```yaml
+plugin:
+  datasearch:
+    enabled: false
+```
+
+**B. 余额查询外呼代理（JVM 系统属性，不是 Spring 配置项）**
+
+`credit/` 余额查询内核的所有外呼统一走 `CreditHttp`，它会读取 JVM 级代理系统属性（`System.getProperty`）。这组属性**不能写在 `application.yml`**，要通过启动参数 `-D` 设置：
+
+| 系统属性 | 含义 | 默认行为 |
+|---|---|---|
+| `http.proxyHost` / `http.proxyPort` | HTTP 外呼代理主机 / 端口 | 未配置直连；端口缺省回落 `80` |
+| `https.proxyHost` / `https.proxyPort` | HTTPS 外呼代理主机 / 端口 | 未配置直连；端口缺省回落 `443` |
+| `http.nonProxyHosts` | 不走代理的主机名单（`\|` 分隔，支持 `127.*`、`*.local` 通配） | 未配置则全部按代理走 |
+| `https.nonProxyHosts` | 同上（HTTPS；未配置时回落读 `http.nonProxyHosts`） | 同上 |
+
+```bash
+java -Dhttp.proxyHost=proxy.example.com -Dhttp.proxyPort=7897 \
+     -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=7897 \
+     -Dhttp.nonProxyHosts="127.*|*.local|192.168.*" \
+     -jar my-service.jar
+```
+
+> 说明：天气 / 定位 / 台风 / 汇率 / 节假日等数据服务的外呼由 utils 层各 `*Provider` 自行实现，不读这组代理属性；这组属性只作用于余额查询（`CreditQueries#query`）与经 `CreditHttp` 的供应商数据外呼。
+
+### 5.2 完整 YAML 使用示例
+
+一个典型 Servlet Web 宿主引入本模块后的 `application.yml`（本模块只认 `plugin.datasearch.enabled` 一个键，其余为宿主自身配置）：
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  application:
+    name: my-service
+
+plugin:
+  datasearch:
+    enabled: true   # 数据检索服务化总开关（默认 true，可省略）
+```
+
+启动与自测：
+
+```bash
+java -jar my-service.jar
+curl -s "http://localhost:8080/v2/weather/overview?city=杭州&days=3&hours=12"
+curl -s "http://localhost:8080/v2/exchange-rate/overview?symbols=USD/CNY,USD/EUR&period=1m"
+curl -s "http://localhost:8080/v2/holiday/get?year=2026"
+curl -s "http://localhost:8080/v2/ip/lookup?ip=114.114.114.114"
+```
+
+7 个端点（天气 / 定位 / 台风列表 / 台风详情 / 汇率 / 节假日 / IP 归属地）全部匿名可访问，参数全部可选（除台风详情 `id`），返回统一为 `ReturnResult` 包装（HTTP 200 + 业务码）。
+
+### 5.3 生产注意事项
+
+1. **匿名暴露面**：7 个 `/v2/**` 端点都标注 `@TokenForIgnore`（顶栏与日历在登录前就要出数），不做登录鉴权。若网关侧需要收敛，请自行加 IP 白名单 / 限流，不要把这些端点当成受保护接口。
+2. **失败语义**：数据源不可用时返回 HTTP 200 + `ReturnResult.error` 失败码，不是 4xx/5xx；调用方（前端或网关聚合层）必须判业务码，不要按 HTTP 状态码重试。空数组（如无活跃台风、某年无节假日数据）是权威结论，与失败码含义不同。
+3. **外呼与超时**：天气 / 定位 / 台风 / 汇率 / 节假日会外呼三方数据源；汇率外呼超时 8 秒、历史缓存 10 分钟（上限 64 条）。防火墙需放行对应外网域名；完全隔离的内网环境这些接口会稳定返回失败码（属预期，前端应回落三方或内置表）。
+4. **IP 归属地依赖可选**：不引入 ip2region / geoip2 实现依赖时，仅 `/v2/ip/lookup` 返回失败码，其余接口不受影响。
+5. **关闭要成套**：`plugin.datasearch.enabled=false` 后 11 个 Bean 全部不注册，前端会探测不到能力；建议同步关闭前端能力开关（`app.yaml` 的 `other.capabilities` 对应项），避免前端反复 HEAD 探测落空。
+6. **路径冲突**：宿主里若还留有旧的同路径控制器（如 api 侧 `/v2/ip/lookup` 旧实现），启动会报 `Ambiguous handler methods mapped`；引入 `spring-support-monitor-starter` 的宿主由 `DatasearchConflictResolve` 自动移走旧控制器，其余宿主需自行保留一处。
+7. **Bean 覆盖即退让**：11 个自动配置 Bean 均带 `@ConditionalOnMissingBean`，宿主自建同类型 Bean 时本模块对应 Bean 自动让位；替换后请自行保证新实现的能力完整（如 IP 库加载、缓存语义）。
 
 ## 6. 使用方式
 

@@ -153,6 +153,80 @@ plugin:
 
 键名建议用上表的连字符形式：`ConsoleKvEnvironmentPostProcessor` 以 `environment.getProperty("plugin.console.enable", "true")`、`environment.getProperty("plugin.console.sqlite-path", "console.sqlite")` 精确取值，不走松散绑定。模块无独立端口/路径前缀配置，控制台固定挂在宿主的 `/console/**` 下。
 
+### 5.1 逐项配置示例
+
+**`plugin.console.enable`** — 控制台总开关
+
+- 含义：是否启用管理控制台。同时控制两处：`ConsoleAutoConfiguration` 的装配条件，以及 `ConsoleKvEnvironmentPostProcessor` 的键值注入。设为 `false` 时页面不装配、键值也不进 `Environment`。
+- 默认值：`true`（装配条件 `matchIfMissing=true`，不写该键即视为启用）。
+
+```yaml
+plugin:
+  console:
+    enable: true
+```
+
+**`plugin.console.sqlite-path`** — SQLite 覆盖库文件路径
+
+- 含义：覆盖库四张表（`console_feature_override` / `console_gray_override` / `console_kv` / `console_meta`）所在的 SQLite 文件，按相对运行目录解析；持久层 `ConsoleSqliteStore` 与键值环境注入器读取同一文件。
+- 默认值：`console.sqlite`（相对运行目录；建议显式指向可写且随部署持久的目录）。
+
+```yaml
+plugin:
+  console:
+    sqlite-path: ./data/console.sqlite
+```
+
+**`plugin.console.permission-code`** — 页面权限码（预留）
+
+- 含义：`/console/**` 页面与调整接口的 `@Permission` 权限码。
+- 默认值：`console:manage`。
+- 注意：当前代码未读取该配置——控制器绑定编译期常量 `ConsolePageController.CONSOLE_PERMISSION`，修改该项不改变实际鉴权行为。
+
+```yaml
+plugin:
+  console:
+    permission-code: console:manage
+```
+
+**`plugin.console.kv-prefix`** — 键值管理前缀过滤（预留）
+
+- 含义：限制键值设置页可管理的 `console_kv` 键前缀；空串表示管理全部键值。
+- 默认值：`""`（空串=不过滤）。
+- 注意：当前代码未读取该配置——页面固定调用 `store.listKv("")`，修改该项不改变页面行为。
+
+```yaml
+plugin:
+  console:
+    kv-prefix: ""
+```
+
+### 5.2 完整 YAML 示例（生产参考）
+
+```yaml
+plugin:
+  console:
+    # 控制台总开关：false 时自动装配与键值注入一并关闭
+    enable: true
+    # SQLite 覆盖库文件：相对运行目录解析，建议指向可写、随部署持久的目录
+    sqlite-path: ./data/console.sqlite
+    # 页面权限码（预留：当前实际鉴权绑定编译期常量 console:manage）
+    permission-code: console:manage
+    # 键值管理前缀过滤（预留：空串=管理全部键值）
+    kv-prefix: ""
+```
+
+`console_kv` 中由页面写入的键会以最高优先级注入 `Environment`（`addFirst`），业务代码可用 `@Value` / `environment.getProperty(...)` 读取这些「运行设置」。
+
+### 5.3 生产注意事项
+
+1. **鉴权闸门**：`/console/**` 全部要求 `console:manage` 权限（oauth-client `PermissionInterceptor` 执行）。公网或共享网络部署前，务必确认宿主鉴权体系已接管，未授权用户不可触及控制台。
+2. **多实例不共享**：覆盖库是各实例本机的 SQLite 文件，实例之间互不可见；页面调整只影响当前实例。集中管控请配合网关按实例路由，或仅在内网单实例使用。
+3. **持久化目录**：`sqlite-path` 所在目录必须可写且持久（容器场景勿放临时层）。文件无法创建/连接时 `ConsoleSqliteStore` 构造抛 `IllegalStateException`，应用启动失败。
+4. **键值注入优先级最高**：`console_kv` 的键经 `addFirst` 置于 `Environment` 最前，会覆盖 `application.yml`、环境变量中的同名键；不要把启动关键配置（数据源、端口等）放进 `console_kv`。
+5. **注解指纹重置**：修改业务代码中的 `@ApiFeature`/`@ApiGray` 注解会改变指纹，下次启动清空 feature/gray 两张覆盖表（`console_kv` 保留）。页面调整是临时手段，长期决策应落回注解并发布。
+6. **单连接同步访问**：`ConsoleSqliteStore` 为单连接 + `synchronized` 方法，面向低频管理写入；不要把高频业务写入接到该库。
+
 ## 6. 使用方式
 
 Maven 坐标（版本也可省略，由父工程 `dependencyManagement` 统一管理）：

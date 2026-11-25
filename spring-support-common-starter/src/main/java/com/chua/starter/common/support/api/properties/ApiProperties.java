@@ -17,8 +17,50 @@ import java.util.Map;
 /**
  * API 统一配置属性
  * <p>
- * 整合版本控制、平台标识、编解码、SPI 等 API 相关配置。
+ * 整合版本控制、平台标识、统一响应、请求/响应编解码、灰度发布、内部接口、
+ * 弃用告警、功能开关、Mock、SPI 短名映射等 API 相关配置。
  * </p>
+ *
+ * <h3>配置示例</h3>
+ * <pre>
+ * plugin:
+ *   api:
+ *     uniform: true                # 统一响应封装（默认 true）
+ *     version:
+ *       enable: true               # @ApiVersion 版本路由（默认 true）
+ *     platform:
+ *       enable: true               # @ApiPlatform 平台标识（默认 true）
+ *       name: SYSTEM               # 平台类型（默认 SYSTEM）
+ *     internal:
+ *       enable: true               # @ApiInternal 内部接口（默认 true）
+ *       global-allowed-ips: []     # 全局 IP 白名单（默认空）
+ *       global-allowed-services: []  # 全局服务白名单（默认空）
+ *     deprecated:
+ *       enable: true               # 弃用告警（默认 true）
+ *       add-warning-header: true   # 追加 Warning 响应头（默认 true）
+ *     gray:
+ *       enable: true               # 灰度发布（默认 true）
+ *       header-name: X-Gray-Hit    # 灰度命中响应头（默认 X-Gray-Hit）
+ *       default-percentage: 0      # 默认放量百分比 0~100（默认 0）
+ *     feature:
+ *       enable: false              # 功能开关目录端点（默认 false）
+ *       path: /api/features        # 端点路径（默认 /api/features）
+ *     spi:
+ *       enable: true               # SPI 短名映射（默认 true）
+ *     mock:
+ *       enable: false              # Mock 模式（默认 false）
+ *       profiles: dev,test         # Mock 生效环境（默认 dev,test）
+ *     encode:
+ *       enable: false              # 响应加密（默认 false）
+ *       codec-type: aes            # 算法：sm2/sm4/aes/rsa/des/keylog（默认 aes）
+ *       white-list: []             # 不加密路径白名单（默认空）
+ *     decode:
+ *       enable: false              # 请求解密（默认 false）
+ *       codec-type: aes            # 算法：sm4/aes/des/keylog（默认 aes）
+ *       codec-request-key: ""      # 请求解密密钥
+ *       keylog-key-file: ""        # keylog 长期密钥文件（同机多服务可共用）
+ *       reject-on-decode-failure: false  # 解密失败是否拒绝请求（默认 false）
+ * </pre>
  *
  * @since 2025/6/3
  * @author CH

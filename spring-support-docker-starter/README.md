@@ -2,6 +2,11 @@
 
 Docker 独立管理模块：容器、镜像、网络、卷、镜像库与容器模板的完整管理台后端。全部能力经 SSH 在受控 POSIX 主机上执行 `docker` CLI，不要求暴露 Docker TCP 端口（2375/2376）；镜像库走 `DockerRegistryProvider` SPI，长耗时操作统一以 SSE 实时回显。在 spring-support 体系中，它是 `spring-support-server-starter` 之上的运维能力模块：只消费 server 的主机台账与 SSH 连接设施，不反向依赖 monitor，可被任意宿主（如 `spring-support-monitor-starter`）按需引入。
 
+> **通道说明（4.0.0.52 起，源码 `DockerChannel` / `LocalDockerHostRegistrar`）**：实际执行路径由主机台账 `MsServerHost` 的 `serverHostDockerMode` 字段决定，共三种，均为台账数据、不是 `application.yml` 配置项：
+> ① **CMD 通道**（默认）——经 SSH 在目标主机执行 `docker` CLI，本 README 主体流程即此通道；
+> ② **API 通道**——经 Docker Engine HTTP API（地址取台账 `serverHostDockerApiUrl`，未配置时按 `http://<主机地址>:2375` 推导），暂不支持交互式终端；
+> ③ **本机通道**——主机地址指向部署本服务的这台机器时，直接以本地进程执行 `docker` CLI（不经 SSH），且应用就绪后由 `LocalDockerHostRegistrar` 自动探测本机 Docker 并把 127.0.0.1 注册为主机（幂等，失败仅记日志不影响启动）。
+
 ## 1. 架构图
 
 ```mermaid
@@ -131,6 +136,60 @@ SSE 事件名契约（`DockerService` 注释即契约）：`step`（阶段说明
 | 检索与目录上限 | 检索 `limit` 缺省 25、上限 100（`DEFAULT_LIMIT`/`MAX_LIMIT`），关键词 <2 字符返回空；`CATALOG_MAX=500`（`limit*CATALOG_FACTOR(10)` 封顶）；`TAG_LIMIT=100` | `RegistryService#search` / `GenericV2RegistryProvider` / `DockerHubRegistryProvider` |
 | 内置库 / Hub 常量 / login 标记 | 内置库 id 固定 `dockerhub`（`BUILTIN_ID`）、`builtin=true`、不可删除、可改地址/凭据；密码「不修改」回传 `******`（`PASSWORD_MASK`）或空串；Hub API `https://hub.docker.com`（`HUB_API`，检索不受镜像加速地址影响）；heredoc 标记 `CHUA_DOCKER_LOGIN_EOF`（密码经标准输入） | `RegistryService` / `DockerHubRegistryProvider` / `DockerServiceImpl#LOGIN_EOF` |
 
+### 5.1 逐项配置说明（按功能分组）
+
+本模块没有可经 `application.yml` 调整的配置项，因此**不存在逐项 YAML 配置**。下表把上表的行为参数与相关数据项按功能分组，补齐含义与默认值；「YAML 可配」一列恒为否——取值来源只有代码常量、请求参数、主机台账数据三类：
+
+| 功能分组 | 参数 / 数据项 | 含义 | 默认值 | YAML 可配 |
+|---|---|---|---|---|
+| 执行通道 | 台账字段 `serverHostDockerMode` | 容器操作通道：`CMD`=SSH+docker CLI、`API`=Docker Engine HTTP API | `CMD` | 否（server 模块主机台账字段，经主机管理接口/页面维护） |
+| 执行通道 | 台账字段 `serverHostDockerApiUrl` | API 通道的 Docker Engine 地址 | 空 → 按 `http://<主机地址>:2375` 推导 | 否（同上） |
+| SSE 与输出 | `SSE_TIMEOUT_MILLIS` | SSE 长任务（建容器/拉镜像/日志/终端）超时 | 30 分钟 | 否 |
+| SSE 与输出 | `OUTPUT_TRUNCATE` | 单条输出截断阈值 | 64KB | 否 |
+| 创建容器 | 重启策略白名单 | `restartPolicy` 允许值 | `no` / `always` / `unless-stopped` / `on-failure` | 否 |
+| 创建容器 | 字段格式白名单 | 镜像名、端口、环境变量、卷映射、容器名的合法性校验（正则见第 5 节参数表） | — | 否 |
+| 容器列表与日志 | `all` / `tail` | 列表是否含停止容器；日志尾部行数 | `all=true`；一次性日志 200、流式日志 100 | 否（请求级参数） |
+| 交互终端 | 默认命令 | 未传命令时进入的 shell | `/bin/sh` | 否 |
+| 镜像检索 | `DEFAULT_LIMIT` / `MAX_LIMIT` / `CATALOG_MAX` / `TAG_LIMIT` | 检索条数缺省 / 上限、目录拉取封顶、标签数上限 | 25 / 100 / 500 / 100 | 否 |
+| 内置镜像库 | `BUILTIN_ID` / `PASSWORD_MASK` / `HUB_API` | 内置 Docker Hub 库 id、密码回显掩码、Hub 检索 API 地址 | `dockerhub` / `******` / `https://hub.docker.com` | 否 |
+| 本地持久化 | 存储目录 | 镜像库与模板 JSON 落盘位置 | `~/.monitor/docker/`（由 `user.home` 推导） | 否（唯一相关的 JVM 标准属性是 `user.home`，见 5.2） |
+| 本机自注册 | `LocalDockerHostRegistrar` 触发时机 | 应用就绪后探测本机 `docker`，可用则把 `127.0.0.1` 注册为主机（CMD 通道、免凭据） | `ApplicationReadyEvent` 后异步执行 | 否 |
+
+### 5.2 完整 YAML 使用示例
+
+宿主应用引入本依赖后，`application.yml` **不需要（也没有）任何本模块配置键**。下面给出一个可运行的宿主应用最小 YAML，注释标明与本模块相关的全部事实：
+
+```yaml
+server:
+  port: 8080            # 宿主应用端口；本模块的 /ms/server/docker/** 随宿主暴露在该端口下
+
+spring:
+  application:
+    name: my-docker-console
+
+# 注意：本模块不读取任何 docker.* 或其它自定义配置键（全模块无 @ConfigurationProperties、无 @Value）。
+# 行为定制只能通过：
+#   1) server 模块主机台账数据（serverHostDockerMode / serverHostDockerApiUrl 等，经主机管理接口维护）；
+#   2) JVM 标准属性 user.home（决定 ~/.monitor/docker/ 持久化目录，一般不要改动）。
+# 因此这里刻意不写 docker: 配置段——写了也不会被读取。
+```
+
+若确需迁移 `~/.monitor/docker/` 的落盘位置，只能以 JVM 参数整体调整用户目录（影响所有依赖 `user.home` 的组件，慎用）：
+
+```text
+java -Duser.home=/var/lib/myapp -jar app.jar
+```
+
+### 5.3 生产注意事项
+
+- **凭据明文落盘**：镜像库密码明文保存在 `~/.monitor/docker/registries.json`（接口回传为 `******` 掩码，但文件本身是明文）。必须把该目录纳入主机安全管控：限制目录权限、纳入备份与审计策略。
+- **无模块级鉴权**：本模块接口挂在宿主的 `/ms/server/docker/**` 前缀下，认证与授权完全依赖宿主安全框架/网关。生产环境务必对该前缀启用登录与权限控制，避免容器管理台裸奔。
+- **多实例会话粘滞**：交互终端（exec）会话保存在内存 `ConcurrentHashMap`，多实例部署时 `POST .../exec/input`、`.../exec/close` 必须路由到建立会话的同一实例；SSE 长连接要求网关不缓冲响应、连接保持时间不小于模块侧 30 分钟超时。
+- **命令白名单是安全边界**：创建容器仅接受白名单字段并做格式校验（见第 5 节参数表），不要为「灵活」绕过校验拼接任意 shell 命令。
+- **通道与平台限制**：CMD 通道要求远程主机为 POSIX（远程 Windows 主机被 `ensurePosix` 拒绝）；API 通道暂不支持交互式终端；本机通道以本地进程执行 `docker` CLI，不受 SSH/POSIX 限制。
+- **清理操作影响面大**：`POST .../prune` 等价 `docker system prune -af --volumes`，会删除目标主机上全部未使用容器/镜像/网络/卷，生产主机慎用，并在前端保留二次确认。
+- **删除类操作不可逆**：容器/镜像/网络/卷删除接口均无回收站，前端集成时应保留确认框；确认提示文案与操作日志建议落审计。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
@@ -177,7 +236,7 @@ request.setTemplateId(null);          // 可空；非空时先按模板回填未
 SseEmitter emitter = dockerService.runContainer(1L, request);
 ```
 
-前置条件：① 宿主已接入 server 模块主机台账（存在 `MsServerHost` 记录且 `ServerHostService#resolveCredential` 能解析 SSH 凭据，否则报「主机不存在」或凭据解析失败）；② 目标主机为 POSIX（Linux/macOS），所有入口先 `ensurePosix(hostId)`，Windows 主机抛 `UnsupportedOperationException`；③ 主机无需暴露 Docker TCP 端口，全部经 SSH 执行 `docker` CLI。
+前置条件：① 宿主已接入 server 模块主机台账（存在 `MsServerHost` 记录且 `ServerHostService#resolveCredential` 能解析 SSH 凭据，否则报「主机不存在」或凭据解析失败；本机通道由 `LocalDockerHostRegistrar` 自动注册，免手工添加）；② CMD 通道的远程主机须为 POSIX（Linux/macOS）——所有入口先 `ensurePosix(hostId)`，远程 Windows 主机抛 `UnsupportedOperationException`（本机通道不受此限，本服务所在机器是 Windows 时也可管理本机 Docker）；③ CMD 通道无需暴露 Docker TCP 端口，全部经 SSH 执行 `docker` CLI；API 通道则要求主机台账配置 `serverHostDockerApiUrl`（未配置时按 `http://<主机地址>:2375` 推导）。
 
 ### 6.3 可选依赖说明
 
@@ -188,7 +247,7 @@ SseEmitter emitter = dockerService.runContainer(1L, request);
 | `jackson-databind` | 必需（传递带入） | `docker --format '{{json .}}'` 输出与本地 JSON 持久化无法解析 |
 | `swagger-annotations` / `lombok` | 必需（传递带入）/ 编译期 `optional` | 前者仅 `@Tag`/`@Operation`/`@Schema` 注解、无运行时逻辑；后者仅编译本模块源码时需要，宿主运行期不需要 |
 
-宿主无需引入 docker-java 等 Docker 客户端库——本模块只经 SSH 调用主机上的 `docker` 命令。
+宿主无需引入 docker-java 等 Docker 客户端库——CMD 通道只经 SSH 调用主机上的 `docker` 命令；API 通道经 server 模块提供的 Docker Engine HTTP 客户端（`DockerChannel`/`DockerEngineClient`），同样无需额外依赖。
 
 ## 7. 使用场景
 
@@ -200,7 +259,7 @@ SseEmitter emitter = dockerService.runContainer(1L, request);
 
 **不适用 / 慎用：**
 
-- Windows 宿主机容器管理（`ensurePosix` 直接拒绝，无 Windows 容器/命名管道实现）；Kubernetes / 编排场景（只面向单机 `docker` CLI，与主机工作台的 K8s 能力解耦）。
+- 远程 Windows 宿主机容器管理（`ensurePosix` 对远程 Windows 直接拒绝，无 Windows SSH 容器/命名管道实现；本机通道除外——本服务所在机器是 Windows 时可管理本机 Docker）；Kubernetes / 编排场景（只面向单机 `docker` CLI，与主机工作台的 K8s 能力解耦）。
 - 高安全 / 多实例场景需注意：镜像库密码明文落 `~/.monitor/docker/registries.json`；`exec` 会话在内存 `ConcurrentHashMap`，多实例必须会话粘滞；命令仅白名单字段，不接受任意 shell 透传（有意限制）。
 
 **与相邻模块的取舍：**
@@ -250,7 +309,7 @@ SPI 入参 `RegistryConfig` 字段：`id`/`name`/`type`/`url`/`username`/`passwo
 本模块 `TemplateController` 已显式命名为 `dockerTemplateController`（源码注释：避免与模板模块 `/api/template` 的同名 `TemplateController` 冲突——两个 starter 被同一应用引入时默认 bean 名都是 `templateController`，组件扫描会抛 `ConflictingBeanDefinitionException`）。若再遇其它同名冲突（如自定义了同名 Bean），要么改名，要么开启 `spring.main.allow-bean-definition-overriding=true`；注意覆盖本模块 Bean 后 SSE/SSH 行为由你的实现负责。
 
 **Q3：需要开放 Docker 2375/2376 端口吗？有没有 `docker.enabled` 开关？与 Spring Boot 4.x 兼容吗？**
-端口与开关都不需要：所有命令经 SSH（默认 22）在目标主机执行 `docker` CLI；模块没有 `docker.enabled` 之类开关，引入依赖即装配（见第 5 节）；接口路径固定在 `/ms/server/docker` 下，网关放行按此前缀配置。兼容性方面：模块随父工程基于 Spring Boot 4.1.2 / Java 25 构建（`maven-compiler-plugin` source/target 25），自动装配用 Boot 3/4 标准的 `AutoConfiguration.imports`，Web/SSE 走 jakarta 命名空间，无 javax 遗留。
+端口与开关都不需要：CMD 通道所有命令经 SSH（默认 22）在目标主机执行 `docker` CLI（API 通道走 Docker Engine HTTP API、本机通道走本地进程，见第 1 节通道说明）；模块没有 `docker.enabled` 之类开关，引入依赖即装配（见第 5 节）；接口路径固定在 `/ms/server/docker` 下，网关放行按此前缀配置。兼容性方面：模块随父工程基于 Spring Boot 4.1.2 / Java 25 构建（`maven-compiler-plugin` source/target 25），自动装配用 Boot 3/4 标准的 `AutoConfiguration.imports`，Web/SSE 走 jakarta 命名空间，无 javax 遗留。
 
 **Q4：主机没装 Docker 会怎样？多实例部署交互终端（exec）有什么注意点？**
 主机未装 Docker 时 `GET .../capability` 不报错，返回 `{"installed": false, "version": null, "compose": false, "runtime": "docker"}`（Windows 主机同样）；列表/操作类接口报「主机未安装或未启动 Docker」错误（`dockerFail` 按 `command not found` / `cannot connect to the docker daemon` 等关键字区分「未安装」与「执行失败」）。`execContainer` 的会话状态在 `DockerServiceImpl#execSessions`（内存 `ConcurrentHashMap`），进程重启即丢；多实例部署时 `POST .../exec/input`、`.../exec/close` 必须路由到建立会话的同一实例（会话粘滞），否则报「会话不存在或已关闭」。

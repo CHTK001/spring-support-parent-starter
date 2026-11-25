@@ -117,6 +117,151 @@ flowchart TD
 
 除该配置类外本模块无其他 `@ConfigurationProperties`，也没有 `auto-init-table` 之类建表开关（建表靠 `db/init` 脚本随 `spring-support-datasource-starter` 执行）。映射文件字段与表结构属内容约定：映射示例见 `src/main/resources/datasync/mappings/user-sync.yaml`、`order-sync.json`（支持 `.yaml/.yml`、`.json`、`.properties`，`mappingId` 缺省取文件名）；建表见 `db/init/V2.0__init_all_datasync.sql`（`datasync_mapping` / `datasync_field_mapping` 两表），种子数据在 `db/init/V2.0__initdata_datasync.sql`（默认模板 `db-user-sync`）。
 
+### 5.1 逐项配置示例
+
+按功能分组给出每个配置项的含义、默认值与 YAML 写法（键名均为 camelCase 属性的 kebab-case 松散绑定形式）。
+
+**① 总开关与映射来源**
+
+- `plugin.datasync.enabled`
+  - 含义：模块总开关，同时是自动装配开关（条件注解 `matchIfMissing=true`，不配置即启用）。
+  - 默认值：`true`。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        enabled: true
+    ```
+
+- `plugin.datasync.mapping-source`
+  - 含义：映射来源 `file`（文件目录扫描）/ `database`（数据库表读取）；只决定是否装配文件扫描器（条件判定要求**显式**写 `file`），不限制数据库加载器。
+  - 默认值：`file`（POJO 初始值；条件判定不消费该默认值，见 5.3 注意事项第 1 条）。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        mapping-source: file
+    ```
+
+**② 文件模式**
+
+- `plugin.datasync.file-mapping.directory-path`
+  - 含义：文件模式下递归扫描的映射配置目录，支持 `.yaml/.yml`、`.json`、`.properties`；目录不存在时只记 warn 并跳过扫描。
+  - 默认值：`./datasync/mappings`。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        file-mapping:
+          directory-path: ./config/datasync
+    ```
+
+**③ 数据库模式**
+
+- `plugin.datasync.database-mapping.enabled`
+  - 含义：是否装配 `DatabaseMappingLoader`；开启后启动期一次性从 `{table-prefix}mapping` / `{table-prefix}field_mapping` 读取映射。
+  - 默认值：`false`。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        database-mapping:
+          enabled: true
+    ```
+
+- `plugin.datasync.database-mapping.table-prefix`
+  - 含义：映射表名前缀，实际读取 `{前缀}mapping` 与 `{前缀}field_mapping`；前缀经 `SqlName.checkSimple` 校验（仅允许简单标识符）。
+  - 默认值：`datasync_`；为空或含非法字符时校验抛 `IllegalArgumentException`，导致映射加载失败（无空值回落）。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        database-mapping:
+          table-prefix: datasync_
+    ```
+
+- `plugin.datasync.database-mapping.cron`
+  - 含义：数据库轮询间隔（Quartz 7 段 Cron 表达式）；**声明字段，当前实现未消费**——加载器只在启动时一次性读表，不轮询。
+  - 默认值：`0/5 * * * * ?`（运行期无消费方）。
+  - YAML：
+
+    ```yaml
+    plugin:
+      datasync:
+        database-mapping:
+          cron: "0/5 * * * * ?"
+    ```
+
+### 5.2 完整 YAML 配置示例
+
+数据库模式全量配置示例（`application.yml`；`DataSource` 由宿主提供，口令一律用占位符）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/monitordb
+    username: your-username        # 占位符，勿写真实账号
+    password: change-me            # 占位符，勿写真实口令
+
+plugin:
+  datasync:
+    # 模块总开关（自动装配开关），不配置即 true
+    enabled: true
+    # 映射来源：file | database（文件扫描器要求显式写 file）
+    mapping-source: database
+    # 文件模式配置（mapping-source=file 时生效）
+    file-mapping:
+      # 映射配置文件目录（递归扫描 .yaml/.yml/.json/.properties）
+      directory-path: ./datasync/mappings
+    # 数据库模式配置（database-mapping.enabled=true 时生效）
+    database-mapping:
+      # 装配 DatabaseMappingLoader，启动期一次性读表
+      enabled: true
+      # 表名前缀：实际读取 datasync_mapping / datasync_field_mapping
+      table-prefix: datasync_
+      # 声明字段，当前实现未消费（不做轮询）
+      cron: "0/5 * * * * ?"
+```
+
+与上例配套的映射行（写入 `datasync_mapping` / `datasync_field_mapping` 表；文件模式则等价写入映射文件，内容格式与模块自带样例 `src/main/resources/datasync/mappings/user-sync.yaml` 一致）：
+
+```yaml
+mappingId: user-sync
+inputId: user-input
+sourceId: user-source
+outputId: user-output
+sinkId: user-sink
+batch: 10
+cronType: fixed
+cron: "0/5 * * * * ?"
+params:
+  key1: value1
+  key2: 123
+mappings:
+  - sourceField: name
+    targetField: user_name
+    converter: toString
+  - sourceField: age
+    targetField: user_age
+    converter: toInteger
+```
+
+### 5.3 生产注意事项
+
+1. **`mapping-source` 必须显式写 `file`**：文件扫描器的条件注解没有 `matchIfMissing`，POJO 里的默认值不参与条件判定——不写该键就不会装配扫描器（数据库加载器不受它控制）。
+2. **生命周期需宿主驱动**：自动配置不会自动调用 `scanner.start()` 与 `server.start()`；且必须先 `registerSource` / `registerSink` 再 `server.start()`，方向要正确（Source 为 INPUT、Sink 为 OUTPUT），否则整条映射被阻止执行。
+3. **数据库模式是一次性加载**：`DatabaseMappingLoader` 在启动期读表，`database-mapping.cron` 当前未消费；改表后需重启（或自行触发加载）。主表加载失败只记 error 不阻断启动，字段映射失败只 warn。
+4. **表结构与数据源**：`datasync_mapping` / `datasync_field_mapping` 由本模块 `db/init` 脚本随 `spring-support-datasource-starter` 建表（幂等 `CREATE TABLE IF NOT EXISTS`），`DataSource` 由宿主提供；`table-prefix` 必须是非空简单标识符，否则 `SqlName.checkSimple` 拒绝并导致加载失败。
+5. **调度状态在进程内存**：映射表与调度状态均不落库，多实例部署需自行按实例拆分映射，避免重复执行。
+6. **Cron 为 Quartz 7 段格式**：映射内的 `cron`（如 `0/5 * * * * ?`）按 Quartz 表达式解析，注意与 Spring 6 段 crontab 区分。
+7. **凭据安全**：任何示例/模板中的数据库口令、密钥一律使用占位符（如 `change-me`、`your-password`），通过环境变量或配置中心注入，禁止提交真实凭据。
+8. **版本与依赖**：基于 Spring Boot 4.1.2 + Java 25 构建，低版本宿主无法加载字节码；pom 会传递带入 ssh / osgi / datalake / fory / protobuf / serialize 等 starter，引入前按 R5 评估其 AutoConfiguration 副作用，不需要时用 `<exclusions>` 排除。
+
 ## 6. 使用方式
 
 Maven 坐标：

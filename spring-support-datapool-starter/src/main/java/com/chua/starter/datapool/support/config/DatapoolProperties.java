@@ -9,6 +9,30 @@ import java.util.List;
 /**
  * 数据源中心配置属性。
  *
+ * <p>配置前缀 {@code plugin.datapool}，是本模块唯一的 {@code @ConfigurationProperties}，
+ * 由 {@link DatapoolAutoConfiguration} 经 {@code @EnableConfigurationProperties} 无条件装配
+ * （relaxed binding，推荐连字符风格，如 {@code connection-ttl-minutes}）。</p>
+ *
+ * <p>完整 YAML 配置示例（各项含义与回落值见对应字段注释）：</p>
+ *
+ * <pre>
+ * plugin:
+ *   datapool:
+ *     enabled: true                        # 服务信息面板展示旗标（非模块开关），默认 true
+ *     connection-ttl-minutes: 10           # JDBC 连接空闲存活分钟数；≤0 按 1 处理
+ *     connection-sweep-interval-ms: 60000  # 声明项：清扫节拍当前固定 60s，改值暂不生效
+ *     probe-timeout-ms: 5000               # 连通性探测超时（毫秒）
+ *     connect-timeout-seconds: 30          # JDBC 建连超时（秒）；≤0 按 1 处理
+ *     query-timeout-seconds: 60            # SQL 执行超时（秒）；0 = 不设上限
+ *     driver-jar-dir: data/jdbc-driver     # 驱动 jar 落盘目录（默认在工作目录下，按平台分隔符）
+ *     driver-jar-max-bytes: 67108864       # 驱动 jar 单个上限（字节），默认 64MB
+ *     file-db-upload-dir: data/file-db     # 文件库上传目录（默认在工作目录下，按平台分隔符）
+ *     file-db-max-bytes: 67108864          # 文件库单个上限（字节），默认 64MB
+ *     file-jdbc-allowed-dirs:              # 文件库路径白名单；留空 = 工作目录/临时目录/用户主目录
+ *       - /data/dbs                        # 追加放行的根目录示例
+ *     secret-key: ${DATASOURCE_SECRET_KEY:change-me}  # 口令加密密钥；留空 = 明文入库；配了不要换
+ * </pre>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -17,29 +41,73 @@ import java.util.List;
 public class DatapoolProperties {
 
     /**
-     * 服务信息面板上「数据源中心」模块的展示旗标（非模块开关）
+     * 服务信息面板上「数据源中心」模块的展示旗标（非模块开关）。
+     *
+     * <p>默认值：{@code true}。注意这不是模块开关：本模块装配无条件，
+     * 置为 {@code false} 只会隐藏服务信息面板上的「数据源中心」旗标，
+     * 不会关闭数据源中心的任何能力。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     enabled: true
+     * </pre>
      */
     private boolean enabled = true;
 
     /**
-     * JDBC 连接空闲存活时长（分钟），超时自动关闭（小于 1 按 1 处理）
+     * JDBC 连接空闲存活时长（分钟），超时自动关闭（小于 1 按 1 处理）。
+     *
+     * <p>默认值：{@code 10}；配置 ≤0 时按 {@code 1} 处理（取用侧 {@code Math.max(1L, ...)}）。
+     * 过期为惰性触发 + 后台清扫（见 {@code connectionSweepIntervalMs}），
+     * TTL 内复用同一物理连接。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     connection-ttl-minutes: 10
+     * </pre>
      */
     // [P3C A20 豁免]
     private long connectionTtlMinutes = 10L;
 
     /**
-     * 空闲连接后台清扫周期（毫秒），默认 60 秒，0 = 关闭清扫。
+     * 空闲连接后台清扫周期（毫秒），默认 60 秒。
      *
      * <p>{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时才会触发
      * 过期回调去关闭物理连接；数据源一旦闲置（页面关了、当天不再查询），那条连接
      * 会一直挂到进程重启或数据源被删除。这里给后台一个定期主动核对的节拍：
      * 到期的连接由清扫任务触发同一套过期回调关闭，既不泄漏 socket，
      * 也不影响 TTL 内的复用（正在使用的连接刚刷新过、不会处于过期态）。</p>
+     *
+     * <p>默认值：{@code 60000}（60 秒）。<b>当前为声明项</b>：运行期尚未读取该值，
+     * 清扫节拍固定写在 {@code JdbcDatasourceSupport#sweepExpiredJdbcConnections} 的
+     * {@code @Scheduled(fixedDelay = 60_000L)}；「0 = 关闭清扫」是设计意图、尚未接线，
+     * 调整清扫频率目前需改代码。</p>
+     *
+     * <p>YAML 示例（保留默认即可，改值暂不生效）：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     connection-sweep-interval-ms: 60000
+     * </pre>
      */
     private long connectionSweepIntervalMs = 60_000L;
 
     /**
-     * 连通性探测超时（毫秒）
+     * 连通性探测超时（毫秒）。
+     *
+     * <p>默认值：{@code 5000}（5 秒）。台账连通性测试与指标采集探活共用该超时；
+     * 弱网/跨机房目标可适当调大。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     probe-timeout-ms: 5000
+     * </pre>
      */
     // [P3C A20 豁免]
     private int probeTimeoutMs = 5000;
@@ -54,6 +122,15 @@ public class DatapoolProperties {
      * <p>实现按驱动族换算单位：MySQL/MariaDB 与 Oracle 的 {@code connectTimeout}
      * 是**毫秒**，PostgreSQL 的是**秒**，SQL Server 只认 {@code loginTimeout}（秒）。
      * 写错单位会让「30 秒」变成 30 毫秒（必超时）或 30 万秒（等于没设）。</p>
+     *
+     * <p>默认值：{@code 30}；配置 ≤0 时按 {@code 1} 秒处理（取用侧 {@code Math.max(1, ...)}）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     connect-timeout-seconds: 30
+     * </pre>
      */
     // [P3C A20 豁免]
     private int connectTimeoutSeconds = 30;
@@ -69,6 +146,16 @@ public class DatapoolProperties {
      *
      * <p>只约束语句级执行（查询/批量/单语句事务），不影响连接本身的建连超时；
      * 按库的慢查询水位调整，0 关闭。</p>
+     *
+     * <p>默认值：{@code 60}；配置 ≤0（含 0）时<b>不设上限</b>——仅当大于 0 才会调用
+     * {@code Statement.setQueryTimeout}，沿用驱动/数据库默认。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     query-timeout-seconds: 60
+     * </pre>
      */
     // [P3C A20 豁免]
     private int queryTimeoutSeconds = 60;
@@ -81,6 +168,17 @@ public class DatapoolProperties {
      * 而台账里还记着这个 jar。</p>
      *
      * <p>文件名落盘时统一加内容指纹，避免同名不同内容的 jar 互相覆盖。</p>
+     *
+     * <p>默认值：{@code data/jdbc-driver}（按 {@code File.separator} 拼接，
+     * 即 Windows 下为 {@code data\jdbc-driver}；路径相对应用工作目录）。
+     * 自定义时建议仍指向持久磁盘上的专用目录，不要放会被系统清理的临时目录。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     driver-jar-dir: data/jdbc-driver
+     * </pre>
      */
     private String driverJarDir = "data" + java.io.File.separator + "jdbc-driver";
 
@@ -90,6 +188,15 @@ public class DatapoolProperties {
      * <p>JDBC 驱动正常在 100KB~10MB；给一个明显越界的上限是为了防止
      * 「误传了整个 JDK」或「传了源码包」把磁盘写满 —— 这个目录在生产机上，
      * 而后台又是常驻的。</p>
+     *
+     * <p>默认值：{@code 67108864}（64MB）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     driver-jar-max-bytes: 67108864
+     * </pre>
      */
     // [P3C A20 豁免]
     private long driverJarMaxBytes = 64L * 1024 * 1024;
@@ -103,6 +210,15 @@ public class DatapoolProperties {
      *
      * <p>该目录应落在 {@code fileJdbcAllowedDirs} 允许的范围内，
      * 否则建连会被路径白名单挡下 —— 默认值本身就在工作目录内，无需额外配置。</p>
+     *
+     * <p>默认值：{@code data/file-db}（按 {@code File.separator} 拼接，路径相对应用工作目录）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     file-db-upload-dir: data/file-db
+     * </pre>
      */
     private String fileDbUploadDir = "data" + java.io.File.separator + "file-db";
 
@@ -111,6 +227,15 @@ public class DatapoolProperties {
      *
      * <p>单文件库正常在几 MB 以内；给上限是为了防止误传一个几百 MB 的
      * 数据仓库文件把磁盘写满。要传更大的库，把这个值调大即可。</p>
+     *
+     * <p>默认值：{@code 67108864}（64MB）。</p>
+     *
+     * <p>YAML 示例：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     file-db-max-bytes: 67108864
+     * </pre>
      */
     // [P3C A20 豁免]
     private long fileDbMaxBytes = 64L * 1024 * 1024;
@@ -126,6 +251,17 @@ public class DatapoolProperties {
      * （java.io.tmpdir）、<b>用户主目录</b>（user.home）—— 分别覆盖「相对路径落盘」、
      * 「/tmp 试用一把」、「{@code jdbc:h2:~/data}」三种正常用法；
      * 要放行别的目录（如 /data/dbs）在此显式追加。</p>
+     *
+     * <p>默认值：空列表（回落放行工作目录 / 系统临时目录 / 用户主目录三处）。</p>
+     *
+     * <p>YAML 示例（列表项为根目录，解析后的库文件路径落在其下即放行）：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     file-jdbc-allowed-dirs:
+     *       - /data/dbs
+     *       - D:/app-data/file-db
+     * </pre>
      */
     private List<String> fileJdbcAllowedDirs = new ArrayList<>();
 
@@ -140,6 +276,15 @@ public class DatapoolProperties {
      *
      * <p><strong>配了就不要换。</strong> 更换密钥会让此前写下的密文全部解不开，
      * 那些数据源的口令只能重新录入。密钥放配置文件或环境变量，不要进代码库。</p>
+     *
+     * <p>默认值：空串（不加密，口令明文入库，进程启动时打一次 WARN）。</p>
+     *
+     * <p>YAML 示例（推荐经环境变量注入，避免明文进配置仓库）：</p>
+     * <pre>
+     * plugin:
+     *   datapool:
+     *     secret-key: ${DATASOURCE_SECRET_KEY:change-me}
+     * </pre>
      */
     private String secretKey = "";
 

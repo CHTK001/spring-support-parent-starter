@@ -146,6 +146,155 @@ JVM 参数（非 Spring 配置项）：`-Dchua.discovery.balance=<strategy>`，�
 
 > 源码说明：`DiscoveryOption` 中还存在 `root`（默认 `discovery`）/ `database` / `deferToInterface` / `extra` 字段，但 `DiscoveryConfiguration#registryBean` 只绑定 address / username / password / 两个超时，其余字段不从 `plugin.discovery` 配置读取；`ignoreInvalidFields = true`，非法字段名不会导致启动失败。
 
+### 5.1 逐项配置示例（按功能分组）
+
+按功能分组列出每个配置项的含义、默认值与 YAML 写法。默认值均与源码字段初始化一致，运行时回落行为在「默认值」列注明。
+
+**① 总开关与运行模式**（`DiscoveryListProperties` 顶层字段）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `enable` | 服务发现总开关；`false` 时仅装配内含 `DefaultServiceDiscovery` 的 `discoveryService#embedd`，不连注册中心 | `false` |
+| `type` | 运行模式：`client`（连外部注册中心）/ `server`（独立注册中心）/ `embbed`（内嵌注册中心），大小写不敏感 | `client` |
+
+```yaml
+plugin:
+  discovery:
+    enable: true      # 默认 false
+    type: client      # 默认 client，可选 server / embbed
+```
+
+**② 注册中心服务端**（`server`，仅 `type=server/embbed` 时生效）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `server.protocol` | 注册中心传输协议（`SyncServer` SPI：`http`/`websocket`/`tcp`/`udp`） | `http` |
+| `server.host` | 监听地址；字段留空时运行时回落：`embbed` → `127.0.0.1`，`server` → `0.0.0.0` | 空（运行时回落） |
+| `server.port` | 监听端口；配置 `<=0` 时按 `9600` 处理 | `9600` |
+| `server.node` | `embbed` 模式本机种子服务节点（字段同 `node[m]`），hub `start()` 时注册 | 空列表 |
+
+```yaml
+plugin:
+  discovery:
+    type: embbed
+    server:
+      protocol: http
+      host: 127.0.0.1
+      port: 9600
+      node:
+        - server-id: demo-app
+          namespace: /demo-service
+          protocol: http
+```
+
+**③ 发现客户端列表**（`properties[n]`，`type=client` 时逐条装配）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `properties[n].enabled` | 单条是否启用，`false` 跳过该条 | `true` |
+| `properties[n].protocol` | SPI 协议名：`nacos`/`zookeeper`/`redis`/`apollo`/`udp-broadcast`/`registry-client`/自定义 | 无（不配则该条降级为本地空实现） |
+| `properties[n].address` | 注册中心地址 → `DiscoveryOption#setAddress` | 无 |
+| `properties[n].username` | 账号 → `DiscoveryOption#setUser` | 无 |
+| `properties[n].password` | 密码 → `DiscoveryOption#setPassword` | 无 |
+| `properties[n].connection-timeout-millis` | 连接超时（毫秒） | `10000` |
+| `properties[n].session-timeout-millis` | 会话超时（毫秒） | `10000` |
+| `properties[n].node` | 要注册的本机服务节点列表 | 空列表 |
+
+```yaml
+plugin:
+  discovery:
+    properties:
+      - enabled: true
+        protocol: nacos
+        address: http://localhost:8848
+        username: your-username
+        password: your-password
+        connection-timeout-millis: 10000
+        session-timeout-millis: 10000
+```
+
+**④ 服务节点**（`properties[n].node[m]`，`server.node[m]` 同构）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `node[m].server-id` | 实例 ID，成为 `Discovery#id`，是反注册键；留空运行时回落 `Project.calcApplicationUuid()` | 无（运行时回落） |
+| `node[m].namespace` | 服务命名空间（注册/查询的 `uriSpec`），也是匹配 `DiscoveryEnvironment#getName()` 的键 | 无 |
+| `node[m].protocol` | 节点对外通信协议，写入 `Discovery#protocol` | `http` |
+
+```yaml
+plugin:
+  discovery:
+    properties:
+      - node:
+          - server-id: demo-app
+            namespace: /demo-service
+            protocol: http
+```
+
+**⑤ 负载均衡策略**（JVM 参数，非 Spring 配置项）
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `-Dchua.discovery.balance` | `getDiscovery(protocol, uriSpec)` 的默认负载策略：`weight` / `random` / `round`（`polling`）；未知策略回落列表第一个节点 | `weight` |
+
+```text
+java -Dchua.discovery.balance=random -jar app.jar
+```
+
+### 5.2 完整 YAML 使用示例
+
+client 模式全量配置（多注册中心并存，字段全覆盖）：
+
+```yaml
+spring:
+  application:
+    name: demo-service
+
+plugin:
+  discovery:
+    enable: true                          # 总开关，默认 false
+    type: client                          # 运行模式，默认 client
+    server:                               # 仅 type=server/embbed 生效，client 模式可省略
+      protocol: http
+      host: 0.0.0.0
+      port: 9600
+      node: []
+    properties:
+      # 主注册中心：Nacos
+      - enabled: true
+        protocol: nacos
+        address: http://localhost:8848
+        username: your-username
+        password: your-password
+        connection-timeout-millis: 10000
+        session-timeout-millis: 10000
+        node:
+          - server-id: ${spring.application.name}   # 留空则回落 Project.calcApplicationUuid()
+            namespace: /demo-service
+            protocol: http
+      # 备注册中心：registry-client 随 common 内置，无需额外依赖
+      - enabled: true
+        protocol: registry-client
+        address: http://10.0.0.10:9600
+        node:
+          - server-id: ${spring.application.name}
+            namespace: /demo-service
+            protocol: http
+```
+
+零外部依赖的 embbed 模式完整示例见「6.4 三种运行模式」。
+
+### 5.3 生产注意事项
+
+- **先确认实现存在**：`protocol` 对应的 SPI 不在 classpath 时只告警并降级为 `DefaultServiceDiscovery`，启动不失败但注册/查询全为空操作；上线前核对依赖与启动日志（`[Discovery] 服务状态` / `[Discovery] 注册服务:`）。
+- **凭据管理**：`username`/`password` 不要明文提交到仓库或配置中心明文空间，用环境变量、启动参数或配置中心加密注入（本文示例一律 `your-username`/`your-password` 占位）。
+- **优雅停机**：`close()` 先反注册再断连；避免 `kill -9`，否则实例会残留到注册中心 TTL/空闲回收，滚动重启期间上游仍可能把流量打到已停进程。
+- **server-id 唯一性**：同一服务的多实例应保证 `server-id` 可辨（留空虽会回落 `Project.calcApplicationUuid()`，仍建议显式配置，便于按实例反注册与排查）。
+- **超时配置**：`connection-timeout-millis`/`session-timeout-millis` 默认 10 秒；跨机房或注册中心压力大时按链路实测调整，避免启动期建连抖动被误判失败。
+- **embbed 暴露面**：内嵌注册中心默认监听 `127.0.0.1`，仅本进程可用；改 `0.0.0.0` 供远程接入时务必配合网络隔离与鉴权，不要暴露到不可信网络。
+- **registry-client 自愈窗口**：hub 重启清表、增量事件丢失、上行失败都会在一个对账周期（默认 30 秒）内自动收敛；对一致性敏感的调用方应容忍该窗口或自行订阅变更。
+- **Bean 命名冲突**：本模块按固定名注册 Bean（`discoveryService#embedd` 等），不要依赖 `spring.main.allow-bean-definition-overriding=true` 硬覆盖；多协议并存按类型注入需 `@Qualifier` 消歧。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标

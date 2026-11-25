@@ -104,6 +104,139 @@ flowchart TB
 
 除 `enabled` 由自动装配条件直接消费外，其余四项需 `enabled=true` 才有意义。
 
+### 5.1 逐项配置示例
+
+#### ① 开关与装配
+
+**`plugin.bundle.enabled`**
+
+| 项 | 说明 |
+|---|---|
+| 含义 | Bundle 管理总开关，被 `BundleAutoConfiguration` 类上的 `@ConditionalOnProperty(prefix="plugin.bundle", name="enabled", havingValue="true")` 直接消费 |
+| 默认值 | `false`（禁用）。不显式置 `true` 时，`bundleManagerService` / `bundleStartupProcessor` / `bundleServiceInfoContributor` 三个 Bean 一并消失 |
+
+```yaml
+plugin:
+  bundle:
+    enabled: true
+```
+
+#### ② 启动期批量装卸
+
+**`plugin.bundle.uninstall-at-startup`**
+
+| 项 | 说明 |
+|---|---|
+| 含义 | 启动时自动卸载的 Bundle 符号名列表；先于安装列表执行，空白条目跳过，单项失败仅 warn、不阻断应用启动 |
+| 默认值 | `[]`（空列表，不自动卸载） |
+
+```yaml
+plugin:
+  bundle:
+    uninstall-at-startup:
+      - org.apache.felix.gogo.runtime
+```
+
+**`plugin.bundle.install-at-startup`**
+
+| 项 | 说明 |
+|---|---|
+| 含义 | 启动时自动安装的 Maven 坐标列表（`groupId:artifactId:version`）；在容器单例就绪后按列表顺序逐项走 `install(coords)`（含升级判定），单项失败仅 warn、不阻断应用启动 |
+| 默认值 | `[]`（空列表，不自动安装） |
+
+```yaml
+plugin:
+  bundle:
+    install-at-startup:
+      - org.apache.felix:org.apache.felix.gogo.runtime:1.1.6
+```
+
+#### ③ 升级策略
+
+**`plugin.bundle.auto-upgrade`**
+
+| 项 | 说明 |
+|---|---|
+| 含义 | 已装同 artifactId 的 Bundle 时是否允许升级：`true` 且请求版本更高 → 优先框架原生 `updateBundle` 原地升级，失败回退「卸载旧版 + 安装新版」；`false` 或请求版本不高于已装版本 → 跳过安装，返回已装版本的成功结果。版本比较只取前三段数字 |
+| 默认值 | `true` |
+
+```yaml
+plugin:
+  bundle:
+    auto-upgrade: true
+```
+
+#### ④ 远程仓库
+
+**`plugin.bundle.repository-url`**
+
+| 项 | 说明 |
+|---|---|
+| 含义 | 远程 Maven 仓库基址，`toMavenUrl` 按「基址 + `/groupId(点换斜杠)/artifactId/version/artifactId-version.jar`」拼 jar 下载 URL，基址末尾的 `/` 会被去掉一次。仅做字符串拼接：无私服认证、不解析 POM、不装传递依赖 |
+| 默认值 | `https://repo1.maven.org/maven2`（Maven Central） |
+
+```yaml
+plugin:
+  bundle:
+    repository-url: https://repo1.maven.org/maven2
+```
+
+### 5.2 完整 YAML 示例
+
+生产可用的完整配置（含相邻 `spring-support-osgi-starter` 的框架开关）：
+
+```yaml
+spring:
+  application:
+    name: bundle-host-demo
+
+plugin:
+  # 相邻模块 spring-support-osgi-starter 的框架开关（其 osgiLauncher Bean 是本模块的运行前提）
+  osgi:
+    enabled: true
+  bundle:
+    # 总开关：默认 false，必须显式开启，否则本模块自动配置整体不生效
+    enabled: true
+    # 启动时先卸载（按符号名），再安装（按 Maven 坐标）；单项失败仅 warn、不阻断启动
+    uninstall-at-startup:
+      - org.apache.felix.gogo.runtime
+    install-at-startup:
+      - org.apache.felix:org.apache.felix.gogo.runtime:1.1.6
+    # 已装同名 Bundle 时允许升级到更高版本（原地升级优先，失败回退「卸载+重装」）
+    auto-upgrade: true
+    # 远程仓库基址（末尾多余的 / 会被去掉；不支持私服认证）
+    repository-url: https://repo1.maven.org/maven2
+```
+
+配套的启动校验代码（启动期装卸失败只 warn，关键 Bundle 应主动校验）：
+
+```java
+@Service
+@RequiredArgsConstructor
+public class BundleStartupGuard implements ApplicationRunner {
+
+    private final BundleManagerService bundleManager;
+
+    @Override
+    public void run(ApplicationArguments args) {
+        if (!bundleManager.isInstalled("org.apache.felix.gogo.runtime")) {
+            throw new IllegalStateException("关键 Bundle 未安装: org.apache.felix.gogo.runtime");
+        }
+    }
+}
+```
+
+### 5.3 生产注意事项
+
+1. **必须并列引入 `spring-support-osgi-starter`**：本模块只消费 `OsgiLauncher` Bean、不创建它；缺失时 `bundleManagerService` 装配失败。
+2. **默认关闭**：`plugin.bundle.enabled` 默认 `false`，开启前确认宿主确实需要 OSGi 插件化能力。
+3. **启动期装卸不阻断启动**：`install-at-startup` / `uninstall-at-startup` 单项失败仅记录 warn；关键插件建议启动后用 `isInstalled` / `getStatus` 主动校验并接告警。
+4. **仓库无认证、无传递依赖**：`repository-url` 只参与 URL 拼接，不读 POM、不装依赖、不支持账号/令牌。私服需匿名可读或经网关代理；Bundle 建议打成自带依赖的 fat bundle，或提前安装其依赖 Bundle。
+5. **坐标务必钉死版本**：坐标中的 version 会原样进入下载 URL，不要使用 `LATEST`/`SNAPSHOT` 等无法定位具体构件的写法。
+6. **版本比较只看前三段数字**：`1.2.3.RELEASE` 与 `1.2.3` 视为相等；需要强制重装时先 `uninstall` 再 `install`。
+7. **回退重装等待上限固定**：原地升级失败回退时，等待旧 Bundle 卸载最长 5000ms（每 50ms 轮询），为代码内常量、不可配置；超时仍会尝试安装新版。
+8. **无 REST 端点**：本模块不监听任何端口；运维入口请使用 `spring-support-osgi-starter` 的 `/osgi/*` 端点与 SSH(8122)/Telnet(6666) 通道。
+
 ## 6. 使用方式
 
 ```xml

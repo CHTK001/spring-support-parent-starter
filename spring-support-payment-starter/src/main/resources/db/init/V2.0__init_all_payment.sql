@@ -431,3 +431,50 @@ CREATE TABLE IF NOT EXISTS `pay_partition_config` (
   UNIQUE KEY `uk_pay_partition_config_business_type` (`pay_partition_config_business_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单与流水分表配置表';
 
+CREATE TABLE IF NOT EXISTS `pay_coupon_template` (
+  `pay_coupon_template_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_coupon_template_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_coupon_template_name` VARCHAR(128) NOT NULL COMMENT '模板名称',
+  `pay_coupon_template_type` VARCHAR(16) NOT NULL DEFAULT 'CASH' COMMENT '类型: CASH-满减券/DEDUCT-直减券',
+  `pay_coupon_template_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '优惠金额',
+  `pay_coupon_template_min_order_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '最低订单金额门槛',
+  `pay_coupon_template_total_count` INT NOT NULL DEFAULT 0 COMMENT '发放总量(0=不限)',
+  `pay_coupon_template_issued_count` INT NOT NULL DEFAULT 0 COMMENT '已发放数量',
+  `pay_coupon_template_per_user_limit` INT NOT NULL DEFAULT 1 COMMENT '每人限领数量',
+  `pay_coupon_template_valid_days` INT DEFAULT NULL COMMENT '领取后有效天数(与固定有效期二选一)',
+  `pay_coupon_template_valid_start_at` DATETIME DEFAULT NULL COMMENT '固定有效期开始',
+  `pay_coupon_template_valid_end_at` DATETIME DEFAULT NULL COMMENT '固定有效期结束',
+  `pay_coupon_template_status` VARCHAR(16) NOT NULL DEFAULT 'ENABLED' COMMENT '状态: ENABLED-启用/DISABLED-停用',
+  `pay_coupon_template_remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `pay_coupon_template_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `pay_coupon_template_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_coupon_template_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX `idx_pay_coupon_template_merchant` (`pay_coupon_template_merchant_id`),
+  INDEX `idx_pay_coupon_template_status` (`pay_coupon_template_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='优惠券模板表';
+
+CREATE TABLE IF NOT EXISTS `pay_coupon` (
+  `pay_coupon_id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `pay_coupon_merchant_id` BIGINT NOT NULL COMMENT '商户ID',
+  `pay_coupon_user_id` BIGINT NOT NULL COMMENT '用户ID',
+  `pay_coupon_template_id` BIGINT NOT NULL COMMENT '模板ID',
+  `pay_coupon_no` VARCHAR(64) NOT NULL COMMENT '券号',
+  `pay_coupon_name` VARCHAR(128) NOT NULL COMMENT '券名称',
+  `pay_coupon_type` VARCHAR(16) NOT NULL DEFAULT 'CASH' COMMENT '类型: CASH/DEDUCT',
+  `pay_coupon_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '优惠金额',
+  `pay_coupon_min_order_amount` DECIMAL(12,2) NOT NULL DEFAULT 0 COMMENT '最低订单金额门槛',
+  `pay_coupon_status` VARCHAR(16) NOT NULL DEFAULT 'UNUSED' COMMENT '状态: UNUSED-未使用/FROZEN-下单锁定/USED-已核销/EXPIRED-已过期',
+  `pay_coupon_order_id` BIGINT DEFAULT NULL COMMENT '核销订单ID',
+  `pay_coupon_order_no` VARCHAR(64) DEFAULT NULL COMMENT '核销订单号',
+  `pay_coupon_used_at` DATETIME DEFAULT NULL COMMENT '核销时间',
+  `pay_coupon_expire_at` DATETIME NOT NULL COMMENT '过期时间',
+  `pay_coupon_deleted` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  `pay_coupon_created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `pay_coupon_updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_pay_coupon_no` (`pay_coupon_no`),
+  INDEX `idx_pay_coupon_merchant_user` (`pay_coupon_merchant_id`, `pay_coupon_user_id`),
+  INDEX `idx_pay_coupon_status` (`pay_coupon_status`),
+  INDEX `idx_pay_coupon_template` (`pay_coupon_template_id`),
+  INDEX `idx_pay_coupon_order_no` (`pay_coupon_order_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户优惠券表';
+

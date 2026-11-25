@@ -147,6 +147,147 @@ plugin:
       # notify-url / return-url 为声明项，请改用请求级字段
 ```
 
+### 5.1 逐项配置示例（按功能分组）
+
+每组给出「字段说明 + 默认值」与对应 YAML 片段；所有键均可省略，省略即取默认值。
+
+**① 开关与环境**
+
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| `enabled` | 总开关：`true` 才注册 `AlipayClient` Bean；网关 SPI 不受它限制 | `false` |
+| `enable` | 历史兼容字段，无任何代码读取，**配置不生效** | `false` |
+| `sandbox` | 沙箱联调开关；仅当 `server-url` 为空时决定生产/沙箱网关 | `false` |
+| `server-url` | 显式网关地址，优先级高于 `sandbox`；为空时按 `sandbox` 兜底 | 空（生产网关） |
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      enabled: true        # 总开关（默认 false）
+      # enable: false      # 死配置，写了也不生效
+      sandbox: true        # 沙箱联调；生产改 false
+      # server-url: https://openapi.alipay.com/gateway.do   # 显式网关，优先于 sandbox
+```
+
+**② 应用与密钥**
+
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| `app-id` | 支付宝开放平台应用 APPID | 空 |
+| `private-key` | 应用私钥（请求签名用） | 空 |
+| `alipay-public-key` | 支付宝公钥（响应验签 + 异步通知验签共用） | 空 |
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      app-id: your-app-id
+      private-key: ${ALIPAY_PRIVATE_KEY}
+      alipay-public-key: ${ALIPAY_PUBLIC_KEY}
+```
+
+**③ 回调地址（声明项）**
+
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| `notify-url` | **声明项，网关不读取**：实际通知地址以 `AliyunAlipayPayRequest.notifyUrl` 请求级字段为准 | 空 |
+| `return-url` | **声明项，网关不读取**：实际跳转地址以请求级 `returnUrl` 为准（App 支付不设 returnUrl） | 空 |
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      # 两项仅作声明，发单时请传请求级字段
+      # notify-url: https://example.com/pay/notify
+      # return-url: https://example.com/pay/return
+```
+
+**④ 报文与签名**
+
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| `format` | 报文格式，写入 `AlipayConfig` | `json` |
+| `charset` | 字符集；异步通知验签 `charset` 的兜底值（优先级：通知参数 &gt; 配置 &gt; UTF-8） | `UTF-8` |
+| `sign-type` | 签名类型；异步通知验签 `sign_type` 的兜底值（优先级：通知参数 &gt; 配置 &gt; RSA2） | `RSA2` |
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      format: json
+      charset: UTF-8
+      sign-type: RSA2
+```
+
+**⑤ 连接池与超时**
+
+均为「非 `null` 才写入 `AlipayConfig`」；配置为 `null` 时不设置，回落支付宝 SDK 默认值。
+
+| 配置项 | 说明 | 默认值 |
+|---|---|---|
+| `connect-timeout` | 连接超时（毫秒） | `10000` |
+| `read-timeout` | 读超时（毫秒） | `30000` |
+| `max-idle-connections` | 连接池最大空闲连接数 | `5` |
+| `keep-alive-duration` | 连接保活时长（毫秒） | `300000` |
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      connect-timeout: 10000
+      read-timeout: 30000
+      max-idle-connections: 5
+      keep-alive-duration: 300000
+```
+
+### 5.2 完整 YAML 使用示例
+
+生产环境建议密钥走环境变量或配置中心，不要把明文私钥提交进仓库：
+
+```yaml
+plugin:
+  aliyun:
+    alipay:
+      enabled: true                                     # 注册 AlipayClient Bean（网关 SPI 不依赖它）
+      sandbox: false                                    # 生产环境；联调改 true
+      server-url: https://openapi.alipay.com/gateway.do # 也可省略，按 sandbox 自动选择
+      app-id: ${ALIPAY_APP_ID}
+      private-key: ${ALIPAY_PRIVATE_KEY}                # 应用私钥，务必走环境变量/配置中心
+      alipay-public-key: ${ALIPAY_PUBLIC_KEY}           # 支付宝公钥（不是应用公钥）
+      format: json
+      charset: UTF-8
+      sign-type: RSA2
+      connect-timeout: 10000
+      read-timeout: 30000
+      max-idle-connections: 5
+      keep-alive-duration: 300000
+      # notify-url / return-url 为声明项，网关不读取；发单时传请求级字段
+```
+
+配套 Java 用法（网关是 SPI，不是 Spring Bean）：
+
+```java
+AliyunAlipayGateway gateway =
+        ServiceProvider.of(AliyunAlipayGateway.class).getExtension("alipay");
+
+AliyunAlipayPayResponse resp = gateway.pagePay(properties,
+        new AliyunAlipayPayRequest(outTradeNo, amount, subject, null,
+                "https://example.com/pay/notify",   // 请求级 notify_url（生效）
+                "https://example.com/pay/return",   // 请求级 return_url（生效）
+                "FAST_INSTANT_TRADE_PAY", null));
+```
+
+### 5.3 生产注意事项
+
+- **密钥安全**：`private-key` 是应用私钥，务必经环境变量 / 配置中心注入，禁止明文提交到代码仓库；`alipay-public-key` 填**支付宝公钥**（不是自己的应用公钥），否则验签必然失败。
+- **沙箱 → 生产**：上线前把 `sandbox` 改为 `false`（或显式配置生产 `server-url`）；沙箱与生产的 APPID、密钥、网关互不通用。
+- **开关语义**：`enabled` 只控制 `AlipayClient` Bean 的装配；网关 SPI（`getExtension("alipay")`）不受它限制，`enabled=false` 时网关调用依然可用。`enable`（不带 d）是死配置。
+- **回调地址**：`notify-url` / `return-url` 配置项是声明项，网关只认 `AliyunAlipayPayRequest` 的请求级字段；异步通知端点需业务自建，验签失败会抛 `IllegalStateException`，需按支付宝要求返回 `failure`。
+- **连接复用**：默认网关每次调用新建 `AlipayClient`，`connect-timeout` / `read-timeout` / 连接池参数作用于每次新建的客户端；高并发下需要连接复用时，按第 8 节自定义网关实现并登记 `@Spi("custom")`。
+- **超时兜底**：四个连接/超时字段配成 `null` 时不写入 `AlipayConfig`，回落支付宝 SDK 默认值。
+- **金额精度**：下单 / 退款 / 转账金额由网关按 `BigDecimal` 2 位小数 `HALF_UP` 序列化，业务侧无需自行格式化。
+
 ## 6. 使用方式
 
 ```xml

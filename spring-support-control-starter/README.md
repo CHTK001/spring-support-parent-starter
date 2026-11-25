@@ -115,6 +115,67 @@ flowchart TD
 | `control.webrtc.width` | `int` | `1280` | 采集最大宽度；当前仅随 `/control/config` 下发，未参与采集设置 |
 | `control.webrtc.height` | `int` | `720` | 采集最大高度；同上 |
 
+### 5.1 逐项配置示例
+
+按功能分组给出每个配置项的含义、默认值与 YAML 写法；未列出的项保持默认值。
+
+**开关与装配**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `control.webrtc.enabled` | 模块总开关，`false` 时整模块不装配（无 `WebRtcServer` Bean、不绑定信令端口；已注册的 `ControlController` 会因缺依赖启动失败） | `true` |
+| `control.webrtc.auto-start` | 是否随应用启动信令服务；`false` 时 Bean 已创建但不调用 `start()`，需自行触发 | `true` |
+
+```yaml
+control:
+  webrtc:
+    enabled: true      # 关闭时控制器注册需一并移除
+    auto-start: true   # 改为 false 时需在合适时机手动 server.start()
+```
+
+**信令网络**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `control.webrtc.host` | 信令服务（`/webrtc` WebSocket）监听地址；`/control/config` 下发的 `wsUrl` 用请求 Host 拼接，不受该值影响 | `0.0.0.0` |
+| `control.webrtc.port` | 信令服务监听端口，独立于 `server.port`；绑定失败仅记录 error 日志，应用继续启动（远控不可用） | `10000` |
+
+```yaml
+control:
+  webrtc:
+    host: 0.0.0.0   # 仅本机使用时可收紧为 127.0.0.1
+    port: 10000     # 注意防火墙放行
+```
+
+**安全**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `control.webrtc.token` | WebSocket 信令握手令牌（`?token=`，不匹配回 403）；为空时启动自动生成（UUID 去横线）并回写，仅内存态，随 `GET /control/config` 下发 | `""`（自动生成） |
+
+```yaml
+control:
+  webrtc:
+    token: ""   # 留空自动生成；生产建议显式固定值（下方为占位示例，请替换）
+    # token: change-me-to-a-long-random-string
+```
+
+**采集参数**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `control.webrtc.frame-rate` | 桌面采集帧率，装配时经 `setCaptureRate` 下发，设置失败仅 warn 不阻断 | `15` |
+| `control.webrtc.width` | 采集最大宽度；当前仅随 `GET /control/config` 下发，未参与采集设置 | `1280` |
+| `control.webrtc.height` | 采集最大高度；同上 | `720` |
+
+```yaml
+control:
+  webrtc:
+    frame-rate: 15   # 带宽/机器紧张时可降到 5~10
+    width: 1280
+    height: 720
+```
+
 ## 6. 使用方式
 
 Maven 坐标（`utils-support-webrtc-starter` 版本由父工程 `dependencyManagement` 托管，继承 `spring-support-parent-starter` 时可省略版本号）：
@@ -183,6 +244,31 @@ boolean capturing = capture.videoTrack() != null;
 | `lombok` | 是 | 仅编译期需要；直接依赖本模块二进制 jar 时无需关心 |
 | `spring-boot-starter-web` | 否 | 无 MVC 运行时，`/control/**` 接口不可用 |
 | `utils-support-common-starter` | 否 | `ReturnResult` / `ServerSetting` / `ProtocolType` 缺失，编译不通过 |
+
+### 6.1 完整 YAML 示例
+
+生产环境推荐的完整配置（本模块全部配置项；`/control/**` REST 走宿主常规 Web 端口，无需额外配置）：
+
+```yaml
+control:
+  webrtc:
+    enabled: true                               # 模块总开关（默认 true）
+    host: 0.0.0.0                               # 信令监听地址（默认 0.0.0.0）；仅本机使用改 127.0.0.1
+    port: 10000                                 # 信令端口，独立于 server.port（默认 10000）
+    auto-start: true                            # 随应用启动信令服务（默认 true）
+    token: change-me-to-a-long-random-string    # 固定信令令牌（占位符，请替换为足够长的随机串）
+    frame-rate: 15                              # 桌面采集帧率（默认 15）
+    width: 1280                                 # 采集最大宽度（默认 1280，仅随 /control/config 下发）
+    height: 720                                 # 采集最大高度（默认 720，仅随 /control/config 下发）
+```
+
+### 6.2 生产注意事项
+
+- **令牌与鉴权**：`token` 留空时每次重启都会重新生成（仅内存态、不持久化），前端必须先 `GET /control/config` 取新令牌再连信令；生产建议显式配置足够长的固定随机串。令牌只保护 `/webrtc` 信令握手，`/control/**` REST 没有方法级鉴权，访问控制依赖宿主的拦截器 / 网关 / 网络隔离。
+- **最小权限**：远控等于把宿主机键鼠交给浏览器端，只在内网或可信环境开启；仅本机排障时把 `host` 收紧为 `127.0.0.1`，并可通过 `GET /control/sessions` 审计活跃会话。
+- **端口与防火墙**：信令端口（默认 10000）独立于 `server.port`，需在防火墙放行；绑定失败只记录 error 日志、应用照常启动但远控不可用，发现连不上先查端口占用。
+- **资源开销**：`frame-rate` 直接决定采集的 CPU 与带宽占用，弱网 / 低配机器建议降到 5~10；采集与注入依赖真实桌面会话，headless 环境注入自动降级为只读（`NoopControlService`）。
+- **依赖完整性**：`utils-support-webrtc-starter` 是 optional 依赖，宿主必须显式声明，缺失时装配直接失败；本模块基于 Spring Boot 4.x / Jakarta，不兼容 Boot 2.x（`javax.*`）。
 
 ## 7. 使用场景
 

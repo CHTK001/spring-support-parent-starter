@@ -396,6 +396,7 @@ public class SysAiModelMetricsService {
     private static final String[] PROVIDER_MODEL_METRIC_KEYS = {
             "price_input_per_musd", "price_output_per_musd",
             "price_cache_hit_per_musd", "price_cache_write_per_musd",
+            "price_image_per_unit", "price_video_per_unit", "price_web_search_per_unit",
             "context_window_tokens", "max_output_tokens",
             "reasoning", "web_search", "image_input", "audio_input", "video_input",
             "pdf_input", "input_modalities", "output_modalities", "attachment",

@@ -18,7 +18,7 @@ flowchart TB
         direction TB
         subgraph L1["自动装配层"]
             EPP["spring.factories：DataSourceEnvironmentPostProcessor / DatabaseSettingEnvironmentPostProcessor"]
-            IMP["AutoConfiguration.imports（13 项）+ DataSourceInspect（BDRPP，动态注册数据源）"]
+            IMP["AutoConfiguration.imports（14 项，含 DataSourceInspect：BDRPP 动态注册数据源）"]
         end
         subgraph L2["核心服务层"]
             DYN["DynamicDataSource / MultiDataSource / DataSourceContextSupport / DataSourceGroupRegistry"]
@@ -48,7 +48,7 @@ flowchart TB
 flowchart TD
     A["Spring Boot 启动"] --> B["DataSourceEnvironmentPostProcessor（ConfigData+10）：<br/>未配置 spring.datasource.url 时兜底 SQLite（jdbc:sqlite:./sys / org.sqlite.JDBC / SQLiteDialect）<br/>并补缺省 ddl-auto=update、spring.sql.init.mode=never、plugin.datasource.script.enable=true"]
     A --> C["DatabaseSettingEnvironmentPostProcessor（ConfigData+110）：<br/>plugin.ops-config.database.enabled=true（默认）时建 sys_setting / sys_setting_group 并注入内置配置"]
-    A --> D["AutoConfiguration.imports 装配（13 项）"]
+    A --> D["AutoConfiguration.imports 装配（14 项）"]
     D --> E["DataSourceInspect（BDRPP）绑定 plugin.multi-datasource（兼容 spring.multi-datasource）：<br/>条目 url+name 齐全注册 dataSource#&lt;name&gt;；扫描 spring.datasource(/.hikari/.druid) 注册 master 与 组名_数字 成员<br/>注册 @Primary dynamicDataSource，应用 strict 与全局 load-balance"]
     D --> I["DataSourceScriptConfiguration（@AutoConfiguration）：<br/>BPP 先于依赖 DB 的 Bean 执行 init/migration/sync 脚本"]
     D --> J["其余能力按条件装配：事务 / SQL 监控 / 文档 / H2 / SQLite / Calcite / Sharding / 物化"]
@@ -78,7 +78,7 @@ flowchart TD
 
 ## 4. Bean 能力矩阵
 
-> imports 中 13 项仅 `DataSourceScriptConfiguration` 标注了 `@AutoConfiguration`；`DSTransactionalConfiguration`、`DatasourceP2AutoConfiguration`（均带 `@AutoConfiguration`）与 `SeataAutoConfiguration`（仅 `@Configuration`）**不在 imports**，需宿主 `@Import`。可否覆盖：✅ = 带 `@ConditionalOnMissingBean`，⚠️ = 核心链路/无让位注解，❌ = 动态生成。
+> imports 中 14 项仅 `DataSourceScriptConfiguration` 与 `DsRuntimeAutoConfiguration` 标注了 `@AutoConfiguration`；`DSTransactionalConfiguration`、`DatasourceP2AutoConfiguration`（均带 `@AutoConfiguration`）与 `SeataAutoConfiguration`（仅 `@Configuration`）**不在 imports**，需宿主 `@Import`。可否覆盖：✅ = 带 `@ConditionalOnMissingBean`，⚠️ = 核心链路/无让位注解，❌ = 动态生成。
 
 | Bean 名 | 类型 | 装配条件（含默认值） | 可否覆盖 | 典型用途 |
 | --- | --- | --- | --- | --- |
@@ -159,6 +159,394 @@ flowchart TD
 | `plugin.ops-config.database.enabled` | `Boolean` | `true` | 建 `sys_setting`/`sys_setting_group` 并注入内置配置 |
 | `seata.enabled / enable-auto-data-source-proxy / data-source-proxy-mode` | `Boolean`/`String` | `true` / 建议 `false` / `AT` | Seata 代理开关（需 `@Import(SeataAutoConfiguration.class)` 且 Seata 在类路径）/ 交由本模块代理避免重复包装 / `AT` 或 `XA` |
 | `spring.datasource.url` 等 | `String` | — | 单数据源标准配置（含 `.hikari.*`/`.druid.*`）；全缺省时 SQLite 兜底 |
+
+### 5.1 逐项配置示例（按功能分组）
+
+> 键名均与 §5 配置表一致，`默认值` 列与源码字段初始化对齐；示例中的口令一律为占位符（`your-password` / `change-me`），生产环境请经环境变量或配置中心注入。
+
+#### 1) 多数据源与负载均衡（`plugin.multi-datasource`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `false` | 属性开关；**是否注册仍由条目 `url`+`name` 齐全决定**（见 Q2） |
+| `load-balance` | `round_robin` | 组内负载均衡：`round_robin` / `random` |
+| `strict` | `false` | `true` 时 `@DS` 指向不存在的数据源抛 `IllegalStateException`，不回退默认数据源 |
+| `force-annotation` | `true` | `true`=无可用数据源时仍按注解值处理 |
+| `dataSource[*].name / url / username / password / driver-class-name` | — | 条目要素；`name` 形如 `组名_数字` 自动成组；`password` 支持 `ENC(...)` |
+
+```yaml
+plugin:
+  multi-datasource:
+    load-balance: round_robin      # 轮询；可改 random
+    strict: false                  # 严格模式：@DS 数据源缺失即抛异常
+    force-annotation: true
+    data-source:
+      - name: master
+        url: jdbc:mysql://localhost:3306/app
+        username: root
+        password: your-password    # 占位符；支持 ENC(密文)
+        driver-class-name: com.mysql.cj.jdbc.Driver
+      - name: slave_1              # 组名_数字 → 自动归入 slave 组
+        url: jdbc:mysql://localhost:3307/app
+        username: root
+        password: your-password
+```
+
+Hikari 专项（`plugin.multi-datasource.hikari`，legacy：`spring.multi-datasource.hikari`）在通用条目之上扩展连接池参数：
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `hikari.enable` | `false` | 启用 Hikari 专项列表 |
+| `hikari.dataSource[*].max-pool-size` | `100` | 最大连接数 |
+| `hikari.dataSource[*].min-idle` | `10` | 最小空闲连接 |
+| `hikari.dataSource[*].idle-timeout` | `600000` | 空闲连接存活时间（毫秒） |
+| `hikari.dataSource[*].max-lifetime` | `1800000` | 连接最大生命周期（毫秒） |
+| `hikari.dataSource[*].leak-detection-threshold` | `0` | 泄漏检测阈值（毫秒，`0` 关闭） |
+
+```yaml
+plugin:
+  multi-datasource:
+    hikari:
+      enable: true
+      data-source:
+        - name: slave_1
+          url: jdbc:mysql://localhost:3307/app
+          username: root
+          password: your-password
+          max-pool-size: 100
+          min-idle: 10
+          idle-timeout: 600000
+          max-lifetime: 1800000
+          leak-detection-threshold: 0   # 0=不检测连接泄漏
+```
+
+#### 2) 声明式事务（`plugin.transaction`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `false` | 按方法名前缀织入事务的开关 |
+| `timeout` | `10` | 写事务超时（秒） |
+| `tx-mapper` | `""` | 切点表达式；缺省按主包生成 `execution(* <主包>..*..*(..))` |
+| `read-only` | `""` | 只读前缀；缺省 `get*,query*,find*,list*,count*,exist*,search*,fetch*` |
+| `write-only` | `""` | 写前缀；缺省 `add*,save*,insert*,update*,modify*,delete*,remove*` |
+| `no-tx` | `""` | 无事务前缀；缺省 `noTx*` |
+
+```yaml
+plugin:
+  transaction:
+    enable: true
+    timeout: 10
+    # tx-mapper: "execution(* com.example.service..*..*(..))"   # 缺省按主包生成
+    read-only: "get*,query*,find*,list*"
+    write-only: "add*,save*,insert*,update*,delete*"
+    no-tx: "noTx*"
+```
+
+#### 3) 数据库脚本初始化（`plugin.datasource.script`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `true` | 总开关（EPP 兜底缺省即 `true`） |
+| `mode` | `SCRIPT` | `SCRIPT` 脚本驱动 / `ENTITY` 实体建表（需 `SchemaDriver` 的 entity 扩展） |
+| `entity-packages` | — | `ENTITY` 模式扫描的实体包（逗号分隔） |
+| `script-path` | `classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql` | 脚本扫描路径（逗号/分号/换行分隔） |
+| `scan-mode` / `migration-scan-mode` / `data-scan-mode` | `ONCE` / `ALWAYS` / `ONCE` | 表结构 / 升级 / 数据脚本扫描模式（`NONE`/`ONCE`/`ALWAYS`；migration 仅 `NONE`/`ALWAYS`） |
+| `continue-on-error` | `true` | 单条语句失败是否继续 |
+| `ignore-failed-drops` | `true` | 忽略失败的 DROP |
+| `separator` / `sql-script-encoding` | `;` / `UTF-8` | 语句分隔符 / 脚本编码 |
+| `version-table` | `sys_database_version` | 版本记录表 |
+| `baseline-version` / `baseline-description` / `baseline-on-migrate` | `1.0.0` / `Initial baseline` / `true` | 基线版本 / 描述 / 迁移时建基线 |
+| `clean-disabled` | `true` | 禁用清理 |
+| `script-prefix` / `script-suffix` / `version-separator` | `V` / `.sql` / `__` | 脚本命名：`V{版本}__{描述}.sql` |
+| `validate-checksum` / `mixed` | `true` / `false` | 校验和 / 允许非版本化脚本 |
+| `timeout` | `0` | 迁移超时（秒，`0` 不限） |
+| `verbose` | `true` | 详细日志 |
+| `database-type` | — | 指定数据库类型脚本目录（如 `mysql`） |
+| `release-type` / `allowed-release-types` | `STABLE` / — | 版本类型门槛（`SNAPSHOT`/`ALPHA`/`BETA`/`RC`/`STABLE`/`ALL`）；后者设置后覆盖前者 |
+| `initdata-parallelism` / `initdata-timeout-minutes` | `0` / `5` | 数据脚本并发（`0` 串行）/ 等待超时（分钟） |
+| `scope` / `exclude-table-prefixes` | `table` / `sys_` | 空库判断范围（`table`/`file`）/ 排除的表前缀 |
+
+```yaml
+plugin:
+  datasource:
+    script:
+      enable: true
+      mode: SCRIPT                  # ENTITY=按实体类建表
+      script-path: "classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql"
+      scan-mode: ONCE               # 表结构：NONE/ONCE/ALWAYS
+      migration-scan-mode: ALWAYS   # 升级补丁：NONE/ALWAYS
+      data-scan-mode: ONCE
+      continue-on-error: true
+      ignore-failed-drops: true
+      separator: ";"
+      sql-script-encoding: UTF-8
+      version-table: sys_database_version
+      baseline-version: 1.0.0
+      baseline-on-migrate: true
+      clean-disabled: true
+      timeout: 0
+      verbose: true
+```
+
+#### 4) SQL 监控（`plugin.datasource.monitor`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enabled` | `null` | `null`=按 profile 自动（见下一行）；显式 `true`/`false` 优先 |
+| `auto-enable-environments` | `dev,test,uat,local` | 未显式设置 `enabled` 时，命中任一激活 profile 即启用 |
+| `slow-sql-threshold-ms` | `1000` | 慢 SQL 阈值（毫秒） |
+| `max-sql-length` | `2000` | SQL 文本截断长度 |
+| `record-sql` | `true` | 是否记录 SQL 文本 |
+| `publish-event` | `true` | 是否发布 `SqlExecutionEvent` |
+| `max-tracked-data-sources` | `1000` | 统计数据源数量上限 |
+| `overflow-policy` | `REJECT` | 达上限策略：`REJECT` / `EVICT_ELDEST` |
+
+```yaml
+plugin:
+  datasource:
+    monitor:
+      enabled: true               # 生产建议显式指定；缺省按 profile 自动
+      slow-sql-threshold-ms: 1000
+      max-sql-length: 2000
+      record-sql: true
+      publish-event: true
+      max-tracked-data-sources: 1000
+      overflow-policy: REJECT
+```
+
+#### 5) 数据库文档预览（`plugin.datasource.document`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `true` | 非 Web 环境自动跳过装配 |
+| `cacheable` | `true` | preview 接口命中缓存不刷新（apply 始终刷新） |
+| `base-path` | `/plugin/datasource/document` | 接口根路径 |
+| `title` / `version` | `数据库设计文档` / `1.0.0` | 文档标题 / 版本号 |
+| `template` | `DEFAULT` | `DEFAULT` / `AURORA` / `SWAGGER`；SPI 缺失回退 `DEFAULT` |
+| `include-tables` / `exclude-tables` | — / `flyway_schema_history,sys_database_version` | 表白/黑名单（逗号分隔，`*` 通配） |
+| `include-schemas` | — | schema 白名单 |
+| `options` | — | 透传 `DocumentParser` 的扩展参数（如 `all: true` 跨 catalog） |
+
+```yaml
+plugin:
+  datasource:
+    document:
+      enable: true
+      base-path: /plugin/datasource/document
+      title: 数据库设计文档
+      version: 1.0.0
+      template: DEFAULT
+      cacheable: true
+      exclude-tables: flyway_schema_history,sys_database_version
+```
+
+#### 6) H2 嵌入式引擎（`plugin.h2`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `false` | H2 引擎开关 |
+| `url` | `jdbc:h2:mem:springh2db;DB_CLOSE_DELAY=-1` | JDBC URL |
+| `username` / `password` | `sa` / `""` | 凭据 |
+| `script-path` | `""` | 迁移脚本路径（配置后自动迁移） |
+| `cleanup-after-shutdown` / `cleanup-after-test` | `false` / `false` | 停机清表 / 测试后清数据 |
+
+```yaml
+plugin:
+  h2:
+    enable: true
+    url: "jdbc:h2:mem:appdb;DB_CLOSE_DELAY=-1"
+    username: sa
+    password: ""
+    script-path: classpath:db/migration/h2   # 配置后自动执行迁移
+    cleanup-after-shutdown: false
+    cleanup-after-test: false
+```
+
+#### 7) SQLite 嵌入式引擎（`plugin.sqlite`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enable` | `false` | SQLite 引擎开关 |
+| `path` | `./data/app.sqlite` | 数据库文件路径（目录自动创建） |
+| `init-sql` | `""` | 初始化脚本路径 |
+| `max-pool-size` | `5` | 连接池上限 |
+
+```yaml
+plugin:
+  sqlite:
+    enable: true
+    path: ./data/app.sqlite
+    init-sql: classpath:db/init/sqlite
+    max-pool-size: 5
+```
+
+#### 8) 分库分表（`plugin.datasource.sharding`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enabled` | `false` | 分片开关 |
+| `show-sql` | `false` | 打印改写后 SQL |
+| `tables[*].logic-table` | — | 逻辑表名（同时为物理表前缀） |
+| `tables[*].sharding-column` | — | 分片列 |
+| `tables[*].time-unit` | — | `YEAR`/`QUARTER`/`MONTH`/`WEEK`/`DAY`/`HOUR`；配置后走 INTERVAL（12 片），缺省走 MOD（16 片） |
+| `tables[*].strategy` | `TABLE` | 仅解析、不参与路由（见 §6.1） |
+| `databases` | — | 分库名单；数量 > 1 启用分库 |
+
+```yaml
+plugin:
+  datasource:
+    sharding:
+      enabled: true
+      show-sql: false
+      tables:
+        - logic-table: t_order
+          sharding-column: user_id        # MOD：物理表 t_order_0..15
+        - logic-table: t_order_log
+          sharding-column: create_time
+          time-unit: MONTH                # INTERVAL：物理表 t_order_log_yyyyMM
+      databases:
+        - db_order_0
+        - db_order_1
+```
+
+#### 9) 分区表自动创建（`plugin.datasource.partition`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `auto-create-enabled` | `false` | 自动建分区表开关（关闭时仍可 `POST /ms/ds-runtime/partition/create-current`） |
+| `check-interval-minutes` | `60` | 检查间隔（分钟，最小 1） |
+| `tables[*].source-table` | — | 源表名 |
+| `tables[*].prefix` | — | 分区表前缀（`prefix_yyyyMM` / `prefix_yyyyMMdd`） |
+| `tables[*].granularity` | `MONTH` | `MONTH` / `DAY` |
+
+```yaml
+plugin:
+  datasource:
+    partition:
+      auto-create-enabled: true
+      check-interval-minutes: 60
+      tables:
+        - source-table: t_order
+          prefix: t_order_part
+          granularity: MONTH
+```
+
+#### 10) SQL 物化路由（`plugin.datasource.materialized`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enabled` | `false` | 总开关（legacy：`spring.datasource.materialized`） |
+| `default-threshold` | `1000` | 表行数超过该值才路由到内存副本 |
+| `refresh-interval-seconds` | `0` | 副本自动刷新间隔（`<=0` 关闭） |
+| `skip-query-in-transaction` | `true` | 事务内跳过物化路由（读己之写） |
+| `cache-data-source-prefix` | `materialized#` | 副本数据源名前缀 |
+
+```yaml
+plugin:
+  datasource:
+    materialized:
+      enabled: true
+      default-threshold: 1000
+      refresh-interval-seconds: 0
+      skip-query-in-transaction: true
+      cache-data-source-prefix: materialized#
+```
+
+#### 11) ENC 加密、健康检查与优雅关闭（`plugin.datasource.enc` / `health` / `graceful-shutdown`）
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enc.enabled` | `false` | ENC 解密开关（EPP 需宿主注册） |
+| `enc.secret-key` | `""` | AES 密钥；缺省内置密钥仅限本地验证，生产必须显式提供 |
+| `health.enabled` | `true` | 数据源健康指示器（需 `@Import(DatasourceP2AutoConfiguration.class)`） |
+| `graceful-shutdown.enabled` | `true` | 停机时优雅关闭连接池（同上） |
+
+```yaml
+plugin:
+  datasource:
+    enc:
+      enabled: true
+      secret-key: change-me-32-chars   # 生产从环境变量/配置中心注入
+    health:
+      enabled: true
+    graceful-shutdown:
+      enabled: true
+```
+
+### 5.2 完整 YAML 示例（生产参考）
+
+将上述能力集中到一份可粘贴的配置（口令均为占位符）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/app
+    username: root
+    password: your-password
+
+plugin:
+  multi-datasource:
+    load-balance: round_robin
+    data-source:
+      - name: slave_1
+        url: jdbc:mysql://localhost:3307/app
+        username: root
+        password: your-password
+    hikari:
+      enable: true
+      data-source:
+        - name: slave_1
+          url: jdbc:mysql://localhost:3307/app
+          username: root
+          password: your-password
+          max-pool-size: 100
+          min-idle: 10
+          idle-timeout: 600000
+          max-lifetime: 1800000
+  transaction:
+    enable: true
+    timeout: 10
+  datasource:
+    script:
+      enable: true
+      scan-mode: ONCE
+      migration-scan-mode: ALWAYS
+      version-table: sys_database_version
+    monitor:
+      enabled: true
+      slow-sql-threshold-ms: 1000
+    document:
+      enable: true
+      template: DEFAULT
+    sharding:
+      enabled: false                  # 需要分库分表时置 true 并配 tables/databases
+    partition:
+      auto-create-enabled: false
+    materialized:
+      enabled: false
+    enc:
+      enabled: true
+      secret-key: change-me-32-chars
+    health:
+      enabled: true
+    graceful-shutdown:
+      enabled: true
+```
+
+> H2 / SQLite / Calcite 属于按需开启的能力：本地开发可 `plugin.h2.enable=true`；Calcite 联邦完整示例见 §6.3；Sharding 完整说明见 §6.1。
+
+### 5.3 生产注意事项
+
+- **连接池是 provided 依赖**：至少引入一种（HikariCP / Druid / DBCP2 / Tomcat JDBC / C3P0），否则数据源解析不到类型，动态数据源不注册。
+- **口令安全**：示例中口令均为占位符。生产用 `ENC(...)` 密文 + `enc.secret-key`，密钥经环境变量/配置中心注入，不要把明文口令或密钥提交进配置库；`enc.secret-key` 缺省内置值仅限本地验证。
+- **SQLite 兜底仅限本地/原型**：`spring.datasource.url` 全缺省时兜底 SQLite；生产必须显式配置真实数据源。
+- **SQL 监控的自动启用只认 profile**：`monitor.enabled` 未设置时仅在 `dev/test/uat/local` 激活；生产 profile 需要监控请显式 `enabled: true`。
+- **脚本扫描模式**：`scan-mode: ALWAYS` 每次启动都执行表结构脚本，务必保证脚本幂等；生产建议 `ONCE` + 版本表（`sys_database_version`）。`continue-on-error: true` 会跳过失败语句继续执行，强一致初始化场景可改 `false` 快速失败。
+- **分片物理表不自动创建**：规则先行生效，建表走受限 DDL 端点（`/ms/ds-runtime/tables/*`）或自行 `CREATE TABLE`。
+- **Calcite `register-mode=replace`（默认）会改变按类型注入行为**：自旧版本升级时如需保持旧行为，显式配 `register-mode: derive`（见 §6.3 迁移提示）。
+- **`@DSTransactional` 不是两阶段提交**：异常时逐连接回滚，提交阶段部分失败仍可能不一致；强一致场景配合 Seata `@GlobalTransactional`，并设 `seata.enable-auto-data-source-proxy=false` 避免重复代理。
+- **需显式 `@Import` 的能力**：`@DSTransactional`（`DSTransactionalConfiguration`）、ENC 解密/健康检查/优雅关闭（`DatasourceP2AutoConfiguration`）、Seata 代理（`SeataAutoConfiguration`）；`ENCEnvironmentPostProcessor` 还需注册进宿主 `spring.factories`。
+- **单位速查**：Hikari 各超时=毫秒；`transaction.timeout`=秒；`monitor.slow-sql-threshold-ms`=毫秒；`script.timeout`=秒；`partition.check-interval-minutes`=分钟；`materialized.refresh-interval-seconds`=秒。
 
 ## 6. 使用方式
 

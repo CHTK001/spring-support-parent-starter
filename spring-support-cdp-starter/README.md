@@ -140,6 +140,146 @@ flowchart LR
 | `spring.cdp.live-proxy.allowed-hosts` | `List<String>` | `[]` | 上游主机白名单；空 = 不限制（调试工具语义，仅建议内网 / 可信环境放开） |
 | `spring.cdp.live-proxy.inject-script` | `boolean` | `true` | 是否向 HTML 注入 `<base>` 与 fetch/XHR/点击/表单/MutationObserver 钩子 |
 
+### 5.1 逐项配置示例（按功能分组）
+
+逐项给出「含义 / 默认值（含为空或异常时的回落）/ YAML 示例」，默认值与 `CdpProperties` 字段初始化代码一致；以下均为 `application.yml` 片段，可按需取舍，不配置即用默认值。
+
+**① 基础开关与浏览器进程**
+
+| 配置项 | 含义 | 默认值（为空时回落） |
+|---|---|---|
+| `spring.cdp.enabled` | 总开关；`false` 时 Bean 仍注册，仅运行时跳过浏览器与代理启动 | `true` |
+| `spring.cdp.port` | Chromium 调试端口（`--remote-debugging-port`）；启动前检测，被无头残留进程占用会先清理，仍占用则启动失败 | `9222` |
+| `spring.cdp.executable` | Chrome/Chromium 可执行文件路径 | 无；为空按环境变量 `CHUA_CHROME`/`CHROME_PATH`/`CHROME_BIN`、Playwright 缓存与常见安装路径探测，仍找不到则启动失败 |
+| `spring.cdp.headless` | 无头启动（追加 `--headless=new`） | `true` |
+| `spring.cdp.user-data-dir` | 用户数据目录，持久化 Cookies/LocalStorage/书签；配置后目录不存在会自动创建并追加 `--auto-open-devtools-for-tabs` | 无；为空用系统临时目录 `chua-cdp-*`，用完即弃 |
+| `spring.cdp.proxy` | 浏览器代理地址（追加 `--proxy-server`） | 无；为空不加该参数，浏览器直连 |
+| `spring.cdp.user-agent` | 全局 User-Agent（追加 `--user-agent`） | 无；为空用浏览器默认 UA |
+| `spring.cdp.args` | 追加给浏览器命令行的额外 `--xxx` 参数 | `[]`（不追加） |
+
+```yaml
+spring:
+  cdp:
+    enabled: true
+    port: 9222
+    # executable: D:/tools/chrome/chrome.exe   # 不配则自动探测
+    headless: true
+    # user-data-dir: D:/cdp/profile            # 想持久化登录态才配
+    # proxy: http://127.0.0.1:7890             # 无代理则删掉本行
+    # user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36
+    args: []                                   # 也可逐条列出：- --disable-gpu
+```
+
+**② 视口与超时**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `spring.cdp.viewport-width` | 窗口宽（拼入 `--window-size`；整页截屏未显式给宽时也作兜底） | `1280` |
+| `spring.cdp.viewport-height` | 窗口高（拼入 `--window-size`；整页截屏未显式给高时也作兜底） | `900` |
+| `spring.cdp.launch-timeout` | 浏览器拉起后等待 `/json/version` 可访问的超时 | `120s` |
+| `spring.cdp.command-timeout` | 页面级 CDP 命令默认超时（导航 / 求值 / 建目标 / 关目标等） | `30s` |
+| `spring.cdp.screenshot-timeout` | 截屏专用超时（整页栅格化比普通命令慢） | `60s` |
+
+```yaml
+spring:
+  cdp:
+    viewport-width: 1280
+    viewport-height: 900
+    launch-timeout: 120s
+    command-timeout: 30s
+    screenshot-timeout: 60s
+```
+
+**③ WebSocket 与事件订阅**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `spring.cdp.ws-path` | 暴露给前端的 CDP 指令透传 WebSocket 路径 | `/ws/cdp` |
+| `spring.cdp.enable-console` | **预留项**：当前版本代码未读取；控制台事件随页面域订阅一起开启，不能用它单独关闭 | `true` |
+| `spring.cdp.enable-network` | **预留项**：同上 | `true` |
+
+```yaml
+spring:
+  cdp:
+    ws-path: /ws/cdp
+    enable-console: true    # 预留项，当前版本配了暂不生效
+    enable-network: true    # 预留项，当前版本配了暂不生效
+```
+
+**④ 实时页面反向代理（`spring.cdp.live-proxy.*`）**
+
+| 配置项 | 含义 | 默认值（为空时回落） |
+|---|---|---|
+| `spring.cdp.live-proxy.enabled` | 反向代理总开关；`false` 时不启动代理端口，其余 CDP 能力不受影响 | `true` |
+| `spring.cdp.live-proxy.port` | 代理监听端口（独立于主服务端口，iframe 直连）；被占用仅记日志，不影响主服务 | `9223` |
+| `spring.cdp.live-proxy.host` | 代理监听地址 | `0.0.0.0`（全部网卡） |
+| `spring.cdp.live-proxy.external-url` | 对外代理基地址；经开发代理 / Nginx 转发导致 Host 头被改写时必填 | 无；为空按后端收到请求的 Host + 代理端口推导 |
+| `spring.cdp.live-proxy.session-ttl` | 会话空闲 TTL，超时自动关闭（含无头浏览器页面；每 30s 清扫一次） | `30m` |
+| `spring.cdp.live-proxy.max-sessions` | 最大并发会话数，超限关闭最久未用的会话 | `8` |
+| `spring.cdp.live-proxy.allowed-hosts` | 上游主机白名单：主机名精确匹配或其子域（大小写不敏感）；同时禁止把代理自身（`localhost`/`127.0.0.1` 的代理端口）配为上游 | `[]`（空 = 不限制，仅建议内网 / 可信环境） |
+| `spring.cdp.live-proxy.inject-script` | 是否向 HTML 注入 `<base>` 与 fetch/XHR/点击/表单/MutationObserver 钩子 | `true` |
+
+```yaml
+spring:
+  cdp:
+    live-proxy:
+      enabled: true
+      port: 9223
+      host: 0.0.0.0
+      # external-url: http://192.168.1.10:9223   # 后端直连时可省略
+      session-ttl: 30m
+      max-sessions: 8
+      allowed-hosts: []                          # 也可逐条列出：- example.com
+      inject-script: true
+```
+
+### 5.2 完整 YAML 示例（可直接粘贴）
+
+```yaml
+spring:
+  cdp:
+    enabled: true                 # 总开关
+    port: 9222                    # Chromium 调试端口
+    executable: D:/tools/chrome/chrome.exe   # Linux/容器示例：/usr/bin/chromium-browser
+    headless: true                # 无头启动
+    user-data-dir: D:/cdp/profile # 持久化目录；不配则用临时目录 chua-cdp-*
+    proxy: http://127.0.0.1:7890  # 浏览器代理；不配则直连
+    user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0 Safari/537.36
+    viewport-width: 1280
+    viewport-height: 900
+    launch-timeout: 120s
+    command-timeout: 30s
+    screenshot-timeout: 60s
+    args:                         # 额外命令行参数
+      - --disable-gpu
+      - --no-sandbox
+    ws-path: /ws/cdp
+    enable-console: true          # 预留项：当前版本未消费
+    enable-network: true          # 预留项：当前版本未消费
+    live-proxy:
+      enabled: true
+      port: 9223
+      host: 0.0.0.0
+      external-url: http://192.168.1.10:9223   # 直连后端时可省略
+      session-ttl: 30m
+      max-sessions: 8
+      allowed-hosts:              # 上游白名单（精确主机名或子域后缀）；空 = 不限制
+        - example.com
+        - internal.example.com
+      inject-script: true
+```
+
+### 5.3 生产注意事项
+
+- **收敛暴露面**：代理默认监听 `0.0.0.0:9223`、`allowed-hosts` 默认不限制、`/ws/cdp` 端点 `setAllowedOrigins("*")`——这是调试工具语义。公网或跨信任域部署前必须收敛：`live-proxy.host` 改绑内网地址、`allowed-hosts` 显式白名单，并在网关层为 `/ms/cdp/**`、`/ws/cdp` 与 9223 端口加鉴权。
+- **端口规划**：本模块额外占用 9222（Chromium 调试端口，仅本机回环访问）与 9223（页面反向代理）。9222 被日常浏览器等非无头进程占用会导致启动失败；9223 被占用只记日志、代理不可用但主服务正常。容器 / 多实例部署要为每个实例显式规划这两个端口。
+- **浏览器可用性**：宿主机或镜像内必须能找到 Chrome/Chromium，否则启动阶段即失败——预装浏览器，或用 `spring.cdp.executable` / 环境变量 `CHUA_CHROME` 指定路径。
+- **资源占用**：常驻一个 Chromium 进程（无头也有数百 MB 级内存开销），用 `live-proxy.max-sessions` 限制并发、`session-ttl` 回收空闲会话；低配宿主建议下调 `max-sessions`。
+- **登录态与数据目录**：`user-data-dir` 配置后 Cookies / LocalStorage 持久化、重启可复用登录态，注意磁盘清理，且多实例不要共用同一目录；缺省临时目录用完即弃，重启后登录态丢失。
+- **预留项勿依赖**：`enable-console` / `enable-network` 当前版本代码未消费，控制台与网络事件随页面域订阅一起开启。
+- **经网关 / 开发代理转发时**：Host 头被改写会使代理会话基地址推导错误，必须配置 `spring.cdp.live-proxy.external-url`。
+- **超时调优**：弱网或大页面试 `screenshot-timeout` 调大（整页栅格化耗时随页面高度增长）；浏览器冷启动慢的机器适当调大 `launch-timeout`。
+
 ## 6. 使用方式
 
 Maven 坐标：

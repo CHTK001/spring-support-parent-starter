@@ -12,37 +12,37 @@ import java.util.Set;
 /**
  * 数据源脚本配置属性类
  * <p>
- * 配置示例:
+ * 配置示例（各键默认值见字段说明）:
  * <pre>
  * plugin:
  *   datasource:
  *     script:
- *       enable: true                              # 是否启用脚本功能
- *       scan-mode: ONCE                           # 表结构脚本扫描模式: NONE/ONCE/ALWAYS
- *       migration-scan-mode: ALWAYS               # 升级补丁脚本扫描模式: NONE/ALWAYS
- *       data-scan-mode: ONCE                      # 初始化数据脚本扫描模式: NONE/ONCE/ALWAYS
- *       script-path: "classpath*:db/init/*.sql"   # 推荐脚本路径
- *       database-type: "mysql"                   # 数据库类型(可选)
- *       version-table: "flyway_schema_history"    # 版本记录表名
- *       baseline-version: "1.0.0"                # 基线版本
- *       baseline-description: "Initial setup"    # 基线描述
+ *       enable: true                              # 是否启用脚本功能（默认 true）
+ *       scan-mode: ONCE                           # 表结构脚本扫描模式: NONE/ONCE/ALWAYS（默认 ONCE）
+ *       migration-scan-mode: ALWAYS               # 升级补丁脚本扫描模式: NONE/ALWAYS（默认 ALWAYS）
+ *       data-scan-mode: ONCE                      # 初始化数据脚本扫描模式: NONE/ONCE/ALWAYS（默认 ONCE）
+ *       script-path: "classpath*:db/init/*.sql"   # 推荐脚本路径（默认另含 db/migration、db/sync）
+ *       database-type: "mysql"                    # 数据库类型(可选)
+ *       version-table: "sys_database_version"     # 版本记录表名（默认 sys_database_version）
+ *       baseline-version: "1.0.0"                 # 基线版本
+ *       baseline-description: "Initial baseline"  # 基线描述
  *       baseline-on-migrate: true                 # 是否在迁移时创建基线
- *       script-prefix: "V"                       # 脚本文件前缀
- *       script-suffix: ".sql"                    # 脚本文件后缀
- *       version-separator: "__"                  # 版本分隔符
- *       separator: ";"                           # SQL语句分隔符
- *       sql-script-encoding: "UTF-8"             # 脚本编码
- *       continue-on-error: false                  # 出错时是否继续
- *       ignore-failed-drops: true                # 是否忽略DROP失败
+ *       script-prefix: "V"                        # 脚本文件前缀
+ *       script-suffix: ".sql"                     # 脚本文件后缀
+ *       version-separator: "__"                   # 版本分隔符
+ *       separator: ";"                            # SQL语句分隔符
+ *       sql-script-encoding: "UTF-8"              # 脚本编码
+ *       continue-on-error: true                   # 出错时是否继续（默认 true）
+ *       ignore-failed-drops: true                 # 是否忽略DROP失败
  *       validate-checksum: true                   # 是否验证校验和
  *       mixed: false                              # 是否允许混合模式
- *       timeout: 300                              # 执行超时时间(秒)
+ *       timeout: 0                                # 执行超时时间(秒，0=不限)
  *       verbose: true                             # 是否输出详细日志
  *       clean-disabled: true                      # 是否禁用清理
- *       release-type: STABLE                       # 允许执行的版本类型(SNAPSHOT/ALPHA/BETA/RC/STABLE/ALL)
- *       allowed-release-types: STABLE,RC           # 允许执行的版本类型集合(可选,覆盖release-type)
- *       mode: SCRIPT                               # 结构驱动模式: SCRIPT=脚本驱动(默认)/ENTITY=实体驱动
- *       entity-packages: com.example.entity        # 实体驱动模式下扫描的实体类所在包(可逗号分隔多个)
+ *       release-type: STABLE                      # 允许执行的版本类型(SNAPSHOT/ALPHA/BETA/RC/STABLE/ALL)
+ *       allowed-release-types: STABLE,RC          # 允许执行的版本类型集合(可选,覆盖release-type)
+ *       mode: SCRIPT                              # 结构驱动模式: SCRIPT=脚本驱动(默认)/ENTITY=实体驱动
+ *       entity-packages: com.example.entity       # 实体驱动模式下扫描的实体类所在包(可逗号分隔多个)
  * </pre>
  *
  * @since 2025/9/3 9:05

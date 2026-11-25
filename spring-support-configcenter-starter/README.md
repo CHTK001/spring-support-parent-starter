@@ -117,6 +117,67 @@ flowchart TD
 
 所有远程配置以 `OriginTrackedMapPropertySource` **`addLast`** 追加：远程优先级低于本地 `application.yml`，本地同名 key 永远生效。`ConfigCenterSetting` 自身还有 `connectionTimeout=3000`、`readTimeout=5000`、`retryCount=3`、`sslEnabled=false` 等默认值；本模块组装 setting 时总是显式传入 `connect-timeout` / `read-timeout`，故这两个超时默认值在本链路不生效，而 `retryCount` / `sslEnabled` 未传入，仍取底层默认。
 
+### 5.1 逐项配置示例（按功能分组）
+
+以下示例均可直接并入 `application.yml`；表中「默认值」与 `ConfigCenterProperties` 字段初始化代码一致。
+
+**基础开关与连接**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `enable` | 总开关；`false` 时本模块整体不装配，无远程配置、无热更新 | `false` |
+| `protocol` | 配置中心协议（底层 `ConfigCenter` SPI 注册名）：`nacos` / `apollo` / `zookeeper` / `redis` | 无 |
+| `address` | 配置中心地址，格式随协议而定 | 无 |
+| `username` | 认证账号 | 无 |
+| `password` | 认证密码（建议经环境变量/启动参数注入） | 无 |
+
+```yaml
+plugin:
+  config-center:
+    enable: true
+    protocol: nacos
+    address: http://127.0.0.1:8848
+    username: your-username
+    password: your-password
+```
+
+**命名空间与超时**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `namespace-id` | 命名空间标识，装入 `ConfigCenterSetting#profile`；未配置回落 `spring.profiles.active` | 无 |
+| `connect-timeout` | 连接超时（毫秒），原样传入底层 `ConfigCenterSetting` | `5000` |
+| `read-timeout` | 读取超时（毫秒），原样传入底层 `ConfigCenterSetting` | `5000` |
+
+```yaml
+plugin:
+  config-center:
+    namespace-id: dev
+    connect-timeout: 5000
+    read-timeout: 5000
+```
+
+**热更新（`hot-reload`）**
+
+| 配置项 | 含义 | 默认值 |
+|---|---|---|
+| `hot-reload.enabled` | 热更新总开关；dataId 级监听与注解 key 级监听的共同前提 | `true` |
+| `hot-reload.value-annotation-enabled` | `@Value` 字段/单参方法热更新开关 | `true` |
+| `hot-reload.config-value-annotation-enabled` | `@ConfigValue` 字段/单参方法热更新开关；字段上还需 `hotReload = true` | `true` |
+| `hot-reload.refresh-delay-ms` | 防抖窗口（毫秒）；窗口内同 dataId/同 key 的后续变更直接丢弃，≤0 关闭防抖 | `100` |
+| `hot-reload.log-on-change` | 变更是否打印日志（`@Value` 热更新日志固定打印，不受此项控制） | `true` |
+
+```yaml
+plugin:
+  config-center:
+    hot-reload:
+      enabled: true
+      value-annotation-enabled: true
+      config-value-annotation-enabled: true
+      refresh-delay-ms: 100
+      log-on-change: true
+```
+
 ## 6. 使用方式
 
 Maven 坐标：
@@ -175,6 +236,47 @@ public class DemoConfigBean {
 传统 `@ConfigurationProperties` 继续可用——远程配置在环境准备阶段已进入 `Environment`，早于容器刷新与属性绑定。
 
 可选依赖说明：pom 直接依赖只有 `spring-support-common-starter`（`ServiceInfoRegistry` / `ModuleEnvironmentRegistration` 等登记能力，必需）与 `utils-support-nacos-starter`（默认协议实现，必需）；`utils-support-apollo-starter` / `utils-support-zookeeper-starter` / `utils-support-redis-starter` 不是本模块的依赖，宿主要用对应协议时自行引入。未引入实现就配置其 `protocol` 时，启动日志出现「暂不支持 {protocol}」，不抛异常，但没有任何远程配置。
+
+### 6.1 完整配置示例
+
+```yaml
+spring:
+  application:
+    name: demo-app
+  profiles:
+    active: dev
+    include: common   # 公共配置也会按 application-common[-dev].yml 从配置中心加载
+
+plugin:
+  config-center:
+    enable: true
+    protocol: nacos
+    address: http://127.0.0.1:8848
+    username: ${CONFIG_CENTER_USERNAME:your-username}
+    password: ${CONFIG_CENTER_PASSWORD:your-password}
+    namespace-id: dev
+    connect-timeout: 5000
+    read-timeout: 5000
+    hot-reload:
+      enabled: true
+      value-annotation-enabled: true
+      config-value-annotation-enabled: true
+      refresh-delay-ms: 200
+      log-on-change: true
+```
+
+该示例启动后会依次尝试加载 `Application-demo-app-dev`、`Application-demo-app`、`application-common-dev.yml`、`application-common.yml` 四类 dataId（后两类因 `include: common` 而来）；全部以 `addLast` 追加，本地同名 key 优先。业务代码注入方式见上文 `@ConfigValue` / `@Value` 示例。
+
+### 6.2 生产注意事项
+
+- **远程不覆盖本地**：所有远程 PropertySource 都是 `addLast`，本地 `application.yml` 同名 key 永远生效；希望「远程可调」的键不要在本地文件里定义同名项。
+- **凭据不入库**：`username` / `password` 用环境变量或启动参数注入（如 `--plugin.config-center.password=change-me`），仓库内 yml 只保留占位符；配置中心命名空间按环境隔离，敏感配置不要放公共空间。
+- **dataId 命名固定**：只加载 `Application-{app}-{profile}`、`Application-{app}`、`application-{include}-{profile}.yml`、`application-{include}.yml` 四类，不支持自定义 dataId / group；在配置中心建目录时按此约定命名。
+- **防抖是丢弃语义**：`refresh-delay-ms` 窗口内同键的后续变更被直接跳过，中间值不会补发；不要假设「每一次变更都会被应用」。
+- **热更新范围有限**：仅对单例 Bean 生效；`@ConfigValue` 字段必须显式 `hotReload = true`；回调方法签名固定 `(String key, Object oldValue, Object newValue)`；`@ConfigurationProperties` 绑定的 Bean 不会自动重新绑定（远程变更只更新 `Environment`，已绑定的属性对象不会回刷）。
+- **`plugin.config-center.*` 本身不支持热改**：这些属性在启动期由环境后置处理器绑定一次，运行期修改不会重新生效；启停/灰度请走发布流程。
+- **协议实现按需引入**：本模块默认只带 `nacos` 实现；`apollo` / `zookeeper` / `redis` 需自行引入对应 `utils-support-*-starter`，缺失时启动仅 WARN「暂不支持 {protocol}」，容易漏配而不自知。
+- **可观测性与超时**：通过 `ServiceInfoRegistry` 标志 `config-center` / `config-hot-reload` / `configcenter` 与启动日志 `[配置中心]...` 确认装配与监听状态；网络不稳时适当调大 `connect-timeout` / `read-timeout`（底层另有 `retryCount=3` 重试，本模块未暴露该参数）。
 
 ## 7. 使用场景
 

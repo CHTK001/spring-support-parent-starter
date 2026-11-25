@@ -9,6 +9,20 @@ import lombok.Data;
  * 不绑定任何业务配置前缀：业务模块通过 {@code @Bean} 提供本对象，
  * 未提供时由 AI 模块给一份默认值，保证只引 ai-starter 的宿主也能启动。</p>
  *
+ * <p>本类<b>不走 YAML 配置绑定</b>（无 {@code @ConfigurationProperties} 前缀），
+ * 需要调整时在宿主声明一个 {@code @Bean} 覆盖默认值，例如：</p>
+ *
+ * <pre>{@code
+ * @Bean
+ * public PaperPipelineProperties paperPipelineProperties() {
+ *     PaperPipelineProperties props = new PaperPipelineProperties();
+ *     props.getMarking().setCallTimeout(120);   // 单次模型调用超时 120 秒（默认 90）
+ *     props.getAi().getRetry().setTimes(3);     // 最大重试 3 次（默认 5）
+ *     props.getAlert().setEnabled(true);        // 开启重试耗尽告警（默认关闭）
+ *     return props;
+ * }
+ * }</pre>
+ *
  * <p>与业务配置（如 {@code plugin.eduai.marking.*} 里的异步、题分、错题阈值、
  * 图片目录）严格分开：那些属于阅卷工作流，留在业务模块。</p>
  *
@@ -19,17 +33,23 @@ import lombok.Data;
 public class PaperPipelineProperties {
 
     /**
-     * 阅卷链路参数
+     * 阅卷链路参数。
+     *
+     * <p>默认 {@code new Marking()}（各字段默认值见 {@link Marking}）；Java 配置：{@code props.getMarking().setXxx(...)}。</p>
      */
     private Marking marking = new Marking();
 
     /**
-     * 模型调用参数
+     * 模型调用参数。
+     *
+     * <p>默认 {@code new Ai()}（各字段默认值见 {@link Ai}）；Java 配置：{@code props.getAi().setXxx(...)}。</p>
      */
     private Ai ai = new Ai();
 
     /**
-     * 重试耗尽告警
+     * 重试耗尽告警。
+     *
+     * <p>默认 {@code new Alert()}（各字段默认值见 {@link Alert}）；Java 配置：{@code props.getAlert().setXxx(...)}。</p>
      */
     private Alert alert = new Alert();
 
@@ -40,23 +60,31 @@ public class PaperPipelineProperties {
     public static class Marking {
 
         /**
-         * 单次模型调用超时（秒）
+         * 单次模型调用超时（秒）。
+         *
+         * <p>默认 {@code 90}；Java 配置：{@code props.getMarking().setCallTimeout(120)}。</p>
          */
         // [P3C A20 豁免]
         private int callTimeout = 90;
 
         /**
-         * 是否对卷面做图片预处理
+         * 是否对卷面做图片预处理。
+         *
+         * <p>默认 {@code true}；Java 配置：{@code props.getMarking().setPreprocess(false)}。</p>
          */
         private boolean preprocess = true;
 
         /**
-         * 是否做版面矫正（默认关闭）
+         * 是否做版面矫正（默认关闭）。
+         *
+         * <p>默认 {@code false}；Java 配置：{@code props.getMarking().setLayoutCorrection(true)}。</p>
          */
         private boolean layoutCorrection = false;
 
         /**
-         * 任意卷识别策略：whole / region
+         * 任意卷识别策略：whole / region。
+         *
+         * <p>默认 {@code whole}；Java 配置：{@code props.getMarking().setExtractStrategy("region")}。</p>
          */
         private String extractStrategy = "whole";
     }
@@ -68,12 +96,16 @@ public class PaperPipelineProperties {
     public static class Ai {
 
         /**
-         * 总开关：关闭后回退到字符串匹配，不调用模型
+         * 总开关：关闭后回退到字符串匹配，不调用模型。
+         *
+         * <p>默认 {@code true}；Java 配置：{@code props.getAi().setEnabled(false)}。</p>
          */
         private boolean enabled = true;
 
         /**
-         * 重试策略
+         * 重试策略。
+         *
+         * <p>默认 {@code new Retry()}（各字段默认值见 {@link Retry}）；Java 配置：{@code props.getAi().getRetry().setXxx(...)}。</p>
          */
         private Retry retry = new Retry();
     }
@@ -85,29 +117,39 @@ public class PaperPipelineProperties {
     public static class Retry {
 
         /**
-         * 最大重试次数（0 = 不重试）
+         * 最大重试次数（0 = 不重试）。
+         *
+         * <p>默认 {@code 5}；Java 配置：{@code props.getAi().getRetry().setTimes(3)}。</p>
          */
         private int times = 5;
 
         /**
-         * 初始退避毫秒
+         * 初始退避毫秒。
+         *
+         * <p>默认 {@code 1000}；Java 配置：{@code props.getAi().getRetry().setBackoffMillis(2000L)}。</p>
          */
         // [P3C A20 豁免]
         private long backoffMillis = 1000L;
 
         /**
-         * 退避倍数（&lt;=1 按 2 处理）
+         * 退避倍数（&lt;=1 按 2 处理）。
+         *
+         * <p>默认 {@code 2.0}；Java 配置：{@code props.getAi().getRetry().setBackoffMultiplier(3.0D)}。</p>
          */
         private double backoffMultiplier = 2.0D;
 
         /**
-         * 退避上限毫秒（&lt;=0 按 15000 处理）
+         * 退避上限毫秒（&lt;=0 按 15000 处理）。
+         *
+         * <p>默认 {@code 20000}；Java 配置：{@code props.getAi().getRetry().setMaxBackoffMillis(30000L)}。</p>
          */
         // [P3C A20 豁免]
         private long maxBackoffMillis = 20000L;
 
         /**
-         * 除限流外是否也重试瞬时故障（超时 / 502 / 503）
+         * 除限流外是否也重试瞬时故障（超时 / 502 / 503）。
+         *
+         * <p>默认 {@code true}；Java 配置：{@code props.getAi().getRetry().setRetryOnTransient(false)}。</p>
          */
         private boolean retryOnTransient = true;
     }
@@ -119,17 +161,23 @@ public class PaperPipelineProperties {
     public static class Alert {
 
         /**
-         * 是否启用
+         * 是否启用。
+         *
+         * <p>默认 {@code false}；Java 配置：{@code props.getAlert().setEnabled(true)}。</p>
          */
         private boolean enabled = false;
 
         /**
-         * 告警 Webhook 地址
+         * 告警 Webhook 地址。
+         *
+         * <p>默认未配置（{@code null}）；Java 配置：{@code props.getAlert().setWebhookUrl("https://your-webhook")}</p>。
          */
         private String webhookUrl;
 
         /**
-         * 告警请求超时（毫秒）
+         * 告警请求超时（毫秒）。
+         *
+         * <p>默认 {@code 5000}；Java 配置：{@code props.getAlert().setTimeoutMillis(10000)}。</p>
          */
         // [P3C A20 豁免]
         private int timeoutMillis = 5000;

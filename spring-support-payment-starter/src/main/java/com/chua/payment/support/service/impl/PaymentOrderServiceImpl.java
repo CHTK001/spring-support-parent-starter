@@ -10,6 +10,7 @@ import com.chua.payment.support.channel.PaymentRequest;
 import com.chua.payment.support.channel.PaymentResult;
 import com.chua.payment.support.channel.RefundRequest;
 import com.chua.payment.support.channel.RefundResult;
+import com.chua.payment.support.dto.CouponDiscountPreview;
 import com.chua.payment.support.dto.CreateRefundOrderDTO;
 import com.chua.payment.support.dto.MarkRefundedDTO;
 import com.chua.payment.support.dto.OrderCreateDTO;
@@ -37,6 +38,7 @@ import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
 import com.chua.payment.support.mapper.MerchantMapper;
 import com.chua.payment.support.mapper.PaymentOrderMapper;
+import com.chua.payment.support.service.CouponService;
 import com.chua.payment.support.service.OrderStateLogService;
 import com.chua.payment.support.service.OrderStateMachineService;
 import com.chua.payment.support.service.MerchantPaymentConfigService;
@@ -114,6 +116,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
        */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
       /**
+        * 用户优惠券服务
+        */
+    private final CouponService couponService;
+      /**
        * 事件发布器
        */
     private final ApplicationEventPublisher eventPublisher;
@@ -160,6 +166,18 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             return convertToVO(existing);
         }
 
+        BigDecimal payableAmount = dto.orderAmount();
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        if (StringUtils.hasText(dto.couponNo())) {
+            if (!Boolean.TRUE.equals(merchant.getPaymentCouponEnabled())) {
+                throw new PaymentException("商户未启用优惠券");
+            }
+            CouponDiscountPreview couponPreview = couponService.previewForOrder(
+                    dto.merchantId(), dto.userId(), dto.couponNo(), dto.orderAmount());
+            couponDiscount = couponPreview.discountAmount();
+            payableAmount = dto.orderAmount().subtract(couponDiscount).max(BigDecimal.ZERO);
+        }
+
         PaymentOrder order = new PaymentOrder();
         BeanUtils.copyProperties(dto, order);
         order.setOrderNo(orderNo);
@@ -169,7 +187,8 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         order.setChannelSubType(channel.getChannelSubType());
         order.setPaidAmount(BigDecimal.ZERO);
         order.setRefundAmount(BigDecimal.ZERO);
-        order.setDiscountAmount(nullToZero(dto.discountAmount()));
+        order.setDiscountAmount(StringUtils.hasText(dto.couponNo())
+                ? couponDiscount : nullToZero(dto.discountAmount()));
         order.setCurrency(StringUtils.hasText(dto.currency()) ? dto.currency() : "CNY");
         order.setStatus(OrderState.PENDING.name());
         order.setSubject(StringUtils.hasText(dto.subject()) ? dto.subject() : "支付订单");
@@ -183,7 +202,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         com.chua.payment.support.channel.OrderCreateRequest createRequest = new com.chua.payment.support.channel.OrderCreateRequest(
                 orderNo,
                 dto.userId(),
-                dto.orderAmount(),
+                payableAmount,
                 order.getSubject(),
                 order.getBody(),
                 order.getCurrency(),
@@ -209,6 +228,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 return convertToVO(duplicated);
             }
             throw new PaymentException("业务订单号已存在，订单创建失败", e);
+        }
+
+        if (StringUtils.hasText(dto.couponNo())) {
+            couponService.reserveForOrder(dto.couponNo(), order.getId(), order.getOrderNo());
         }
 
         stateMachineService.createStateMachine(order.getId());
@@ -1386,9 +1409,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (channel.getId() != null && !channel.getId().equals(existing.getChannelId())) {
             throw new PaymentException("业务订单号已存在且支付方式不一致");
         }
-        if (existing.getOrderAmount() != null && dto.orderAmount() != null
-                && existing.getOrderAmount().compareTo(dto.orderAmount()) != 0) {
-            throw new PaymentException("业务订单号已存在且订单金额不一致");
+        if (existing.getOrderAmount() != null && dto.orderAmount() != null) {
+            BigDecimal expectedPayable = dto.orderAmount();
+            if (StringUtils.hasText(dto.couponNo()) && existing.getDiscountAmount() != null) {
+                expectedPayable = dto.orderAmount().subtract(existing.getDiscountAmount()).max(BigDecimal.ZERO);
+            }
+            if (existing.getOrderAmount().compareTo(expectedPayable) != 0) {
+                throw new PaymentException("业务订单号已存在且订单金额不一致");
+            }
         }
         String currency = StringUtils.hasText(dto.currency()) ? dto.currency() : "CNY";
         if (StringUtils.hasText(existing.getCurrency()) && !existing.getCurrency().equalsIgnoreCase(currency)) {

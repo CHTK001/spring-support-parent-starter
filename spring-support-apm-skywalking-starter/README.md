@@ -118,6 +118,101 @@ sequenceDiagram
 
 优先级：`plugin.apm.skywalking.*` 覆盖 `skywalking.*`（`@AutoConfiguration(after = SkywalkingAutoConfiguration.class)` 保证执行顺序）；系统属性 `-Dskywalking.url` 与环境变量 `SW_OAP_ADDRESS` / `SW_OAP_USERNAME` / `SW_OAP_PASSWORD` 在 `SkywalkingSettings` 静态初始化时兜底，Spring 侧 `apply` 写入的值最终生效。
 
+### 5.1 逐项配置示例
+
+按功能分组给出每个配置项的含义、默认值与 YAML 示例；默认值均与 `SkywalkingApmProperties` 的字段初始化代码一致。
+
+#### 连接地址
+
+**`plugin.apm.skywalking.url`**
+
+- 含义：SkyWalking OAP 的 GraphQL 服务地址。写入进程级设置时会规范化：去掉尾部 `/`、剥离 `/graphql` 后缀（如 `http://127.0.0.1:12800/graphql` 会被存为 `http://127.0.0.1:12800`）。
+- 默认值：`""`（空串）。留空表示不改写地址，沿用 utils 层 `skywalking.url`（最终回落 `http://127.0.0.1:12800`）。
+- 特别注意：只有显式配置本键，整个桥接 Bean（`SkywalkingApmAutoConfiguration`）才会装配；键不存在时本模块不参与配置。
+
+```yaml
+plugin:
+  apm:
+    skywalking:
+      url: http://skywalking-oap:12800
+```
+
+#### 鉴权
+
+**`plugin.apm.skywalking.username`**
+
+- 含义：OAP 开启 Basic 鉴权时的用户名。
+- 默认值：`""`（空串）。未配置 `url`（桥接不装配）时，留空即沿用 `skywalking.username`；桥接一旦生效，本值非 null 即覆盖进程级用户名——空串也会覆盖，**不会**回落到 `skywalking.username`。
+- 生产建议：OAP 开启鉴权时务必显式填写，或改用环境变量 `SW_OAP_USERNAME`。
+
+```yaml
+plugin:
+  apm:
+    skywalking:
+      username: your-username
+```
+
+**`plugin.apm.skywalking.password`**
+
+- 含义：OAP Basic 鉴权密码。
+- 默认值：`""`（空串）。覆盖行为与 `username` 相同：桥接生效时空串也会覆盖进程级密码，不会回落到 `skywalking.password`。
+- 生产建议：不要把真实口令提交进仓库；用环境变量 `SW_OAP_PASSWORD`、启动参数或配置中心注入。
+
+```yaml
+plugin:
+  apm:
+    skywalking:
+      password: change-me
+```
+
+#### 超时
+
+**`plugin.apm.skywalking.timeout`**
+
+- 含义：单次 OAP 查询的超时时间（毫秒）。
+- 默认值：`0`。`<=0` 时 `SkywalkingSettings#apply` 不覆盖，沿用 utils 层 `skywalking.timeout`（默认 `5000` 毫秒）；只有 `>0` 才会覆盖进程级超时。
+
+```yaml
+plugin:
+  apm:
+    skywalking:
+      timeout: 5000
+```
+
+### 5.2 完整配置示例
+
+生产环境推荐写法（密码经环境变量注入，YAML 中只留占位符）：
+
+```yaml
+plugin:
+  apm:
+    enabled: true                        # APM 模块总开关
+    type: skywalking                     # 可留空：自动探测时本实现 order=0，优先被选中
+    mode: embedded                       # 嵌入模式：接口随宿主端口暴露（{plugin.apm.path}/**）
+    path: /api/apm/v1                    # 统一 REST 前缀
+    skywalking:
+      url: http://skywalking-oap:12800   # 必填：键不存在则桥接 Bean 不装配
+      username: your-username            # OAP 开启 Basic 鉴权时填写
+      password: ${SW_OAP_PASSWORD:change-me}
+      timeout: 5000                      # 单次查询超时（毫秒）
+
+# 兜底前缀（utils 层）：本模块未覆盖的键按此生效，可不配
+skywalking:
+  enabled: true
+  url: http://127.0.0.1:12800
+  timeout: 5000
+```
+
+### 5.3 生产注意事项
+
+1. **`url` 是桥接开关**：只配 `username`/`password`/`timeout` 而不配 `url`，桥接 Bean 不装配，这些值全部被忽略（见 9.3 节）。
+2. **鉴权覆盖陷阱**：桥接生效后，`username`/`password` 的空串也会覆盖进程级值，不会回落到 `skywalking.*`。OAP 开启鉴权的生产环境必须在 `plugin.apm.skywalking` 下显式填写，或使用环境变量 `SW_OAP_USERNAME` / `SW_OAP_PASSWORD`，避免启动后鉴权被清空导致 OAP 返回 401。
+3. **口令管理**：密码属于部署机密，建议经环境变量、启动参数或配置中心注入；运行期热改接口（`POST {plugin.apm.path}/config`）刻意不接受鉴权项，避免界面回显明文口令。
+4. **地址写法**：Spring 配置里建议写全 `http://host:port`；尾部 `/` 与 `/graphql` 后缀会被自动剥掉。环境变量 `SW_OAP_ADDRESS` 允许省略协议头（自动补 `http://`），但 `plugin.apm.skywalking.url` 不要省略协议头。
+5. **超时规划**：跨机房或 OAP 负载高时适当调大 `timeout`；超时只影响单次查询，不会中断进程，按 OAP 实际负载与网络时延调整即可。
+6. **多引擎并存**：与 `spring-support-apm-hotspot-starter` 并存时本实现 `order=0` 优先；需要固定引擎时显式配 `plugin.apm.type: skywalking`，避免自动探测受另一实现可用性影响。
+7. **暴露面**：嵌入模式下 APM 接口随宿主端口暴露在 `plugin.apm.path` 下，生产环境建议经网关收敛并做访问控制；`plugin.apm.enabled=false` 可整体关闭 APM 模块。
+
 ## 6. 使用方式
 
 ### 6.1 Maven 坐标
