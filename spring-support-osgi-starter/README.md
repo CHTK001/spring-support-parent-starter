@@ -460,6 +460,38 @@ public class ExcelActivator implements BundleActivator {
 - 服务取不到：bundle 没到 ACTIVE、没 `registerService`，或 ranking 被更高实现压住；`GET /osgi/services` 看注册表现状。
 - 宿主接口演进后 bundle 未同步重打包：调用期抛 `NoSuchMethodError`；接口变更时宿主与插件要一起发版。
 
+**⑥ 零 Activator 最小形态：`@Spi` 实现自动进宿主服务注册表**
+
+不需要 Activator、也不需要手工 `registerService`：bundle 只带实现类 + `META-INF/extensions` 索引，启动时由 `BundleSpiAutoPublisher` 自动发现 `@Spi` 实现并发布到 OSGi 注册表；同时经宿主桥登记进宿主侧 `ServiceProvider`，业务代码用 `NativeServices.get(XxxSpi.class)` / `ServiceProvider.of(XxxSpi.class).getExtension(null)` 直接取到实现，bundle STOPPED / UPDATED / UNINSTALLED 时自动同步摘除（宿主侧回落「无实现」，不会抛异常）。
+
+最小 Manifest（无需 Activator / Import-Package，`DynamicImport-Package: *` 兜底解析宿主导出包；内嵌三方 jar 时加 `Bundle-ClassPath`）：
+
+```
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: com.acme.report.excel
+Bundle-Version: 1.0.0
+DynamicImport-Package: *
+```
+
+资源索引按「接口全限定名 → 实现类全限定名」登记（接口类不进 bundle，由宿主导出）：
+
+```
+META-INF/extensions/com.acme.report.api.Exporter
+  └─ 内容一行：com.acme.report.excel.ExcelExporter
+```
+
+宿主要把接口包与 `com.chua.common.support.spi.annotations` 一起导出进框架类空间——实现类的 `@Spi` 注解必须可解析，否则实现被静默丢弃，表象是 bundle ACTIVE 但注册表无服务：
+
+```yaml
+plugin:
+  osgi:
+    framework-properties:
+      org.osgi.framework.system.packages.extra: com.acme.report.api,com.chua.common.support.spi.annotations
+```
+
+真实样例：`utils-support-native-rdp` 打成 `native-rdp-spi` bundle（`Bundle-ClassPath: .,lib/jna-5.19.1.jar` 内嵌 JNA，`native/rdpj/win32-x86-64/rdpj.dll` 随包分发），宿主 `NativeServices.get(RdpNativeSpi.class)` 直接拿到 bundle 内实现并完成真实 JNA 调用；JNA 类 bundle 宿主需加 `org.osgi.framework.bootdelegation: sun.*,com.sun.*`。另注意：`@Spi` 硬门槛对所有发现路径生效（含 `META-INF/extensions` 标准索引），实现类未标 `@Spi` 时索引照读但实现被静默丢弃。
+
 ### 6.8 REST 管理端点调用示例
 
 以下响应均取自隔离宿主 E2E 实测（`start=false` 安装、批量混入不存在的名字、2 秒超时宿主），可直接当作联调对照。
