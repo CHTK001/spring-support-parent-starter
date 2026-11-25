@@ -43,3 +43,5 @@ com.chua.starter.datasearch.credit.spi.impl.XaiCreditQueryProvider
 com.chua.starter.datasearch.credit.spi.impl.HmilionSeekCreditQueryProvider
 # 基元律动(TokenRhythm)控制台余额(tr_session 会话 Cookie 鉴权;sk_xxx 推理 Key 查不了,勿混用)
 com.chua.starter.datasearch.credit.spi.impl.TokenRhythmCreditQueryProvider
+# 百度千帆(百度智能云)控制台余额(控制台同源接口;Cookie 会话鉴权,credit_key 口径为 bce-user-info值#bce-sessionid值)
+com.chua.starter.datasearch.credit.spi.impl.QianfanCreditQueryProvider

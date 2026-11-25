@@ -67,8 +67,8 @@ flowchart TD
 | 纯 JDBC 层 SQL 监控与端点 | `SqlMonitorAutoConfiguration`、`DataSourceSqlMonitor`、`SqlMonitorEndpoint` | `plugin.datasource.monitor.enabled` 未设置时 dev/test/uat/local 自动启用；`GET/POST /actuator/sqlmonitor` |
 | 数据库设计文档预览 | `DocumentAutoConfiguration`、`DataSourceDocumentController`、`DatabaseGraphService` | Web 环境 + `plugin.datasource.document.enable=true`（默认 `true`） |
 | H2 / SQLite 嵌入式引擎 | `H2EngineAutoConfiguration`、`SqliteEngineAutoConfiguration`、`SqliteEngineEndpointAutoConfiguration`、`H2Engine`、`SqliteEngine` | `plugin.h2.enable=true` / `plugin.sqlite.enable=true`（默认均 `false`）；`GET /actuator/sqlite` |
-| Calcite 跨库联邦查询 | `CalciteAutoConfiguration`、`CalciteDataSourceConversion` | `plugin.datasource.calcite.enabled=true`（默认 `false`） |
-| ShardingSphere 分库分表 | `ShardingAutoConfiguration`、`ShardingV5Conversion` | `plugin.datasource.sharding.enabled=true`（默认 `false`） |
+| Calcite 跨库联邦查询 | `CalciteAutoConfiguration`、`CalciteDataSourceConversion` | `plugin.datasource.calcite.enabled=true`（默认 `false`）；运行期联邦 `ds_calcite_federation` + `/ms/ds-runtime/calcite`（见 §6.3） |
+| ShardingSphere 分库分表 | `ShardingAutoConfiguration`、`ShardingV5Conversion` | `plugin.datasource.sharding.enabled=true`（默认 `false`）；运行期规则 `ds_sharding_rule` + `/ms/ds-runtime/sharding`（见 §6.1） |
 | SQL 物化路由 | `MaterializedRouteAutoConfiguration`、`MaterializedRouteAdvisor`、`CalciteMaterializedSqlRouter` | `plugin.datasource.materialized.enabled=true`（默认 `false`）；`@MaterializedRoute` / `@MaterializedRefresh` |
 | Seata 分布式事务代理 | `SeataAutoConfiguration`、`SeataDataSourcePostProcessor` | Seata 在类路径 + `seata.enabled=true`（缺省 `true`）；需 `@Import`（未在 imports） |
 | ENC 配置加密解密 | `ENCEnvironmentPostProcessor`、`AesPasswordDecryptor` | `plugin.datasource.enc.enabled=true`（默认 `false`）；EPP 与 Bean 均需宿主注册/导入 |
@@ -139,8 +139,8 @@ flowchart TD
 | `plugin.datasource.calcite.enabled / max-pool-size` | `Boolean`/`Integer` | `false` / `10` | 聚合所有已注册数据源为 Calcite 数据源 / 聚合连接池上限 |
 | `plugin.datasource.calcite.schema-mapping / default-schema` | `Map`/`String` | — | 数据源→模式名映射 / 默认模式名 |
 | `plugin.datasource.sharding.enabled / show-sql` | `Boolean` | `false` / `false` | 分片开关 / 打印改写后 SQL |
-| `plugin.datasource.sharding.tables[*].logic-table / sharding-column / time-unit / strategy` | `String` | — / — / — / `TABLE` | 逻辑表 / 分片列 / 时间单位（配置后走 `INTERVAL`，否则 `MOD`）/ 策略（`TABLE`/`DB`） |
-| `plugin.datasource.sharding.databases` | `List<String>` | — | 分库列表；数量 > 1 时启用分库 |
+| `plugin.datasource.sharding.tables[*].logic-table / sharding-column / time-unit / strategy` | `String` | — / — / — / `TABLE` | 逻辑表（同时为物理表前缀）/ 分片列 / 时间单位 `YEAR`·`QUARTER`·`MONTH`·`WEEK`·`DAY`·`HOUR`（配置后走 `INTERVAL` 固定 12 片，物理表 `逻辑表_yyyy…`；缺省走 `MOD` 固定 16 片，物理表 `逻辑表_0..15`）/ 策略（`TABLE`/`DB`，当前仅解析、不参与路由） |
+| `plugin.datasource.sharding.databases` | `List<String>` | — | 分库列表；数量 > 1 时启用分库（每表按分片列对库数取模 `db_mod`） |
 | `plugin.datasource.materialized.enabled` | `Boolean` | `false` | 物化路由总开关（legacy：`spring.datasource.materialized`） |
 | `plugin.datasource.materialized.default-threshold / refresh-interval-seconds` | `Long` | `1000` / `0` | 表行数阈值（超过才走内存副本）/ 自动刷新间隔（`<=0` 关闭） |
 | `plugin.datasource.materialized.skip-query-in-transaction / cache-data-source-prefix` | `Boolean`/`String` | `true` / `materialized#` | 事务内跳过物化路由（读己之写）/ 副本数据源名前缀 |
@@ -191,6 +191,87 @@ plugin:
 @Import({DSTransactionalConfiguration.class, DatasourceP2AutoConfiguration.class, SeataAutoConfiguration.class})
 public class App { ... }
 ```
+
+### 6.1 分库分表（ShardingSphere）
+
+`plugin.datasource.sharding.enabled=true` 时，模块把**已注册的普通数据源**（排除动态路由数据源与分片数据源自身）交给 `ShardingV5Conversion`（底层 ShardingSphere 5.5.2）构建名为 `shardingDataSource` 的分片数据源。有两条配置路径：
+
+**方式一：yml 静态配置（`plugin.datasource.sharding.*`，分片数写死）**
+
+```yaml
+plugin:
+  datasource:
+    sharding:
+      enabled: true
+      show-sql: true            # 打印改写后的 SQL
+      tables:
+        - logic-table: t_order       # 逻辑表名（同时是物理表名前缀）
+          sharding-column: user_id   # 分片列；不配 time-unit → MOD 取模
+        - logic-table: t_order_log
+          sharding-column: create_time
+          time-unit: MONTH           # 时间分片 → INTERVAL，物理表 t_order_log_yyyyMM
+      databases:                     # 数量 > 1 才启用分库
+        - db_order_0
+        - db_order_1
+```
+
+| 配置形态 | 算法 | 物理表/库命名 | 分片数 |
+| --- | --- | --- | --- |
+| 未配 `time-unit` | `MOD`（包装为 `ManualModShardingAlgorithm`） | `逻辑表_0 .. 逻辑表_15` | 固定 16 |
+| 配置 `time-unit` | `INTERVAL`（范围固定 2000-01-01 ~ 2099-12-31） | `逻辑表_<时间后缀>`：YEAR=yyyy、QUARTER=yyyyQ、MONTH=yyyyMM、WEEK=yyyyww、DAY=yyyyMMdd、HOUR=yyyyMMddHH | 固定 12 |
+| `databases` 数量 > 1 | `db_mod`（与分表同分片列，对库数取模） | 库按已注册数据源路由 | 库数 |
+
+- `tables[*].strategy`（`TABLE`/`DB`）当前**仅被解析、不参与路由判定**；是否分库只看 `databases` 数量是否 > 1。
+- ShardingSphere 禁止「手动 actualDataNodes」模式使用内置 MOD/HASH_MOD 自动分片算法，本模块统一包装为 `ManualModShardingAlgorithm`（CLASS_BASED）做等价取模路由。
+- **物理表不自动创建**：`ShardingV5Conversion` 在物理表缺失时按分片数合成 `逻辑表_0..N-1` 数据节点，让分片规则先行生效；真正建表走受限 DDL（见下）或自行执行 `CREATE TABLE`。
+- 受限 DDL 端点（`/ms/ds-runtime/tables/*`）：只开放样板 `CREATE TABLE IF NOT EXISTS`（表名必须等于逻辑表名）与 `ALTER TABLE ADD COLUMN` 的模板生成/预览/执行，不提供任意 DDL。
+
+**方式二：运行期规则（`ds_sharding_rule` 表，分片数/分库成员可参数化）**
+
+`ds_sharding_rule` 一条记录 = 一个逻辑表的规则（算法 MOD/INTERVAL、分片列、分片数、分库成员 JSON——支持 url 直连或引用已注册数据源名）。`ShardingRuleManager` 在启动（`loadOnStartup`）或 `POST /ms/ds-runtime/sharding/refresh` 时构建/替换分片数据源，**不重启生效**。管理端点：`GET/POST /ms/ds-runtime/sharding`、`DELETE /ms/ds-runtime/sharding/{id}`、`POST /ms/ds-runtime/sharding/route-preview`（SQL 落点预览）、`POST /ms/ds-runtime/sharding/query`；全量配置可经 `GET /ms/ds-runtime/config/export` / `POST /ms/ds-runtime/config/import` 导入导出。
+
+### 6.2 分区路由（pay_partition_config，独立于分库分表）
+
+分区（partition）是另一套**按时间切表**的机制，与 ShardingSphere 分库分表相互独立：
+
+- 配置存于 `pay_partition_config`（DDL 见 payment-starter `db/init/V2.0__init_all_payment.sql`），关键字段：业务类型、源表、分表前缀、粒度（仅 `MONTH`/`DAY`）、`auto_create_enabled`、`create_ahead_days`、`migrate_before_days` 等。
+- 分区表命名：`<分表前缀>_part_yyyyMM`（MONTH）/ `<分表前缀>_part_yyyyMMdd`（DAY）。
+- `PartitionAwareTableFactory` 只把 `auto_create_enabled=true` 的配置注册为 Calcite `PartitionRoutingTable`（热表 + `%_part_%` 分区表 UNION 的路由视图）；`auto_create_enabled=false` 的行不参与路由。
+- **datasource-starter 不建分区表**：本模块内没有任何创建分区表的 DDL/调度；`/ms/ds-runtime/partition/**` 为只读端点（配置盘点、实际分区表、日期范围预览均为静态推算 + 元数据核对，不执行 DDL/DML）。
+- 分区表的**自动创建与数据迁移由 payment-starter 承担**：`OrderPartitionConfigServiceImpl#executeAutoCreate / executeAutoMigrate` + 定时任务（`PaymentOrderPartitionCreateTask` / `TransactionPartitionCreateTask` 及对应 Migrate 任务，默认 cron `0 0 2 * * ?`，`plugin.payment.scheduler.enabled` 控制）。即 `auto_create_enabled=true` 时，定时任务按 `create_ahead_days` 预建 `CREATE TABLE IF NOT EXISTS <分区表> LIKE <源表>`，并按 `migrate_before_days` 迁移/清理历史数据；datasource-starter 只消费该配置做查询路由。
+
+### 6.3 Calcite 联邦查询（跨库聚合）
+
+`plugin.datasource.calcite.enabled=true` 时，`CalciteAutoConfiguration` 把所有已注册普通数据源聚合为一个 `calciteDataSource`，一条 SQL 即可跨库 join / 聚合。同样有两条配置路径：
+
+**方式一：yml 静态配置（`plugin.datasource.calcite.*`）**
+
+```yaml
+plugin:
+  datasource:
+    calcite:
+      enabled: true
+      max-pool-size: 10         # 聚合连接池上限
+      schema-mapping:           # 数据源名 → Calcite 模式名
+        master: db_main
+        slave_1: db_slave
+      default-schema: db_main   # SQL 不带模式前缀时落在这里
+```
+
+**方式二：运行期联邦（`ds_calcite_federation` 表）**
+
+动态增删联邦成员时，用 `DsCalciteFederation` 描述成员数据源与模式映射；`CalciteFederationManager` 在启动（`ApplicationReadyEvent`）与配置变更时把它物化为 Calcite schema，不重启生效。管理端点（`/ms/ds-runtime/calcite`）：
+
+| 端点 | 说明 |
+| --- | --- |
+| `GET /ms/ds-runtime/calcite` | 联邦配置清单（含停用） |
+| `POST /ms/ds-runtime/calcite` | 保存联邦配置并立即刷新 |
+| `DELETE /ms/ds-runtime/calcite/{id}` | 删除联邦配置并刷新 |
+| `POST /ms/ds-runtime/calcite/refresh` | 手动刷新全部联邦配置，返回生效 schema 列表 |
+| `POST /ms/ds-runtime/calcite/query` | 经聚合数据源执行联邦 SQL |
+| `GET /ms/ds-runtime/calcite/health` | 联邦成员健康状态 |
+
+> 与物化路由的分工：Calcite 负责「跨库联邦查询」；`@MaterializedRoute`（`plugin.datasource.materialized.*`）负责把大表查询路由到内存副本，两者可叠加但互不依赖。
 
 ## 7. 使用场景
 

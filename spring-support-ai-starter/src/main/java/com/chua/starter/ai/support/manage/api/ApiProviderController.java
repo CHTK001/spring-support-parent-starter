@@ -970,6 +970,9 @@ public class ApiProviderController {
         entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         entity.setProxy(str(body, "proxy"));
         entity.setExtra(uncheckedCast(body.get("extra")));
+        // AK/SK 签名族余额口径唯一为厂商官方：落库前剥掉 extra.credit_kind，
+        // 保留运行时候选链（如火山 volc-plan 失败回落 host）。
+        stripLockedCreditKind(entity);
         entity.setSortOrder(intv(body, "sort_order", accountChannelService.nextSortOrder()));
 
         // 初始模型（可选，用户可以后续手动添加）
@@ -1061,6 +1064,9 @@ public class ApiProviderController {
         if (body.containsKey("sort_order")) {
             entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
+        // AK/SK 签名族余额口径唯一为厂商官方：保存前剥掉 extra.credit_kind（含历史残留），
+        // 保留运行时候选链。
+        stripLockedCreditKind(entity);
         // 编辑同样要守唯一性：否则可以把 A 改名为 B 的名字，绕过新增/克隆的判重造出重复项。
         // 排除自身（excludeProviderId = 当前被编辑的供应商），只拦与「别人」撞名的情况。
         boolean checkDuplicate = body.containsKey("name") || body.containsKey("platform");
@@ -2696,6 +2702,17 @@ public class ApiProviderController {
             entity.setBaseUrl(baseUrl == null ? null : baseUrl.trim());
             extra = new HashMap<>(4);
         }
+        // AK/SK 签名族（阿里云百炼 / 火山 / 百度千帆 / 七牛）的官方余额口径唯一为
+        // 「厂商官方」；百度千帆另有控制台 Cookie 口径（推理 Key / AK/SK 都查不了余额），
+        // 表单给出「千帆控制台余额 → 厂商官方」两个选项，其余三族仍只回唯一官方选项。
+        if (isCreditKindLockedProvider(entity)) {
+            List<CreditKindOption> locked = new ArrayList<>(2);
+            if (isQianfanProvider(entity)) {
+                locked.add(new CreditKindOption("qianfan", creditKindLabel("qianfan"), null));
+            }
+            locked.add(new CreditKindOption("host", creditKindLabel("host"), null));
+            return ApiResult.ok(locked);
+        }
         List<String> auto = autoCandidateKinds(entity, extra);
         List<CreditKindOption> options = new ArrayList<>(auto.size() + 2);
         options.add(new CreditKindOption("custom", "自定义", null));
@@ -2753,6 +2770,7 @@ public class ApiProviderController {
             case "moss" -> "Moss 门户余额";
             case "100milionseek" -> "100milionseek 每日配额";
             case "tokenrhythm" -> "基元律动余额";
+            case "qianfan" -> "百度千帆控制台余额";
             default -> kind;
         };
     }
@@ -4419,7 +4437,8 @@ public class ApiProviderController {
                     || "shusheng".equals(candidate) || "zai".equals(candidate)
                     || "volc-plan".equals(candidate)
                     || "ppio".equals(candidate) || "anthropic".equals(candidate)
-                    || "xai".equals(candidate) || "sensenova".equals(candidate);
+                    || "xai".equals(candidate) || "sensenova".equals(candidate)
+                    || "qianfan".equals(candidate);
             String url = explicitUrl != null ? explicitUrl : (builtinUrl ? null : entity.getBaseUrl());
             query.setUrl(url);
             // 出网代理：供应商配了 proxy 按供应商的走；没配时 CreditHttp 回落 JVM 全局代理属性
@@ -4583,6 +4602,12 @@ public class ApiProviderController {
         // 缺 AK/SK 时签名器提前拦下并提示配置，不发必然失败的请求
         if (isAliyunBailianProvider(entity)) {
             kinds.add("host");
+        }
+        // 百度千帆控制台余额：控制台同源账户接口（Cookie 会话鉴权，推理 API Key 与
+        // AK/SK 都查不了），放登记表的 AK/SK 签名预设（host）之前；Cookie 失效时
+        // 自动回落 host（需配 AK/SK），两条失败原因都会出现在「已尝试」链路里
+        if (isQianfanProvider(entity)) {
+            kinds.add("qianfan");
         }
         // 腾讯云 / 华为云 / 七牛云 / 百度千帆：模型域名（hunyuan.cloud.tencent.com /
         // modelarts-maas.com / api.qnaigc.com / qianfan.baidubce.com）与计费域名不同根，
@@ -5013,11 +5038,12 @@ public class ApiProviderController {
         if ("moss".equals(kind) || "agnes".equals(kind) || "deepseek".equals(kind) || "sub2api".equals(kind)
                 || "minimax-platform".equals(kind) || "zai".equals(kind) || "opencode".equals(kind)
                 || "opencode-console".equals(kind) || "ppio".equals(kind)
-                || "anthropic".equals(kind) || "xai".equals(kind) || "tokenrhythm".equals(kind)) {
+                || "anthropic".equals(kind) || "xai".equals(kind) || "tokenrhythm".equals(kind)
+                || "qianfan".equals(kind)) {
             // Moss / MiniMax / OpenCode / Anthropic 控制台认 Cookie 会话（opencode-console 为
             // __Host-console_session、anthropic 为 sessionKey，由各自实现包装成 Cookie 头）、
             // Agnes / DeepSeek / sub2api / z.ai / OpenCode / PPIO / xAI 官方 API 认 Bearer、
-            // TokenRhythm 控制台认 tr_session Cookie（由实现包装成 Cookie 头）：
+            // TokenRhythm / 百度千帆控制台认会话 Cookie（由实现包装成 Cookie 头）：
             // 令牌原值交给各自实现 / 请求出口包装，不走渠道鉴权前缀，避免与余额接口的实际口径错位
             query.setToken(key);
             return;
@@ -5333,6 +5359,48 @@ public class ApiProviderController {
         }
         String host = hostOf(entity.getBaseUrl());
         return host != null && (host.endsWith("volces.com") || host.endsWith("volcengine.com"));
+    }
+
+    /**
+     * 是否是「余额查询类型绑死厂商官方」的 AK/SK 签名族供应商。
+     *
+     * <p>阿里云百炼 / 火山（豆包）/ 百度千帆 / 七牛四族的官方余额都走登记表里的
+     * AK/SK 签名预设（品牌 host 口径）。除百度千帆外没有第二种查询实现可选：表单不出
+     * 「查询类型」下拉，落库时也不写 {@code extra.credit_kind}——火山运行时
+     * 候选链是 volc-plan 失败回落 host，写死 host 会顶掉自动回落，所以统一剥键，
+     * 让 {@code providerCredit} 自动按候选链取官方口径。百度千帆保留
+     * 「千帆控制台余额 → 厂商官方」两选项（见 {@code providerCreditKinds}），
+     * 候选链同理按 qianfan → host 自动回落。</p>
+     *
+     * @param entity 供应商
+     * @return 绑定厂商官方口径为 true
+     */
+    private static boolean isCreditKindLockedProvider(SysAccountChannel entity) {
+        return isAliyunBailianProvider(entity) || isDoubaoProvider(entity)
+                || isQianfanProvider(entity) || isQiniuProvider(entity);
+    }
+
+    /**
+     * 绑定厂商官方口径的供应商落库前剥掉 {@code extra.credit_kind}。
+     *
+     * @param entity 供应商
+     */
+    private static void stripLockedCreditKind(SysAccountChannel entity) {
+        if (entity == null || !isCreditKindLockedProvider(entity)) {
+            return;
+        }
+        Map<String, Object> extra = entity.getExtra();
+        if (extra == null || extra.isEmpty() || !extra.containsKey("credit_kind")) {
+            return;
+        }
+        try {
+            extra.remove("credit_kind");
+        } catch (UnsupportedOperationException e) {
+            // 个别映射产物不可变：拷贝一份再剥，保持「锁定族不落 credit_kind」的口径
+            Map<String, Object> copy = new HashMap<>(extra);
+            copy.remove("credit_kind");
+            entity.setExtra(copy);
+        }
     }
 
     /**

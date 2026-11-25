@@ -16,15 +16,19 @@ import java.util.List;
  *       enabled: true
  *       show-sql: true
  *       tables:
- *         - logic-table: t_order
+ *         - logic-table: t_order_log
  *           sharding-column: create_time
- *           time-unit: MONTH
+ *           time-unit: MONTH          # 配置后走 INTERVAL 时间分片，物理表 t_order_log_yyyyMM
  *         - logic-table: t_user
- *           sharding-column: user_id
- *       databases:
- *         - db_order
- *         - db_user
+ *           sharding-column: user_id  # 不配 time-unit 走 MOD 取模，物理表 t_user_0..t_user_15
+ *       databases:                    # 数量大于 1 时启用分库（按同一分片列对库数取模）
+ *         - db_order_0
+ *         - db_order_1
  * </pre>
+ * <p>
+ * 物理表不会自动创建：规则先行生效（缺失的物理表按分片数合成数据节点），
+ * 建表请走受限 DDL 端点（{@code /ms/ds-runtime/tables/*}）或自行执行 CREATE TABLE；
+ * 需要参数化分片数/分库成员时改用运行期规则表 {@code ds_sharding_rule}。
  *
  * @since 2024/12/21
  * @author CH
@@ -49,7 +53,10 @@ public class ShardingDataSourceProperties {
     private List<ShardingTableConfig> tables;
 
     /**
-     * 分库配置列表（逻辑库名）
+     * 分库配置列表（逻辑库名）。
+     *
+     * <p>列表数量大于 1 时启用分库：对每个逻辑表按其分片列对库数取模（db_mod 算法）路由，
+     * 分库与分表使用同一个分片列；只有 1 个或未配置时不分库。</p>
      */
     private List<String> databases;
 
@@ -71,12 +78,24 @@ public class ShardingDataSourceProperties {
         private String shardingColumn;
 
         /**
-         * 时间分片单位: YEAR, QUARTER, MONTH, WEEK, DAY, HOUR
+         * 时间分片单位：YEAR / QUARTER / MONTH / WEEK / DAY / HOUR。
+         *
+         * <p>配置了 time-unit 时走 INTERVAL 时间分片：分片范围固定为 2000-01-01 ~ 2099-12-31，
+         * 分片数固定 12；物理表名为 {@code 逻辑表_时间后缀}，时间后缀按单位分别为
+         * YEAR=yyyy、QUARTER=yyyyQ、MONTH=yyyyMM、WEEK=yyyyww、DAY=yyyyMMdd、HOUR=yyyyMMddHH
+         * （如 {@code t_order_log_202601}）。</p>
+         *
+         * <p>未配置（null/空）时走 MOD 取模分片，物理表名为
+         * {@code 逻辑表_0 .. 逻辑表_15}（固定 16 片）。</p>
          */
         private String timeUnit;
 
         /**
-         * 分片策略: TABLE, DB
+         * 分片策略: TABLE, DB。
+         *
+         * <p>当前仅解析该字段、未参与路由判定：是否分库由
+         * {@link ShardingDataSourceProperties#getDatabases()} 的数量是否大于 1 决定，
+         * 分表始终按 logic-table / sharding-column / time-unit 生效。</p>
          */
         private String strategy = "TABLE";
 
