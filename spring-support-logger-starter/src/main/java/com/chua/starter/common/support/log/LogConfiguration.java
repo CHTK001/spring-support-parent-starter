@@ -75,7 +75,6 @@ public class LogConfiguration {
      *     <li>客户端 IP 地址</li>
      *     <li>请求耗时</li>
      * </ul>
-     * </p>
      *
      * @param applicationContext Spring 应用上下文
      * @return FilterRegistrationBean 过滤器注册 Bean
@@ -103,7 +102,7 @@ public class LogConfiguration {
      * 日志/MDC 模块的 服务信息 贡献者: 输出 MDC 链路追踪、参数日志过滤器等开关状态。
      *
      * <p>MDC 链路追踪由 {@link MdcHandlerFilter} 实现, 通过
-     * {@link com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer}
+     * {@code com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer}
      * 注册为全局过滤器, 订单 为 {@link Integer#MIN_VALUE} (过滤链最前), 永久开启无需配置。</p>
      *
      * @return ServiceInfoContributor

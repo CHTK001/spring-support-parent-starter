@@ -292,12 +292,8 @@ public final class ServiceInfoRegistry {
         /**
          * 创建 flag信息 实例
          * @param name 名称
-         * @param name 字符串
-         * @param value 布尔值
-         * @param name 字符串
-         * @param name 字符串
          * @param group 群体
-         * @param value 值
+         * @param value 布尔值
          * @param description description
          * @param suffix 后缀
          */
