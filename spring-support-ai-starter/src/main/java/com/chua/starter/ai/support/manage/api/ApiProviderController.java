@@ -8771,10 +8771,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @param googleProtocol 是否使用 Gemini 协议
      * @param proxy          HTTP 代理地址（可为空）
      * @param auth           鉴权参数（方案 + 头名 + 前缀）
+     * @param platform       供应商平台标识（价格口径换算用，可为空）
      * @return 模型条目列表；请求失败返回 空（由调用方决定是否重试/报错）
      */
     private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol,
-                                                           String proxy, UpstreamAuth auth) {
+                                                           String proxy, UpstreamAuth auth, String platform) {
         // 地址为空时必须在拼 URL 之前拦住：原实现的 baseUrl.endsWith(...) 会直接 NPE，
         // 异常 message 为 null，最终在界面上显示成「无法连接供应商模型接口: null」。
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -8830,7 +8831,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             // 只在拿到 2xx 时留存：401 / 429 的响应头来自失败的候选（鉴权不对 / 已被限流），
             // 拿它当这家供应商的限额只会写进一条假口径。
             lastUpstreamHeaders.set(new LinkedHashMap<>(response.headers().map()));
-            return googleProtocol ? parseGoogleModels(response.body()) : parseOpenAiModels(response.body());
+            return googleProtocol ? parseGoogleModels(response.body(), platform) : parseOpenAiModels(response.body(), platform);
         } catch (ApiException e) {
             // 业务异常直接向上抛出
             throw e;
@@ -8884,10 +8885,11 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * 这正是「模型元数据必须来自真实 {@code /models} 响应」的入口，
      * 不能用模型名猜。</p>
      *
-     * @param body 响应体 JSON
+     * @param body     响应体 JSON
+     * @param platform 供应商平台标识（价格口径换算用，可为空）
      * @return 模型条目列表
      */
-    private List<Map<String, Object>> parseOpenAiModels(String body) {
+    private List<Map<String, Object>> parseOpenAiModels(String body, String platform) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
         // 响应格式为数据数组，每个元素包含模型标识等字段。
@@ -8905,7 +8907,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 if (id == null || id.isBlank()) {
                     continue;
                 }
-                models.add(upstreamModelRow(id, item.path("name").asText(id), item));
+                models.add(upstreamModelRow(id, item.path("name").asText(id), item, platform));
             }
         }
         return models;
@@ -8918,11 +8920,12 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * 输出上限（已由统一解析口径识别），这里只补 Gemini 特有的
      * {@code temperature} 能力与 {@code description / version}。</p>
      *
-     * @param body 响应体 JSON
+     * @param body     响应体 JSON
+     * @param platform 供应商平台标识（价格口径换算用，可为空）
      * @return 模型条目列表
      */
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> parseGoogleModels(String body) {
+    private List<Map<String, Object>> parseGoogleModels(String body, String platform) {
         List<Map<String, Object>> models = new ArrayList<>(8); // 模型数量不可预估
         com.fasterxml.jackson.databind.JsonNode root = readJson(body);
         com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("models");
@@ -8935,7 +8938,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                     continue;
                 }
                 String displayName = item.path("displayName").asText(id);
-                Map<String, Object> m = upstreamModelRow(id, displayName, item);
+                Map<String, Object> m = upstreamModelRow(id, displayName, item, platform);
                 // description 已由 upstreamModelRow 统一读取（description / summary），
                 // 这里不再单独补一次，避免两处口径分叉。
                 Map<String, Object> extra = new LinkedHashMap<>(4);
@@ -8979,7 +8982,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      * @return 列表行
      */
     private Map<String, Object> upstreamModelRow(String id, String name,
-                                                 com.fasterxml.jackson.databind.JsonNode item) {
+                                                 com.fasterxml.jackson.databind.JsonNode item, String platform) {
         Map<String, Object> m = new LinkedHashMap<>(12);
         m.put("id", id);
         m.put("name", name);
