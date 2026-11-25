@@ -14,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
 import javax.sql.DataSource;
@@ -73,15 +74,18 @@ public class CalciteAutoConfiguration {
      * 把配置的 {@code plugin.datasource.calcite.bean-name} 注册为规范 Bean 的别名。
      *
      * <p>静态 {@code @Bean} + {@link BeanFactoryPostProcessor}：别名注册发生在
-     * Bean 定义加载之后、实例化之前，不会提前实例化本配置类。</p>
+     * Bean 定义加载之后、实例化之前，不会提前实例化本配置类。这里刻意从
+     * {@link Environment} 读取配置而不是注入 {@code CalciteDataSourceProperties}：
+     * BFPP 阶段早于 {@code ConfigurationPropertiesBindingPostProcessor} 注册，
+     * 过早实例化 properties Bean 会拿到未绑定 yaml 的默认值。</p>
      *
-     * @param properties Calcite 数据源配置
+     * @param environment 环境配置
      * @return 别名注册处理器
      */
     @Bean
-    public static BeanFactoryPostProcessor calciteBeanNameAliasPostProcessor(CalciteDataSourceProperties properties) {
+    public static BeanFactoryPostProcessor calciteBeanNameAliasPostProcessor(Environment environment) {
         return beanFactory -> {
-            String customName = properties.getBeanName();
+            String customName = environment.getProperty("plugin.datasource.calcite.bean-name");
             if (customName == null || customName.isBlank()
                     || !(beanFactory instanceof ConfigurableListableBeanFactory registry)) {
                 return;
