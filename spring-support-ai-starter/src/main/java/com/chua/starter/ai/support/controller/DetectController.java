@@ -1,8 +1,9 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.common.support.ai.image.AiImageDetectResult;
+import com.chua.common.support.ai.image.AiImageDetector;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.DetectorUtils;
-import com.chua.common.support.utils.PhotoMetadataUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,13 +27,14 @@ import java.util.Map;
  * <ul>
  *   <li>文本：{@link DetectorUtils} 纯统计启发式评分（0~100），输出判定、置信度、
  *       逐句标注与正反依据；</li>
- *   <li>图片：{@link PhotoMetadataUtils} 元数据分析（C2PA 内容凭证 / IPTC 来源类型 /
- *       XMP / EXIF / 生成参数块），输出判定、置信度与信号清单。</li>
+ *   <li>图片：经 {@link AiImageDetector} 门户取判定实现，默认实现为元数据分析
+ *       （C2PA 内容凭证 / IPTC 来源类型 / XMP / EXIF / 生成参数块 + 像素统计兜底），
+ *       输出判定、置信度与信号清单。</li>
  * </ul>
  *
- * <p>检测内核来自 utils 层工具类，本控制器只做开关/阈值/大小限制的配置读取与编排，
- * 不重复实现检测算法。配置走 {@code detect} 分组全局设置
- * （{@code /v2/settings/detect} 读写），变更实时生效。</p>
+ * <p>检测内核来自 utils 层，本控制器只做开关/阈值/大小限制的配置读取与编排，
+ * 不重复实现检测算法，也不直接 import 具体判定工具类——换判定引擎只改门户名称。
+ * 配置走 {@code detect} 分组全局设置（{@code /v2/settings/detect} 读写），变更实时生效。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -111,7 +113,7 @@ public class DetectController {
      * @param file 图片文件
      * @return report（元数据检测报告）+ fileName + size
      */
-    @Operation(summary = "图片 AI 元数据检测", description = "读取图片元数据（C2PA/XMP/EXIF/生成参数块）判断是否带 AI 生成/编辑痕迹")
+    @Operation(summary = "图片 AI 检测", description = "读取图片元数据（C2PA/XMP/EXIF/生成参数块）并对像素做统计兜底，判断是否带 AI 生成/编辑痕迹")
     @PostMapping("/image")
     public ReturnResult<?> detectImage(@RequestParam("file") MultipartFile file) {
         if (!boolSetting(FIELD_IMAGE_ENABLED, true)) {
@@ -133,12 +135,45 @@ public class DetectController {
             return ReturnResult.error("读取上传图片失败");
         }
 
-        PhotoMetadataUtils.Report report = PhotoMetadataUtils.analyze(data);
+        AiImageDetectResult detected;
+        try {
+            detected = ImageDetectorHolder.DETECTOR.detect(data);
+        } catch (RuntimeException e) {
+            log.warn("[Detect] 图片检测实现执行失败: {}", e.getMessage(), e);
+            return ReturnResult.error("图片检测失败，请稍后重试");
+        }
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("format", detected.format());
+        report.put("verdict", detected.verdict().displayText());
+        report.put("confidence", detected.confidence().displayText());
+        report.put("hasContentCredentials", detected.hasContentCredentials());
+        report.put("digitalSourceType", detected.digitalSourceType());
+        report.put("generator", detected.generator());
+        report.put("generatorSource", detected.generatorSource());
+        report.put("generationParams", detected.generationParams());
+        report.put("signals", detected.evidence());
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("report", report);
+        result.put("detector", detected.detector());
+        result.put("aiGenerated", detected.aiGenerated());
         result.put("fileName", file.getOriginalFilename());
         result.put("size", file.getSize());
         return ReturnResult.ok(result);
+    }
+
+    /**
+     * 判定实现持有者（延迟初始化，永不失败）。
+     *
+     * <p>以静态内部类持有：门户按 SPI 取默认实现，索引缺失时 {@code create()} 内部
+     * 直接实例化启发式实现兜底，不会因为类加载顺序让检测能力整体失效。</p>
+     */
+    private static final class ImageDetectorHolder {
+
+        /**
+         * 默认判定实现（heuristic，元数据 + 像素统计）。
+         */
+        private static final AiImageDetector DETECTOR = AiImageDetector.create();
     }
 
     /**

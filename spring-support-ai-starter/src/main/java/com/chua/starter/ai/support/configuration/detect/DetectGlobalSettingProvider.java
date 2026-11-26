@@ -15,9 +15,9 @@ import java.util.List;
  *
  * <p>AI 检测是纯 JDK 启发式能力：文本按写作统计特征评分
  * （{@link com.chua.common.support.utils.DetectorUtils}），
- * 图片按元数据（C2PA / XMP / EXIF / 生成参数块）判定
- * （{@link com.chua.common.support.utils.PhotoMetadataUtils}），
- * 不依赖任何模型配置。这里的开关与阈值只控制「是否开放」与「判定口径」。</p>
+ * 图片经门户（{@link com.chua.common.support.ai.image.AiImageDetector}）取默认启发式实现，
+ * 按元数据（C2PA / XMP / EXIF / 生成参数块）与像素统计判定，
+ * 默认不依赖任何模型配置。这里的开关与阈值只控制「是否开放」与「判定口径」。</p>
  *
  * @since 4.0.0.42
  * @author CH
