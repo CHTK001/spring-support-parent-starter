@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datasource.configuration.environment;
 
+import com.chua.common.support.utils.ClassUtils;
 import com.chua.common.support.utils.StringUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -19,6 +20,12 @@ import java.util.Properties;
  * @since 4.0.0
  */
 public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+
+    /**
+     * 可选的 Hibernate SQLite 方言实现；宿主未引入时不做声明，交由 JPA 侧自行解析。
+     */
+    private static final String SQLITE_DIALECT_CLASS = "com.chua.hibernate.support.dialect.SQLiteDialect";
+
     @Override
     /**
      * Post处理环境
@@ -35,7 +42,11 @@ public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProces
             properties.setProperty("spring.datasource.driver-class-name", "org.sqlite.JDBC");
             properties.setProperty("spring.datasource.username", "sa");
             properties.setProperty("spring.datasource.password", "");
-            properties.setProperty("spring.jpa.database-platform", "com.chua.hibernate.support.dialect.SQLiteDialect");
+            // Hibernate 方言属可选钩子：仅当宿主 classpath 上确有项目方言实现时才声明；
+            // 写死一个不存在的类会让 JPA 宿主启动即 ClassNotFoundException。
+            if (ClassUtils.isPresent(SQLITE_DIALECT_CLASS)) {
+                properties.setProperty("spring.jpa.database-platform", SQLITE_DIALECT_CLASS);
+            }
         }
 
         properties.setProperty("spring.jpa.hibernate.ddl-auto", "update");
