@@ -15,6 +15,14 @@ import org.apache.ibatis.annotations.Param;
 public interface CollectTaskMapper extends BaseMapper<CollectTask> {
 
     /**
+     * 批量取本页流程的最近五次运行，避免全局任务截断及逐流程查询。
+     *
+     * @param flowIds 本页非空流程 ID 集合
+     * @return 每个流程最多五条，按时间和 ID 倒序
+     */
+    java.util.List<CollectTask> recentForFlows(@Param("flowIds") java.util.List<Integer> flowIds);
+
+    /**
      * 累加任务计量：节点执行次数、抓取次数、记录数各列独立自增。
      *
      * @param taskId      任务ID

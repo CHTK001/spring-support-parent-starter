@@ -3,6 +3,8 @@ package com.chua.starter.collect.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.collect.dto.CollectDslDTO;
 import com.chua.starter.collect.dto.CollectFlowSaveDTO;
+import com.chua.starter.collect.dto.CollectWorkbenchQuery;
+import com.chua.starter.collect.vo.CollectFlowWorkbenchVO;
 import com.chua.starter.collect.entity.CollectFlow;
 import com.chua.starter.collect.service.CollectFlowService;
 import com.chua.starter.collect.vo.CollectFlowVO;
@@ -59,6 +61,20 @@ public class CollectFlowController {
     public ReturnPageResult<CollectFlowVO> page(@ParameterObject Query<CollectFlow> query,
                                                 @ParameterObject CollectFlow condition) {
         return PageResultUtils.ok(flowService.pageFlows(query.createPage(), condition));
+    }
+
+    /**
+     * 工作台分页，最近运行与筛选均由采集业务服务提供。
+     *
+     * @param query 分页参数
+     * @param condition 工作台筛选
+     * @return 包含运行摘要的分页
+     */
+    @Operation(summary = "采集工作台分页")
+    @GetMapping("/workbench")
+    public ReturnPageResult<CollectFlowWorkbenchVO> workbench(@ParameterObject Query<CollectFlow> query,
+                                                            @ParameterObject CollectWorkbenchQuery condition) {
+        return PageResultUtils.ok(flowService.workbench(query.createPage(), condition));
     }
 
     /**

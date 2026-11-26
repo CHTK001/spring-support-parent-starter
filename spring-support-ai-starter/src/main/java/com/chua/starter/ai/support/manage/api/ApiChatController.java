@@ -104,6 +104,10 @@ public class ApiChatController {
        * @return 创建的结果
        */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
+        // [TEMP DEBUG] Log what we actually receive for model field
+        Object modelVal = body.get("model");
+        log.info("[TEMP-DEBUG] create() model field: class={} value={}",
+                modelVal == null ? "null" : modelVal.getClass().getName(), modelVal);
         SysAiConversation c = new SysAiConversation();
         String id = conversationStore.newId();
         c.setConversationId(id);

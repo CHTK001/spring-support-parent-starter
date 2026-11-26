@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -26,10 +27,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 采集流程执行引擎。
@@ -41,7 +45,7 @@ import java.util.concurrent.TimeoutException;
  *   <li>节点的 {@code loopCount} 参数决定令牌展开几个迭代，可以是次数也可以是集合；每个迭代
  *       把自己的作用域沿下游继续传播，这就是"列表页抓 N 条、每条再抓详情"的天然表达。
  *       集合为空时本节点及其下游都不执行。</li>
- *   <li>{@code loopParallel} 打开后各迭代各自入池，由线程池大小限流；关闭时按顺序执行。</li>
+ *   <li>{@code loopParallel} 打开后按线程数建立迭代通道，完成一轮再领取下一轮；关闭时按顺序执行。</li>
  *   <li>连线按异常流向与 {@code condition} 放行；环路在建模期被拒绝，令牌不会无限增殖。</li>
  * </ul>
  *
@@ -326,7 +330,8 @@ public class CollectEngine {
                 ? properties.getDefaultThreadCount() : dsl.threadCount();
         int size = Math.max(1, Math.min(threads, 64));
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        return Executors.newFixedThreadPool(size, runnable -> {
+        return new ThreadPoolExecutor(size, size, 0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(), runnable -> {
 // [P3C C1 豁免] 场景化创建线程，需文档化
             Thread thread = new Thread(runnable);
             thread.setName("collect-" + context.getTaskNo() + "-" + thread.threadId());
@@ -386,15 +391,38 @@ public class CollectEngine {
             return;
         }
         context.beginWork();
-        context.getPool().submit(() -> {
+        submitWork(context, () -> {
             try {
                 runToken(context, node, vars);
             } catch (Exception ex) {
                 log.warn("[collect] 令牌执行异常 task={} node={}", context.getTaskNo(), node.id(), ex);
-            } finally {
-                context.endWork();
             }
         });
+    }
+
+    /**
+     * 提交已计数的工作，提交失败也必须释放计数，防止任务等待到全局超时。
+     *
+     * @param context 执行上下文
+     * @param work 工作内容
+     */
+    private void submitWork(CollectContext context, Runnable work) {
+        try {
+            context.getPool().execute(() -> {
+                try {
+                    if (context.isRunning()) {
+                        work.run();
+                    }
+                } finally {
+                    context.endWork();
+                }
+            });
+        } catch (RejectedExecutionException ex) {
+            context.endWork();
+            if (context.isRunning()) {
+                context.markFailure("采集执行队列拒绝工作: " + ex.getMessage());
+            }
+        }
     }
 
     /**
@@ -424,9 +452,10 @@ public class CollectEngine {
             return;
         }
         if (items.size() > 1 && node.boolParam(PARAM_LOOP_PARALLEL, false)) {
-            for (int iteration = 0; iteration < items.size(); iteration++) {
-                int round = iteration;
-                scheduleIteration(context, executor, node, vars, items, round);
+            AtomicInteger next = new AtomicInteger();
+            int lanes = Math.min(items.size(), ((ThreadPoolExecutor) context.getPool()).getMaximumPoolSize());
+            for (int lane = 0; lane < lanes; lane++) {
+                scheduleIteration(context, executor, node, vars, items, next);
             }
             return;
         }
@@ -439,28 +468,36 @@ public class CollectEngine {
     }
 
     /**
-     * 并行模式下把一次迭代作为独立令牌入池。
+     * 并行通道每次只领取一个迭代，完成后把通道排回队尾。
+     *
+     * <p>下游令牌先入队，通道续作后入队，使快速来源不会一次把全部循环产出堆到队列里。
+     * 续作提交前仍计为在途工作，等待方不会在两个迭代之间提前判定任务结束。</p>
      *
      * @param context  执行上下文
      * @param executor 节点执行器
      * @param node     节点
      * @param vars     令牌入参作用域
      * @param items    迭代元素
-     * @param iteration 轮次
+     * @param next 下一个尚未领取的轮次
      */
     private void scheduleIteration(CollectContext context, CollectShapeExecutor executor, CollectNode node,
-                                   Map<String, Object> vars, List<Object> items, int iteration) {
+                                   Map<String, Object> vars, List<Object> items, AtomicInteger next) {
         if (!context.isRunning()) {
             return;
         }
         context.beginWork();
-        context.getPool().submit(() -> {
+        submitWork(context, () -> {
             try {
-                runIteration(context, executor, node, vars, items, iteration);
+                int iteration = next.getAndIncrement();
+                if (context.isRunning() && iteration < items.size()) {
+                    runIteration(context, executor, node, vars, items, iteration);
+                    if (context.isRunning() && next.get() < items.size()) {
+                        scheduleIteration(context, executor, node, vars, items, next);
+                    }
+                }
             } catch (Exception ex) {
                 log.warn("[collect] 迭代执行异常 task={} node={}", context.getTaskNo(), node.id(), ex);
-            } finally {
-                context.endWork();
+                context.markFailure("循环执行异常: " + describe(ex));
             }
         });
     }
@@ -536,19 +573,15 @@ public class CollectEngine {
         }
         String policy = node.param(PARAM_NODE_TIMEOUT_POLICY);
 // [P3C C1 豁免] 场景化创建线程，需文档化
-        ExecutorService single = Executors.newSingleThreadExecutor();
+        FutureTask<Void> future = new FutureTask<>(() -> {
+            executor.execute(node, context, scope);
+            return null;
+        });
+        Thread.ofVirtual().name("collect-node-" + context.getTaskNo() + "-" + node.id()).start(future);
         try {
-            Future<?> future = single.submit(() -> {
-                try {
-                    executor.execute(node, context, scope);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            });
             try {
                 future.get(timeout, TimeUnit.MILLISECONDS);
             } catch (TimeoutException timeoutEx) {
-                future.cancel(true);
                 if (TIMEOUT_POLICY_EXTEND.equalsIgnoreCase(policy)) {
                     try {
                         future.get(timeout, TimeUnit.MILLISECONDS);
@@ -566,7 +599,8 @@ public class CollectEngine {
             }
             throw new IllegalStateException(cause == null ? "节点执行失败" : cause.getMessage(), cause);
         } finally {
-            single.shutdownNow();
+            // 延长等待前不能取消；成功、二次超时、中断和停止均在这里统一收尾。
+            future.cancel(true);
         }
     }
 
@@ -777,11 +811,19 @@ public class CollectEngine {
         if (count <= 0) {
             return List.of();
         }
-        List<Object> rounds = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            rounds.add((long) i);
-        }
-        return rounds;
+        // 数值循环只保存上限，按需取下标，避免百万次循环先分配百万个 Long。
+        return new AbstractList<>() {
+            @Override
+            public Object get(int index) {
+                java.util.Objects.checkIndex(index, count);
+                return (long) index;
+            }
+
+            @Override
+            public int size() {
+                return count;
+            }
+        };
     }
 
     /**
@@ -1142,4 +1184,6 @@ public class CollectEngine {
      * @return 执行中返回 true
      */
     public boolean isFlowRunning(Integer flowId) {
-        return inflightOfFlow(flowId) > 0;    }}
+        return inflightOfFlow(flowId) > 0;
+    }
+}

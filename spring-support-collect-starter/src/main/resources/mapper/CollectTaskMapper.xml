@@ -2,6 +2,25 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.collect.mapper.CollectTaskMapper">
 
+    <!-- 每个流程利用 (flow_id, begin_time) 索引取五条后合并；不读取执行参数。 -->
+    <select id="recentForFlows" resultType="com.chua.starter.collect.entity.CollectTask">
+        SELECT collect_task_id, collect_task_no, collect_task_flow_id, collect_task_status,
+               collect_task_trigger_type, collect_task_begin_time, collect_task_cost,
+               collect_task_record_count, collect_task_error
+        FROM (
+            <foreach collection="flowIds" item="flowId" separator=" UNION ALL ">
+            (SELECT collect_task_id, collect_task_no, collect_task_flow_id, collect_task_status,
+                   collect_task_trigger_type, collect_task_begin_time, collect_task_cost,
+                   collect_task_record_count, collect_task_error
+            FROM collect_task
+            WHERE collect_task_flow_id = #{flowId}
+            ORDER BY collect_task_begin_time DESC, collect_task_id DESC
+            LIMIT 5)
+            </foreach>
+        ) recent
+        ORDER BY collect_task_begin_time DESC, collect_task_id DESC
+    </select>
+
     <!-- 分别累加任务执行节点数、抓取请求数和产出记录数。 -->
     <update id="accumulate" parameterType="java.util.Map">
         UPDATE collect_task

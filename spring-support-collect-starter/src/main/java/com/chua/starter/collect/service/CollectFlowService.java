@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.spring.service.IService;
 import com.chua.starter.collect.dto.CollectDslDTO;
 import com.chua.starter.collect.dto.CollectFlowSaveDTO;
+import com.chua.starter.collect.dto.CollectWorkbenchQuery;
+import com.chua.starter.collect.vo.CollectFlowWorkbenchVO;
 import com.chua.starter.collect.entity.CollectFlow;
 import com.chua.starter.collect.vo.CollectFlowVO;
 
@@ -28,6 +30,15 @@ public interface CollectFlowService extends IService<CollectFlow> {
      * @return 流程分页，列表不含 DSL 正文
      */
     IPage<CollectFlowVO> pageFlows(IPage<CollectFlow> page, CollectFlow condition);
+
+    /**
+     * 工作台服务端分页，包含本页采集器的最近运行摘要。
+     *
+     * @param page 分页对象
+     * @param query 筛选条件
+     * @return 工作台分页
+     */
+    IPage<CollectFlowWorkbenchVO> workbench(IPage<CollectFlow> page, CollectWorkbenchQuery query);
 
     /**
      * 精简列表，用于下拉框与首页卡片。

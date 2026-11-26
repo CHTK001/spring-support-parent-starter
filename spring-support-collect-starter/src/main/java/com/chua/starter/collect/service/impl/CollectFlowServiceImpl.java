@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.chua.starter.collect.dto.CollectDslDTO;
 import com.chua.starter.collect.dto.CollectFlowSaveDTO;
+import com.chua.starter.collect.dto.CollectWorkbenchQuery;
+import com.chua.starter.collect.vo.CollectFlowWorkbenchVO;
 import com.chua.starter.collect.dto.CollectNodeDTO;
 import com.chua.starter.collect.dto.CollectParamDTO;
 import com.chua.starter.collect.engine.CollectEngine;
@@ -49,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -120,6 +123,58 @@ public class CollectFlowServiceImpl extends ServiceImpl<CollectFlowMapper, Colle
      * 流程版本服务，保存/编辑流程后自动落版本快照。
      */
     private final CollectFlowVersionService versionService;
+
+    @Override
+    public IPage<CollectFlowWorkbenchVO> workbench(IPage<CollectFlow> page, CollectWorkbenchQuery query) {
+        CollectWorkbenchQuery safe = query == null ? new CollectWorkbenchQuery(null, null, null, null) : query;
+        String keyword = safe.keyword() == null ? "" : safe.keyword().trim();
+        String lastStatus = safe.lastRunStatus() == null ? "" : safe.lastRunStatus().trim();
+        if (!lastStatus.isEmpty() && !Set.of("RUNNING", "SUCCESS", "FAILURE", "STOPPED", "SKIPPED", "NONE").contains(lastStatus)) {
+            throw new IllegalArgumentException("不支持的最近运行状态");
+        }
+        if (safe.status() != null && safe.status() != 0 && safe.status() != 1) {
+            throw new IllegalArgumentException("调度状态只能是 0 停用或 1 启用");
+        }
+        page.setSize(Math.max(1L, Math.min(page.getSize(), 100L)));
+        LambdaQueryWrapper<CollectFlow> wrapper = Wrappers.<CollectFlow>lambdaQuery()
+                .eq(CollectFlow::getCollectFlowIsDeleted, 0)
+                .and(!keyword.isEmpty(), part -> part.like(CollectFlow::getCollectFlowName, keyword)
+                        .or().like(CollectFlow::getCollectFlowCode, keyword))
+                .eq(safe.categoryId() != null, CollectFlow::getCollectFlowCategoryId, safe.categoryId())
+                .eq(safe.status() != null, CollectFlow::getCollectFlowStatus, safe.status())
+                .select(CollectFlow.class, field -> !"collect_flow_dsl".equals(field.getColumn()))
+                .orderByDesc(CollectFlow::getCollectFlowStatus, CollectFlow::getCollectFlowId);
+        String latestStatusSql = "(SELECT t.collect_task_status FROM collect_task t "
+                + "WHERE t.collect_task_flow_id = collect_flow.collect_flow_id "
+                + "ORDER BY t.collect_task_begin_time DESC, t.collect_task_id DESC LIMIT 1)";
+        if ("NONE".equals(lastStatus)) {
+            wrapper.apply("COALESCE(collect_flow_exec_count, 0) = 0")
+                    .isNull(CollectFlow::getCollectFlowLastExecTime)
+                    .apply("COALESCE(collect_flow_running, 0) = 0")
+                    .apply("NOT EXISTS (SELECT 1 FROM collect_task t WHERE t.collect_task_flow_id = collect_flow.collect_flow_id)");
+        } else if ("RUNNING".equals(lastStatus)) {
+            wrapper.apply("(COALESCE(collect_flow_running, 0) > 0 OR " + latestStatusSql + " = {0})", lastStatus);
+        } else if (!lastStatus.isEmpty()) {
+            wrapper.apply("COALESCE(collect_flow_running, 0) = 0")
+                    .apply(latestStatusSql + " = {0}", lastStatus);
+        }
+        IPage<CollectFlow> entityPage = page(page, wrapper);
+        List<Integer> ids = entityPage.getRecords().stream().map(CollectFlow::getCollectFlowId).toList();
+        Map<Integer, List<CollectFlowWorkbenchVO.RunSummary>> tasks = new LinkedHashMap<>();
+        if (!ids.isEmpty()) {
+            for (CollectTask task : taskMapper.recentForFlows(ids)) {
+                tasks.computeIfAbsent(task.getCollectTaskFlowId(), key -> new ArrayList<>()).add(
+                        new CollectFlowWorkbenchVO.RunSummary(task.getCollectTaskId(), task.getCollectTaskNo(),
+                                task.getCollectTaskStatus(), task.getCollectTaskTriggerType(), task.getCollectTaskBeginTime(),
+                                task.getCollectTaskCost(), task.getCollectTaskRecordCount(), task.getCollectTaskError()));
+            }
+        }
+        Map<Integer, String> categories = categoryNames();
+        Map<String, CollectFlowScheduleState> runtimes = jobRuntimes();
+        return entityPage.convert(flow -> new CollectFlowWorkbenchVO(
+                toVo(flow, categories, runtimes.get(CollectFlowScheduleKeys.jobKeyOf(flow.getCollectFlowId()))),
+                List.copyOf(tasks.getOrDefault(flow.getCollectFlowId(), List.of()))));
+    }
 
     @Override
     public IPage<CollectFlowVO> pageFlows(IPage<CollectFlow> page, CollectFlow condition) {
@@ -747,7 +802,8 @@ public class CollectFlowServiceImpl extends ServiceImpl<CollectFlowMapper, Colle
                 flow.getCollectFlowRecordCount(),
                 null,
                 null,
-                engine.isFlowRunning(flow.getCollectFlowId()),
+                (flow.getCollectFlowRunning() != null && flow.getCollectFlowRunning() > 0)
+                        || engine.isFlowRunning(flow.getCollectFlowId()),
                 runtime != null && runtime.handlerRegistered(),
                 null,
                 flow.getCreateName(),

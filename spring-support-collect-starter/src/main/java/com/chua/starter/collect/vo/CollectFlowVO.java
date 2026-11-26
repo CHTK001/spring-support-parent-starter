@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
  * @param collectFlowRecordCount    累计采集条数，随任务收尾累加
  * @param nodeCount                 节点数，来自 DSL 摘要
  * @param edgeCount                 连线数，来自 DSL 摘要
- * @param running                   本机是否有该流程的运行中任务
+ * @param running                   共享并发计数或本机执行器表明该流程有运行中任务
  * @param scheduled                 调度台账里已登记该流程，且任务处理器可用
  * @param dsl                       流程图 DSL，仅详情接口返回
  * @param createName                创建人姓名
