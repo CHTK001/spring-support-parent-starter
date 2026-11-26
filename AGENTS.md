@@ -43,6 +43,19 @@
 - 但 `{@code}` / `{@literal}` 体内**不解析 HTML 实体**（JDK 25 javadoc 实测原样输出 `&#47;`），实体方案只对普通 HTML 上下文（`<code>`、纯 `<pre>`）有效；含实体或裸 `<=` 的示例块应脱壳为普通 `<pre>`，并把 `<=` 转义为 `&lt;=`。
 - 严格 javadoc 检查（-Xdoclint）跑整模块时：`-J-*` 启动器参数**不能进 @argfile**（放命令行）；@argfile 里超长单行 `-classpath`（约 59K / 数百 jar）会被 javadoc **静默丢弃**——全部第三方 import 报「程序包不存在」、100 错误上限中断，doclint 没跑到语法检查，结论是假阴性。可靠做法 = pathing jar（MANIFEST `Class-Path` 列全部 jar，`-classpath` 只放该 jar 一个短路径；样例 `temp/doc-verify/build-pathing.ps1`）。
 
+## 行为探针验证套路与坑（2026-11-25 二阶段实证）
+
+对 starter 文档做行为断言验证（真实 Spring 上下文，禁 mock）时的定版做法与坑：
+
+- **Spring 7.0.10 已移除 `DefaultListableBeanFactory#setLazyInit`**：探针要全 Bean 懒加载时，用 `addBeanFactoryPostProcessor` 遍历全部 BeanDefinition 置 lazy（CCPP 之后、实例化之前执行，语义等价、版本无关）；样例 `temp/doc-verify/p0/src/docverify/p0/R.java` 的 `R.lazy(ctx)`。
+- **pathing jar 的 manifest `Class-Path` 运行时 JVM 不解析**（javac 才解析；目录条目缺尾斜杠疑为主因）——javac 编译探针可用 pathing jar，`java` 运行时必须改用 **@argfile 直读 `target/cp.txt`**（`mvn -o dependency:build-classpath` 生成，反斜杠转正斜杠），顺带规避 32K 命令行限制。
+- **@argfile classpath 必须把工作区相关模块 `target/classes` 前插**：maven 仓里的同 groupId 旧 jar 可能缺本会话新增的类（实例：common-starter 旧 jar 缺 `CollectAiInvoker`，导致 AiConfiguration 解析即失败）。
+- **宽扫描配置类在普通 `AnnotationConfigApplicationContext` 下 refresh 必失败**：组件扫描面会拖入依赖 Web 作用域的宿主 Bean（如 `sysLoggerPointcutAdvisor` 注入 `HttpServletRequest`），BPP 注册阶段必炸。但**条件评估与 BeanDefinition 注册发生在更早的配置类解析阶段**——验证 `@ConditionalOn*` 装配语义时，catch refresh 失败后继续用 `ctx.getBeanFactory().containsBeanDefinition(...)` / `getBeanNamesForType(...)` 做定义级断言，结论依然有效；中断原因记 INFO 即可。
+- **D3 类冲突验证**：消费方 `@Bean` 方法必须以冲突类型作**方法参数**（`@Bean Consumer c(AlipayClient client)`）由容器按类型解析，不能 `new Consumer(null)`；这样 `getBean(Consumer.class)` 才会真实抛 `NoUniqueBeanDefinitionException`。
+- **DefaultAlipayClient 构造期校验密钥格式**：哑字符串触发「创建支付宝客户端失败」。探针现场 `KeyPairGenerator` 生成 RSA 密钥对（PKCS8/X.509 Base64）填 `private-key`/`alipay-public-key`——这是合法生成的测试密钥，不是 mock。
+- **真实产品缺陷（待修复）**：`AliyunAlipayProperties.keepAliveDuration` 默认 300000ms，超出支付宝 SDK `AbstractAlipayClient.setKeepAliveDuration` 的 60s 上限（`AlipayApiException: 连接超时时间不能超过60s`）——`plugin.aliyun.alipay.enabled=true` 且不显式调低该值时 `alipayClient` Bean 必然创建失败。修法：默认值 ≤60000 或 factory 内钳制。
+- PS 5.1 驱动探针：`Start-Process` 后 `$proc.ExitCode` 常为空（只判 EXITED/TIMEOUT）；`*>`/`2>&1` 重定向 native 进程输出写成 UTF-16LE（读日志先验 BOM，或用 `-RedirectStandardOutput` 参数）；javac 编译探针必须带依赖 classpath（`classes;<模块>.jar`）。
+
 ## 提交
 
 只提交自己的文件，避开其它会话的在途改动；`_tmp_cleanup/` 不参与构建。

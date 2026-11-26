@@ -1,4 +1,4 @@
-package com.chua.common.support.data.materialized;
+package com.chua.starter.datasource.materialized;
 
 import lombok.Data;
 

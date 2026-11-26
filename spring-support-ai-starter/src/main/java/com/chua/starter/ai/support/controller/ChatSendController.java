@@ -135,6 +135,9 @@ public class ChatSendController {
                 req.setStream(true);
                 req.setUseSkill(true);
                 req.setMessages(msgList);
+                // Agent 链路只吃 prompt（agent.runStream 的输入），不会读 messages 充当输入；
+                // 缺了会被 OpencodeServerAgent 判「输入为空」毫秒级失败（对齐 /chat/stream 的 setPrompt 口径）
+                req.setPrompt(userContent);
                 // 返回的 emitter 不挂到 HTTP 响应，仅利用回调拿完整回复
                 aiChatFacadeService.stream(req, null, reply -> {
                     String finalText = reply != null ? reply : "";

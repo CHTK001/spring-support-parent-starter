@@ -1,4 +1,4 @@
-package com.chua.common.support.spi;
+package com.chua.starter.common.support.spi;
 
 /**
  * SPI 选项接口，定义 SPI 扩展点的元信息契约

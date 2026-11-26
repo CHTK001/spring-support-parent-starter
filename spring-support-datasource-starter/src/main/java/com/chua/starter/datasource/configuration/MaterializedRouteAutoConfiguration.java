@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
-import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlDataSourceRouter;
 import com.chua.datasource.support.materialized.CalciteMaterializedSqlRouter;
 import com.chua.starter.datasource.properties.MaterializedRouteProperties;
 import com.chua.starter.datasource.support.DataSourceContextSupport;

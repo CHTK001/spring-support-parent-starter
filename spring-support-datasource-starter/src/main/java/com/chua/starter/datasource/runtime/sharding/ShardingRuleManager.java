@@ -1,6 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: SQL/日志字符串字面量场景，豁免。
 package com.chua.starter.datasource.runtime.sharding;
 
+import com.chua.datasource.support.engine.DataSourceConversion;
 import com.chua.datasource.support.engine.DataSourceEnvironment;
 import com.chua.shardingv5.support.conversion.ShardingV5Conversion;
 import com.chua.starter.datasource.runtime.model.DsShardingRule;
@@ -167,8 +168,14 @@ public class ShardingRuleManager {
 
     /**
      * 把一条规则翻译为 ShardingV5Conversion 的算法 + 表 + 库配置（参数化分片数/时间范围）。
+     *
+     * <p>签名只依赖非 optional 的 {@link DataSourceConversion}；对 ShardingV5Conversion
+     * 的引用全部留在方法体内（new/cast/invoke 均为懒解析）——shardingv5 是 optional
+     * 依赖，jar 缺失时本类必须仍可加载与内省，否则 Spring Bean 内省阶段会抛
+     * NoClassDefFoundError 阻断启动。</p>
      */
-    private void applyRule(ShardingV5Conversion conversion, DsShardingRule rule, int dbCount) {
+    private void applyRule(DataSourceConversion conversion, DsShardingRule rule, int dbCount) {
+        ShardingV5Conversion v5 = (ShardingV5Conversion) conversion;
         String table = rule.getLogicTable();
         String column = rule.getShardingColumn();
         boolean interval = DsShardingRule.ALGO_INTERVAL.equalsIgnoreCase(rule.getAlgorithm())
@@ -181,23 +188,23 @@ public class ShardingRuleManager {
             props.put("datetime-lower", rule.getTimeLower() == null ? "2000-01-01" : rule.getTimeLower());
             props.put("datetime-upper", rule.getTimeUpper() == null ? "2099-12-31" : rule.getTimeUpper());
             props.put("datetime-partition-pattern", partitionPattern(rule.getTimeUnit()));
-            conversion.algo(algoName, "INTERVAL", props);
-            conversion.table(table, column, resolveIntervalShardCount(rule), algoName);
+            v5.algo(algoName, "INTERVAL", props);
+            v5.table(table, column, resolveIntervalShardCount(rule), algoName);
             log.info("[ds-runtime] 时间分片规则: {} 列={} 粒度={} 范围={}~{}",
                     table, column, rule.getTimeUnit(), rule.getTimeLower(), rule.getTimeUpper());
         } else {
             String algoName = "mod_" + table;
             int shardCount = rule.getShardCount() == null || rule.getShardCount() <= 0 ? 16 : rule.getShardCount();
-            conversion.algo(algoName, "MOD", Map.of("sharding-count", String.valueOf(shardCount)));
-            conversion.table(table, column, shardCount, algoName);
+            v5.algo(algoName, "MOD", Map.of("sharding-count", String.valueOf(shardCount)));
+            v5.table(table, column, shardCount, algoName);
             log.info("[ds-runtime] 取模分片规则: {} 列={} 分片数={}", table, column, shardCount);
         }
 
         // 分库：成员数 >= 2 时按同分片列对库取模
         if (dbCount >= 2) {
             String dbAlgo = "db_mod_" + table;
-            conversion.algo(dbAlgo, "MOD", Map.of("sharding-count", String.valueOf(dbCount)));
-            conversion.db(table, column, dbCount, dbAlgo);
+            v5.algo(dbAlgo, "MOD", Map.of("sharding-count", String.valueOf(dbCount)));
+            v5.db(table, column, dbCount, dbAlgo);
         }
     }
 

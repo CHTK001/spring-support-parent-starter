@@ -3,7 +3,10 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.configuration.agent.AgentGlobalSettingProvider;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.registry.AgentManager;
+import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.ai.agent.Agent;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
@@ -49,6 +53,16 @@ public class ApiAgentRuntimeController {
     private final AgentManager agentManager;
 
     /**
+     * 全局设置读取器：读 agent 分组的唯一名称（getStrDirect 直连库，避免缓存旧值）
+     */
+    private final GlobalSettingReader globalSettingReader;
+
+    /**
+     * Agent 注册表：按名称解析已注册的运行时 Agent
+     */
+    private final AgentRegistry agentRegistry;
+
+    /**
      * 列出当前全部托管的运行时 Agent。
      *
      * @return 状态列表（id、名称、实现、是否已中断、连续重复次数、最近一次工具等）
@@ -71,6 +85,85 @@ public class ApiAgentRuntimeController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "运行时 Agent 不存在: " + agentId);
         }
         return ApiResult.ok(status);
+    }
+
+    /**
+     * 按配置中心「Agent 配置」分组的唯一名称解析运行时 Agent。
+     *
+     * <p>缺省读取全局设置 {@code agent.agent_name}，经 {@link AgentRegistry#getByName}
+     * 解析已注册的 Agent；传入 {@code name} 参数时改为解析该名称 —— 供配置中心在
+     * <b>保存前</b>做「测试解析」（不读库，直接验证名称能否命中注册表）。
+     * 命中的 Agent 若同时被 {@link AgentManager} 托管，附带其运行态快照。
+     * 未配置名称、名称未注册分别返回明确的业务错误。
+     * 管理员专属：agent 分组字段 adminOnly，写路径也仅管理员可改。</p>
+     *
+     * @param name 待解析的 Agent 名称（可选；缺省解析当前已保存配置）
+     * @return 配置名称与解析到的 Agent 概要（含运行态，若有）
+     */
+    @Permission("admin")
+    @GetMapping("/configured")
+    public ApiResult<Map<String, Object>> configured(
+            @RequestParam(value = "name", required = false) String name) {
+        String configuredName = globalSettingReader.getStrDirect(
+                AgentGlobalSettingProvider.GROUP, AgentGlobalSettingProvider.FIELD_AGENT_NAME);
+        String source = (name != null && !name.isBlank()) ? name : configuredName;
+        if (source == null || source.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "尚未配置 Agent 名称（设置中心 → Agent 配置）");
+        }
+        String resolvedName = source.trim();
+        Agent agent = agentRegistry.getByName(resolvedName);
+        if (agent == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "Agent 不存在: " + resolvedName);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("name", resolvedName);
+        result.put("found", true);
+        Map<String, Object> summary = agentSummary(agent);
+        result.put("agent", summary);
+        Object definitionId = summary.get("id");
+        if (definitionId instanceof String id && agentManager.contains(id)) {
+            result.put("runtime", agentManager.status(id));
+        }
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 列出全部已注册 Agent 的名称。
+     *
+     * <p>配置中心「Agent 唯一名称」下拉的可选集：名称必须与这里的一项一致，
+     * {@link #configured} 才能解析成功。字典序升序，方便在下拉里定位。</p>
+     *
+     * @return 已注册 Agent 名称列表（字典序升序）
+     */
+    @Permission("admin")
+    @GetMapping("/names")
+    public ApiResult<List<String>> names() {
+        return ApiResult.ok(agentRegistry.getNames().stream().sorted().toList());
+    }
+
+    /**
+     * 组装 Agent 概要（静态信息，不含运行态）。
+     *
+     * @param agent 已解析的 Agent
+     * @return 概要字段：实现类、定义 id/名称/描述/角色/是否主控
+     */
+    private static Map<String, Object> agentSummary(Agent agent) {
+        AgentDefinition definition = null;
+        try {
+            definition = agent.getDefinition();
+        } catch (RuntimeException e) {
+            // 个别实现可能不暴露定义：概要降级为仅实现类名，不让解析接口整体失败。
+        }
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("impl", agent.getClass().getName());
+        if (definition != null) {
+            summary.put("id", definition.getId());
+            summary.put("name", definition.getName());
+            summary.put("description", definition.getDescription());
+            summary.put("role", definition.getRole());
+            summary.put("leader", definition.isLeader());
+        }
+        return summary;
     }
 
     /**

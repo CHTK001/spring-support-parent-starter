@@ -310,6 +310,25 @@ public class ModelClientResolver {
                 if (provider != null && Boolean.TRUE.equals(provider.getEnabled())) {
                     return provider;
                 }
+                // 前缀不是已注册供应商：冒号可能是模型名本身的一部分
+                //（如 OpenRouter inclusionai/ling-3.2-flash:free），用全名反查
+                String qualifiedModel = parsed.providerId() + ":" + parsed.model();
+                List<SysAccountChannelModel> qualifiedCandidates =
+                        channelModelService.listEnabledByModel(qualifiedModel);
+                if (!qualifiedCandidates.isEmpty()) {
+                    if (qualifiedCandidates.size() > 1) {
+                        log.warn("[ModelClientResolver] 模型 {} 在 {} 个供应商下同名（{}），未指定供应商时取第一家；"
+                                        + "若这不符合预期，请让调用方传 <providerId>:<model> 限定名",
+                                qualifiedModel, qualifiedCandidates.size(),
+                                qualifiedCandidates.stream().map(SysAccountChannelModel::getProviderId).toList());
+                    }
+                    for (SysAccountChannelModel pm : qualifiedCandidates) {
+                        SysAccountChannel p = channelService.find(pm.getProviderId());
+                        if (p != null && Boolean.TRUE.equals(p.getEnabled())) {
+                            return p;
+                        }
+                    }
+                }
                 log.warn("[ModelClientResolver] 指定的供应商 {} 不可用（不存在或已停用），回退按模型名反查: {}",
                         parsed.providerId(), parsed.model());
             }

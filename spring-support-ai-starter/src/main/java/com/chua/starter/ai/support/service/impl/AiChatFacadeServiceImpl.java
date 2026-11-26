@@ -915,13 +915,25 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             String prefix = model.substring(0, colon).trim();
             String bare = model.substring(colon + 1).trim();
             if (!prefix.isEmpty() && !bare.isEmpty()) {
-                if (modelProviderId == null || modelProviderId.isBlank()) {
-                    modelProviderId = prefix;
+                // 已限定供应商时，冒号属于模型名本身（如 OpenRouter 的 :free 后缀），不拆分
+                if (modelProviderId != null && !modelProviderId.isBlank()) {
+                    log.info("[AiChat] 已限定供应商 {}，模型名 {} 保持原样（冒号属于模型名）",
+                            modelProviderId, model);
+                } else {
+                    // 未限定供应商时，只在 prefix 确实是已注册供应商 ID 时才拆分；
+                    // 否则冒号可能是模型名的一部分（如 OpenRouter inclusionai/ling-3.2-flash:free）
+                    SysAccountChannel prefixProvider = channelService.find(prefix);
+                    if (prefixProvider != null) {
+                        modelProviderId = prefix;
+                        request.setProviderId(modelProviderId);
+                        log.info("[AiChat] 限定名拆分 {} -> 供应商={} 模型={}", model, modelProviderId, bare);
+                        model = bare;
+                        request.setModel(bare);
+                    } else {
+                        log.info("[AiChat] 冒号前缀 {} 不是已知供应商 ID，跳过拆分，模型名保持原样: {}",
+                                prefix, model);
+                    }
                 }
-                request.setProviderId(modelProviderId);
-                log.info("[AiChat] 限定名拆分 {} -> 供应商={} 模型={}", model, modelProviderId, bare);
-                model = bare;
-                request.setModel(bare);
             }
         }
         String provider = request.getProvider();

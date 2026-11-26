@@ -16,7 +16,7 @@ import com.baomidou.mybatisplus.spring.MybatisSqlSessionFactoryBean;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
-import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlDataSourceRouter;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.chua.starter.datasource.properties.MaterializedRouteProperties;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;

@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.support;
 
-import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
+import com.chua.starter.common.support.data.materialized.MaterializedRouteDefinition;
 import com.chua.starter.datasource.annotation.MaterializedRefresh;
 import com.chua.starter.datasource.materialized.MaterializedRefreshContext;
 import com.chua.starter.datasource.properties.MaterializedRouteProperties;

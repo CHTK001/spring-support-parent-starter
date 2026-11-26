@@ -410,19 +410,57 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
     /**
      * 按符号名取框架内原生 bundle。
      *
+     * <p>同一符号名存在多个版本并存时（先装旧版再装新版、旧版未卸载），
+     * 取「活动态优先、版本最高、bundleId 最大」的 bundle，保证新版本胜出；
+     * 若直接按符号名取第一个，会把旧版本实例重新发布，导致新版本不生效。</p>
+     *
      * @param symbolicName bundle 符号名
      * @return 原生 bundle；不存在返回 {@code null}
      */
     private Bundle nativeBundle(String symbolicName) {
-        OsgiBundle osgiBundle = launcher.getBundle(symbolicName);
-        if (osgiBundle == null) {
-            return null;
-        }
         BundleContext context = launcher.getFrameworkBundleContext();
         if (context == null) {
             return null;
         }
-        return context.getBundle(osgiBundle.getBundleId());
+        OsgiBundle best = null;
+        for (OsgiBundle candidate : launcher.getBundles()) {
+            if (candidate == null || !symbolicName.equals(candidate.getSymbolicName())) {
+                continue;
+            }
+            if (best == null) {
+                best = candidate;
+                continue;
+            }
+            if (candidate.isActive() != best.isActive()) {
+                // 活动态优先：非活动 bundle 的 classloader 不可靠
+                if (candidate.isActive()) {
+                    best = candidate;
+                }
+                continue;
+            }
+            int byVersion = versionOf(candidate).compareTo(versionOf(best));
+            if (byVersion > 0 || (byVersion == 0 && candidate.getBundleId() > best.getBundleId())) {
+                best = candidate;
+            }
+        }
+        if (best == null) {
+            return null;
+        }
+        return context.getBundle(best.getBundleId());
+    }
+
+    /**
+     * 解析 bundle 版本号（不可解析时按 0.0.0 处理）。
+     *
+     * @param bundle bundle 包装
+     * @return OSGi 版本号
+     */
+    private static org.osgi.framework.Version versionOf(OsgiBundle bundle) {
+        try {
+            return org.osgi.framework.Version.parseVersion(bundle.getVersion());
+        } catch (Exception ex) {
+            return org.osgi.framework.Version.emptyVersion;
+        }
     }
 
     /**

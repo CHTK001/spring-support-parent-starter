@@ -1,11 +1,11 @@
 package com.chua.datasource.support.materialized;
 
-import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
-import com.chua.common.support.data.materialized.MaterializedSqlCommandType;
-import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
-import com.chua.common.support.data.materialized.MaterializedSqlOptions;
-import com.chua.common.support.data.materialized.MaterializedSqlRequest;
-import com.chua.common.support.data.materialized.MaterializedSqlRoute;
+import com.chua.starter.common.support.data.materialized.MaterializedRouteDefinition;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlCommandType;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlDataSourceRouter;
+import com.chua.starter.datasource.materialized.MaterializedSqlOptions;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlRequest;
+import com.chua.starter.common.support.data.materialized.MaterializedSqlRoute;
 
 import javax.sql.DataSource;
 import java.util.Objects;

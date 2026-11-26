@@ -24,7 +24,7 @@ import com.chua.payment.support.mapper.WalletAccountMapper;
 import com.chua.payment.support.service.WalletAccountService;
 import com.chua.payment.support.service.WalletLimitService;
 import com.chua.payment.support.vo.WalletAccountVO;
-import com.chua.starter.strategy.template.IdempotentTemplate;
+import com.chua.starter.common.support.strategy.template.IdempotentTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

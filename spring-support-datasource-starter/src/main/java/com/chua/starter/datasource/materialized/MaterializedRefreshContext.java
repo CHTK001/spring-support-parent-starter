@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.materialized;
 
-import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
+import com.chua.starter.common.support.data.materialized.MaterializedRouteDefinition;
 
 /**
  * 手动刷新上下文。

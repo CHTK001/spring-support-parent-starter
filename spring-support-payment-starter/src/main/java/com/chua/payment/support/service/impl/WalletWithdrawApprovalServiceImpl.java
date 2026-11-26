@@ -8,7 +8,7 @@ import com.chua.payment.support.entity.WalletWithdrawApproval;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.WalletWithdrawApprovalMapper;
 import com.chua.payment.support.service.WalletWithdrawApprovalService;
-import com.chua.starter.strategy.template.IdempotentTemplate;
+import com.chua.starter.common.support.strategy.template.IdempotentTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

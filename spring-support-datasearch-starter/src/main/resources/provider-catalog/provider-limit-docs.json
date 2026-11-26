@@ -138,8 +138,23 @@
       "hosts": [
         "api.groq.com"
       ],
-      "doc": "https://console.groq.com/docs/models",
-      "verified": false
+      "doc": "https://console.groq.com/docs/rate-limits",
+      "verified": true,
+      "limits": {
+        "billing_basis": "免费档按请求与 token 计限速，不扣费；超出返回 HTTP 429",
+        "currency": "USD",
+        "free_tier_models": [
+          "openai/gpt-oss-120b",
+          "openai/gpt-oss-20b",
+          "openai/gpt-oss-safeguard-20b",
+          "qwen/qwen3.8-27b",
+          "meta-llama/llama-prompt-guard-2-22m",
+          "meta-llama/llama-prompt-guard-2-86m",
+          "whisper-large-v3",
+          "whisper-large-v3-turbo"
+        ]
+      },
+      "notes": "免费档逐模型限速（2026-11-26 官方页面实拉，来源 console.groq.com/docs/rate-limits，RPM/RPD/TPM/TPD/ASH/ASD 六列）：gpt-oss-120b=30 RPM / 1K RPD / 8K TPM / 200K TPD；gpt-oss-20b=30 RPM / 1K RPD / 8K TPM / 200K TPD；gpt-oss-safeguard-20b=3 RPM / 1K RPD / 2K TPM / 200K TPD；qwen3.8-27b=30 RPM / 1K RPD / 8K TPM / 200K TPD；llama-prompt-guard-2-22m=30 RPM / 14.4K RPD / 15K TPM / 500K TPD；llama-prompt-guard-2-86m=30 RPM / 14.4K RPD / 15K TPM / 500K TPD；whisper-large-v3=20 RPM / 2K RPD / — / — / 7.2K ASH / 28.8K ASD；whisper-large-v3-turbo=20 RPM / 2K RPD / — / — / 7.2K ASH / 28.8K ASD。llama-3.1-8b-instant 已于 2026-08-16 移出免费档，不在本表。开发档（dev tier）限速更高，此处仅登记免费档。撞限速回 429，不扣费。"
     },
     {
       "id": "togetherai",

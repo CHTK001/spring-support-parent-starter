@@ -10,7 +10,7 @@ Spring Boot 通用支撑 Starter：为宿主应用提供 Web 统一响应与全�
 </dependency>
 ```
 
-装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 16 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 18 处 `@ConfigurationProperties` 承担（本模块 14 处，其余 4 处在传递依赖 `spring-support-logger-starter` 中）。源码分布在两个包根：`com.chua.starter.common.support`（主包：Web / API / 安全 / 日志 / 渠道契约等）与 `com.chua.common.starter.support`、`com.chua.common.support`、`com.chua.mysql.support`、`com.chua.sharding.v5`、`com.chua.spring.support`（次级根：IP 质量、对象结构、物化路由、binlog、分片、Spring 桥接），完整清单见文末「附录：包结构速览」。本模块依赖底层 `utils-support-common-starter`——它是**纯 Java 工具模块，不是 Spring starter**；`@Spi` / `ServiceProvider` SPI 设施与 JSON/XML 门面、HTTP 执行器、类型转换、表达式解析等底层契约均来自该模块，本模块只做 Spring 侧桥接与复用。
+装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 登记 16 个自动配置类；`META-INF/spring.factories` 登记 3 个 `EnvironmentPostProcessor`（Freemarker / Spring / Profile 环境后处理）；`META-INF/extensions` 登记 4 个 SPI 扩展点；配置绑定由 18 处 `@ConfigurationProperties` 承担（本模块 14 处，其余 4 处在传递依赖 `spring-support-logger-starter` 中）。源码统一分布在单一包根 `com.chua.starter.common.support`（Web / API / 安全 / 日志 / 渠道契约 / IP 质量 / 对象结构 / 物化路由契约 / 幂等模板等），完整清单见文末「附录：包结构速览」；按命名宪法，原先寄居本模块的 binlog 客户端骨架、ShardingSphere 构建器骨架、Spring 桥接三组能力已迁至对应 utils 模块（见第六节说明）。本模块依赖底层 `utils-support-common-starter`——它是**纯 Java 工具模块，不是 Spring starter**；`@Spi` / `ServiceProvider` SPI 设施与 JSON/XML 门面、HTTP 执行器、类型转换、表达式解析等底层契约均来自该模块，本模块只做 Spring 侧桥接与复用。
 
 ## 一、整体架构
 
@@ -111,16 +111,16 @@ flowchart LR
 
 | 能力 | 类 | 说明 |
 | --- | --- | --- |
-| 物化视图 SQL 路由契约 | `common.support.data.materialized.*` | `MaterializedSqlRouter` / `MaterializedSqlDataSourceRouter` 定义「把 SELECT 路由到物化库、写成功后回调刷新」的契约；`MaterializedSqlRequest`（statementId/sql/commandType/tables/parameters）→ `MaterializedSqlRoute`（dataSourceName，`notRouted()` 走源库）。实现在 datasource-starter（Calcite），消费在 mybatis-starter 的 `MaterializedSqlInterceptor`，本模块只持契约 |
-| MySQL binlog 客户端骨架 | `mysql.support.binlog.BinaryLogClient` | API 形状仿 mysql-binlog-connector-java（connect/disconnect/registerEventListener + Write/UpdateRows/TableMap 事件模型），但**不依赖任何 binlog 库、方法均为空实现**；仓库内真正可用的 CDC 在 `utils-support-datalake-cdc-starter`（zendesk mysql-binlog-connector 0.25.6） |
-| ShardingSphere 构建器骨架 | `sharding.v5.support.builder.ShardingDataSourceBuilder` | 链式 API：`newBuilder().dataSources(...).shardingDatabase(...).shardingTable(逻辑表).shardingColumn(...).shardByYear/Quarter/Month/Week/Day/Hour().done().showSql(bool).build()`；类路径无 ShardingSphere 时不生效（`build()` 返回 null 的兼容占位） |
-| 单机幂等模板 | `starter.strategy.template.IdempotentTemplate` | 内存版幂等锁：`tryAcquire(key, timeout, unit)` 抢占（过期可重占、null key 放行）、`release` / `complete` 释放；`ConcurrentHashMap` + 守护线程每 60s 清理过期 key。**仅单机**，分布式场景请用 Redis 实现。典型 key：`payment:idempotent:wallet:{bizType}:{merchantId}:{userId}:{bizNo}` |
-| 对象树与图表结构 | `common.starter.support.objects.struct.*` | `ObjectStruct.toTree(list)` 把扁平对象按 id/parentId 组装成 `TreeNode` 树；`toBarChartData / toRadarChartData / toRelationData / toTreemapData` 产出 ECharts 风格图表数据；提取器由 `TreeStructConfig`（id/parentId/name/value 四函数）定义 |
+| 物化视图 SQL 路由契约 | `com.chua.starter.common.support.data.materialized.*` | `MaterializedSqlRouter` / `MaterializedSqlDataSourceRouter` 定义「把 SELECT 路由到物化库、写成功后回调刷新」的契约；`MaterializedSqlRequest`（statementId/sql/commandType/tables/parameters）→ `MaterializedSqlRoute`（dataSourceName，`notRouted()` 走源库）。实现在 datasource-starter（Calcite），消费在 mybatis-starter 的 `MaterializedSqlInterceptor`，本模块只持契约 |
+| MySQL binlog 客户端骨架 | `com.chua.mysql.support.binlog.BinaryLogClient`（**已迁至 `utils-support-mysql-starter`**） | API 形状仿 mysql-binlog-connector-java（connect/disconnect/registerEventListener + Write/UpdateRows/TableMap 事件模型），但**不依赖任何 binlog 库、方法均为空实现**；仓库内真正可用的 CDC 在 `utils-support-datalake-cdc-starter`（zendesk mysql-binlog-connector 0.25.6） |
+| ShardingSphere 构建器骨架 | `com.chua.shardingv5.support.builder.ShardingDataSourceBuilder`（**已迁至 `utils-support-shardingv5-starter`**） | 链式 API：`newBuilder().dataSources(...).shardingDatabase(...).shardingTable(逻辑表).shardingColumn(...).shardByYear/Quarter/Month/Week/Day/Hour().done().showSql(bool).build()`；类路径无 ShardingSphere 时不生效（`build()` 返回 null 的兼容占位） |
+| 单机幂等模板 | `com.chua.starter.common.support.strategy.template.IdempotentTemplate` | 内存版幂等锁：`tryAcquire(key, timeout, unit)` 抢占（过期可重占、null key 放行）、`release` / `complete` 释放；`ConcurrentHashMap` + 守护线程每 60s 清理过期 key。**仅单机**，分布式场景请用 Redis 实现。典型 key：`payment:idempotent:wallet:{bizType}:{merchantId}:{userId}:{bizNo}` |
+| 对象树与图表结构 | `com.chua.starter.common.support.objects.struct.*` | `ObjectStruct.toTree(list)` 把扁平对象按 id/parentId 组装成 `TreeNode` 树；`toBarChartData / toRadarChartData / toRelationData / toTreemapData` 产出 ECharts 风格图表数据；提取器由 `TreeStructConfig`（id/parentId/name/value 四函数）定义 |
 | 数据/视图双模返回值 | `ModelView` + `ResponseModelViewMethodProcessor` | Controller 返回 `ModelView<T>(data, mediaType)`：mediaType 不含 text/html 时按消息转换器写 JSON；含 text/html 且 data 是 CharSequence 时当视图名（支持 `redirect:` 前缀）。已注册为 MVC 返回值处理器 |
 | 自定义注解注入基类 | `AnnotationInjectedBeanPostProcessor<A>` | 仿 `AutowiredAnnotationBeanPostProcessor`：按自定义注解扫描字段/Setter 构建注入元数据（并发缓存），注入对象由子类 `doGetInjectedBean` 提供并按 key 缓存，`destroy()` 联动销毁。各 starter 借此实现「注解即引用」 |
-| Spring 桥接 | `spring.support.*` | `SpringServiceAutowire`：给**非 Spring 创建的 SPI 实例**补字段注入（SPI 实例也能注入 Mapper/Service）、`createBean` 交容器创建；`PluginBeanRegisteredEvent` / `PluginBeanUnregisteredEvent`：插件 Bean 注册/卸载时发布，监听方可做后续处理 |
+| Spring 桥接 | `com.chua.spring.support.*`（**已迁至 `utils-support-spring-starter`**） | `SpringServiceAutowire`：给**非 Spring 创建的 SPI 实例**补字段注入（SPI 实例也能注入 Mapper/Service）、`createBean` 交容器创建；`PluginBeanRegisteredEvent` / `PluginBeanUnregisteredEvent`：插件 Bean 注册/卸载时发布，监听方可做后续处理 |
 | 隧道配置支撑 | `tunnel.*` | `TunnelRecord`（ngrok/cloudflared 能力并集的落盘模型）+ `TunnelFileStore`（一条映射一个 JSON、临时文件+原子替换、SAFE_ID 防目录穿越、全方法 synchronized、坏文件跳过）+ `TunnelView`（叠加 running/publicUrls/error 等内存运行态）+ `TunnelStatusStream`（守护线程定时取快照，以事件名 `tunnels` SSE 广播，页面免轮询） |
-| IP 质量检测 | `common.starter.support.network.quality.*` | 策略接口 `IpQualityDetector`（非 SPI）+ 结果模型 `IpQuality`（proxy/vpn/tor/dataCenter/riskScore 0-100，`isRisky()` 判定）；离线实现 `IP2ProxyLiteIpQualityDetector`（classpath `IP2PROXY-LITE-PX2.BIN`，BIN 缺失降级为不可用、绝不抛异常），在线实现 `ToDetectIpQualityDetector`（todetect.cn）；HTTP 模板基类统一 OkHttp+Jackson、失败降级返回空结果；`IpQualityProbe` 提供命令行探针 |
+| IP 质量检测 | `com.chua.starter.common.support.network.quality.*` | 策略接口 `IpQualityDetector`（非 SPI）+ 结果模型 `IpQuality`（proxy/vpn/tor/dataCenter/riskScore 0-100，`isRisky()` 判定）；离线实现 `IP2ProxyLiteIpQualityDetector`（classpath `IP2PROXY-LITE-PX2.BIN`，BIN 缺失降级为不可用、绝不抛异常），在线实现 `ToDetectIpQualityDetector`（todetect.cn）；HTTP 模板基类统一 OkHttp+Jackson、失败降级返回空结果；`IpQualityProbe` 提供命令行探针 |
 | HTTP 执行器适配 | `WebClientHttpClientExecutor` | `@Spi("webclient")` 实现底层 `HttpClientExecutor`（接口在 `utils-support-common-starter`），用 Spring WebClient（10MB 内存上限）执行 `ClientRequest`；classpath 无 WebClient 时自动不可用 |
 | UA 解析 | `network.UserAgent` | UA 串 → 浏览器/操作系统枚举，`isCrawler()` 按 bot/spider/python 等关键字判爬虫 |
 | JSON / XML 门面 | `text.json.Json` / `xml.Xml` | 统一 JSON/XML 出入口，全部委托底层 `utils-support-common-starter` 实现；**其他 spring-\* 模块必须经本类复用，禁止重复实现** |
@@ -637,10 +637,10 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 不是。traceId 由 `MdcHandlerFilter` 在 HTTP 边界写入 MDC；`@Watch` 的 linkId 由 `TrackContext` 在方法边界管理。两者仅在 `@Watch` 切面入口用同一个 UUID 关联，跨线程传播也各走各的（MDC 走 `MdcWrap`/`MdcTaskDecorator`，Span 栈是 ThreadLocal、最外层结束即清空）。
 
 **Q：binlog / ShardingSphere 相关类为什么是空实现？**
-`BinaryLogClient` 与 `ShardingDataSourceBuilder` 是「API 骨架 + 安全降级」：接口与链式 API 完整，但本模块不引入对应重依赖。binlog 的可用实现在 `utils-support-datalake-cdc-starter`（zendesk mysql-binlog-connector）；Sharding 需宿主类路径带 ShardingSphere 5.x。直接调用骨架方法会得到 no-op / null，属预期行为。
+`BinaryLogClient`（`com.chua.mysql.support.binlog`，在 `utils-support-mysql-starter`）与 `ShardingDataSourceBuilder`（`com.chua.shardingv5.support.builder`，在 `utils-support-shardingv5-starter`）是「API 骨架 + 安全降级」：接口与链式 API 完整，但不引入对应重依赖。binlog 的可用实现在 `utils-support-datalake-cdc-starter`（zendesk mysql-binlog-connector）；Sharding 需宿主类路径带 ShardingSphere 5.x。直接调用骨架方法会得到 no-op / null，属预期行为。
 
 **Q：如何新增一个渠道实现？**
-实现对应契约接口（如 `AccountChannelAuthManager`），类上标 `@Spi("渠道id")`，并在**实现方模块**的 `META-INF/extensions/com.chua.starter.common.support.channel.AccountChannelAuthManager` 追加实现类全限定名；非 Spring 创建的 SPI 实例需要注入时依赖 `SpringServiceAutowire` 补装。上游请求统一走 `ChannelHttp`，失败抛 `ChannelException` 系异常。
+实现对应契约接口（如 `AccountChannelAuthManager`），类上标 `@Spi("渠道id")`，并在**实现方模块**的 `META-INF/extensions/com.chua.starter.common.support.channel.AccountChannelAuthManager` 追加实现类全限定名；非 Spring 创建的 SPI 实例需要注入时依赖 `SpringServiceAutowire`（`com.chua.spring.support.configuration.spi`，在 `utils-support-spring-starter`）补装。上游请求统一走 `ChannelHttp`，失败抛 `ChannelException` 系异常。
 
 ## 附录：包结构速览
 
@@ -680,11 +680,16 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 | `...support.utils` | `IpUtils`（真实 IP/CIDR）、`CookieUtil`、`NonceUtils`（签名+防重放）、`RequestUtils` / `ResponseUtils`、`MultipartFileUtils`、`JakartaValidationUtils`、`LocaleUtils`（i18n）、`SpringCompatUtils`、`BeanDefinitionUtils` / `BeanDefinitionRegistryUtils` |
 | `...support.watch` | `@Watch` + `WatchPointcutAdvisor` + `Span` / `NewTrackManager` |
 | `...support.watchlog.console` | `Console` 树形日志 SPI |
-| `...strategy.template` | `IdempotentTemplate` 单机幂等锁 |
-| `com.chua.common.support.data.materialized` | 物化视图 SQL 路由契约 |
-| `com.chua.common.support.objects` | `ConfigureObjectContext` 可配置对象上下文扩展 |
-| `com.chua.common.support.spi` | `SpiOption` SPI 选项元信息契约 |
+| `...support.data.materialized` | 物化视图 SQL 路由契约（`MaterializedSqlRouter` / `MaterializedSqlRequest` / `MaterializedSqlRoute` 等 6 类） |
 | `...support.objects.struct` | 对象树 / 图表数据结构 |
-| `com.chua.mysql.support.binlog` | MySQL binlog 客户端骨架 |
-| `com.chua.sharding.v5` | ShardingSphere 数据源构建器骨架 |
-| `com.chua.spring.support` | `SpringServiceAutowire`、插件 Bean 注册/卸载事件 |
+| `...support.spi` | `SpiOption` SPI 选项元信息契约 |
+| `...support.strategy.template` | `IdempotentTemplate` 单机幂等锁 |
+
+> 已迁出本模块的包（按命名宪法下沉到对应 utils 模块，本模块不再持有）：
+>
+> | 原包 | 现归属模块 | 现包名 |
+> | --- | --- | --- |
+> | `com.chua.common.support.objects`（`ConfigureObjectContext` / `ObjectContextSetting`） | `utils-support-common-starter` | `com.chua.common.support.objects` |
+> | `com.chua.mysql.support.binlog` | `utils-support-mysql-starter` | `com.chua.mysql.support.binlog` |
+> | `com.chua.sharding.v5.support.builder` | `utils-support-shardingv5-starter` | `com.chua.shardingv5.support.builder` |
+> | `com.chua.spring.support.configuration.spi` / `com.chua.spring.support.plugin.integration` | `utils-support-spring-starter` | `com.chua.spring.support.configuration.spi` / `com.chua.spring.support.plugin.integration` |

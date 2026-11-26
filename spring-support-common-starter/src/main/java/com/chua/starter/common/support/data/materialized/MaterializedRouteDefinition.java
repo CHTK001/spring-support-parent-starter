@@ -1,4 +1,4 @@
-package com.chua.common.support.data.materialized;
+package com.chua.starter.common.support.data.materialized;
 
 /**
  * 物化视图路由定义

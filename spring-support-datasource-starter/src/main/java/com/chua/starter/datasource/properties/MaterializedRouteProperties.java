@@ -1,6 +1,6 @@
 package com.chua.starter.datasource.properties;
 
-import com.chua.common.support.data.materialized.MaterializedSqlOptions;
+import com.chua.starter.datasource.materialized.MaterializedSqlOptions;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
