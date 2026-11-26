@@ -45,6 +45,13 @@
 - 实现类落在**接口包及其子包**下时可被 `SamePackageServiceResolver` 扫到，索引非必需；只有跨包实现才必须登记（datapool 的 nginx 实现属前者，框架侧不需要 nginx 索引）。
 - 定期对账脚本 `temp/namespace-audit/index-audit.js`：判据 = 索引键接口存在 + 每行实现类存在，输出 `MOVED/MISSING` 计数。
 
+可达性对账口径（2026-11-26 二轮，`temp/namespace-audit/spi-reachability-audit.js`）：
+
+- 判「可达」必须同时认四条发现路径：**索引登记**、**同包扫描**（`SamePackageServiceResolver`，只扫接口包及其子包，跨包实现扫不到）、**Spring 托管**（`@Service`/`@Component` + 注入取用，不走 `ServiceProvider`）、`@AutoSpi` + 注解处理器生成（仅 utils 侧有处理器）。只按索引判会把同包/Spring 托管实现误判成缺失。
+- 判「真隐患」要再加一条：**仓内存在 `ServiceProvider.of(<接口>.class)` 之类的真实消费点**。没有消费点的实现漏登记不产生行为差异（服务器实现类多由工厂按名/同包扫描创建），登记留档即可，不要为凑零而批量补索引。
+- 同一接口的多个实现分散在多个模块时，索引文件放在**实现所在模块**即可——`CustomServiceResolver` 用 `classLoader.getResources()` 遍历，多 jar 同名索引会合并；不必集中到接口所在模块。
+- 审计脚本自身两类假象要排除：嵌套实现/接口的键名是 `Outer$Inner`（按 `Outer.java` 定位会误报不存在），以及 `@SpiIgnore` 标记的类是有意不登记。
+
 split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 
 - **模块粒度 = `src` 之前的完整相对路径**（`utils/utils-support-core-parent/utils-support-network-starter`），**不能取上层目录**。取父目录会把同一 parent 下的兄弟模块并成一个「模块」，兄弟模块之间的同包跨模块被误判为「同包同模块」，扫描结果假绿。
