@@ -9,6 +9,7 @@ import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageSyncLogMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.manage.service.SysAiModelMetricsService;
+import com.chua.starter.ai.support.manage.service.SysAiModelPriceService;
 import com.chua.starter.ai.support.manage.service.SysAiProviderMetricService;
 import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
@@ -81,20 +82,23 @@ public class UsageAutoConfiguration {
      *
      * @param pricingMapper         定价映射器
      * @param modelMetricsService   全量指标库服务
+     * @param modelPriceService     模型价格服务
      * @param providerMetricService 供应商指标系数服务
      * @return 计费服务实现
      */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
                                                    SysAiModelMetricsService modelMetricsService,
+                                                   SysAiModelPriceService modelPriceService,
                                                    SysAiProviderMetricService providerMetricService) {
         /**
          * sysaipricing服务impl。
          * @param pricingMapper pricing映射器
          * @param modelMetricsService 全量指标库服务
+         * @param modelPriceService 模型价格服务
          * @param providerMetricService 供应商指标系数服务
          * @return sysAIpricing服务impl的结果
          */
-        return new SysAiPricingServiceImpl(pricingMapper, modelMetricsService, providerMetricService);
+        return new SysAiPricingServiceImpl(pricingMapper, modelMetricsService, modelPriceService, providerMetricService);
     }
 
     @Bean

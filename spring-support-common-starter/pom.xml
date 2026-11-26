@@ -96,8 +96,15 @@
             <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
 
-        <!-- 邮件能力已下线：common 的 MailService 为僵尸代码（多数宿主扫描不到其包，真实发信走 utils 的 EmailPush SPI），
-             spring-boot-starter-mail 不再作为 common 的强依赖，需要的宿主自行引入 -->
+        <!-- Spring Boot JavaMail - 邮件发送支持（common 的 MailService 编译依赖）。
+             标记 optional：不把 JavaMail 自动配置强加给全部宿主（R5），
+             需要真实发信的宿主自行引入 spring-boot-starter-mail；
+             MailService 本身由 @ConditionalOnBean(JavaMailSender) 门控 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
         <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
