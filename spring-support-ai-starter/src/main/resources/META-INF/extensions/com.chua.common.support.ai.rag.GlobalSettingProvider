@@ -23,3 +23,6 @@ com.chua.starter.ai.support.configuration.detect.DetectGlobalSettingProvider
 com.chua.starter.ai.support.configuration.timewheel.TimeWheelGlobalSettingProvider
 com.chua.starter.ai.support.configuration.platform.PlatformAccessGlobalSettingProvider
 com.chua.starter.ai.support.configuration.agent.AgentGlobalSettingProvider
+com.chua.starter.ai.support.configuration.health.HealthGlobalSettingProvider
+com.chua.starter.ai.support.configuration.security.SecurityGlobalSettingProvider
+com.chua.starter.ai.support.configuration.sim.SimGlobalSettingProvider
