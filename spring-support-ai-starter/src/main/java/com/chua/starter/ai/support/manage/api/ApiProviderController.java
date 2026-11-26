@@ -969,15 +969,15 @@ public class ApiProviderController {
             // 免费渠道是渠道管理的统一入口：模型与上游地址/凭据都由渠道管理维护，
             // 本行只做路由聚合，地址允许留空（不再填 free.nomifun.com 之类的占位地址）。
             if (ProviderRouteTargets.isFreeChannel(platform)) {
-                String freeBaseUrl = str(body, "base_url");
-                entity.setBaseUrl(freeBaseUrl == null ? "" : freeBaseUrl);
+                String freeBaseUrl = ProviderRegistries.resolveBaseUrl(str(body, "base_url"));
+                entity.setBaseUrl(freeBaseUrl);
                 entity.setAuthScheme(authScheme == null || authScheme.isBlank() ? "none" : authScheme);
             } else if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
-                String keylessBaseUrl = str(body, "base_url");
-                entity.setBaseUrl(keylessBaseUrl == null ? "" : keylessBaseUrl);
+                String keylessBaseUrl = ProviderRegistries.resolveBaseUrl(str(body, "base_url"));
+                entity.setBaseUrl(keylessBaseUrl);
                 entity.setAuthScheme("none");
             } else {
-                entity.setBaseUrl(requireStr(body, "base_url"));
+                entity.setBaseUrl(ProviderRegistries.resolveBaseUrl(requireStr(body, "base_url")));
                 entity.setAuthScheme(requireStr(body, "auth_scheme"));
             }
         }
@@ -1038,7 +1038,7 @@ public class ApiProviderController {
             entity.setName(str(body, "name"));
         }
         if (body.containsKey("base_url")) {
-            entity.setBaseUrl(str(body, "base_url"));
+            entity.setBaseUrl(ProviderRegistries.resolveBaseUrl(str(body, "base_url")));
         }
         if (body.containsKey("auth_scheme")) {
             entity.setAuthScheme(str(body, "auth_scheme"));
@@ -8236,6 +8236,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         m.put("mosi", new ProtocolPreset("mosi", "https://api.mosi.cn/v1"));
         m.put("deepgram", new ProtocolPreset("deepgram", "https://api.deepgram.com/v1"));
         m.put("novita", new ProtocolPreset("novita", "https://api.novita.ai/openai/v1"));
+        // Groq：官方 OpenAI 兼容端点（/openai/v1），LPU 推理；前端模板 id groq
+        m.put("groq", new ProtocolPreset("groq", "https://api.groq.com/openai/v1"));
         m.put("openrouter", new ProtocolPreset("openrouter", "https://openrouter.ai/api/v1"));
         m.put("poe", new ProtocolPreset("poe", "https://api.poe.com/v1"));
         m.put("ppio", new ProtocolPreset("ppio", "https://api.ppinfra.com/v3/openai"));

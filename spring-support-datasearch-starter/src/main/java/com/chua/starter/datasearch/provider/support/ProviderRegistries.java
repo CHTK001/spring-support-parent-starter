@@ -208,4 +208,84 @@ public final class ProviderRegistries {
             return null;
         }
     }
+
+    /**
+     * 推断上游地址的 API 路径后缀并补全。
+     *
+     * <p>用户只给域名（如 {@code api.openai.com}）时，按登记表的 host→suffix 映射
+     * 自动补全路径（如 {@code /v1}）。已带路径后缀的保持原样；未知 host 补
+     * {@code /v1}（OpenAI 兼容默认）。</p>
+     *
+     * <p>匹配策略：先按 host 精确匹配，再按子域匹配（{@code host.endsWith("." + candidate)}），
+     * 与 {@link #isOfficialSite(String, String)} 同一口径。取到登记项后从其
+     * {@code baseUrl} 提取路径部分作为后缀。</p>
+     *
+     * @param baseUrl 上游基础地址（可空）
+     * @return 补全后的地址；入参为空时返回空串
+     */
+    public static String resolveBaseUrl(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "";
+        }
+        String trimmed = baseUrl.trim();
+        // 已带路径后缀的保持原样
+        if (hasPath(trimmed)) {
+            return trimmed;
+        }
+        String host = hostOf(trimmed);
+        if (host == null) {
+            return trimmed;
+        }
+        // 查登记表
+        ProviderDescriptor descriptor = find(null, trimmed);
+        String suffix = descriptor == null ? null : pathOf(descriptor.getBaseUrl());
+        if (suffix == null || suffix.isEmpty()) {
+            suffix = "/v1";
+        }
+        // 拼接：去掉末尾斜杠再补
+        String base = trimmed.endsWith("/") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+        return base + suffix;
+    }
+
+    /**
+     * 判断 URL 是否已带路径后缀（不含尾部斜杠）。
+     *
+     * @param url 地址
+     * @return 有路径后缀返回 true
+     */
+    private static boolean hasPath(String url) {
+        String noScheme = url;
+        int schemeEnd = url.indexOf("://");
+        if (schemeEnd > 0) {
+            noScheme = url.substring(schemeEnd + 3);
+        }
+        int slashIdx = noScheme.indexOf('/');
+        if (slashIdx <= 0) {
+            return false;
+        }
+        return noScheme.substring(slashIdx).length() > 1;
+    }
+
+    /**
+     * 从登记表的 baseUrl 提取路径部分。
+     *
+     * @param url 登记表地址（始终带协议）
+     * @return 路径部分；无路径时返回空串
+     */
+    private static String pathOf(String url) {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        String noScheme = url;
+        int schemeEnd = url.indexOf("://");
+        if (schemeEnd > 0) {
+            noScheme = url.substring(schemeEnd + 3);
+        }
+        int slashIdx = noScheme.indexOf('/');
+        if (slashIdx <= 0) {
+            return "";
+        }
+        String path = noScheme.substring(slashIdx);
+        return path.length() <= 1 ? "" : path;
+    }
 }
