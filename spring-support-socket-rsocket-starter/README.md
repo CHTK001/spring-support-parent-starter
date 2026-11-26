@@ -280,7 +280,7 @@ plugin:
 ### 5.3 生产注意事项
 
 1. **端点必须自行注册**：本模块无自动装配入口，`start()` 不绑定端口；若不在宿主注册 `WebSocketConfigurer` 端点（6.2 第三步），客户端无处可连且应用不报任何错。
-2. **补 SPI 登记文件**：本模块没有 `META-INF/extensions` 目录，宿主应用必须提供 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，内容为 `rsocket=com.chua.rsocket.support.spi.RSocketProvider`，否则启动即抛 `IllegalStateException`（见 Q1）。
+2. **补 SPI 登记文件**：本模块没有 `META-INF/extensions` 目录，宿主应用必须提供 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，内容为 `rsocket=com.chua.starter.socket.rsocket.spi.RSocketProvider`，否则启动即抛 `IllegalStateException`（见 Q1）。
 3. **会话不共享**：`sessionCache` 是本地 `ConcurrentHashMap`，多实例部署时会话不互通，广播只达本实例；需要会话粘滞的负载均衡或外部共享方案。
 4. **无握手鉴权**：`auth-factory` 对本实现无效；接入公网前请子类化 `RSocketSessionTemplateImpl#afterConnectionEstablished` 校验握手参数（如 token），或在网关层拦截。
 5. **并发发送需自行串行化**：底层 `WebSocketSession.sendMessage` 非线程安全，同一会话并发写可能抛异常；必要时用 `ConcurrentWebSocketSessionDecorator` 包装或业务侧加锁。
@@ -315,7 +315,7 @@ plugin:
 第二步，补 SPI 登记文件。本模块当前**没有** `META-INF/extensions` 目录，须在宿主应用 `src/main/resources/META-INF/extensions/com.chua.socket.support.spi.SocketProvider` 中补一行（格式与 socket-io / sse 一致），否则启动即抛异常：
 
 ```text
-rsocket=com.chua.rsocket.support.spi.RSocketProvider
+rsocket=com.chua.starter.socket.rsocket.spi.RSocketProvider
 ```
 
 第三步，把模板注册为 WebSocket 端点（`start()` 不绑定端口，注册必须由宿主完成）：
@@ -404,7 +404,7 @@ public class EventHandler implements SocketListener {
 
 **Q1：启动报 `IllegalStateException("[Socket] 未找到协议 [rsocket] 的 SPI 实现...")`**
 
-仓库内缺少 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider` 登记文件，`ServiceProvider` 发现不到 `RSocketProvider`。在宿主应用补一行 `rsocket=com.chua.rsocket.support.spi.RSocketProvider` 即可（见 6.2 第二步）。
+仓库内缺少 `META-INF/extensions/com.chua.socket.support.spi.SocketProvider` 登记文件，`ServiceProvider` 发现不到 `RSocketProvider`。在宿主应用补一行 `rsocket=com.chua.starter.socket.rsocket.spi.RSocketProvider` 即可（见 6.2 第二步）。
 
 **Q2：配置了 `plugin.socket.*` 但大部分不生效**
 

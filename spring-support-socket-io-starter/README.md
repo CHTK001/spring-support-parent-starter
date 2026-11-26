@@ -88,13 +88,13 @@ sequenceDiagram
 
 | 能力域 | 关键类 | 入口/触发方式 |
 |---|---|---|
-| 协议接入（SPI） | `com.chua.socketio.support.spi.SocketIOProvider`（`@Spi("socketio")`） | `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，由 `SocketConfiguration` 通过 `ServiceProvider.of(SocketProvider.class).getNewExtension("socketio")` 调用 |
-| 会话管理 / 消息收发 | `com.chua.socketio.support.session.SocketIOSessionTemplate`（实现 `SocketSessionTemplate`） | 注入 `SocketSessionTemplate`（抽象层 `@Primary`） |
-| 服务端封装与会话模型 | `com.chua.socketio.support.server.DelegateSocketIOServer`（继承 `SocketIOServer`）、`SocketIOSession`（实现 `SocketSession`，包装 `SocketIOClient`） | `SocketIOSessionTemplate#getServer(clientId)`（具体类方法）/ `SocketSessionTemplate#getSession(sessionId)` |
+| 协议接入（SPI） | `com.chua.starter.socket.io.spi.SocketIOProvider`（`@Spi("socketio")`） | `META-INF/extensions/com.chua.socket.support.spi.SocketProvider`，由 `SocketConfiguration` 通过 `ServiceProvider.of(SocketProvider.class).getNewExtension("socketio")` 调用 |
+| 会话管理 / 消息收发 | `com.chua.starter.socket.io.session.SocketIOSessionTemplate`（实现 `SocketSessionTemplate`） | 注入 `SocketSessionTemplate`（抽象层 `@Primary`） |
+| 服务端封装与会话模型 | `com.chua.starter.socket.io.server.DelegateSocketIOServer`（继承 `SocketIOServer`）、`SocketIOSession`（实现 `SocketSession`，包装 `SocketIOClient`） | `SocketIOSessionTemplate#getServer(clientId)`（具体类方法）/ `SocketSessionTemplate#getSession(sessionId)` |
 | 入站事件分发 | `@OnEvent` + `SocketListener`（抽象层）+ `EventListenerProcessor` | 声明 `SocketListener` Bean，方法标注 `@OnEvent("事件名")` |
 | 握手鉴权 | `SocketAuthFactory`（抽象层契约），本模块 `configureAuthorization` / `resolveAuthFactory` 完成装配 | `plugin.socket.auth-factory=工厂全限定类名` |
-| 同步协议适配 | `com.chua.socketio.support.sync.SocketioSyncServer`（继承 `AbstractSyncServer`） | 未标注组件注解，不自动注册；需要时手动 `new` 并接入同步体系 |
-| 事件命名常量 | `com.chua.socketio.support.constant.SocketTopics`（`Service.Message/Operation`、`System.Message/User/Config/Auth`） | 常量引用，命名格式 `项目:模块:功能` |
+| 同步协议适配 | `com.chua.starter.socket.io.sync.SocketioSyncServer`（继承 `AbstractSyncServer`） | 未标注组件注解，不自动注册；需要时手动 `new` 并接入同步体系 |
+| 事件命名常量 | `com.chua.starter.socket.io.constant.SocketTopics`（`Service.Message/Operation`、`System.Message/User/Config/Auth`） | 常量引用，命名格式 `项目:模块:功能` |
 
 本模块**不注册任何 Spring 自动配置类**：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 只有一行注释，也没有 `spring.factories`；所有 Bean 由 `spring-support-socket-starter` 的 `SocketConfiguration` 统一创建。native-image 元数据在 `META-INF/native-image/com.chua/spring-support-socket-io-starter/`（`reflect-config.json` 登记 `SocketIOProvider`，`resource-config.json` 包含 `META-INF/extensions/.*`）。
 

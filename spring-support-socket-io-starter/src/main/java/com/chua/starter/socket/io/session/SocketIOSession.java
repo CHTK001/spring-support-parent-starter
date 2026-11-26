@@ -1,0 +1,210 @@
+package com.chua.starter.socket.io.session;
+
+import com.chua.socket.support.properties.SocketProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.socket.support.session.SocketSession;
+import com.chua.socket.support.session.SocketUser;
+import com.corundumstudio.socketio.SocketIOClient;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Socket.IO 会话实现
+ *
+ * @since 2024-12-04
+ * @author CH
+ */
+public class SocketIOSession implements SocketSession {
+
+    /**
+     * 对象_映射器
+    */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    /**
+     * 客户端
+    */
+    private final SocketIOClient client;
+    private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
+    /**
+     * 客户端标识
+    */
+    private String clientId;
+    /**
+     * 用户
+    */
+    private SocketUser user;
+
+    /**
+     * 创建 Socketio会话 实例
+     * @param client 客户端
+     * @param properties Socket属性
+     * @param properties 属性
+     */
+    public SocketIOSession(SocketIOClient client, SocketProperties properties) {
+        this.client = client;
+    }
+
+    @Override
+    /**
+     * 获取标识
+     * @return 返回值
+    */
+    public String getId() {
+        return client.getSessionId().toString();
+    }
+
+    @Override
+    /**
+     * 获取客户端标识
+     * @return 返回值
+    */
+    public String getClientId() {
+        return clientId;
+    }
+
+    @Override
+    /**
+     * 设置客户端标识
+     * @param clientId 字符串
+     * @return 返回值
+    */
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    @Override
+    /**
+     * 获取用户
+     * @return 返回值
+    */
+    public SocketUser getUser() {
+        return user;
+    }
+
+    @Override
+    /**
+     * 设置用户
+     * @param user 参数
+     * @return 返回值
+    */
+    public void setUser(SocketUser user) {
+        this.user = user;
+    }
+
+    @Override
+    /**
+     * 设置Attribute
+     * @param key 字符串
+     * @param value 对象
+     * @return 返回值
+    */
+    public void setAttribute(String key, Object value) {
+        attributes.put(key, value);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    /**
+     * 获取Attribute
+     *
+     * @param key Key
+     * @return 获取attribute的结果
+     */
+    public <T> T getAttribute(String key) {
+        return (T) attributes.get(key);
+    }
+
+    @Override
+    /**
+     * 移除Attribute
+     * @param key 字符串
+     * @return 返回值
+    */
+    public void removeAttribute(String key) {
+        attributes.remove(key);
+    }
+
+    @Override
+    /**
+     * 获取Attributes
+     * @return 返回值
+    */
+    public Map<String, Object> getAttributes() {
+        return attributes;
+    }
+
+    @Override
+    /**
+     * 是否连接
+     * @return 返回值
+    */
+    public boolean isConnected() {
+        return client.isChannelOpen();
+    }
+
+    @Override
+    /**
+     * 断开
+    */
+    public void disconnect() {
+        client.disconnect();
+    }
+
+    @Override
+    /**
+     * 发送
+     * @param data 对象
+     * @param event 字符串
+     * @return 返回值
+    */
+    public void send(String event, Object data) {
+        if (client.isChannelOpen()) {
+            String msg;
+            if (data instanceof String) {
+                msg = (String) data;
+            } else {
+                try {
+                    msg = OBJECT_MAPPER.writeValueAsString(data);
+                } catch (Exception e) {
+                    msg = data.toString();
+                }
+            }
+            client.sendEvent(event, msg);
+        }
+    }
+
+    @Override
+    /**
+     * 发送Binary
+     * @param data 参数
+     * @param event 字符串
+     * @return 返回值
+    */
+    public void sendBinary(String event, byte[] data) {
+        if (client.isChannelOpen()) {
+ // Socket.IO 原生支持二进制数据传输
+            client.sendEvent(event, data);
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    /**
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
+    public <T> T getConnection() {
+        return (T) client;
+    }
+
+    /**
+     * 获取原生 Socket.IO 客户端
+     *
+     * @return SocketIOClient
+     */
+    public SocketIOClient getClient() {
+        return client;
+    }
+}

@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.chat;
 
-import com.chua.common.support.ai.agent.AgentUsage;
+import com.chua.starter.ai.support.model.AgentUsage;
 import com.chua.common.support.ai.chat.ChatResponse;
 
 /**

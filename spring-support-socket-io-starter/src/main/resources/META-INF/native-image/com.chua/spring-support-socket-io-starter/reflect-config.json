@@ -1,6 +1,6 @@
 [
 {
-  "name": "com.chua.socketio.support.spi.SocketIOProvider",
+  "name": "com.chua.starter.socket.io.spi.SocketIOProvider",
   "allDeclaredConstructors": true,
   "allPublicConstructors": true,
   "allDeclaredMethods": true,
