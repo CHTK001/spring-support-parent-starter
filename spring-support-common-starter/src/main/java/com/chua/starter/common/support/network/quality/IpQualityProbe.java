@@ -1,4 +1,4 @@
-package com.chua.common.starter.support.network.quality;
+package com.chua.starter.common.support.network.quality;
 
 import com.chua.common.support.utils.CommandLine;
 import lombok.extern.slf4j.Slf4j;

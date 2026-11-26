@@ -1,4 +1,4 @@
-package com.chua.common.starter.support.network.quality;
+package com.chua.starter.common.support.network.quality;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;

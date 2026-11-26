@@ -1,4 +1,4 @@
-package com.chua.common.starter.support.objects.struct;
+package com.chua.starter.common.support.objects.struct;
 
 import java.util.ArrayList;
 import java.util.List;

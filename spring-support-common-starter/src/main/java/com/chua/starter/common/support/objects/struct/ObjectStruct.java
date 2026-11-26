@@ -1,9 +1,9 @@
-package com.chua.common.starter.support.objects.struct;
+package com.chua.starter.common.support.objects.struct;
 
-import com.chua.common.starter.support.objects.struct.chart.BarChartData;
-import com.chua.common.starter.support.objects.struct.chart.RadarChartData;
-import com.chua.common.starter.support.objects.struct.chart.RelationData;
-import com.chua.common.starter.support.objects.struct.chart.TreemapData;
+import com.chua.starter.common.support.objects.struct.chart.BarChartData;
+import com.chua.starter.common.support.objects.struct.chart.RadarChartData;
+import com.chua.starter.common.support.objects.struct.chart.RelationData;
+import com.chua.starter.common.support.objects.struct.chart.TreemapData;
 
 import java.util.List;
 

@@ -1,18 +1,18 @@
-package com.chua.common.starter.support.objects.struct.chart;
+package com.chua.starter.common.support.objects.struct.chart;
 
 import java.io.Serializable;
 import java.util.List;
 
 /**
- * 雷达图数据
+ * 柱状图数据
  *
- * @param indicators 指标名称
- * @param values     数值集合
+ * @param categories 分类名称
+ * @param values    数值集合
  * @author CH
  * @since 4.0.0
  */
-public record RadarChartData(
-        List<String> indicators,
+public record BarChartData(
+        List<String> categories,
         List<Number> values) implements Serializable {
 
     /** 串行版本UID */

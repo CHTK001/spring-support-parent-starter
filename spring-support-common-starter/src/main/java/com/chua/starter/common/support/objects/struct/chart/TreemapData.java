@@ -1,4 +1,4 @@
-package com.chua.common.starter.support.objects.struct.chart;
+package com.chua.starter.common.support.objects.struct.chart;
 
 import java.io.Serializable;
 import java.util.List;

@@ -666,7 +666,7 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 | `...support.logger` | 日志事件模型（Sys/User/Interface）、`AbstractLoggerPointcutAdvisor` 抽象、`@LoggerIgnore`、`ModuleLog` |
 | `...support.media` | `MediaTypeHandler`（xml/json/csv）与 `Formatter`（date/none）SPI |
 | `...support.model` / `...processor` | `ModelView` 双模返回值、`ResponseModelViewMethodProcessor`、`AnnotationInjectedBeanPostProcessor` |
-| `...support.network` | `UserAgent` 解析；`com.chua.common.starter.support.network.quality`为 IP 质量检测，`network.client` 为 WebClient 执行器 SPI 适配 |
+| `...support.network` | `UserAgent` 解析；`...support.network.quality` 为 IP 质量检测，`...support.network.client` 为 WebClient 执行器 SPI 适配 |
 | `...support.oauth` | `AuthService` / `CurrentUser` 当前用户契约与权限判断 |
 | `...support.provider` | `CaptchaProvider` REST 端点 + 5 种 `CaptchaGenerator`、`OptionalProvider`（`/v1/option` SPI 选项目录） |
 | `...support.properties` | `AsyncThreadPoolProperties` / `CaptchaProperties` / `IpProperties` / `MessageConverterProperties` / `NonceSignProperties` / `NoticeProperties` / `OptionalProperties` |
@@ -684,7 +684,7 @@ ParameterLogFilter 的装配条件是 `matchIfMissing=false`，不显式配置 `
 | `com.chua.common.support.data.materialized` | 物化视图 SQL 路由契约 |
 | `com.chua.common.support.objects` | `ConfigureObjectContext` 可配置对象上下文扩展 |
 | `com.chua.common.support.spi` | `SpiOption` SPI 选项元信息契约 |
-| `com.chua.common.starter.support.objects.struct` | 对象树 / 图表数据结构 |
+| `...support.objects.struct` | 对象树 / 图表数据结构 |
 | `com.chua.mysql.support.binlog` | MySQL binlog 客户端骨架 |
 | `com.chua.sharding.v5` | ShardingSphere 数据源构建器骨架 |
 | `com.chua.spring.support` | `SpringServiceAutowire`、插件 Bean 注册/卸载事件 |

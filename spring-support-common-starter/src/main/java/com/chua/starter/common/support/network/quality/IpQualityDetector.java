@@ -1,4 +1,4 @@
-package com.chua.common.starter.support.network.quality;
+package com.chua.starter.common.support.network.quality;
 
 /**
  * IP 质量检测器
