@@ -63,6 +63,13 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - 迁移记录与运行时证据见 `D:\ch\验收报告\包结构残留寄宿迁移评估.md`、`D:\ch\验收报告\包结构整改.md`；扫描脚本 `temp/namespace-audit/split-module-level.js`。
 - `@ComponentScan("...")`、`scanBasePackages = {"..."}`、`AutoConfiguration.imports` 里的包名/FQN 都是**字符串**，改包名时编译不报错，迁包必须逐条 grep 这些字面量。
 
+按名取用与字符串 FQN 对账口径（2026-11-26 三轮，`temp/namespace-audit/spi-name-lookup-audit.js`、`fqn-string-audit.js`）：
+
+- **`getExtension("名字")` 未命中不抛异常**，`DefaultServiceProvider` 静默回落 `getDefaultImpl()`（多数接口无默认实现 → `null`），所以「编译绿 + 无报错」证明不了按名可达。判据：实现 FQN 必须出现在该接口索引文件里，或同包扫描范围内，或调用方先走 Spring `getBeansOfType`；**不要按索引行文本反推运行期名字**（无别名时名字来自实现类 `@Spi`/`@Extension`/`@Component`）。
+- 空名字 `getExtension("")` 走 `singleDefinition()` / `getDefaultImpl()`，属默认解析，别当按名缺陷统计。
+- 字符串 FQN（`Class.forName`、`ServiceProvider.of(String)`、`SettingDefinition` 默认值、`spring.factories`、`*.imports`）在改包名时全部失联且编译无感。**`plugin.api.spi.mapping.<别名>` 的值必须是 SPI 接口 FQN（不是实现类）**——它被 `SpiOptionController` / `OptionalProvider` 直接交给 `ServiceProvider.of(String)`，写成不存在或旧包名的类时 `options()` 静默返回空列表，前端表现为 SPI 选项下拉为空。
+- 审计出的 `Class.forName` 悬空项要先分层：`ClassUtils.isPresent` / `ReflectUtils.forName` + null 兜底的是**可选依赖钩子**（缺类即不注册，属设计），`instantiate` 后回落内存/文件实现的是**死兜底**，只有被当作真实类型直接使用、且无兜底路径的才是缺陷。
+
 ## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
