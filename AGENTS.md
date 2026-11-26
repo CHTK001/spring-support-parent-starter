@@ -37,6 +37,14 @@
 
 新增 `@Spi` 扩展实现（如 `GlobalSettingProvider`）且未标 `@AutoSpi` 时，必须手工在 `src/main/resources/META-INF/extensions/<SPI 接口全限定名>` 追加实现类全限定名。该文件是 git 跟踪的源码资源，编译期不会为纯 `@Spi` 类自动生成索引；漏加则编译绿但启动时静默不注册（如设置分组永不初始化）。
 
+索引口径（2026-11-26 全仓对账实证，704 个索引 / 1548 条实现行）：
+
+- **索引文件名必须等于接口当前的 FQN**。接口随包结构迁移改了包名而索引留在旧文件名时，整份索引静默失效（`CustomServiceResolver` 按 `<接口 FQN>` 找文件，键不存在就连加载都不会发生）；同名旧键文件应改名而不是另存新文件。
+- 索引行支持 `别名=FQN` 与裸 FQN；**SPI 名称会被规范化成大写**（`file_viewer` → `FILE_VIEWER`），探针按小写判存在会假红。
+- 加载只做 `Class.forName` + `isAssignableFrom`，**不要求 `@Spi` 注解**；行内类名写错（类已改名）时该行被静默跳过，表现为「索引在、实现不在」。
+- 实现类落在**接口包及其子包**下时可被 `SamePackageServiceResolver` 扫到，索引非必需；只有跨包实现才必须登记（datapool 的 nginx 实现属前者，框架侧不需要 nginx 索引）。
+- 定期对账脚本 `temp/namespace-audit/index-audit.js`：判据 = 索引键接口存在 + 每行实现类存在，输出 `MOVED/MISSING` 计数。
+
 ## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
