@@ -13,6 +13,12 @@
     <lucene.version>9.12.2</lucene.version>
   </properties>
   <dependencies>
+    <!-- 只消费底层数据管线契约与宿主已有 DatalakeServer，不引入数据中台管理业务。 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-datalake-starter</artifactId>
+      <version>${utils.version}</version>
+    </dependency>
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-api-support-common-system-starter</artifactId>
