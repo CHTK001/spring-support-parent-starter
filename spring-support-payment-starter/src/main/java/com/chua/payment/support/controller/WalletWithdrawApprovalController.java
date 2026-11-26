@@ -74,6 +74,20 @@ public class WalletWithdrawApprovalController {
         return PageResultUtils.ok(page);
     }
 
+    /** 查询提现申请详情。 */
+    @GetMapping("/{id}")
+    public ReturnResult<WalletWithdrawApproval> detail(@PathVariable Long id, HttpServletRequest request) {
+        ReturnResult<Void> denied = denyIfNecessary(request);
+        if (denied != null) {
+            return ReturnResult.error(denied.getMsg());
+        }
+        WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(id);
+        if (approval == null) {
+            return ReturnResult.error("提现申请不存在");
+        }
+        return ReturnResult.ok(approval);
+    }
+
     @PostMapping("/{id}/approve")
     /**
      * 审批通过
