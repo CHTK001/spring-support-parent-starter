@@ -1,7 +1,7 @@
 package com.chua.starter.logger.server;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import com.chua.starter.logger.LoggerAutoConfiguration;
 import com.chua.starter.logger.event.LoggerEvent;
 import com.chua.starter.logger.properties.LoggerProperties;

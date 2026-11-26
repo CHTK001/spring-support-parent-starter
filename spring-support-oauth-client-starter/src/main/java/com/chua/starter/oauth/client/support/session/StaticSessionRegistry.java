@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.client.support.session;
 
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;

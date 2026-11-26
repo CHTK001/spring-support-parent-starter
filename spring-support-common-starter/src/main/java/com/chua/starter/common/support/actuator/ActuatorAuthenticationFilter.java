@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.actuator;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.matcher.PathMatcher;
-import com.chua.starter.common.support.utils.IpUtils;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.IpUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;

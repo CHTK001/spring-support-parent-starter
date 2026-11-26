@@ -1,6 +1,6 @@
 package com.chua.starter.logger.appender;
 
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import com.chua.starter.logger.event.LoggerEvent;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;

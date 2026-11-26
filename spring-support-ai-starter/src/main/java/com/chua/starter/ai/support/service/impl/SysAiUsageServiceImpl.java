@@ -14,7 +14,7 @@ import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.ai.support.service.ModelAliasService;
 import com.chua.starter.common.support.service.IptablesService;
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.network.ip.GeoCity;
 import lombok.RequiredArgsConstructor;

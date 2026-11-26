@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.log;
 
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import org.slf4j.MDC;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
@@ -10,7 +10,7 @@ import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 
-import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
+import static com.chua.starter.logger.constant.MdcConstant.X_TRACE_ID;
 
 /**
  * RestTemplate 追踪标识拦截器

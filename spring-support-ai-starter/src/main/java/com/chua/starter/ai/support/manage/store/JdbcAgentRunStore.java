@@ -71,11 +71,12 @@ public class JdbcAgentRunStore implements AgentRunStore {
     public int updateRun(AgentRunRecord run) {
         String sql = "UPDATE sys_ai_agent_run SET sys_ai_session_id=?, agent_id=?, trigger_type=?, mode=?,"
                 + " status=?, input_summary=?, output_summary=?, error=?, tokens_used=?, rounds=?, tool_calls=?,"
-                + " sub_session_id=?, sys_user_id=?, started_at=?, ended_at=? WHERE sys_ai_run_id=?";
+                + " sub_session_id=?, sys_user_id=?, started_at=?, ended_at=? WHERE sys_ai_run_id=?"
+                + " AND (status NOT IN ('COMPLETED','FAILED','CANCELED') OR (status=? AND ended_at=?))";
         return jdbcTemplate.update(sql, run.sessionId(), run.agentId(), run.triggerType(), run.mode(),
                 run.status().name(), run.inputSummary(), run.outputSummary(), run.error(), run.tokensUsed(),
                 run.rounds(), run.toolCalls(), run.subSessionId(), run.userId(), run.startedAt(), run.endedAt(),
-                run.runId());
+                run.runId(), run.status().name(), run.endedAt());
     }
 
     @Override

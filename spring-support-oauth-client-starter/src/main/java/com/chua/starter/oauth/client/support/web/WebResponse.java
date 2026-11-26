@@ -3,7 +3,7 @@ package com.chua.starter.oauth.client.support.web;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.advice.Advice;
 import com.chua.starter.oauth.client.support.advice.AdviceResolver;
 import com.chua.starter.oauth.client.support.advice.HtmlAdviceResolver;

@@ -7,7 +7,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.lang.balance.LoadBalance;
 import com.chua.common.support.lang.balance.Node;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.common.support.xml.Xml;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;

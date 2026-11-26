@@ -5,7 +5,7 @@ import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.logger.InterfaceLoggerInfo;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

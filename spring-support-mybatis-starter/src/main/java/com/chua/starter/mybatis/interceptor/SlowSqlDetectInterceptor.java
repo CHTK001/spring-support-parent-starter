@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.regex.Matcher;
 
-import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
+import static com.chua.starter.logger.constant.MdcConstant.TRACE_ID;
 
 /**
    * MyBatis 慢 SQL 检测拦截器。

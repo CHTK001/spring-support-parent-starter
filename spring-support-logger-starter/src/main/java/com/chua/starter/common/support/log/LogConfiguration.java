@@ -2,7 +2,7 @@
 package com.chua.starter.common.support.log;
 
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;

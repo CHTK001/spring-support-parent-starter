@@ -57,6 +57,9 @@ public class AgentRunServiceImpl implements AgentRunService {
      */
     private final AiSessionEventBroadcaster eventBroadcaster;
 
+    /** 本进程同步执行线程，取消时发出中断；数据库状态负责跨进程的边界检查。 */
+    private final Map<String, Thread> executions = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
     public AgentRunRecord startRun(Long sessionId, String agentId, String triggerType, String mode,
                                    String inputSummary) {
@@ -65,6 +68,7 @@ public class AgentRunServiceImpl implements AgentRunService {
                     AgentRunStatus.RUNNING, truncate(inputSummary), null, null, 0L, 0, 0, null,
                     AiUserContext.currentUserId(), System.currentTimeMillis(), null);
             agentRunStore.insertRun(run);
+            executions.put(run.runId(), Thread.currentThread());
             publishRunUpdate(run, null);
             return run;
         } catch (Exception e) {
@@ -102,12 +106,29 @@ public class AgentRunServiceImpl implements AgentRunService {
 
     @Override
     public void completeRun(String runId, String outputSummary) {
-        transitionRun(runId, AgentRunStatus.COMPLETED, truncate(outputSummary), null);
+        try {
+            transitionRun(runId, AgentRunStatus.COMPLETED, truncate(outputSummary), null);
+        } finally {
+            if (runId != null) executions.remove(runId);
+        }
     }
 
     @Override
     public void failRun(String runId, String error) {
-        transitionRun(runId, AgentRunStatus.FAILED, null, error);
+        try {
+            transitionRun(runId, AgentRunStatus.FAILED, null, error);
+        } finally {
+            if (runId != null) executions.remove(runId);
+        }
+    }
+
+    @Override
+    public void checkCancelled(String runId) {
+        if (runId == null) return;
+        AgentRunRecord run = agentRunStore.findRun(runId);
+        if (run != null && run.status() == AgentRunStatus.CANCELED) {
+            throw new java.util.concurrent.CancellationException("运行已取消");
+        }
     }
 
     @Override
@@ -120,9 +141,8 @@ public class AgentRunServiceImpl implements AgentRunService {
         AgentRunRecord updated = new AgentRunRecord(run.runId(), sessionId, run.agentId(), run.triggerType(),
                 run.mode(), run.status(), run.inputSummary(), run.outputSummary(), run.error(), run.tokensUsed(),
                 run.rounds(), run.toolCalls(), subSessionId, run.userId(), run.startedAt(), run.endedAt());
-        agentRunStore.updateRun(updated);
-        publishRunUpdate(updated, null);
-        return updated;
+        if (agentRunStore.updateRun(updated) > 0) publishRunUpdate(updated, null);
+        return agentRunStore.findRun(runId);
     }
 
     @Override
@@ -139,9 +159,12 @@ public class AgentRunServiceImpl implements AgentRunService {
                 run.mode(), AgentRunStatus.CANCELED, run.inputSummary(), run.outputSummary(), "手动取消",
                 run.tokensUsed(), run.rounds(), run.toolCalls(), run.subSessionId(), run.userId(),
                 run.startedAt(), System.currentTimeMillis());
-        agentRunStore.updateRun(updated);
-        publishRunUpdate(updated, null);
-        return updated;
+        if (agentRunStore.updateRun(updated) > 0) {
+            Thread execution = executions.remove(runId);
+            if (execution != null) execution.interrupt();
+            publishRunUpdate(updated, null);
+        }
+        return requireRun(runId);
     }
 
     @Override
@@ -191,8 +214,7 @@ public class AgentRunServiceImpl implements AgentRunService {
                     run.triggerType(), run.mode(), target, run.inputSummary(), outputSummary, error,
                     run.tokensUsed(), run.rounds(), run.toolCalls(), run.subSessionId(), run.userId(),
                     run.startedAt(), System.currentTimeMillis());
-            agentRunStore.updateRun(updated);
-            publishRunUpdate(updated, null);
+            if (agentRunStore.updateRun(updated) > 0) publishRunUpdate(updated, null);
         } catch (Exception e) {
             log.warn("[AgentRun] 运行状态落库失败（不影响主链路）runId={}: {}", runId, e.getMessage());
         }

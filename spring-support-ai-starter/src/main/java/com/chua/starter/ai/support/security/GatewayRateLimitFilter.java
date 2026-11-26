@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.security;
 
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

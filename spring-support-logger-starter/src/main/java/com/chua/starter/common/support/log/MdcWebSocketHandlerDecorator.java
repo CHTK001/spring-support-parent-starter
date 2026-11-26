@@ -1,7 +1,7 @@
 // [P3C A20 豁免] A20/A30/A31: traceId 生成含 "-" 剥离等非业务字面量，与 MdcHandlerFilter 同口径，豁免。
 package com.chua.starter.common.support.log;
 
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import org.slf4j.MDC;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketHandler;

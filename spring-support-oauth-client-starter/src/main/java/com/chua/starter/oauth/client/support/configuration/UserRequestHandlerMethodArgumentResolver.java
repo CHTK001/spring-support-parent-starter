@@ -5,7 +5,7 @@ import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.lang.NamingCase;
 import com.chua.starter.common.support.utils.CookieUtil;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenValue;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.entity.RoleJudge;

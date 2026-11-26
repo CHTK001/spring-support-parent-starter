@@ -11,25 +11,20 @@ import com.chua.common.support.ai.agent.run.AgentRunRecord;
 import com.chua.common.support.ai.agent.run.AgentStepStatus;
 import com.chua.common.support.ai.agent.run.AgentStepType;
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.starter.ai.support.service.AgentOrchestrationGraph;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
-import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
-import com.chua.starter.account.channel.store.SysAccountChannel;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AgentEvalRecorderProvider;
 import com.chua.starter.ai.support.service.AgentRunService;
 import com.chua.starter.ai.support.service.SysAiAgentService;
-import com.chua.starter.ai.support.util.ProviderCredentials;
-import com.chua.common.support.ai.chat.route.RouteTarget;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
-import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -60,7 +55,6 @@ import java.util.Optional;
 public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     private final SysAiAgentMapper agentMapper; // Agent映射器
-    private final AccountChannelService channelService; // 渠道业务（账号模块）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentRegistry agentRegistry; // Agentregistry
     private final AgentManager agentManager; // 运行时 Agent 管理器（按 id 运维）
@@ -70,6 +64,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final AgentRunService agentRunService; // Agent 运行记录（Run/Step 落库 + 会话 SSE）
     private final AgentApprovalGate agentApprovalGate; // Agent 工具风险裁决门（切片四审批闭环）
     private final AgentEvalRecorderProvider agentEvalRecorderProvider; // Agent 评测记录器（懒加载单例）
+
+    /** Agent 标识到公开模型名称，生命周期按业务 id 跟踪，支持自定义名称。 */
+    private final Map<String, String> registeredModels = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final String STRATEGY_KEY_MODE = "mode"; // strategyKeymode
     private static final String STRATEGY_KEY_PLANNING = "planning"; // strategyKeyplanning
@@ -143,6 +140,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     public Map<String, Object> updateAgent(String agentId, Map<String, Object> body) {
         SysAiAgent entity = requireAgent(agentId);
+        String previousName = entity.getName();
         /**
          * apply主体。
          * @param entity 实体
@@ -158,6 +156,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         entity.setUpdatedAt(System.currentTimeMillis());
         agentMapper.updateById(entity);
+        if (!java.util.Objects.equals(previousName, entity.getName())) {
+            agentRegistry.unregister(previousName);
+        }
         /**
          * rebuildAgent。
          * @param entity 实体
@@ -174,6 +175,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     public void deleteAgent(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
+        removeRegisteredModel(agent);
         agentRegistry.unregister(agent.getName());
         // 运行时托管也要一起撤掉并关闭：库里删了但实例还在跑，是最难查的那类泄漏。
         agentManager.destroy(agentId);
@@ -304,21 +306,20 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     // ==================== 编排图 ====================
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> saveOrchestration(String agentId, Map<String, Object> body) {
- // 编排图由子 Agent 的增删改与 X6 拖拽位置/连线组成。
-        // 位置与连线由前端 X6 图在每次变更后通过本接口持久化。
-        // 持久化 nodes + edges 到全局设置 orchestration 分组，供运行时编排路由读取。
-        List<?> nodes = body.get("nodes") instanceof List<?> nl ? nl : List.of();
-        List<?> edges = body.get("edges") instanceof List<?> el ? el : List.of();
-        try {
-            globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_nodes", Json.toJson(nodes), "orchestration nodes");
-            globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_edges", Json.toJson(edges), "orchestration edges");
-            Object mode = body.get("mode");
-            if (mode != null) {
-                globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_mode", mode.toString(), "orchestration mode");
-            }
-        } catch (Exception e) {
-            log.warn("[Agent] 持久化编排图失败 agentId={}: {}", agentId, e.getMessage());
+        requireAgent(agentId);
+        Set<String> allowed = new java.util.HashSet<>();
+        allowed.add(agentId);
+        subAgentsOf(agentId).forEach(sub -> allowed.add(sub.getAgentId()));
+        AgentOrchestrationGraph graph = AgentOrchestrationGraph.validate(body, allowed);
+        List<?> nodes = graph.nodes();
+        List<?> edges = graph.edges();
+        globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_nodes", Json.toJson(nodes), "orchestration nodes");
+        globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_edges", Json.toJson(edges), "orchestration edges");
+        Object mode = body.get("mode");
+        if (mode != null) {
+            globalSettingService.upsertValue("orchestration", "graph_" + agentId + "_mode", mode.toString(), "orchestration mode");
         }
         Map<String, Object> result = new LinkedHashMap<>(4);
         result.put("agentId", agentId);
@@ -431,10 +432,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
 
         // 读取持久化编排图，按边做拓扑排序；无图时按 sort 顺序串行。
         List<String> order = new ArrayList<>(4); // 编排节点数量不可预估
+        boolean persisted = false;
         try {
             Optional<String> nodesJson = globalSettingService.getValue("orchestration", "graph_" + agentId + "_nodes");
             Optional<String> edgesJson = globalSettingService.getValue("orchestration", "graph_" + agentId + "_edges");
             if (nodesJson.isPresent() && edgesJson.isPresent()) {
+                persisted = true;
                 @SuppressWarnings({"rawtypes","unchecked"})
                 List<Map<String, Object>> nodes = (List<Map<String, Object>>) (List) Json.fromJsonToList(nodesJson.get(), Map.class);
                 @SuppressWarnings({"rawtypes","unchecked"})
@@ -442,27 +445,29 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 order = topologicalOrder(nodes, edges, subById.keySet(), master.getAgentId());
             }
         } catch (Exception e) {
-            log.warn("[Agent] 编排拓扑排序失败 agentId={}，回退 sort 顺序: {}", agentId, e.getMessage());
+            throw new IllegalStateException("编排图无效，无法执行: " + e.getMessage(), e);
         }
-        if (order.isEmpty()) {
+        if (!persisted) {
             for (SysAiAgent sub : subs) {
                 order.add(sub.getAgentId());
             }
         }
+        if (order.isEmpty()) throw new IllegalStateException("编排中没有可执行的子 Agent");
 
         Map<String, String> outputs = new LinkedHashMap<>(4); // 子 Agent 数量不可预估
         String current = input != null ? input : "";
         for (String subId : order) {
+            agentRunService.checkCancelled(run == null ? null : run.runId());
             SysAiAgent sub = subById.get(subId);
             if (sub == null) {
-                continue;
+                throw new IllegalStateException("编排子 Agent 不可用: " + subId);
             }
             ChatClient client = buildChatClient(sub);
             if (client == null) {
                 log.warn("[Agent] 编排跳过子 Agent（无可用模型/凭证）: {}", subId);
                 agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, subId,
                         null, "跳过：无可用模型/凭证", AgentStepStatus.SKIPPED, runStartAt, System.currentTimeMillis());
-                continue;
+                throw new IllegalStateException("子 Agent 无可用模型/凭证: " + sub.getName());
             }
             long stepStartAt = System.currentTimeMillis();
             try {
@@ -471,6 +476,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                     client = client.system(sub.getSystemPrompt());
                 }
                 String out = client.chatSync(prompt);
+                agentRunService.checkCancelled(run == null ? null : run.runId());
                 outputs.put(subId, out);
                 // 简单串行模式：上一个子 Agent 的输出作为下一个子 Agent 的输入
                 current = out != null ? out : "";
@@ -481,6 +487,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 outputs.put(subId, "ERROR: " + e.getMessage());
                 agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, subId,
                         null, e.getMessage(), AgentStepStatus.FAILED, stepStartAt, System.currentTimeMillis());
+                throw new IllegalStateException("子 Agent 执行失败: " + sub.getName(), e);
+            } finally {
+                client.close();
             }
         }
 
@@ -518,6 +527,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 client = client.system(sub.getSystemPrompt());
             }
             String output = client.chatSync(prompt);
+            agentRunService.checkCancelled(run == null ? null : run.runId());
             agentRunService.appendStep(run == null ? null : run.runId(), AgentStepType.SUB_AGENT, sub.getName(),
                     prompt, output, AgentStepStatus.OK, startedAt, System.currentTimeMillis());
             agentRunService.completeRun(run == null ? null : run.runId(), output);
@@ -547,6 +557,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 result.put("runId", run.runId());
             }
             return result;
+        } finally {
+            client.close();
         }
     }
 
@@ -563,12 +575,15 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                                                  Set<String> validSubIds, String masterId) {
         Map<String, Integer> indegree = new LinkedHashMap<>(4); // 节点数量不可预估
         Map<String, List<String>> adj = new LinkedHashMap<>(4); // 节点数量不可预估
+        Map<String, String> nodeAgents = new HashMap<>();
         for (Map<String, Object> node : nodes) {
-            Object id = node.get("agent_id") != null ? node.get("agent_id") : node.get("id");
+            Object id = node.get("agent_id") != null ? node.get("agent_id")
+                    : node.get("agentId") != null ? node.get("agentId") : node.get("id");
             if (id == null) {
                 continue;
             }
             String sid = id.toString();
+            nodeAgents.put(String.valueOf(node.get("id")), sid);
             if (!validSubIds.contains(sid) || sid.equals(masterId)) {
                 continue;
             }
@@ -581,8 +596,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             if (src == null || tgt == null) {
                 continue;
             }
-            String s = src.toString();
-            String t = tgt.toString();
+            String s = nodeAgents.getOrDefault(src.toString(), src.toString());
+            String t = nodeAgents.getOrDefault(tgt.toString(), tgt.toString());
             if (!validSubIds.contains(t) || t.equals(masterId)) {
                 continue;
             }
@@ -612,11 +627,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 }
             }
         }
-        // 环或孤立节点兜底：追加尚未排序的合法子 Agent
-        for (String id : indegree.keySet()) {
-            if (!order.contains(id)) {
-                order.add(id);
-            }
+        if (order.size() != indegree.size()) {
+            throw new IllegalArgumentException("编排存在循环依赖，禁止执行");
         }
         return order;
     }
@@ -636,6 +648,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         String resolvedModel = modelName != null && !modelName.isBlank()
                 ? modelName : "agent-" + agent.getName();
+        String existing = registeredModels.entrySet().stream()
+                .filter(entry -> !entry.getKey().equals(agentId) && entry.getValue().equalsIgnoreCase(resolvedModel))
+                .map(Map.Entry::getKey).findFirst().orElse(null);
+        if (existing != null) {
+            throw new IllegalArgumentException("模型名称已被其他 Agent 使用: " + resolvedModel);
+        }
         /**
          * rebuildAgent。
          * @param agent Agent
@@ -645,8 +663,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
  // Agent-as-模型：包装为 对话客户端 注册到对话注册中心
         Agent runtime = agentRegistry.getByName(agent.getName());
         if (runtime != null) {
+            removeRegisteredModel(agent);
             chatClientRegistry.registerAgentModel(resolvedModel, new AgentChatClient(runtime),
                     "chat", "tools", "skills", "routing");
+            registeredModels.put(agentId, resolvedModel);
             log.info("[Agent] Agent {} 已注册为模型 {}", agent.getName(), resolvedModel);
         } else {
             // 运行时没建起来（构建异常已在 rebuildAgent 记 ERROR），必须如实失败：
@@ -666,15 +686,14 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     @Override
     public void unregisterModel(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
-        String resolvedModel = agent.getName() != null ? "agent-" + agent.getName() : agentId;
-        chatClientRegistry.unregisterAgentModel(resolvedModel);
+        removeRegisteredModel(agent);
         log.info("[Agent] Agent {} 已从模型注册中心注销", agent.getName());
     }
 
     @Override
     public Map<String, Object> getRegisteredModelInfo(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
-        String resolvedModel = "agent-" + agent.getName();
+        String resolvedModel = registeredModels.getOrDefault(agentId, "agent-" + agent.getName());
         boolean registered = chatClientRegistry.isAgentModelRegistered(resolvedModel);
         Map<String, Object> info = new LinkedHashMap<>(4);
         info.put("agentId", agentId);
@@ -698,6 +717,14 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         try {
             String agentName = agent.getName();
+            if (!Boolean.TRUE.equals(agent.getEnabled())) {
+                removeRegisteredModel(agent);
+                agentRegistry.unregister(agentName);
+                agentManager.destroy(agent.getAgentId());
+                return;
+            }
+            String registeredModel = registeredModels.get(agent.getAgentId());
+            if (registeredModel != null) chatClientRegistry.unregisterAgentModel(registeredModel);
             agentRegistry.unregister(agentName);
 
             // opencode 运行时禁止 leader 定义（OpencodeServerAgent#validateDefinition 对 isLeader()
@@ -795,6 +822,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             // 同时按业务 id 纳入运行时托管：接口与管理页按 agentId 就能拿到这个实例，
             // 并对它做中断（interrupt）与状态查看——只按 name 索引是查不到的。
             agentManager.register(agent.getAgentId(), agentInstance);
+            if (registeredModel != null) {
+                chatClientRegistry.registerAgentModel(registeredModel, new AgentChatClient(agentInstance),
+                        "chat", "tools", "skills", "routing");
+            }
             log.info("[Agent] 已构建并注册 Agent: name={}, mode={}, subAgents={}",
                     agentName, mode, subs.size());
         } catch (Exception e) {
@@ -815,6 +846,15 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     // ==================== 辅助方法 ====================
 
     /**
+     * 清理 Agent 对外模型注册，删除、停用和重新注册共用同一生命周期入口。
+     * @param agent Agent 定义
+     */
+    private void removeRegisteredModel(SysAiAgent agent) {
+        String registered = registeredModels.remove(agent.getAgentId());
+        chatClientRegistry.unregisterAgentModel(registered != null ? registered : "agent-" + agent.getName());
+    }
+
+    /**
      * 构建对话客户端。
      * @param agent Agent
      * @return 构建对话客户端的结果
@@ -824,28 +864,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 || agent.getModel() == null || agent.getModel().isBlank()) {
             return null;
         }
-        SysAccountChannel provider = channelService.find(agent.getProviderId());
-        if (provider == null || provider.getBaseUrl() == null) {
-            return null;
-        }
-        String apiKey = extractApiKey(provider.getCredentials());
-        Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-        Map<String, Object> extra = provider.getExtra();
-        Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
-                provider, ModelClientResolver.ownerScopeOf(provider));
-        ChatClientSetting setting = ChatClientSetting.builder()
-                .provider(provider.getPlatform())
-                .appKey(apiKey)
-                .baseUrl(provider.getBaseUrl())
-                .extraHeaders(extraHeaders)
-                // 认证方案：Dots Studio 这类只认 api-key 头的服务商靠这三项才能通过鉴权
-                .authScheme(provider.getAuthScheme())
-                .authHeader(extra == null || extra.get("auth_header") == null ? null : extra.get("auth_header").toString())
-                .authPrefix(extra == null || extra.get("auth_prefix") == null ? null : extra.get("auth_prefix").toString())
-                .proxy(provider.getProxy())
-                .routes(channelRoutes)
-                .build();
-        return ChatClient.create(setting).model(agent.getModel());
+        return modelClientResolver.resolveFresh(agent.getProviderId() + ":" + agent.getModel());
     }
 
     /**
@@ -922,7 +941,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         map.put("created_at", agent.getCreatedAt());
         map.put("updated_at", agent.getUpdatedAt());
         if (agent.getParentId() == null) {
-            String resolvedModel = "agent-" + agent.getName();
+            String resolvedModel = registeredModels.getOrDefault(agent.getAgentId(), "agent-" + agent.getName());
             map.put("registered_model_name", chatClientRegistry.isAgentModelRegistered(resolvedModel) ? resolvedModel : null);
         }
         if (includeSubs) {
@@ -1004,38 +1023,6 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         } catch (NumberFormatException e) {
             return def;
         }
-    }
-
-    /**
-     * extractapiKey。
-     * @param credentials 凭证
-     * @return extractapiKey的结果
-     */
-    private static String extractApiKey(Map<String, Object> credentials) {
-        return ProviderCredentials.firstApiKey(credentials);
-    }
-
-    @SuppressWarnings("unchecked")
-    /**
-     * extractextra头部。
-     * @param extra extra
-     * @return extractextra头部的结果
-     */
-    private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
-        if (extra == null) {
-            return null;
-        }
-        Object headers = extra.get("custom_headers");
-        if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new HashMap<>(8); // 自定义头部数量不可预估
-            map.forEach((k, v) -> {
-                if (k != null && v != null) {
-                    result.put(k.toString(), v.toString());
-                }
-            });
-            return result.isEmpty() ? null : result;
-        }
-        return null;
     }
 
     /**

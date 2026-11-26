@@ -266,6 +266,21 @@ public class ModelClientResolver {
     }
 
     /**
+     * 为持有会话状态的 Agent 创建独立客户端，避免共享缓存实例的提示词、历史与工具互相覆盖。
+     *
+     * @param qualifiedModel 渠道限定模型名
+     * @return 独立客户端，不可用时返回 null
+     */
+    public ChatClient resolveFresh(String qualifiedModel) {
+        ParsedModel parsed = parse(qualifiedModel);
+        if (parsed == null) {
+            return null;
+        }
+        SysAccountChannel provider = resolveProvider(parsed);
+        return provider == null ? null : build(provider, parsed.model(), ownerScopeOf(provider));
+    }
+
+    /**
      * 计算归属作用域，用于缓存键与连接过滤。
      *
      * <p>免费渠道固定走「管理员/系统账号池」（{@code _free}，与当前用户无关）；

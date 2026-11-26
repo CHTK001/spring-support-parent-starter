@@ -14,7 +14,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.common.support.utils.CookieUtil;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;

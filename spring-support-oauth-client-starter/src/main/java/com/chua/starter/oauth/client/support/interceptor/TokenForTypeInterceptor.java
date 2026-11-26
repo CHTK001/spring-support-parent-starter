@@ -1,6 +1,6 @@
 package com.chua.starter.oauth.client.support.interceptor;
 
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForType;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.exception.OauthException;

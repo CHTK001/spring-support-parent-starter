@@ -3,10 +3,10 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
-import com.chua.starter.ai.support.configuration.agent.AgentGlobalSettingProvider;
-import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.agent.AgentRuntimeProfile;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.ai.agent.Agent;
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -53,9 +54,9 @@ public class ApiAgentRuntimeController {
     private final AgentManager agentManager;
 
     /**
-     * 全局设置读取器：读 agent 分组的唯一名称（getStrDirect 直连库，避免缓存旧值）
+     * 全局设置服务：解析 agent 分组的运行时基线（与对话装配侧同源，带缓存）
      */
-    private final GlobalSettingReader globalSettingReader;
+    private final SysAiGlobalSettingService globalSettingService;
 
     /**
      * Agent 注册表：按名称解析已注册的运行时 Agent
@@ -97,16 +98,18 @@ public class ApiAgentRuntimeController {
      * 未配置名称、名称未注册分别返回明确的业务错误。
      * 管理员专属：agent 分组字段 adminOnly，写路径也仅管理员可改。</p>
      *
+     * <p>响应里同时带 {@code profile}（当前生效的运行时基线快照）与 {@code preview}：
+     * 传 {@code name} 时 preview 是「把名称换成它」后的基线，便于保存前核对。</p>
+     *
      * @param name 待解析的 Agent 名称（可选；缺省解析当前已保存配置）
-     * @return 配置名称与解析到的 Agent 概要（含运行态，若有）
+     * @return 配置名称、解析到的 Agent 概要（含运行态）、运行时基线与预览
      */
     @Permission("admin")
     @GetMapping("/configured")
     public ApiResult<Map<String, Object>> configured(
             @RequestParam(value = "name", required = false) String name) {
-        String configuredName = globalSettingReader.getStrDirect(
-                AgentGlobalSettingProvider.GROUP, AgentGlobalSettingProvider.FIELD_AGENT_NAME);
-        String source = (name != null && !name.isBlank()) ? name : configuredName;
+        AgentRuntimeProfile profile = AgentRuntimeProfile.resolve(globalSettingService);
+        String source = (name != null && !name.isBlank()) ? name : profile.agentName();
         if (source == null || source.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "尚未配置 Agent 名称（设置中心 → Agent 配置）");
         }
@@ -124,7 +127,45 @@ public class ApiAgentRuntimeController {
         if (definitionId instanceof String id && agentManager.contains(id)) {
             result.put("runtime", agentManager.status(id));
         }
+        result.put("profile", profileOf(profile));
+        result.put("preview", profileOf(profile.withAgentName(resolvedName)));
         return ApiResult.ok(result);
+    }
+
+    /**
+     * 读取当前生效的 Agent 运行时基线（配置中心「Agent 配置」的只读快照）。
+     *
+     * <p>与 {@code AiChatFacadeServiceImpl#maybeWrapAgent} 走同一个解析入口
+     * （{@link AgentRuntimeProfile#resolve}），因此页面上看到的基线与真正装配到
+     * 会话 Agent 上的值同源，不存在「显示一套、跑另一套」。</p>
+     *
+     * @return 运行时基线快照
+     */
+    @Permission("admin")
+    @GetMapping("/baseline")
+    public ApiResult<Map<String, Object>> baseline() {
+        return ApiResult.ok(profileOf(AgentRuntimeProfile.resolve(globalSettingService)));
+    }
+
+    /**
+     * 把运行时基线档案摊成前端可读的 Map。
+     *
+     * @param profile 基线档案
+     * @return 字段视图
+     */
+    private static Map<String, Object> profileOf(AgentRuntimeProfile profile) {
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("agentName", profile.agentName());
+        view.put("mcp", profile.mcp().name().toLowerCase(Locale.ROOT));
+        view.put("mcpServers", profile.mcpServers());
+        view.put("subAgent", profile.subAgent().name().toLowerCase(Locale.ROOT));
+        view.put("defaultSkills", profile.defaultSkills());
+        view.put("memory", profile.memory());
+        view.put("planning", profile.planning());
+        view.put("maxToolIterations", profile.maxToolIterations());
+        view.put("maxTotalTokens", profile.maxTotalTokens());
+        view.put("requiresAgent", profile.requiresAgent());
+        return view;
     }
 
     /**

@@ -5,7 +5,7 @@ import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.AnnotationUtils;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;

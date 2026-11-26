@@ -1260,16 +1260,10 @@ public class ChatStreamOrchestrator {
             resumeParentDbId = Long.parseLong(resumeParentId);
         }
 
-        // 切片四：用户经 /v2/chat/resume 决议时，按 replyId+toolCallId CAS 回写匹配的
-        // PENDING 审批单。失败只记日志，不阻断 resume 主链路（确认卡恢复不依赖审批单）。
+        // 恢复执行前核对审批归属、时效与决策；校验失败必须阻断工具执行。
         if (resumeReplyId != null && !resumeReplyId.isBlank() && !decisions.isEmpty()) {
-            try {
-                agentApprovalService.resolveByReplyId(dialogId, resumeReplyId, decisions,
-                        AiUserContext.currentUserId());
-            } catch (Exception e) {
-                log.warn("[ChatStream] 审批单随 resume 回写失败（不影响恢复）replyId={}: {}",
-                        resumeReplyId, e.getMessage());
-            }
+            agentApprovalService.resolveByReplyId(dialogId, resumeReplyId, decisions,
+                    AiUserContext.currentUserId());
         }
 
         // create 帧携带 DB 父消息作为兜底；前端会按当前渲染的用户消息 id 覆盖

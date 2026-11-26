@@ -3,7 +3,7 @@ package com.chua.starter.monitor.support.operlog;
 import com.chua.starter.apm.support.web.ApmOperLogSink;
 import com.chua.starter.apm.support.web.ApmRequest;
 import com.chua.starter.apm.support.web.ApmResult;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.monitor.support.entity.MsApmOperLog;
 import com.chua.starter.monitor.support.service.ApmOperLogService;
 import jakarta.servlet.http.HttpServletRequest;

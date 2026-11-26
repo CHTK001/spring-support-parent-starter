@@ -67,6 +67,12 @@ public interface AgentRunService {
     void failRun(String runId, String error);
 
     /**
+     * 执行边界检查取消状态，取消后不得进入下一个模型/工具调用。
+     * @param runId 运行标识
+     */
+    void checkCancelled(String runId);
+
+    /**
      * 回填运行与会话 / 子代理记录的关联（会话侧调用入口在拿到运行标识后调用）。
      *
      * <p>运行在 Agent 服务内创建时尚无会话上下文（sessionId 为空），本方法补齐

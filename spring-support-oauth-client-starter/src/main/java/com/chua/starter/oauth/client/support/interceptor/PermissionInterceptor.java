@@ -4,7 +4,7 @@ package com.chua.starter.oauth.client.support.interceptor;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.common.support.annotations.Permission;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.constants.AuthConstant;
 import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;

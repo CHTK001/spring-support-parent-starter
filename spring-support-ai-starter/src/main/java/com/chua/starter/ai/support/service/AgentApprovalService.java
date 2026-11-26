@@ -82,14 +82,15 @@ public class AgentApprovalService {
      * 按单号 CAS 决议（仅 PENDING 可变）
      */
     private static final String RESOLVE_BY_ID_SQL = "UPDATE " + TABLE + " SET status = ?, decided_by = ?, "
-            + "decided_at = ?, decision_reason = ?, resolved_at = ? WHERE sys_ai_approval_id = ? AND status = 'PENDING'";
+            + "decided_at = ?, decision_reason = ?, resolved_at = ? WHERE sys_ai_approval_id = ? "
+            + "AND sys_user_id = ? AND status = 'PENDING' AND expire_at > ?";
 
     /**
      * 按 会话 + replyId + toolCallId CAS 回写（仅 PENDING 可变）
      */
     private static final String RESOLVE_BY_REPLY_SQL = "UPDATE " + TABLE + " SET status = ?, decided_by = ?, "
             + "decided_at = ?, resolved_at = ? WHERE sys_ai_session_id = ? AND reply_id = ? AND tool_call_id = ? "
-            + "AND status = 'PENDING'";
+            + "AND sys_user_id = ? AND status = 'PENDING' AND expire_at > ?";
 
     /**
      * 数据库访问
@@ -167,16 +168,18 @@ public class AgentApprovalService {
      */
     public ApprovalResolveResult resolve(String approvalId, boolean approved, String decidedBy, String reason) {
         AgentApprovalRecord rec = find(approvalId);
-        if (rec == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "审批单不存在: " + approvalId);
-        }
+        requireOwner(rec, decidedBy);
         if (!rec.isPending()) {
             // 幂等：已决议/已过期直接返回现状，未发生状态迁移
             return new ApprovalResolveResult(rec, false);
         }
         String target = approved ? AgentApprovalRecord.STATUS_APPROVED : AgentApprovalRecord.STATUS_REJECTED;
         long now = System.currentTimeMillis();
-        int updated = jdbcTemplate.update(RESOLVE_BY_ID_SQL, target, decidedBy, now, reason, now, approvalId);
+        if (rec.expireAt() <= now) {
+            return new ApprovalResolveResult(expire(rec, now), false);
+        }
+        int updated = jdbcTemplate.update(RESOLVE_BY_ID_SQL, target, decidedBy, now, reason, now,
+                approvalId, decidedBy, now);
         if (updated == 0) {
             // 并发决议被抢先，返回最新现状（未落定）
             AgentApprovalRecord latest = find(approvalId);
@@ -220,8 +223,12 @@ public class AgentApprovalService {
             }
             String target = decision.isConfirmed()
                     ? AgentApprovalRecord.STATUS_APPROVED : AgentApprovalRecord.STATUS_REJECTED;
+            AgentApprovalRecord existing = findByReplyAndToolCall(dialogId, replyId, decision.getToolCallId());
+            if (existing != null) {
+                requireResumable(existing, decidedBy, target, now);
+            }
             int updated = jdbcTemplate.update(RESOLVE_BY_REPLY_SQL, target, decidedBy, now, now,
-                    dialogId, replyId, decision.getToolCallId());
+                    dialogId, replyId, decision.getToolCallId(), decidedBy, now);
             if (updated > 0) {
                 count++;
                 AgentApprovalRecord rec = findByReplyAndToolCall(dialogId, replyId, decision.getToolCallId());
@@ -230,6 +237,10 @@ public class AgentApprovalService {
                     extra.put("decidedBy", decidedBy == null ? "" : decidedBy);
                     publishApprovalEvent(AiSessionEventBroadcaster.TYPE_AGENT_APPROVAL_RESOLVED, rec, extra);
                 }
+            } else if (existing != null) {
+                // CAS 失败后重新核对，避免另一标签页的拒绝/过期被恢复执行覆盖。
+                requireResumable(findByReplyAndToolCall(dialogId, replyId, decision.getToolCallId()),
+                        decidedBy, target, System.currentTimeMillis());
             }
         }
         if (count > 0) {
@@ -265,6 +276,9 @@ public class AgentApprovalService {
      * @return { total, page, pageSize, items }
      */
     public Map<String, Object> listForUser(String userId, String status, int page, int pageSize) {
+        if (userId == null || userId.isBlank()) {
+            throw new ApiException(ApiErrorCode.UNAUTHORIZED, "请先登录");
+        }
         int safePage = Math.max(page, 1);
         int size = pageSize < 1 ? 20 : Math.min(pageSize, 200);
         StringBuilder where = new StringBuilder(" WHERE sys_user_id = ?");
@@ -278,7 +292,7 @@ public class AgentApprovalService {
                 Integer.class, args.toArray());
         List<Object> pageArgs = new ArrayList<>(args);
         pageArgs.add(size);
-        pageArgs.add((safePage - 1) * size);
+        pageArgs.add((long) (safePage - 1) * size);
         List<AgentApprovalRecord> items = jdbcTemplate.query(
                 "SELECT " + COLS + " FROM " + TABLE + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 (rs, rowNum) -> mapApproval(rs), pageArgs.toArray());
@@ -300,20 +314,11 @@ public class AgentApprovalService {
             long now = System.currentTimeMillis();
             List<AgentApprovalRecord> overdue = jdbcTemplate.query(
                     "SELECT " + COLS + " FROM " + TABLE
-                            + " WHERE status = 'PENDING' AND expire_at < ? ORDER BY created_at LIMIT "
+                            + " WHERE status = 'PENDING' AND expire_at <= ? ORDER BY created_at LIMIT "
                             + EXPIRE_BATCH,
                     (rs, rowNum) -> mapApproval(rs), now);
             for (AgentApprovalRecord rec : overdue) {
-                int updated = jdbcTemplate.update(
-                        "UPDATE " + TABLE + " SET status = ?, resolved_at = ? "
-                                + "WHERE sys_ai_approval_id = ? AND status = 'PENDING'",
-                        AgentApprovalRecord.STATUS_EXPIRED, now, rec.approvalId());
-                if (updated > 0) {
-                    AgentApprovalRecord expired = withStatus(rec, AgentApprovalRecord.STATUS_EXPIRED, now);
-                    Map<String, Object> extra = new LinkedHashMap<>(2);
-                    extra.put("reason", "审批超时自动关闭");
-                    publishApprovalEvent(AiSessionEventBroadcaster.TYPE_AGENT_APPROVAL_RESOLVED, expired, extra);
-                }
+                expire(rec, now);
             }
             if (!overdue.isEmpty()) {
                 log.info("[AgentApproval] 过期清扫完成 count={}", overdue.size());
@@ -321,6 +326,58 @@ public class AgentApprovalService {
         } catch (Exception e) {
             log.warn("[AgentApproval] 过期清扫失败（下一轮重试）: {}", e.getMessage());
         }
+    }
+
+    /**
+     * 所有决议入口先校验归属；不存在与越权使用相同响应，避免泄露单据。
+     *
+     * @param rec 审批单
+     * @param userId 当前决议用户
+     */
+    private static void requireOwner(AgentApprovalRecord rec, String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new ApiException(ApiErrorCode.UNAUTHORIZED, "请先登录");
+        }
+        if (rec == null || !userId.equals(rec.userId())) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "审批单不存在");
+        }
+    }
+
+    /**
+     * 校验聊天恢复决策与持久化审批一致，超时和相反决策均禁止恢复。
+     *
+     * @param rec 审批单
+     * @param userId 当前用户
+     * @param target 请求的决议状态
+     * @param now 当前时间
+     */
+    private void requireResumable(AgentApprovalRecord rec, String userId, String target, long now) {
+        requireOwner(rec, userId);
+        if (rec.isPending() && rec.expireAt() <= now) {
+            expire(rec, now);
+            throw new ApiException(ApiErrorCode.CONFLICT, "审批已过期，请重新发起请求");
+        }
+        if (!rec.isPending() && !target.equals(rec.status())) {
+            throw new ApiException(ApiErrorCode.CONFLICT, "审批已结束，不能更改决策");
+        }
+    }
+
+    /**
+     * 原子关闭过期单据，只有状态迁移胜出者广播一次。
+     *
+     * @param rec 原单据
+     * @param now 当前时间
+     * @return 数据库中的最新单据
+     */
+    private AgentApprovalRecord expire(AgentApprovalRecord rec, long now) {
+        int updated = jdbcTemplate.update("UPDATE " + TABLE + " SET status = ?, resolved_at = ? "
+                        + "WHERE sys_ai_approval_id = ? AND status = 'PENDING' AND expire_at <= ?",
+                AgentApprovalRecord.STATUS_EXPIRED, now, rec.approvalId(), now);
+        if (updated > 0) {
+            publishApprovalEvent(AiSessionEventBroadcaster.TYPE_AGENT_APPROVAL_RESOLVED,
+                    withStatus(rec, AgentApprovalRecord.STATUS_EXPIRED, now), Map.of("reason", "审批超时自动关闭"));
+        }
+        return find(rec.approvalId());
     }
 
     /**

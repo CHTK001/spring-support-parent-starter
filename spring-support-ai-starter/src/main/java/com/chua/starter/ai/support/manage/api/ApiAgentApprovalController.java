@@ -82,13 +82,16 @@ public class ApiAgentApprovalController {
     @PostMapping("/{id}/resolve")
     public ApiResult<Map<String, Object>> resolve(@PathVariable("id") String id,
                                                   @RequestBody Map<String, Object> body) {
-        boolean approved = Boolean.parseBoolean(String.valueOf(body.get("approved")));
+        if (!(body.get("approved") instanceof Boolean approved)) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM, "approved 必须为布尔值");
+        }
         String reason = body.get("reason") == null ? null : String.valueOf(body.get("reason"));
         String decidedBy = AiUserContext.requireUserId();
         AgentApprovalService.ApprovalResolveResult result =
                 agentApprovalService.resolve(id, approved, decidedBy, reason);
         boolean resumed = false;
-        if (result.transitioned() && approved) {
+        if (result.transitioned()) {
             resumed = forwardResume(result.record());
         }
         Map<String, Object> data = new LinkedHashMap<>(4);
@@ -116,7 +119,7 @@ public class ApiAgentApprovalController {
         try {
             Map<String, Object> decision = new HashMap<>(4);
             decision.put("toolCallId", rec.toolCallId());
-            decision.put("confirmed", true);
+            decision.put("confirmed", AgentApprovalRecord.STATUS_APPROVED.equals(rec.status()));
             decision.put("mode", "once");
             Map<String, Object> body = new HashMap<>(4);
             body.put("sessionId", rec.sessionUid());

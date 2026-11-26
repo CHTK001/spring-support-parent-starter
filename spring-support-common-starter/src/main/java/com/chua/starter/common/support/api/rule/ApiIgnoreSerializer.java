@@ -4,7 +4,7 @@ import com.chua.common.support.utils.ArrayUtils;
 import com.chua.starter.common.support.api.annotations.ApiFieldIgnore;
 import com.chua.starter.common.support.api.annotations.ApiGroup;
 import com.chua.spring.support.configuration.SpringBeanUtils;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;

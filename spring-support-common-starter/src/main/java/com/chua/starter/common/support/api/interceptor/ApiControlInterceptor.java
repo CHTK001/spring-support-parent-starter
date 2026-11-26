@@ -20,7 +20,7 @@ import com.chua.starter.common.support.api.permission.PermissionRules;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.chua.starter.common.support.utils.RequestUtils.*;
+import static com.chua.spring.support.utils.RequestUtils.*;
 
 /**
  * 鉴权客户端操作

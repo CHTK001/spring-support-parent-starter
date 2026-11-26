@@ -159,8 +159,8 @@ public class ChatClientRegistry {
         }
         // 先幂等移除旧注册
         unregisterAgentModel(modelName);
-        // 注册到通用索引
-        register("agent", modelName, client, capabilities);
+        // 每个 Agent 模型使用独立索引；共享 provider=agent 会移除前一个模型。
+        register("agent:" + modelName, modelName, client, capabilities);
  // 追踪 Agent 模型名称
         registeredAgentModelNames.add(modelName);
         log.info("[ChatClientRegistry] 注册 Agent 模型: {}", modelName);
@@ -176,7 +176,10 @@ public class ChatClientRegistry {
             return;
         }
         String key = modelName.toLowerCase();
-        registeredAgentModelNames.remove(modelName);
+        boolean registered = registeredAgentModelNames.removeIf(name -> name.equalsIgnoreCase(modelName));
+        if (!registered) {
+            return;
+        }
  // 通过 模型索引 找到要移除的 客户端
         ChatClient target = modelIndex.get(key);
         if (target != null) {
@@ -198,7 +201,7 @@ public class ChatClientRegistry {
         if (modelName == null) {
             return false;
         }
-        return registeredAgentModelNames.contains(modelName);
+        return registeredAgentModelNames.stream().anyMatch(name -> name.equalsIgnoreCase(modelName));
     }
 
     /**
@@ -367,6 +370,7 @@ public class ChatClientRegistry {
         modelIndex.clear();
         capabilityIndex.clear();
         allClients.clear();
+        registeredAgentModelNames.clear();
         defaultClient = null;
         aggregateClient = null;
         log.info("[ChatClientRegistry] 所有 ChatClient 已关闭");

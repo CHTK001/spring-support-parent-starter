@@ -3,7 +3,7 @@ package com.chua.starter.common.support.api.gray;
 import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.annotations.ApiGray;
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.expression.EvaluationContext;

@@ -1,7 +1,7 @@
 package com.chua.starter.oauth.client.support.ratelimit;
 
 import com.chua.common.support.lang.json.Json;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;

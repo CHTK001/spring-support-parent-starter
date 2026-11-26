@@ -1,13 +1,13 @@
 package com.chua.starter.common.support.log;
 
-import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.logger.constant.MdcConstant;
 import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.HttpRequestInterceptor;
 import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.MDC;
 
-import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
-import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
+import static com.chua.starter.logger.constant.MdcConstant.TRACE_ID;
+import static com.chua.starter.logger.constant.MdcConstant.X_TRACE_ID;
 
 /**
  * http客户端 追踪标识拦截器（兼容 http客户端 5.x）。

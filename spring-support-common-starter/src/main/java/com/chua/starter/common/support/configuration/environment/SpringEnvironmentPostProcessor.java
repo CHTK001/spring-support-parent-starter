@@ -1,6 +1,6 @@
 package com.chua.starter.common.support.configuration.environment;
 
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;

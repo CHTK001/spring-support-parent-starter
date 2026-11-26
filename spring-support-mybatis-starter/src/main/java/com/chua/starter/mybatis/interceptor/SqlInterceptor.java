@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
-import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
+import static com.chua.starter.logger.constant.MdcConstant.TRACE_ID;
 
 /**
    * SQL拦截器

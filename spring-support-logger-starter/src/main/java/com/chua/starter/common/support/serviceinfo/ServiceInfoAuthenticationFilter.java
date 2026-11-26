@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.serviceinfo;
 
 import com.chua.common.support.constant.CommonConstant;
-import com.chua.starter.common.support.utils.IpUtils;
+import com.chua.spring.support.utils.IpUtils;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

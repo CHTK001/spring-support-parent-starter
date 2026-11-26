@@ -1,4 +1,4 @@
-package com.chua.starter.common.support.constant;
+package com.chua.starter.logger.constant;
 
 /**
  * MDC 链路追踪常量

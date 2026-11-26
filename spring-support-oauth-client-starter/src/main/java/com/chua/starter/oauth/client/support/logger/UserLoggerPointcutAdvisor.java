@@ -114,7 +114,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         outputLog(isSuccess, logMessage, throwable);
 
         // 构建日志信息对象
-        jakarta.servlet.http.HttpServletRequest req = com.chua.starter.common.support.utils.RequestUtils.getRequest();
+        jakarta.servlet.http.HttpServletRequest req = com.chua.spring.support.utils.RequestUtils.getRequest();
         String header = req != null ? req.getHeader("login-agent") : null;
         UserAgent.UserAgentInfo userAgent = UserAgent.parseUserAgentString(header);
         UserLoggerInfo userLoggerInfo = new UserLoggerInfo(name);

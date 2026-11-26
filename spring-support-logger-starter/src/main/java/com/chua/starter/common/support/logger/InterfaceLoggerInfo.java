@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.logger;
 
 import com.chua.starter.common.support.filter.CustomHttpServletRequestWrapper;
-import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.spring.support.utils.RequestUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.EqualsAndHashCode;
 import org.springframework.context.ApplicationEvent;
