@@ -45,6 +45,13 @@
 - 实现类落在**接口包及其子包**下时可被 `SamePackageServiceResolver` 扫到，索引非必需；只有跨包实现才必须登记（datapool 的 nginx 实现属前者，框架侧不需要 nginx 索引）。
 - 定期对账脚本 `temp/namespace-audit/index-audit.js`：判据 = 索引键接口存在 + 每行实现类存在，输出 `MOVED/MISSING` 计数。
 
+split-package 扫描口径（2026-11-26 修正，旧结论作废）：
+
+- **模块粒度 = `src` 之前的完整相对路径**（`utils/utils-support-core-parent/utils-support-network-starter`），**不能取上层目录**。取父目录会把同一 parent 下的兄弟模块并成一个「模块」，兄弟模块之间的同包跨模块被误判为「同包同模块」，扫描结果假绿。
+- 按错误粒度曾得出「SPLIT=0」；按正确粒度实测仍有 **4 处**：`com.chua.common.support.network.tcp`（common 7 类 + network 1 类）、`com.chua.datalake.support.engine`（datalake-query + datalake-sink）、`com.chua.ffmpeg.support.processor`（ffmpeg 2 类 + ffmpeg-javacv 1 类）、`com.chua.starter.service.configuration`（api configuration 6 类 + service 2 类）。
+- 迁移评估与批次建议见 `D:\ch\验收报告\包结构残留寄宿迁移评估.md`；扫描脚本 `temp/namespace-audit/split-module-level.js`。
+- `@ComponentScan("...")`、`scanBasePackages = {"..."}`、`AutoConfiguration.imports` 里的包名/FQN 都是**字符串**，改包名时编译不报错，迁包必须逐条 grep 这些字面量。
+
 ## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
