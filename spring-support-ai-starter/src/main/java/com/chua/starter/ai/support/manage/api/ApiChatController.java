@@ -111,6 +111,8 @@ public class ApiChatController {
         c.setName((String) body.getOrDefault("name", "新对话"));
         if (body.get("model") instanceof Map) {
             c.setModel(uncheckedCast(body.get("model")));
+        } else if (body.get("model") instanceof String s && !s.isBlank()) {
+            c.setModel(Map.of("model", s));
         }
         if (body.get("extra") instanceof Map) {
             c.setExtra(uncheckedCast(body.get("extra")));
@@ -200,8 +202,12 @@ public class ApiChatController {
         if (body.containsKey("pinned_at") && body.get("pinned_at") != null) {
             patch.setPinnedAt(((Number) body.get("pinned_at")).longValue());
         }
-        if (body.containsKey("model") && body.get("model") instanceof Map) {
-            patch.setModel(uncheckedCast(body.get("model")));
+        if (body.containsKey("model")) {
+            if (body.get("model") instanceof Map) {
+                patch.setModel(uncheckedCast(body.get("model")));
+            } else if (body.get("model") instanceof String s && !s.isBlank()) {
+                patch.setModel(Map.of("model", s));
+            }
         }
         if (body.containsKey("execution_template_id")) {
             patch.setExecutionTemplateId(String.valueOf(body.get("execution_template_id")));

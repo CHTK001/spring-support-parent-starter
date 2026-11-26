@@ -2,32 +2,21 @@
 package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.ai.chat.ChatClientSetting;
-import com.chua.common.support.ai.chat.aggregate.MultiKeyChatClient;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupChatClient;
 import com.chua.common.support.ai.chat.aggregate.RouterGroupSetting;
 import com.chua.common.support.ai.chat.route.RouteTarget;
-import com.chua.common.support.task.cooldown.Backoff;
-import com.chua.common.support.task.cooldown.CooldownPolicies;
-import com.chua.common.support.task.cooldown.CooldownPolicy;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.account.channel.service.AccountChannelConnectionService;
 import com.chua.starter.account.channel.service.AccountChannelModelService;
 import com.chua.starter.account.channel.service.AccountChannelService;
 import com.chua.starter.account.channel.store.SysAccountChannel;
-import com.chua.starter.account.channel.store.SysAccountChannelConnection;
 import com.chua.starter.account.channel.store.SysAccountChannelModel;
 import com.chua.starter.ai.support.event.ChannelHealthProbeEvent;
-import com.chua.starter.ai.support.service.ChannelHealthService;
-import com.chua.starter.ai.support.util.ProviderCredentials;
 import com.chua.starter.ai.support.util.ProviderRouteTargets;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -72,16 +61,13 @@ public class ModelClientResolver {
      * 渠道业务（账号模块）
      */
     private final AccountChannelService channelService;
+    /** 账号模块拥有的客户端装配契约。 */
+    private final com.chua.starter.account.channel.service.AccountChannelChatClientService channelClients;
 
     /**
      * 渠道模型清单业务（账号模块的查询接口，含缓存）
      */
     private final AccountChannelModelService channelModelService;
-
-    /**
-     * 渠道连接业务（账号模块）：按归属作用域聚合密钥
-     */
-    private final AccountChannelConnectionService connectionService;
 
     /**
      * 客户端缓存：key = providerId::model
@@ -92,11 +78,6 @@ public class ModelClientResolver {
      * 渠道路由缓存：key = ownerScope
      */
     private final Map<String, CachedRoutes> routeCache = new ConcurrentHashMap<>();
-
-    /**
-     * 渠道健康探针服务：通道隔离（剔除下线的连接）
-     */
-    private final ChannelHealthService channelHealthService;
 
     /**
      * 渠道路由源（账号渠道 / 免登录渠道 / magpie 网关），按 {@link ChannelRouteSource#order()} 叠加
@@ -276,8 +257,20 @@ public class ModelClientResolver {
         if (parsed == null) {
             return null;
         }
-        SysAccountChannel provider = resolveProvider(parsed);
+        // Agent 的渠道是明确绑定，停用或模型下线时拒绝，不能回退到同名模型的其他渠道。
+        if (parsed.providerId() == null) return null;
+        channelService.requireAvailableModel(parsed.providerId(), parsed.model());
+        SysAccountChannel provider = channelService.find(parsed.providerId());
         return provider == null ? null : build(provider, parsed.model(), ownerScopeOf(provider));
+    }
+
+    /**
+     * 管理表单的绑定校验只查目录，不创建客户端或触发上游连接。
+     * @param providerId 渠道标识
+     * @param model 模型标识
+     */
+    public void validateBinding(String providerId, String model) {
+        channelService.requireAvailableModel(providerId, model);
     }
 
     /**
@@ -396,7 +389,7 @@ public class ModelClientResolver {
     /**
      * 按 Key 构建客户端：单 Key 与多 Key 走同一条路。
      *
-     * <p>只有一个 Key 时也包一层 {@link MultiKeyChatClient}：Key 的失败/成功必须
+     * <p>客户端构造与账号轮换由账号模块负责：Key 的失败/成功必须
      * 记进 {@link com.chua.common.support.ai.chat.aggregate.ClientCooldownRegistry}，
      * 否则同一个 Key 会被路由组反复选中、被上层当成健康账号。多 Key 的轮换、
      * 冷却与「自动切换」开关同样由它内部处理，这里不再另建一套聚合。</p>
@@ -407,127 +400,8 @@ public class ModelClientResolver {
      * @return 客户端；没有任何可用 Key 时返回 {@code null}
      */
     private ChatClient buildKeyed(SysAccountChannel provider, String model, String ownerScope) {
-        registerCooldownPolicy(provider);
-        Map<String, ChatClient> keyed = keyedClients(provider, model, ownerScope);
-        if (keyed.isEmpty()) {
-            return null;
-        }
-        return MultiKeyChatClient.multiKey(provider.getProviderId(), model,
-                MultiKeyChatClient.Strategy.of(extraString(provider.getExtra(), "load_strategy")),
-                !"false".equalsIgnoreCase(extraString(provider.getExtra(), "auto_switch_on_rate_limit")),
-                keyed);
-    }
-
-    /**
-     * 按「Key → 已绑定模型的客户端」收集单个供应商下的客户端。
-     *
-     * <p>多 Key 的轮换、冷却、开关全部交给 {@link MultiKeyChatClient} 在内部维护，
-     * 这里只负责把「哪些 Key、每个 Key 用哪个地址」翻译成客户端。</p>
-     *
-     * @param provider   供应商
-     * @param model      裸模型名
-     * @param ownerScope 归属作用域
-     * @return Key（可空，代表免鉴权）→ 客户端；无可用 Key 时为空表
-     */
-    private Map<String, ChatClient> keyedClients(SysAccountChannel provider, String model, String ownerScope) {
-        Map<String, Object> providerExtra = provider.getExtra() == null ? Map.of() : provider.getExtra();
-        List<String> keys = collectAllKeys(provider, ownerScope);
-        // 同时使用的账号数：只用前 N 个 Key 轮换（0/缺失 = 全部启用）
-        int maxAccounts = extraInt(providerExtra, "max_accounts");
-        if (maxAccounts > 0 && keys.size() > maxAccounts) {
-            log.info("[ModelClientResolver] 供应商 {} 限制同时使用 Key：{} / {}",
-                    provider.getProviderId(), maxAccounts, keys.size());
-            keys = new ArrayList<>(keys.subList(0, maxAccounts));
-        }
-        Map<String, String> extraHeaders = extractExtraHeaders(providerExtra);
-        mergePassthroughRequestHeaders(providerExtra, extraHeaders);
-        Map<String, Object> extraBody = extraMap(providerExtra, "extra_body");
-        Map<String, RouteTarget> channelRoutes = ProviderRouteTargets.isFreeChannel(provider.getPlatform())
-                ? mergedRoutes(provider, ownerScope)
-                : null;
-        if (keys.isEmpty()) {
-            if (!allowsKeyless(provider)) {
-                log.debug("[ModelClientResolver] 供应商无可用密钥: {}", provider.getProviderId());
-                return Map.of();
-            }
-            // 免费渠道 / 免登录渠道允许无 key：上游本身不鉴权，
-            // 缺失时由客户端按路由与 auth_scheme 决定是否发送认证头
-            keys = new ArrayList<>();
-            keys.add(null);
-        }
-        Map<String, ChatClient> result = new LinkedHashMap<>();
-        for (String key : keys) {
-            ChatClient raw = ChatClient.create(buildSetting(provider, key, extraHeaders, channelRoutes, model));
-            if (raw == null) {
-                continue;
-            }
-            if (!extraBody.isEmpty()) {
-                // 额外请求体：整段并入出站 JSON（prompt_cache_key、safety_settings 这类上游私有字段）
-                raw = raw.extraBody(extraBody);
-            }
-            result.put(key == null ? "" : key, raw.model(model));
-        }
-        return result;
-    }
-
-    /**
-     * 免登录对话渠道的 provider 行前缀。
-     *
-     * <p>渠道管理把「内置模型渠道」（DuckDuckGo / Trae 这类免登录对话渠道）的模型
-     * 落库到 {@code chat-<渠道>} 大写的 provider 行上，而 ChatClient SPI 注册的是
-     * 渠道自身的扩展名（{@code duckduckgo}）。解析客户端时按该前缀还原。</p>
-     */
-    private static final String CHAT_CHANNEL_PREFIX = "chat-";
-
-    /**
-     * 该供应商是否允许「无 Key」构建客户端。
-     *
-     * <p>两类供应商本来就没有 Key：</p>
-     * <ul>
-     *   <li>免费渠道（{@code free-channel}）：路由表里的上游可能免鉴权；</li>
-     *   <li>免登录内置渠道：渠道管理物化出来的 {@code chat-*} 行，以及
-     *       {@code auth_scheme=none} 的供应商（如 DuckDuckGo），凭据由客户端自己处理。</li>
-     * </ul>
-     *
-     * <p>缺了这条判断，这些供应商的模型行虽然能在模型管理里看到，
-     * 但会话选中时 {@link #keyedClients} 收集不到 Key 就会返回空表，
-     * 表现为「模型已启用却永远解析不到客户端」。</p>
-     *
-     * @param provider 供应商
-     * @return 允许无 Key 时返回 {@code true}
-     */
-    private static boolean allowsKeyless(SysAccountChannel provider) {
-        if (ProviderRouteTargets.isFreeChannel(provider.getPlatform())) {
-            return true;
-        }
-        String authScheme = provider.getAuthScheme();
-        if (authScheme != null && "none".equalsIgnoreCase(authScheme.trim())) {
-            return true;
-        }
-        String platform = provider.getPlatform();
-        return platform != null && platform.trim().toLowerCase(java.util.Locale.ROOT)
-                .startsWith(CHAT_CHANNEL_PREFIX);
-    }
-
-    /**
-     * 把供应商平台标识翻译成 ChatClient SPI 扩展名。
-     *
-     * <p>免登录对话渠道的 {@code chat-<渠道>} 行去掉前缀（{@code CHAT-DUCKDUCKGO} →
-     * {@code duckduckgo}），其它平台原样返回 —— SPI 查找本身大小写不敏感。</p>
-     *
-     * @param platform 供应商平台标识
-     * @return SPI 扩展名；入参为空返回 {@code null}
-     */
-    static String clientProviderOf(String platform) {
-        if (platform == null) {
-            return null;
-        }
-        String value = platform.trim();
-        if (value.length() > CHAT_CHANNEL_PREFIX.length()
-                && value.toLowerCase(java.util.Locale.ROOT).startsWith(CHAT_CHANNEL_PREFIX)) {
-            return value.substring(CHAT_CHANNEL_PREFIX.length());
-        }
-        return value;
+        return channelClients.create(provider.getProviderId(), model, ownerScope,
+                ProviderRouteTargets.isFreeChannel(provider.getPlatform()) ? mergedRoutes(provider, ownerScope) : null);
     }
 
     /**
@@ -662,147 +536,6 @@ public class ModelClientResolver {
     }
 
     /**
-     * 组装客户端配置，含认证方案与渠道路由。
-     *
-     * <p>认证方案必须一并下发：{@code auth_scheme} 决定是否发送认证头，
-     * {@code extra.auth_header} / {@code extra.auth_prefix} 决定头名与前缀。
-     * 缺了这三项，Dots Studio 这类只认 {@code api-key} 的服务商会因
-     * 收到 {@code Authorization: Bearer} 而 401。</p>
-     *
-     * @param provider      供应商
-     * @param apiKey        API Key
-     * @param extraHeaders  自定义请求头
-     * @param channelRoutes 渠道路由（免费渠道专用，可为 null）
-     * @param model         模型标识（用于解析 BaseUrl）
-     * @return 客户端配置
-     */
-    private ChatClientSetting buildSetting(SysAccountChannel provider, String apiKey,
-                                            Map<String, String> extraHeaders,
-                                            Map<String, RouteTarget> channelRoutes, String model) {
-        return ChatClientSetting.builder()
-                // 免登录对话渠道物化出来的 chat-<渠道> 行要去掉前缀再查 ChatClient SPI，
-                // 否则 create("CHAT-DUCKDUCKGO") 找不到 DuckChatClient，导致模型永远解析不到客户端
-                .provider(clientProviderOf(provider.getPlatform()))
-                .appKey(apiKey)
-                .baseUrl(resolveBaseUrl(provider, model))
-                .extraHeaders(extraHeaders)
-                .authScheme(provider.getAuthScheme())
-                .authHeader(extraString(provider.getExtra(), "auth_header"))
-                .authPrefix(extraString(provider.getExtra(), "auth_prefix"))
-                .metricsUrl(extraString(provider.getExtra(), "metrics_url"))
-                .proxy(provider.getProxy())
-                .passthroughResponseHeaders(extraStringList(provider.getExtra(), "passthrough_response_headers"))
-                .routes(channelRoutes != null ? channelRoutes
-                        : ProviderRouteTargets.fromExtra(provider.getExtra()))
-                .build();
-    }
-
-    /**
-     * 把渠道上配置的限流冷却时长挂到冷却引擎。
-     *
-     * <p>每个渠道一套恢复节奏：被 429 / 额度耗尽的账号先排除
-     * {@code rate_limit_base_ms}，同账号连续失败按 2 的幂次翻倍，
-     * 封顶 {@code rate_limit_max_ms}；一次成功立即恢复参与轮换。
-     * 两项都不配（或配成 0）时撤销该渠道的策略，回落到全局默认 60s / 10m。</p>
-     *
-     * <p>同时注册 platform 与 providerId 两个前缀：单供应商聚合用 platform 拼冷却键，
-     * 路由组成员用 providerId 拼冷却键，取最长匹配，两者都能命中。</p>
-     *
-     * @param provider 供应商
-     */
-    private void registerCooldownPolicy(SysAccountChannel provider) {
-        long base = extraLong(provider.getExtra(), "rate_limit_base_ms");
-        long max = extraLong(provider.getExtra(), "rate_limit_max_ms");
-        String backoffName = extraString(provider.getExtra(), "rate_limit_backoff");
-        Backoff backoff = StringUtils.isBlank(backoffName) ? null : Backoff.of(backoffName);
-        CooldownPolicy policy = new CooldownPolicy(base, max, backoff);
-        CooldownPolicies.register(provider.getPlatform() + "|", policy);
-        CooldownPolicies.register(provider.getProviderId() + "|", policy);
-    }
-
-    /**
-     * 解析本次请求实际使用的上游地址。
-     *
-     * <p>供应商 {@code extra.endpoints} 可按协议单独覆盖地址（截图里的
-     * 「端点 OpenAI / Responses / Anthropic」三行）：键为协议名
-     * （openai / openai-response / gemini / anthropic），值为该协议的基础地址。
-     * 命中则用协议地址，未命中回落到供应商的 base_url。</p>
-     *
-     * @param provider 供应商
-     * @param model    裸模型名
-     * @return 实际基础地址
-     */
-    private String resolveBaseUrl(SysAccountChannel provider, String model) {
-        Map<String, Object> extra = provider.getExtra();
-        Map<String, Object> endpoints = extraMap(extra, "endpoints");
-        if (endpoints.isEmpty()) {
-            return provider.getBaseUrl();
-        }
-        String protocol = protocolOf(provider.getProviderId(), model);
-        Object url = protocol == null ? null : endpoints.get(protocol);
-        if (url == null || String.valueOf(url).isBlank()) {
-            return provider.getBaseUrl();
-        }
-        log.debug("[ModelClientResolver] 端点覆盖 provider={} model={} protocol={} url={}",
-                provider.getProviderId(), model, protocol, url);
-        return String.valueOf(url).trim();
-    }
-
-    /**
-     * 读取模型行上的接入协议（能力表里的 {@code protocol}）。
-     *
-     * @param providerId 供应商 ID
-     * @param model      裸模型名
-     * @return 协议名；读不到返回 {@code null}
-     */
-    private String protocolOf(String providerId, String model) {
-        try {
-            SysAccountChannelModel row = channelModelService.find(providerId, model);
-            if (row == null || row.getCapabilities() == null) {
-                return null;
-            }
-            for (Map<String, Object> cap : row.getCapabilities()) {
-                Object protocol = cap == null ? null : cap.get("protocol");
-                if (protocol != null && !String.valueOf(protocol).isBlank()) {
-                    return String.valueOf(protocol).trim();
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 读取模型协议失败 {}:{} {}", providerId, model, e.getMessage());
-        }
-        return null;
-    }
-
-    /**
-     * 把「透传请求头」名单里的入站头带到出站请求。
-     *
-     * <p>名单来自 {@code extra.passthrough_request_headers}（逗号分隔或数组）；
-     * 只在请求线程里可用，后台线程取不到就是没有，不报错。</p>
-     *
-     * @param extra   扩展配置
-     * @param headers 待补齐的出站头
-     */
-    private void mergePassthroughRequestHeaders(Map<String, Object> extra, Map<String, String> headers) {
-        List<String> names = extraStringList(extra, "passthrough_request_headers");
-        if (names.isEmpty()) {
-            return;
-        }
-        try {
-            if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) {
-                return;
-            }
-            for (String name : names) {
-                String value = attrs.getRequest().getHeader(name);
-                if (value != null && !value.isBlank()) {
-                    headers.putIfAbsent(name, value);
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 透传请求头失败: {}", e.getMessage());
-        }
-    }
-
-    /**
      * 读取 extra 中的整数字段。
      *
      * @param extra 扩展配置
@@ -914,48 +647,6 @@ public class ModelClientResolver {
         }
         Object value = extra.get(key);
         return value == null ? null : value.toString();
-    }
-
-    /**
-     * 本连接是否已下线（通道探针连续失败达到阈值后自动下线）
-     *
-     * @param conn 连接
-     * @return true 表示已下线（路由层应剔除）
-     */
-    private boolean isDown(SysAccountChannelConnection conn) {
-        return channelHealthService.isDown(conn.getConnectionId());
-    }
-
-    /**
-     * 收集供应商级与其全部连接级凭证中的密钥（去重、保序），并按归属作用域过滤连接。
-     *
-     * <p>归属规则：</p>
-     * <ul>
-     *   <li>免费渠道（{@code _free}）：只用管理员/系统账号池（历史 {@code user_id IS NULL} 行
-     *       = 渠道管理改造前管理员绑定的账号）——「免费的走管理员的渠道管理配置」；</li>
-     *   <li>当前用户（userId）：只用该用户自己的连接；管理员额外可见 NULL 系统池；</li>
-     *   <li>无身份后台任务（{@code _sys}）：只用 NULL 系统池，避免匿名读到他人账号。</li>
-     * </ul>
-     *
-     * @param provider   供应商
-     * @param ownerScope 归属作用域
-     * @return 密钥列表
-     */
-    private List<String> collectAllKeys(SysAccountChannel provider, String ownerScope) {
-        LinkedHashSet<String> keys = new LinkedHashSet<>(ProviderCredentials.apiKeys(provider.getCredentials()));
-        try {
-            List<SysAccountChannelConnection> connections =
-                    connectionService.listPoolForScope(provider.getProviderId(), ownerScope);
-            for (SysAccountChannelConnection conn : connections) {
-                if (isDown(conn)) {
-                    continue;
-                }
-                keys.addAll(ProviderCredentials.apiKeys(conn.getCredentials()));
-            }
-        } catch (Exception e) {
-            log.debug("[ModelClientResolver] 查询连接凭证失败: {}", e.getMessage());
-        }
-        return new ArrayList<>(keys);
     }
 
     /**
@@ -1085,30 +776,6 @@ public class ModelClientResolver {
      */
     public void invalidateRouteCache() {
         routeCache.clear();
-    }
-
-    /**
-     * 从供应商 extra.custom_headers 提取附加请求头。
-     *
-     * @param extra 扩展配置
-     * @return 请求头；无则返回 {@code null}
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
-        if (extra == null) {
-            return null;
-        }
-        Object headers = extra.get("custom_headers");
-        if (headers instanceof Map<?, ?> map) {
-            Map<String, String> result = new java.util.HashMap<>(8);
-            map.forEach((k, v) -> {
-                if (k != null && v != null) {
-                    result.put(k.toString(), v.toString());
-                }
-            });
-            return result.isEmpty() ? null : result;
-        }
-        return null;
     }
 
     /**

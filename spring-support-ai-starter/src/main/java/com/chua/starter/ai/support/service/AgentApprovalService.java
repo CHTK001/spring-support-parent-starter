@@ -186,6 +186,9 @@ public class AgentApprovalService {
             if (latest == null) {
                 throw new ApiException(ApiErrorCode.NOT_FOUND, "审批单不存在: " + approvalId);
             }
+            if (latest.isPending() && latest.expireAt() <= System.currentTimeMillis()) {
+                latest = expire(latest, System.currentTimeMillis());
+            }
             return new ApprovalResolveResult(latest, false);
         }
         AgentApprovalRecord after = find(approvalId);
@@ -217,6 +220,13 @@ public class AgentApprovalService {
         }
         int count = 0;
         long now = System.currentTimeMillis();
+        // 先核对整批，避免后面的越权/过期项导致前面的单据已经被修改。
+        for (ConfirmationDecision decision : decisions) {
+            if (decision == null || decision.getToolCallId() == null || decision.getToolCallId().isBlank()) continue;
+            AgentApprovalRecord existing = findByReplyAndToolCall(dialogId, replyId, decision.getToolCallId());
+            if (existing != null) requireResumable(existing, decidedBy,
+                    decision.isConfirmed() ? AgentApprovalRecord.STATUS_APPROVED : AgentApprovalRecord.STATUS_REJECTED, now);
+        }
         for (ConfirmationDecision decision : decisions) {
             if (decision == null || decision.getToolCallId() == null || decision.getToolCallId().isBlank()) {
                 continue;

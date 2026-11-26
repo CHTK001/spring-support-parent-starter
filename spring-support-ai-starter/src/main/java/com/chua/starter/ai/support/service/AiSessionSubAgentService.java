@@ -244,6 +244,7 @@ public class AiSessionSubAgentService {
         payload.put("subSessionId", String.valueOf(row.getId()));
         payload.put("status", STATUS_CLOSED);
         payload.put("reason", reason == null ? "" : reason);
+        payload.put("parentSessionId", String.valueOf(row.getSessionId()));
         broadcaster.publish(AiSessionEventBroadcaster.TYPE_SUB_AGENT_CLOSED,
                 userId, String.valueOf(row.getId()), payload);
         log.info("[SubAgentSession] close 主会话={}, subSessionId={}, reason={}", session.getId(), row.getId(), reason);
@@ -269,6 +270,7 @@ public class AiSessionSubAgentService {
         Map<String, Object> payload = new LinkedHashMap<>(4);
         payload.put("subSessionId", String.valueOf(row.getId()));
         payload.put("status", target);
+        payload.put("parentSessionId", String.valueOf(row.getSessionId()));
         broadcaster.publish(AiSessionEventBroadcaster.TYPE_SUB_AGENT_STATUS,
                 userId, String.valueOf(row.getId()), payload);
         return toResponse(row);
@@ -316,6 +318,8 @@ public class AiSessionSubAgentService {
         payload.put("subSessionId", String.valueOf(row.getId()));
         payload.put("status", row.getStatus());
         payload.put("reason", failed ? "failed" : "completed");
+        payload.put("parentSessionId", String.valueOf(row.getSessionId()));
+        payload.put("output", row.getOutput());
         if (failed) {
             payload.put("error", error);
         }
@@ -421,12 +425,15 @@ public class AiSessionSubAgentService {
         sessionRef.put("title", row.getAgentName());
         sessionRef.put("type", "sub_agent");
         sessionRef.put("status", row.getStatus());
+        sessionRef.put("sessionId", String.valueOf(row.getSessionId()));
         Map<String, Object> payload = new LinkedHashMap<>(8);
         payload.put("subSessionId", String.valueOf(row.getId()));
         payload.put("name", row.getAgentName());
         payload.put("agentId", row.getAgentId());
         payload.put("masterId", row.getMasterAgentId());
         payload.put("status", row.getStatus());
+        payload.put("parentSessionId", String.valueOf(row.getSessionId()));
+        payload.put("input", row.getInput());
         payload.put("session", sessionRef);
         broadcaster.publish(AiSessionEventBroadcaster.TYPE_SUB_AGENT_CREATE,
                 row.getSysUserId(), String.valueOf(row.getId()), payload);

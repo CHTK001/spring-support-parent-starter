@@ -13,5 +13,6 @@ com.chua.starter.common.support.api.configuration.ApiFilterConfiguration
 com.chua.starter.common.support.api.cors.ApiCorsConfiguration
 com.chua.starter.common.support.api.permission.PermissionControlConfiguration
 com.chua.starter.common.support.api.feature.ApiFeatureConfiguration
+com.chua.starter.common.support.api.sniff.BotSniffAutoConfiguration
 com.chua.starter.common.support.actuator.ActuatorConfiguration
 com.chua.starter.common.support.configuration.security.RequestFingerprintAutoConfiguration

@@ -65,9 +65,13 @@ public class ApiAgentRunController {
             @RequestParam(value = "pageSize", required = false, defaultValue = "20") int pageSize) {
         int safePage = Math.max(page, 1);
         int size = pageSize < 1 ? 20 : Math.min(pageSize, MAX_PAGE_SIZE);
+        long offset = (long) (safePage - 1) * size;
+        if (offset > Integer.MAX_VALUE) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "页码超出支持范围");
+        }
         // 普通用户强制只看本人；管理员可看全部
         String userId = AiUserContext.canAccessOthersData() ? null : AiUserContext.requireUserId();
-        AgentRunQuery query = new AgentRunQuery(sessionId, agentId, status, userId, size, (safePage - 1) * size);
+        AgentRunQuery query = new AgentRunQuery(sessionId, agentId, status, userId, size, (int) offset);
         long total = agentRunService.countRuns(query);
         List<AgentRunRecord> items = agentRunService.listRuns(query);
         Map<String, Object> result = new LinkedHashMap<>(6);

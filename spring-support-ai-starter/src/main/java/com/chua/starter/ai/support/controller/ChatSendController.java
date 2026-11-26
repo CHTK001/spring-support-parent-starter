@@ -1,197 +1,124 @@
 package com.chua.starter.ai.support.controller;
 
-import com.chua.starter.ai.support.chat.ChatMemorySupport;
-import com.chua.starter.ai.support.chat.ChatMessage;
-import com.chua.starter.ai.support.entity.AIDialog;
-import com.chua.starter.ai.support.model.AiChatRequest;
-import com.chua.starter.ai.support.service.AIDialogRecordService;
-import com.chua.starter.ai.support.service.AiChatFacadeService;
-import com.chua.starter.ai.support.configuration.client.EffectiveChatModelResolver;
+import com.chua.common.support.ai.agent.AgentTrace;
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.service.PlatformAccessKeyService;
+import com.chua.starter.ai.support.service.AiSessionEventBroadcaster;
+import com.chua.starter.ai.support.stream.ChatFrameSink;
+import com.chua.starter.ai.support.stream.ChatStreamOrchestrator;
+import com.chua.starter.ai.support.stream.ChatStreamRegistry;
+import com.chua.starter.ai.support.stream.PreparedChat;
 import com.chua.starter.ai.support.util.AiUserContext;
-import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 聊天发送接口（前端适配）。
- *
- * <p>POST /v2/chat/send：非 SSE，异步触发一次模型对话并落库，立即返回。
- * 真正的流式回复走 {@link ChatStreamController} 的 /v2/chat/stream。</p>
+ * 异步发送适配器。权限、模型、附件、技能与消息落库统一交给聊天编排器。
  *
  * @author CH
- * @since 4.0.0.51
  */
 @RestController
 @RequestMapping("/v2/chat")
 @ApiReturnFormatIgnore
 @RequiredArgsConstructor
-@Slf4j
 public class ChatSendController {
 
-    /**
-     * 生效对话模型解析器（连接器级 → Bot 默认 → 配置中心默认）
-     */
-    private final EffectiveChatModelResolver effectiveChatModelResolver;
-
-    /**
-     * 平台访问密钥校验（web:/onnx: 模型逐请求门禁）
-     */
+    /** 统一聊天编排。 */
+    private final ChatStreamOrchestrator orchestrator;
+    /** 活跃执行登记。 */
+    private final ChatStreamRegistry registry;
+    /** 平台模型访问校验。 */
     private final PlatformAccessKeyService platformAccessKeyService;
+    /** 跨页面执行事件。 */
+    private final AiSessionEventBroadcaster broadcaster;
 
     /**
-     * 解析本次异步对话使用的模型，<b>不写死任何模型名</b>。
+     * 接收消息并异步执行；准备失败直接返回错误，不吞掉落库异常。
      *
-     * @return 模型名；未配置可用模型时返回 空
-     */
-    private String resolvedModel() {
-        String model = effectiveChatModelResolver.resolve(null);
-        if (model == null) {
-            log.warn("[ChatSend] 未配置可用的默认对话模型，本次异步对话无法执行");
-        }
-        return model;
-    }
-
-    private final AiChatFacadeService aiChatFacadeService;
-    private final AIDialogRecordService aiDialogRecordService;
-    private final ChatMemorySupport chatMemorySupport;
-
-    /**
-     * 前端 sessionId(UUID) -> 后端 dialogId 映射
-    */
-    private final Map<String, Long> sessionDialogMap = new ConcurrentHashMap<>();
-
-    /**
-     * 发送消息（非流式，异步触发模型对话并落库）。
-     * @param request 请求，不允许为 null
-     * @return 结果映射，无数据时为空映射
+     * @param request 聊天参数
+     * @param onnxKey ONNX 访问密钥
+     * @param webKey Web 访问密钥
+     * @return 接收确认
      */
     @PostMapping("/send")
     public Map<String, Object> send(@RequestBody Map<String, Object> request,
-                                    @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
-                                    @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey) {
-        log.info("[ChatSend] 收到消息: {}", request);
-
-        String sessionId = str(request.get("sessionId"));
-        String content = str(request.get("content"));
-        if (content == null || content.isBlank()) {
-            Object userMessage = request.get("userMessage");
-            if (userMessage instanceof Map<?, ?> um) {
-                content = str(um.get("content"));
-            }
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
+            @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey) {
+        synchronized (registry.lockFor(request.get("sessionId"))) {
+            return sendLocked(request, onnxKey, webKey);
         }
-        if (content == null || content.isBlank()) {
-            return Map.of("success", false, "message", "消息内容为空");
-        }
-
-        Long dialogId = resolveDialogId(sessionId);
-
-        // 落库用户消息
-        try {
-            aiDialogRecordService.addMessage(dialogId, new ChatMessage("user", content));
-        } catch (Exception e) {
-            log.warn("[ChatSend] 保存用户消息失败: {}", e.getMessage());
-        }
-
-        // 异步触发模型对话（非 SSE 等待，复用 stream 的 onComplete 拿完整回复落库）
-        final String userContent = content;
-        final Long did = dialogId;
-        final String sid = sessionId;
-        // 身份必须在请求线程内解析：异步回调线程取不到，记忆会落成无主数据
-        final String memoryUser = AiUserContext.currentUserId();
-
-        // 平台密钥门禁：默认模型若落在 web:/onnx: 平台，非管理员必须携带匹配密钥。
-        // 模型在请求线程内解析并校验，失败直接抛 403，不进入异步对话。
-        final String resolvedModelId = resolvedModel();
-        platformAccessKeyService.assertChatModelAllowed(resolvedModelId, onnxKey, webKey);
-        CompletableFuture.runAsync(MdcWrap.wrap(AiUserContext.capturing(() -> {
-            try {
-                List<Map<String, Object>> msgList = new ArrayList<>();
-                List<ChatMessage> history = aiDialogRecordService.getDialogMessages(did);
-                if (history != null) {
-                    for (ChatMessage m : history) {
-                        Map<String, Object> mm = new LinkedHashMap<>();
-                        mm.put("role", m.getRole() != null ? m.getRole() : "user");
-                        mm.put("content", m.getContent() != null ? m.getContent() : "");
-                        msgList.add(mm);
-                    }
-                }
-                chatMemorySupport.inject(memoryUser, sid, userContent, msgList);
-                AiChatRequest req = new AiChatRequest();
-                req.setModel(resolvedModelId);
-                req.setStream(true);
-                req.setUseSkill(true);
-                req.setMessages(msgList);
-                // Agent 链路只吃 prompt（agent.runStream 的输入），不会读 messages 充当输入；
-                // 缺了会被 OpencodeServerAgent 判「输入为空」毫秒级失败（对齐 /chat/stream 的 setPrompt 口径）
-                req.setPrompt(userContent);
-                // 返回的 emitter 不挂到 HTTP 响应，仅利用回调拿完整回复
-                aiChatFacadeService.stream(req, null, reply -> {
-                    String finalText = reply != null ? reply : "";
-                    try {
-                        aiDialogRecordService.addMessage(did, new ChatMessage("assistant", finalText));
-                    } catch (Exception e) {
-                        log.warn("[ChatSend] 保存助手消息失败: {}", e.getMessage());
-                    }
-                    chatMemorySupport.remember(memoryUser, sid, userContent, finalText, resolvedModelId);
-                    log.info("[ChatSend] 异步对话完成 sessionId={}, 回复长度={}", sid, finalText.length());
-                }, error -> log.error("[ChatSend] 异步对话失败 sessionId={}", sid, error));
-            } catch (Exception e) {
-                log.error("[ChatSend] 异步对话启动失败 sessionId={}", sid, e);
-            }
-        })));
-
-        return Map.of(
-            "success", true,
-            "message", "消息已接收"
-        );
     }
 
     /**
-     * 解析DialogID。
-     *
-     * @param sessionId 会话ID，不允许为 null
-     * @return Long 对象
+     * 在会话锁内完成准备与登记。
+     * @param request 聊天参数
+     * @param onnxKey ONNX 访问密钥
+     * @param webKey Web 访问密钥
+     * @return 接收确认
      */
-    private Long resolveDialogId(String sessionId) {
-        if (sessionId != null && sessionId.matches("\\d+")) {
-            return Long.parseLong(sessionId);
+    private Map<String, Object> sendLocked(Map<String, Object> request, String onnxKey, String webKey) {
+        AiUserContext.requireUserId();
+        Object content = request.get("content");
+        if (request.get("userMessage") instanceof Map<?, ?> message) content = message.get("content");
+        if (content == null || String.valueOf(content).isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "消息内容为空");
         }
-        if (sessionId != null && !sessionId.isBlank()) {
-            Long cached = sessionDialogMap.get(sessionId);
-            if (cached != null) {
-                return cached;
-            }
-        }
-        String title = "guada-" + (sessionId != null && sessionId.length() > 8 ? sessionId.substring(0, 8) : "chat");
-        AIDialog dialog = aiDialogRecordService.createDialog(title);
-        Long id = dialog.getId();
-        if (sessionId != null && !sessionId.isBlank()) {
-            sessionDialogMap.put(sessionId, id);
-        }
-        return id;
+        Object model = request.get("modelId");
+        if (model == null) model = request.get("model");
+        platformAccessKeyService.assertChatModelAllowed(model == null ? null : String.valueOf(model), onnxKey, webKey);
+        PreparedChat prepared = orchestrator.prepare(request);
+        BackgroundSink sink = new BackgroundSink(prepared);
+        registry.register(prepared.sessionId(), prepared.memoryUser(), sink);
+        broadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_STARTED,
+                prepared.memoryUser(), prepared.sessionId(), null);
+        orchestrator.execute(prepared, sink);
+        return Map.of("success", true, "message", "消息已接收");
     }
 
-    /**
-     * 字符串。
-     *
-     * @param o 方法入参 o
-     * @return 结果字符串
-     */
-    private static String str(Object o) {
-        return o != null ? String.valueOf(o) : null;
+    /** 无 HTTP 流的真实运行槽，仍参与停止与终态广播。 */
+    private final class BackgroundSink implements ChatFrameSink {
+        /** 当前运行。 */
+        private final PreparedChat prepared;
+        /** 取消标记。 */
+        private final AtomicBoolean cancelled = new AtomicBoolean();
+        /** 单次终态。 */
+        private final AtomicBoolean finished = new AtomicBoolean();
+        /** 结束原因。 */
+        private String reason = "completed";
+
+        /** @param prepared 当前运行 */
+        private BackgroundSink(PreparedChat prepared) { this.prepared = prepared; }
+        @Override
+        public void sendEvent(Map<String, Object> event) {
+            if ("finish".equals(event.get("type"))) {
+                String value = String.valueOf(event.getOrDefault("finishReason", "stop"));
+                reason = "stop".equals(value) ? "completed" : value;
+            }
+        }
+        @Override
+        public void sendTrace(AgentTrace trace) { }
+        @Override
+        public void sendDone() { close(); }
+        @Override
+        public boolean isCancelled() { return cancelled.get(); }
+        @Override
+        public void markCancelled() { cancelled.set(true); }
+        @Override
+        public void close() {
+            if (finished.compareAndSet(false, true)) {
+                registry.remove(prepared.sessionId(), this);
+                broadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_FINISHED,
+                        prepared.memoryUser(), prepared.sessionId(), Map.of("reason", reason));
+            }
+        }
     }
 }

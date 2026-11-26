@@ -129,7 +129,13 @@ public class ApiCorsConfiguration  {
                 // 移除了原来的 addExposedHeader("*")，必须在此显式列出。
                 ENCRYPT_HEADER,
                 KEY_HEADER,
-                NOISE_LEVEL_HEADER
+                NOISE_LEVEL_HEADER,
+                // 嗅探（bot 挑战）：跨域部署时必须能读到挑战标记与签发的 ticket，
+                // 否则前端既认不出挑战、也收不到 ticket（每个请求都要重复挑战）。
+                // 这里写的是默认头名；自定义 ticket/solved 头名时需同步追加。
+                "X-Bot-Sniff-Challenge",
+                "X-Bot-Sniff-Ticket",
+                "X-Bot-Sniff-Solved-Ttl"
         );
         // 允许的来源：按白名单放行，白名单为空则不放行任何跨域来源（同源访问不受影响）。
         //

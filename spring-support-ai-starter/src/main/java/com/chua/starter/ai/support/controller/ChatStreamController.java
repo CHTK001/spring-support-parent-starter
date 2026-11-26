@@ -246,6 +246,7 @@ public class ChatStreamController {
                              @RequestHeader(value = PlatformAccessKeyService.HEADER_ONNX_APP_KEY, required = false) String onnxKey,
                              @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey,
                              HttpServletResponse response) {
+        synchronized (registry.lockFor(body.get("sessionId"))) {
         // 0. 平台密钥门禁：web:/onnx: 前缀模型必须携带匹配密钥（管理员豁免、未配置放行）
         assertPlatformModelAllowed(body, onnxKey, webKey);
         // 1. 同步准备：归属/权限错误在此抛出，返回标准 JSON（尚未声明 event-stream）
@@ -278,7 +279,7 @@ public class ChatStreamController {
         // 2.6 再套上「会话事件广播」：流结束（sendDone/close）时向该用户广播 stream_finished
         ChatFrameSink eventAware = withSessionEvents(guarded, p.sessionId(), p.memoryUser());
         registry.register(p.sessionId(), p.memoryUser(), eventAware);
-        registerCleanup(emitter, p.sessionId());
+        registerCleanup(emitter, p.sessionId(), eventAware);
 
         // 广播流开始：其他标签页把该会话标为「工作中」（发起方标签页按 source 区分）
         sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_STARTED,
@@ -287,6 +288,7 @@ public class ChatStreamController {
         // 3. 异步产出帧
         orchestrator.execute(p, eventAware);
         return emitter;
+        }
     }
 
     /**
@@ -303,6 +305,7 @@ public class ChatStreamController {
                              @RequestHeader(value = PlatformAccessKeyService.HEADER_WEB_APP_KEY, required = false) String webKey,
                              HttpServletResponse response) {
         Map<String, Object> safeBody = body != null ? body : new java.util.LinkedHashMap<>();
+        synchronized (registry.lockFor(safeBody.get("sessionId"))) {
         // 平台密钥门禁：恢复轮次同样按模型前缀校验
         assertPlatformModelAllowed(safeBody, onnxKey, webKey);
         PreparedChat p = orchestrator.prepareResume(safeBody);
@@ -325,7 +328,6 @@ public class ChatStreamController {
                 log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
-        registerCleanup(emitter, p.sessionId());
 
         // 恢复轮次同样套会话超时看门狗（注册的是带看门狗的槽，取消/停止才会作用在真实传输上）
         ChatFrameSink guardedResume = withIdleTimeout(sink, p.sessionId(), p.memoryUser());
@@ -333,6 +335,7 @@ public class ChatStreamController {
         ChatFrameSink eventAwareResume = withSessionEvents(guardedResume, p.sessionId(), p.memoryUser());
         // 只注册最终包装槽一次（此前裸槽与看门狗槽各注册一次，先注册的裸槽会让停止绕过看门狗）
         registry.register(p.sessionId(), p.memoryUser(), eventAwareResume);
+        registerCleanup(emitter, p.sessionId(), eventAwareResume);
 
         // 广播流开始：恢复轮次同样是活跃流
         sessionEventBroadcaster.publish(AiSessionEventBroadcaster.TYPE_STREAM_STARTED,
@@ -340,6 +343,7 @@ public class ChatStreamController {
 
         orchestrator.executeResume(p, eventAwareResume);
         return emitter;
+        }
     }
 
     /**
@@ -376,17 +380,18 @@ public class ChatStreamController {
      *
      * @param emitter   发射器
      * @param sessionId 会话标识
+     * @param sink 本轮输出槽
      */
-    private void registerCleanup(SseEmitter emitter, String sessionId) {
-        emitter.onCompletion(() -> registry.remove(sessionId));
+    private void registerCleanup(SseEmitter emitter, String sessionId, ChatFrameSink sink) {
+        emitter.onCompletion(() -> registry.remove(sessionId, sink));
         emitter.onTimeout(() -> {
-            registry.remove(sessionId);
+            registry.remove(sessionId, sink);
             try {
                 emitter.complete();
             } catch (Exception e) {
                 log.debug("[ai] 操作失败，已忽略: {}", e.getMessage());
             }
         });
-        emitter.onError(t -> registry.remove(sessionId));
+        emitter.onError(t -> registry.remove(sessionId, sink));
     }
 }

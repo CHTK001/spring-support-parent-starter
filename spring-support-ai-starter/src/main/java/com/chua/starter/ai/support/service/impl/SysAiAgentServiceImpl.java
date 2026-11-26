@@ -647,7 +647,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             throw new IllegalArgumentException("只有主 Agent 可以注册为模型");
         }
         String resolvedModel = modelName != null && !modelName.isBlank()
-                ? modelName : "agent-" + agent.getName();
+                ? modelName.trim() : "agent-" + agent.getName();
+        if (!Boolean.TRUE.equals(agent.getEnabled())) throw new IllegalArgumentException("已停用的 Agent 不能注册为模型");
         String existing = registeredModels.entrySet().stream()
                 .filter(entry -> !entry.getKey().equals(agentId) && entry.getValue().equalsIgnoreCase(resolvedModel))
                 .map(Map.Entry::getKey).findFirst().orElse(null);
@@ -913,6 +914,26 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         if (create) {
             entity.setName(str(body, "name"));
+        }
+        if (entity.getName() == null || entity.getName().isBlank()) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM, "Agent 名称不能为空");
+        }
+        entity.setName(entity.getName().trim());
+        long sameName = agentMapper.selectCount(new LambdaQueryWrapper<SysAiAgent>()
+                .eq(SysAiAgent::getName, entity.getName()).ne(SysAiAgent::getAgentId, entity.getAgentId()));
+        if (sameName > 0) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.CONFLICT, "Agent 名称已存在");
+        }
+        if (body.containsKey("model") || body.containsKey("provider_id")) {
+            boolean hasModel = entity.getModel() != null && !entity.getModel().isBlank();
+            boolean hasProvider = entity.getProviderId() != null && !entity.getProviderId().isBlank();
+            if (hasModel != hasProvider) {
+                throw new com.chua.starter.ai.support.manage.common.ApiException(
+                        com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM, "请选择完整的渠道和模型");
+            }
+            if (hasModel) modelClientResolver.validateBinding(entity.getProviderId(), entity.getModel());
         }
     }
 

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * 多 Agent 模型共存与独立注销回归。
@@ -28,6 +29,8 @@ class ChatClientRegistryTest {
         registry.register("normal", "ordinary", new FreeChannelChatClient(ChatClientSetting.builder().build()), "chat");
         registry.unregisterAgentModel("ordinary");
         assertNotNull(registry.getByModel("ordinary"));
+        assertThrows(IllegalArgumentException.class, () -> registry.registerAgentModel("ordinary",
+                new FreeChannelChatClient(ChatClientSetting.builder().build())));
         registry.closeAll();
         assertEquals(0, registry.getRegisteredAgentModels().size());
     }

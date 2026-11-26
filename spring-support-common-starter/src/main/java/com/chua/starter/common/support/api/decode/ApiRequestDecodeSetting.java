@@ -16,9 +16,9 @@ import java.util.Locale;
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {
 
     /**
-     * 数据库配置别名：codec请求打开
+     * 数据库配置别名：codec请求打开（默认关闭：请求加密属可选增强，不默认启用）
      */
-    private boolean codecRequestOpen = true;
+    private boolean codecRequestOpen = false;
 
     /**
      * 请求加密Key
@@ -29,6 +29,11 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * 数据库配置别名：codec分段传输打开（traceId 分片）
      */
     private boolean codecTraceOpen = false;
+
+    /**
+     * 数据库配置别名：嗅探（bot 挑战）打开（默认关闭）
+     */
+    private boolean codecSniffOpen = false;
 
     /**
      * 数据库配置别名：请求/响应 codec 算法类型（aes/sm4/keylog 等）
@@ -79,6 +84,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
         this.codecRequestOpen = setting.isEnable();
         this.codecRequestKey = setting.getCodecRequestKey();
         this.codecTraceOpen = setting.isCodecTraceOpen();
+        this.codecSniffOpen = setting.isCodecSniffOpen();
         this.codecType = setting.getCodecType();
         this.codecServerPublicKey = setting.getCodecServerPublicKey();
         this.apiSignOpen = setting.isApiSignOpen();
@@ -183,11 +189,37 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
+     * 获取嗅探（bot 挑战）开关
+     *
+     * @return codecSniffOpen
+     */
+    public boolean getCodecSniffOpen() {
+        return codecSniffOpen;
+    }
+
+    /**
+     * 判断是否开启嗅探（bot 挑战）
+     *
+     * @return codecSniffOpen
+     */
+    public boolean isCodecSniffOpen() {
+        return codecSniffOpen;
+    }
+
+    /**
+     * 设置嗅探（bot 挑战）开关
+     *
+     * @param codecSniffOpen codecSniffOpen
+     */
+    public void setCodecSniffOpen(boolean codecSniffOpen) {
+        this.codecSniffOpen = codecSniffOpen;
+    }
+
+    /**
      * 获取 codec 算法类型
      *
      * @return codecType
-     */
-    public String getCodecType() {
+     */    public String getCodecType() {
         return codecType;
     }
 

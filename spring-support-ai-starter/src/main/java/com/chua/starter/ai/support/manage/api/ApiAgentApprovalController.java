@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.service.AgentApprovalRecord;
 import com.chua.starter.ai.support.service.AgentApprovalService;
 import com.chua.starter.ai.support.stream.ChatFrameSink;
 import com.chua.starter.ai.support.stream.ChatStreamOrchestrator;
+import com.chua.starter.ai.support.stream.ChatStreamRegistry;
 import com.chua.starter.ai.support.stream.PreparedChat;
 import com.chua.starter.ai.support.util.AiUserContext;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,8 @@ public class ApiAgentApprovalController {
      * 聊天流式编排（内转 resume 用）
      */
     private final ChatStreamOrchestrator chatStreamOrchestrator;
+    /** 与聊天入口共享准备锁和活跃执行。 */
+    private final ChatStreamRegistry registry;
 
     /**
      * 归属当前用户的审批单分页列表。
@@ -72,8 +75,8 @@ public class ApiAgentApprovalController {
      * 按单号决议一次审批（批准 / 拒绝）。
      *
      * <p>幂等：单据已决议时返回现状且不重复内转 resume。仅当「本次调用完成
-     * PENDING → APPROVED 的落定」且单据携带 replyId + 前端会话标识时，才把
-     * 决策内转给 resume 链路（拒绝/过期不恢复执行）。</p>
+     * PENDING → APPROVED/REJECTED 的落定」且单据携带 replyId + 前端会话标识时，
+     * 才把决策内转给 resume 链路，拒绝同样通知暂停中的执行。</p>
      *
      * @param id   审批单号
      * @param body { approved: boolean, reason?: string }
@@ -88,8 +91,9 @@ public class ApiAgentApprovalController {
         }
         String reason = body.get("reason") == null ? null : String.valueOf(body.get("reason"));
         String decidedBy = AiUserContext.requireUserId();
-        AgentApprovalService.ApprovalResolveResult result =
-                agentApprovalService.resolve(id, approved, decidedBy, reason);
+        AgentApprovalRecord current = agentApprovalService.find(id);
+        synchronized (registry.lockFor(current == null ? id : current.sessionUid())) {
+        AgentApprovalService.ApprovalResolveResult result = agentApprovalService.resolve(id, approved, decidedBy, reason);
         boolean resumed = false;
         if (result.transitioned()) {
             resumed = forwardResume(result.record());
@@ -98,6 +102,7 @@ public class ApiAgentApprovalController {
         data.put("approval", result.record());
         data.put("resumed", resumed);
         return ApiResult.ok(data);
+        }
     }
 
     /**
@@ -126,7 +131,9 @@ public class ApiAgentApprovalController {
             body.put("replyId", rec.replyId());
             body.put("decisions", List.of(decision));
             PreparedChat prepared = chatStreamOrchestrator.prepareResume(body);
-            chatStreamOrchestrator.executeResume(prepared, new DiscardSink());
+            DiscardSink sink = new DiscardSink();
+            registry.register(prepared.sessionId(), prepared.memoryUser(), sink);
+            chatStreamOrchestrator.executeResume(prepared, sink);
             log.info("[AgentApproval] 决议已内转 resume approvalId={} sessionId={} replyId={}",
                     rec.approvalId(), rec.sessionUid(), rec.replyId());
             return true;
@@ -145,6 +152,8 @@ public class ApiAgentApprovalController {
      * @since 4.0.0.52
      */
     private static final class DiscardSink implements ChatFrameSink {
+        /** 后台审批恢复同样可被停止。 */
+        private final java.util.concurrent.atomic.AtomicBoolean cancelled = new java.util.concurrent.atomic.AtomicBoolean();
 
         /**
          * 丢弃事件帧。
@@ -181,7 +190,7 @@ public class ApiAgentApprovalController {
          */
         @Override
         public boolean isCancelled() {
-            return false;
+            return cancelled.get();
         }
 
         /**
@@ -189,7 +198,7 @@ public class ApiAgentApprovalController {
          */
         @Override
         public void markCancelled() {
-            // 内转链路不支持取消
+            cancelled.set(true);
         }
 
         /**

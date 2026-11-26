@@ -135,9 +135,12 @@ plugin:
     # 设备需先加入 Tailnet（tailscale up 或 plugin.tailscale.auth-key）；auth-key 留空时用本机已登录状态。
     # 每条映射一个 JSON 文件；不配时默认 ~/.chua/tunnel/tailscale
     # store-dir: ${user.home}/.chua/tunnel/tailscale
-  api:
-    request-decode:
-      enable: false
+  security:
+    sniff:
+      # 嗅探（bot 挑战）：与 CodecRequestOpen / CodecTraceOpen 同口径——缺省即装配，
+      # 唯一开关是系统配置 CodecSniffOpen（group=config，默认 false）；enabled: false 为硬关。
+      # 注意：本应用的业务路径前缀是 /ms（不是 /v2），要整体开启时把 include-paths 一并改掉。
+      # include-paths: /ms/**,/v2/**,/api/**
   # 上报客户端注册服务端：
   # 客户端应用经 SyncClient 连接本服务端并发送
   #   - sync/client/register  （客户端注册：ip/port/应用名）

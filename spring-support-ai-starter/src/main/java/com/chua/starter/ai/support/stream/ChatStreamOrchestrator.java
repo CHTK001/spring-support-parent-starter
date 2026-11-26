@@ -246,6 +246,10 @@ public class ChatStreamOrchestrator {
         }
 
         final Long dialogId = resolveDialogId(sessionId);
+        if (registry.get(sessionId) != null) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.CONFLICT, "SessionBusyError: 会话正在执行");
+        }
         final String incomingMcp = body.containsKey("mcpServerIds") ? str(body.get("mcpServerIds")) : null;
         if (incomingMcp != null && AiUserContext.isAdmin()) {
             persistSessionMcp(dialogId, incomingMcp);
@@ -770,7 +774,7 @@ public class ChatStreamOrchestrator {
                         attachTurnAccounting(turnEndEvent, p, usage);
                         sink.sendEvent(turnEndEvent);
                         sink.sendDone();
-                        registry.remove(sid);
+                        registry.remove(sid, sink);
                         sink.close();
                     },
                     error -> {
@@ -1106,7 +1110,7 @@ public class ChatStreamOrchestrator {
                     } catch (Exception e) {
                         log.debug("[ai-stream] 下发超时结束帧失败，已忽略: {}", e.getMessage());
                     } finally {
-                        registry.remove(p.sessionId());
+                        registry.remove(p.sessionId(), sink);
                         sink.close();
                     }
                 }));
@@ -1151,7 +1155,7 @@ public class ChatStreamOrchestrator {
         } catch (Exception e) {
             log.debug("[ai-stream] 下发失败结束帧失败，已忽略: {}", e.getMessage());
         } finally {
-            registry.remove(sid);
+            registry.remove(sid, sink);
             sink.close();
         }
     }
@@ -1167,6 +1171,10 @@ public class ChatStreamOrchestrator {
     public PreparedChat prepareResume(Map<String, Object> body) {
         String sessionId = str(body.get("sessionId"));
         final Long dialogId = resolveDialogId(sessionId);
+        if (registry.get(sessionId) != null) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.CONFLICT, "SessionBusyError: 会话正在执行");
+        }
 
         final String characterId = str(body.get("characterId"));
         final SysAiRole boundRole = loadRole(characterId);
@@ -1439,7 +1447,7 @@ public class ChatStreamOrchestrator {
                             attachTurnAccounting(turnEndEvent, p, usageHolder[0]);
                             sink.sendEvent(turnEndEvent);
                             sink.sendDone();
-                            registry.remove(sid);
+                            registry.remove(sid, sink);
                             sink.close();
                         },
                         error -> {
@@ -1460,7 +1468,7 @@ public class ChatStreamOrchestrator {
                             attachTurnAccounting(turnEndEvent, p, null);
                             sink.sendEvent(turnEndEvent);
                             sink.sendDone();
-                            registry.remove(sid);
+                            registry.remove(sid, sink);
                             sink.close();
                         });
             } catch (Throwable e) {
@@ -2297,11 +2305,27 @@ public class ChatStreamOrchestrator {
      * @return 返回值
     */
     private Long resolveDialogId(String sessionId) {
-        if (sessionId != null && sessionId.matches("\\d+")) {
-            return Long.parseLong(sessionId);
+        String userId = AiUserContext.requireUserId();
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM, "sessionId 不能为空");
         }
+        if (AiUserContext.isReadonly()) {
+            throw new com.chua.starter.ai.support.manage.common.ApiException(
+                    com.chua.starter.ai.support.manage.common.ApiErrorCode.FORBIDDEN, "只读账号不能发送消息");
+        }
+        if (sessionId != null && sessionId.matches("\\d+")) {
+            Long id = parseNumericId(sessionId);
+            com.chua.starter.ai.support.entity.SysAiSession session = id == null ? null : sysAiSessionMapper.selectById(id);
+            if (session == null || !userId.equals(session.getSysUserId())) {
+                throw new com.chua.starter.ai.support.manage.common.ApiException(
+                        com.chua.starter.ai.support.manage.common.ApiErrorCode.NOT_FOUND, "会话不存在");
+            }
+            return id;
+        }
+        String mappingKey = userId + "::" + sessionId;
         if (sessionId != null && !sessionId.isBlank()) {
-            Long cached = sessionDialogMap.get(sessionId);
+            Long cached = sessionDialogMap.get(mappingKey);
             if (cached != null) {
                 return cached;
             }
@@ -2310,7 +2334,7 @@ public class ChatStreamOrchestrator {
         AIDialog dialog = aiDialogRecordService.createDialog(title);
         Long id = dialog.getId();
         if (sessionId != null && !sessionId.isBlank()) {
-            sessionDialogMap.put(sessionId, id);
+            sessionDialogMap.put(mappingKey, id);
         }
         log.info("[ChatStream] 映射 sessionId={} -> dialogId={}", sessionId, id);
         return id;

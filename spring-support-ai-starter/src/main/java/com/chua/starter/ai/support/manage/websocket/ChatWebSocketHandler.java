@@ -99,6 +99,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String chatRequestId = body.get("chatRequestId") != null
                     ? String.valueOf(body.get("chatRequestId")) : null;
             try {
+                synchronized (registry.lockFor(body.get("sessionId"))) {
                 PreparedChat p = orchestrator.prepare(body);
                 WsChatFrameSink sink = new WsChatFrameSink(session, p.chatRequestId(), objectMapper);
                 registry.register(p.sessionId(), p.memoryUser(), sink);
@@ -107,6 +108,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 orchestrator.execute(p, sink);
                 log.info("[chat-ws] chat.start 已受理 sessionId={} chatRequestId={}",
                         p.sessionId(), p.chatRequestId());
+                }
             } catch (Exception e) {
                 log.warn("[chat-ws] 准备失败: {}", e.getMessage());
                 Map<String, Object> err = new LinkedHashMap<>();

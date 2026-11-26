@@ -425,6 +425,38 @@
       }
     },
     {
+      "id": "tokenrouter",
+      "name": "TokenRouter",
+      "description": "聚合 API 网关，OpenAI 兼容，一个 Key 调多家模型",
+      "protocol": "openai",
+      "baseUrl": "https://api.tokenrouter.com/v1",
+      "hosts": [
+        "api.tokenrouter.com"
+      ],
+      "doc": "https://www.tokenrouter.com/docs",
+      "modelsDevId": null,
+      "aliases": [
+        "tokenrouter"
+      ],
+      "capabilities": {
+        "streaming": true,
+        "streamingSource": "protocol",
+        "async": null,
+        "asyncSource": null,
+        "source": "registry"
+      },
+      "credit": {
+        "mode": "probe",
+        "kind": "auto",
+        "providerId": null,
+        "currency": null
+      },
+      "limits": {
+        "verified": false,
+        "source": "registry"
+      }
+    },
+    {
       "id": "commandcode",
       "name": "commandcode",
       "description": "聚合 API，支持数百个模型",

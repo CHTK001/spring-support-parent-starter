@@ -108,6 +108,16 @@
          这里只需要 JUnit 5、Spring 自带测试夹具（MockHttpServletRequest，非 mock 框架）与 H2。
          spring-test / h2 / junit-jupiter 的版本均由 Spring Boot BOM 托管。 -->
     <!-- 真实数据库链路：内存 H2（MySQL 兼容模式）回放账号三表 DDL，Mapper 全部真实落库 -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

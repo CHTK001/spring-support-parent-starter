@@ -159,6 +159,22 @@ public class AccountChannelService {
     }
 
     /**
+     * 校验指定渠道模型当前可供给，所有消费方复用同一启用口径。
+     * @param providerId 渠道标识
+     * @param model 模型标识
+     */
+    public void requireAvailableModel(String providerId, String model) {
+        SysAccountChannel channel = require(providerId);
+        if (!Boolean.TRUE.equals(channel.getEnabled()) || model == null || model.isBlank()
+                || modelMapper.selectCount(new LambdaQueryWrapper<SysAccountChannelModel>()
+                    .eq(SysAccountChannelModel::getProviderId, providerId)
+                    .eq(SysAccountChannelModel::getModel, model)
+                    .eq(SysAccountChannelModel::getEnabled, true)) == 0) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "渠道或模型未启用");
+        }
+    }
+
+    /**
      * 按认证方式取渠道（不看开关）。
      *
      * @param authScheme 认证方式，如 {@code oauth}

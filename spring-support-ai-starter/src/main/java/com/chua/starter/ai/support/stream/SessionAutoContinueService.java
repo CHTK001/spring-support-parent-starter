@@ -223,13 +223,15 @@ public class SessionAutoContinueService {
         SilentSink sink = new SilentSink();
         try {
             AiUserContext.runWith(resume, () -> {
+                synchronized (registry.lockFor(sid)) {
                 PreparedChat prepared = orchestrator.prepare(body);
                 registry.register(sid, session.getSysUserId(), sink);
                 orchestrator.execute(prepared, sink);
+                }
             });
         } catch (RuntimeException e) {
             // 准备阶段失败时不能留下活跃登记，否则这一会话在本次运行内再也不会被补发
-            registry.remove(sid);
+            registry.remove(sid, sink);
             throw e;
         }
         return true;

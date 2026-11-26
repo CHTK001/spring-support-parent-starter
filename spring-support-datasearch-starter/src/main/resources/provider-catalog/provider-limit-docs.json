@@ -157,6 +157,28 @@
       "notes": "免费档逐模型限速（2026-11-26 官方页面实拉，来源 console.groq.com/docs/rate-limits，RPM/RPD/TPM/TPD/ASH/ASD 六列）：gpt-oss-120b=30 RPM / 1K RPD / 8K TPM / 200K TPD；gpt-oss-20b=30 RPM / 1K RPD / 8K TPM / 200K TPD；gpt-oss-safeguard-20b=3 RPM / 1K RPD / 2K TPM / 200K TPD；qwen3.8-27b=30 RPM / 1K RPD / 8K TPM / 200K TPD；llama-prompt-guard-2-22m=30 RPM / 14.4K RPD / 15K TPM / 500K TPD；llama-prompt-guard-2-86m=30 RPM / 14.4K RPD / 15K TPM / 500K TPD；whisper-large-v3=20 RPM / 2K RPD / — / — / 7.2K ASH / 28.8K ASD；whisper-large-v3-turbo=20 RPM / 2K RPD / — / — / 7.2K ASH / 28.8K ASD。llama-3.1-8b-instant 已于 2026-08-16 移出免费档，不在本表。开发档（dev tier）限速更高，此处仅登记免费档。撞限速回 429，不扣费。"
     },
     {
+      "id": "tokenrouter",
+      "name": "TokenRouter",
+      "aliases": [
+        "tokenrouter"
+      ],
+      "hosts": [
+        "api.tokenrouter.com"
+      ],
+      "doc": "https://www.tokenrouter.io/docs/rate-limits",
+      "verified": true,
+      "limits": {
+        "billing_basis": "网关按「每月请求次数」计配额，不按 token 加价；配额耗尽回 429 monthly_quota_exceeded",
+        "currency": "USD",
+        "free_tier_models": [
+          "deepseek/deepseek-v4.1-flash-1017-free",
+          "stealth/union-alpha",
+          "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+        ]
+      },
+      "notes": "两层限制（2026-11-26 官方页面实拉，来源 tokenrouter.io/docs/rate-limits）：① 计划级月度网关请求配额——Free=1,000 / Starter=1,000,000 / Team=10,000,000 / Enterprise=不限；耗尽回 429 monthly_quota_exceeded（终态，重试无效）。② per-key RPM / TPM——创建或编辑 Key 时在控制台设置，撞限回 429 rate_limit_exceeded 并带 Retry-After（瞬时，可退避重试）。上游供应商自身的限速由 TokenRouter 透出为 502 upstream_error 并附厂商原文。计费口径：网关请求次数计费、零 token 加价，所以免费档模型（price=0）在配额内是真零成本。以上为官网 tokenrouter.io 文档口径；本系统接入的 api.tokenrouter.com 实例是 new-api 二次开发部署（页面 meta generator=new-api，/api/status 返回 _qn=token-router、quota_display_type=USD、quota_per_unit=500000），该实例的 403 insufficient_user_quota 对应「账户余额/token 额度不足」，与此处登记的计划级网关请求配额不是同一层，二者需分别理解。实测：App Key 拿 GET /v1/models 返回 160 个模型；付费模型走 /v1/chat/completions 回 403 insufficient_user_quota；免费档模型 deepseek/deepseek-v4.1-flash-1017-free 回 200 并返回真实 completion。"
+    },
+    {
       "id": "togetherai",
       "name": "Together AI",
       "aliases": [

@@ -152,10 +152,13 @@ public class ChatClientRegistry {
      * @param client       对话客户端 实例
      * @param capabilities 能力标签
      */
-    public void registerAgentModel(String modelName, ChatClient client, String... capabilities) {
+    public synchronized void registerAgentModel(String modelName, ChatClient client, String... capabilities) {
         if (modelName == null || client == null) {
             log.warn("[ChatClientRegistry] 注册 Agent 模型参数不完整: modelName={}, client={}", modelName, client);
             return;
+        }
+        if (!isAgentModelRegistered(modelName) && modelIndex.containsKey(modelName.toLowerCase(java.util.Locale.ROOT))) {
+            throw new IllegalArgumentException("模型名称已被普通模型使用: " + modelName);
         }
         // 先幂等移除旧注册
         unregisterAgentModel(modelName);
@@ -171,7 +174,7 @@ public class ChatClientRegistry {
      *
      * @param modelName 模型名称
      */
-    public void unregisterAgentModel(String modelName) {
+    public synchronized void unregisterAgentModel(String modelName) {
         if (modelName == null) {
             return;
         }

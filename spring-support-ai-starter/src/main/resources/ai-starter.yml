@@ -195,6 +195,23 @@ plugin:
       # 后端对 key 做 SHA-256 → 32 字节 AES-256 密钥，IV 取前 16 字节）
       codec-type: aes
       codec-request-key: e3eccc79fe899fcd06b380126930d61c
+  security:
+    sniff:
+      # 嗅探（bot 挑战）：与 CodecRequestOpen / CodecTraceOpen 同口径——常量过滤器「缺省即装配」，
+      # 真正的开关是系统配置 CodecSniffOpen（group=config，默认 false），打开即生效，不用改 yaml。
+      # 这里只放调参；置 enabled: false 是硬关（彻底不装配）。
+      # 首段判定只看不可伪造的请求信号（UA 缺失 / 无头 UA / 机器人 UA 等），
+      # 命中直接 403；其余请求返回 428 + 挑战 JS，前端执行后加密指纹重放同一请求，
+      # 第二段由 DetectorUtils 结合客户端探针判定，通过后签发 ticket（HMAC 无状态）。
+      # ticket 签名密钥；不配用内置常量（只影响 ticket 防伪，不影响解答密文：
+      # 解答以每次挑战的一次性随机数作密钥）
+      # secret-key: 0123456789abcdef
+      # ticket 有效期（秒），默认 1800
+      # ttl-seconds: 1800
+      # 需要嗅探的路径，默认 /v2/** 与 /api/**；设置水合、登录、登出、验证码内置豁免
+      # include-paths: /v2/**,/api/**
+      # 额外豁免路径（逗号分隔），留空即只用内置豁免
+      # exclude-paths: /v2/ai/generate/models
   oauth:
     enable: true
     protocol: static

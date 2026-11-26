@@ -836,7 +836,8 @@ public class ApiProviderController {
         if (!webVisible) {
             log.info("[Providers] 非管理员未携带有效 Web 平台密钥，隐藏 Web 模型目录");
         }
-        List<SysAccountChannel> providers = accountChannelService.listAll();
+        List<SysAccountChannel> providers = enabledOnly
+                ? accountChannelService.listEnabled() : accountChannelService.listAll();
 
         List<Map<String, Object>> items = new ArrayList<>(8); // 提供者数量不可预估
         for (SysAccountChannel p : providers) {
@@ -8239,6 +8240,8 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
         // Groq：官方 OpenAI 兼容端点（/openai/v1），LPU 推理；前端模板 id groq
         m.put("groq", new ProtocolPreset("groq", "https://api.groq.com/openai/v1"));
         m.put("openrouter", new ProtocolPreset("openrouter", "https://openrouter.ai/api/v1"));
+        // TokenRouter：OpenAI 兼容聚合网关（/v1/models 实测 160 个模型）；前端模板 id tokenrouter
+        m.put("tokenrouter", new ProtocolPreset("tokenrouter", "https://api.tokenrouter.com/v1"));
         m.put("poe", new ProtocolPreset("poe", "https://api.poe.com/v1"));
         m.put("ppio", new ProtocolPreset("ppio", "https://api.ppinfra.com/v3/openai"));
         m.put("modelscope", new ProtocolPreset("modelscope", "https://api-inference.modelscope.cn/v1"));

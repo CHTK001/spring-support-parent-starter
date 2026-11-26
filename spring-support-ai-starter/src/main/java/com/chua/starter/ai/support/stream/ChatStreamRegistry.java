@@ -35,6 +35,19 @@ public class ChatStreamRegistry {
      */
     private final Map<String, ActiveChat> active = new ConcurrentHashMap<>();
 
+    /** 有界分段锁，覆盖准备与注册之间的窗口。 */
+    private final Object[] preparationLocks = java.util.stream.IntStream.range(0, 128)
+            .mapToObj(index -> new Object()).toArray();
+
+    /**
+     * 同一会话的准备、审批恢复与注册必须在同一把锁内完成。
+     * @param sessionId 会话标识
+     * @return 有界分段锁
+     */
+    public Object lockFor(Object sessionId) {
+        return preparationLocks[Math.floorMod(String.valueOf(sessionId).hashCode(), preparationLocks.length)];
+    }
+
     /**
      * sessionId -> 本轮 Agent 的中断动作。
      *
@@ -98,7 +111,22 @@ public class ChatStreamRegistry {
      */
     public void register(String sessionId, String ownerUserId, ChatFrameSink sink) {
         if (sessionId != null) {
-            active.put(sessionId, new ActiveChat(ownerUserId, sink));
+            if (active.putIfAbsent(sessionId, new ActiveChat(ownerUserId, sink)) != null) {
+                throw new ApiException(ApiErrorCode.CONFLICT, "SessionBusyError: 会话正在执行");
+            }
+        }
+    }
+
+    /**
+     * 只移除属于该槽的轮次，旧轮次延迟收尾不能删除下一轮。
+     * @param sessionId 会话标识
+     * @param sink 本轮输出槽
+     */
+    public void remove(String sessionId, ChatFrameSink sink) {
+        if (sessionId == null) return;
+        ActiveChat current = active.get(sessionId);
+        if (current != null && current.sink() == sink && active.remove(sessionId, current)) {
+            interrupters.remove(sessionId);
         }
     }
 
@@ -152,7 +180,7 @@ public class ChatStreamRegistry {
         } catch (Exception e) {
             log.debug("[ai-stream] 发送结束帧失败，已忽略: {}", e.getMessage());
         }
-        active.remove(sessionId);
+        active.remove(sessionId, chat);
         sink.close();
         log.info("[ChatStream] 已停止流式 sessionId={}", sessionId);
     }
