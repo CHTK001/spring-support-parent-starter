@@ -7,7 +7,7 @@ import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.model.vo.AgentPushVO;
 import com.chua.starter.server.support.spi.HostAgentHistoryWriter;

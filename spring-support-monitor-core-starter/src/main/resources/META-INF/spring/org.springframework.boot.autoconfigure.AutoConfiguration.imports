@@ -1,1 +1,1 @@
-com.chua.starter.monitor.support.client.MonitorClientAutoConfiguration
+com.chua.starter.monitor.core.client.MonitorClientAutoConfiguration

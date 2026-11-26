@@ -10,7 +10,7 @@ import com.chua.starter.monitor.support.mapper.*;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.impl.MetricTimeSeriesWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

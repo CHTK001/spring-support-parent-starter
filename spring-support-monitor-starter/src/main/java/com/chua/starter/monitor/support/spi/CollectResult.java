@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.support.spi;
 
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import lombok.Data;

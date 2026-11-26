@@ -1,6 +1,6 @@
-package com.chua.starter.monitor.support.client;
+package com.chua.starter.monitor.core.client;
 
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import lombok.extern.slf4j.Slf4j;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;

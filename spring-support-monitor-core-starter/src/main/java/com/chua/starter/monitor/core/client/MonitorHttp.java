@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.client;
+package com.chua.starter.monitor.core.client;
 
 import java.net.URI;
 import java.net.http.HttpClient;

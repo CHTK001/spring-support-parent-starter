@@ -1,7 +1,7 @@
-package com.chua.starter.monitor.support.client;
+package com.chua.starter.monitor.core.client;
 
-import com.chua.starter.monitor.support.model.AgentMetricsPushVO;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.model.AgentMetricsPushVO;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 

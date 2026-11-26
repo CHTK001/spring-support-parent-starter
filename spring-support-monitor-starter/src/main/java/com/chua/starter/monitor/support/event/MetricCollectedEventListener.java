@@ -3,7 +3,7 @@ package com.chua.starter.monitor.support.event;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;

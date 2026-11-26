@@ -3,7 +3,7 @@ package com.chua.starter.monitor.support.service;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.*;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 
 import java.time.LocalDateTime;
 import java.util.List;

@@ -8,7 +8,7 @@ import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.MetricProvider;
 import java.io.IOException;
 import java.net.http.HttpClient;

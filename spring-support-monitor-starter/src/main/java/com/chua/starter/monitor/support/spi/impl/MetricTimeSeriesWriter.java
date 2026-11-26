@@ -2,7 +2,7 @@ package com.chua.starter.monitor.support.spi.impl;
 
 import com.chua.common.support.lang.datasource.series.SeriesEngine;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.model;
+package com.chua.starter.monitor.core.model;
 
 import java.util.List;
 import java.util.Objects;

@@ -11,7 +11,7 @@
 未开启该开关的存量宿主零影响（自动装配默认不生效）。
 
 - Maven 坐标：`com.chua:spring-support-monitor-core-starter:4.0.0.51`
-- 自动装配入口：`com.chua.starter.monitor.support.client.MonitorClientAutoConfiguration`
+- 自动装配入口：`com.chua.starter.monitor.core.client.MonitorClientAutoConfiguration`
   （注册于 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`）
 
 ## 能力概览

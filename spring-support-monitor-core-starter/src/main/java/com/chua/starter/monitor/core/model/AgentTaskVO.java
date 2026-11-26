@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.model;
+package com.chua.starter.monitor.core.model;
 
 /**
  * Agent 采集任务视图

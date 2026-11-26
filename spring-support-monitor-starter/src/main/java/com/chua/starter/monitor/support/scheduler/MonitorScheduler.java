@@ -15,7 +15,7 @@ import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.MetricProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

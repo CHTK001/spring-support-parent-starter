@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.client;
+package com.chua.starter.monitor.core.client;
 
 import lombok.extern.slf4j.Slf4j;
 

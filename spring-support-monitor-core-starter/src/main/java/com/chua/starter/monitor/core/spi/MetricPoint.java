@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.spi;
+package com.chua.starter.monitor.core.spi;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

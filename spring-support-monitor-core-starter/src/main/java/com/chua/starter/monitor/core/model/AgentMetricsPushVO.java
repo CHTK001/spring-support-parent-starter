@@ -1,6 +1,6 @@
-package com.chua.starter.monitor.support.model;
+package com.chua.starter.monitor.core.model;
 
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.ArrayList;

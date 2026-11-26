@@ -12,7 +12,7 @@ import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.MetricProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

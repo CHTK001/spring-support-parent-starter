@@ -2,7 +2,7 @@
 package com.chua.starter.monitor.support.service;
 
 import com.chua.starter.monitor.support.config.AgentDeployProperties;
-import com.chua.starter.monitor.support.model.AgentHealthVO;
+import com.chua.starter.monitor.core.model.AgentHealthVO;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;

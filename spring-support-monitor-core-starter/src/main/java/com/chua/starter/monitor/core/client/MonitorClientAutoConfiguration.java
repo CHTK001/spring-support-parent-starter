@@ -1,4 +1,4 @@
-package com.chua.starter.monitor.support.client;
+package com.chua.starter.monitor.core.client;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -56,7 +56,7 @@ public class MonitorClientAutoConfiguration {
         try {
             Class.forName("oshi.SystemInfo", false, MonitorClientAutoConfiguration.class.getClassLoader());
             return (MonitorMetricCollector) Class.forName(
-                            "com.chua.starter.monitor.support.client.OshiMetricCollector",
+                            "com.chua.starter.monitor.core.client.OshiMetricCollector",
                             true, MonitorClientAutoConfiguration.class.getClassLoader())
                     .getDeclaredConstructor().newInstance();
         } catch (Throwable e) {
