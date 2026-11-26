@@ -1,2 +1,0 @@
-com.chua.starter.monitor.support.nginx.spi.impl.PosixNginxCommandProvider
-com.chua.starter.monitor.support.nginx.spi.impl.WindowsNginxCommandProvider

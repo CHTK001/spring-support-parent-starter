@@ -7,7 +7,6 @@ com.chua.starter.ai.support.configuration.ocr.OcrGlobalSettingProvider
 com.chua.starter.ai.support.configuration.rag.RagGlobalSettingProvider
 com.chua.starter.ai.support.configuration.input.InputOptimizeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider
-com.chua.starter.ai.support.configuration.runtime.ProtocolServerGlobalSettingProvider
 com.chua.starter.ai.support.configuration.generate.GenerateGlobalSettingProvider
 com.chua.starter.ai.support.configuration.usage.UsageGlobalSettingProvider
 com.chua.starter.ai.support.configuration.memory.MemoryGlobalSettingProvider
@@ -16,7 +15,6 @@ com.chua.starter.ai.support.configuration.session.SessionGlobalSettingProvider
 com.chua.starter.ai.support.configuration.tts.TtsGlobalSettingProvider
 com.chua.starter.ai.support.configuration.search.SearchGlobalSettingProvider
 com.chua.starter.ai.support.configuration.paper.PaperGlobalSettingProvider
-com.chua.starter.ai.support.configuration.reid.ReidGlobalSettingProvider
 com.chua.starter.ai.support.configuration.marking.MarkingGlobalSettingProvider
 com.chua.starter.ai.support.configuration.compose.PaperComposeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.health.ChannelProbeGlobalSettingProvider
