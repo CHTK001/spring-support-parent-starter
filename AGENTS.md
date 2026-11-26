@@ -48,8 +48,12 @@
 split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 
 - **模块粒度 = `src` 之前的完整相对路径**（`utils/utils-support-core-parent/utils-support-network-starter`），**不能取上层目录**。取父目录会把同一 parent 下的兄弟模块并成一个「模块」，兄弟模块之间的同包跨模块被误判为「同包同模块」，扫描结果假绿。
-- 按错误粒度曾得出「SPLIT=0」；按正确粒度实测仍有 **4 处**：`com.chua.common.support.network.tcp`（common 7 类 + network 1 类）、`com.chua.datalake.support.engine`（datalake-query + datalake-sink）、`com.chua.ffmpeg.support.processor`（ffmpeg 2 类 + ffmpeg-javacv 1 类）、`com.chua.starter.service.configuration`（api configuration 6 类 + service 2 类）。
-- 迁移评估与批次建议见 `D:\ch\验收报告\包结构残留寄宿迁移评估.md`；扫描脚本 `temp/namespace-audit/split-module-level.js`。
+- 按错误粒度曾得出「SPLIT=0」；按正确粒度实测曾暴露 **4 处**，**2026-11-26 已全部整改归零**（复跑 `SPLIT_SCAN javaFiles=10340 packages=2272 SPLIT=0`）：
+  - `com.chua.common.support.network.tcp`：`VertxTcpClient` → `com.chua.vertx.support.client`（接口 `TcpClient` 仍留 common）。
+  - `com.chua.datalake.support.engine`：`HttpDatalakeQueryEngine` → `com.chua.datalake.support.query`（sink 侧 `DefaultPipelineEngine` 仍留原包）。
+  - `com.chua.ffmpeg.support.processor`：`JavaCVFFmpegProcessor` → `com.chua.ffmpeg.support.processor.javacv`（它只 `implements FFmpegProcessor`，不继承 `AbstractFFmpegProcessor`）。
+  - `com.chua.starter.service.configuration`：`ServiceConfiguration`、`CommonServiceSchemaInitializer` → `com.chua.starter.service`（configuration-starter 的 6 类不动，`SysSettingEnvironmentPostProcessor` 还登记在 `spring.factories`）。
+- 迁移记录与运行时证据见 `D:\ch\验收报告\包结构残留寄宿迁移评估.md`、`D:\ch\验收报告\包结构整改.md`；扫描脚本 `temp/namespace-audit/split-module-level.js`。
 - `@ComponentScan("...")`、`scanBasePackages = {"..."}`、`AutoConfiguration.imports` 里的包名/FQN 都是**字符串**，改包名时编译不报错，迁包必须逐条 grep 这些字面量。
 
 ## Javadoc 注释三坑（2026-11-25 实证）
