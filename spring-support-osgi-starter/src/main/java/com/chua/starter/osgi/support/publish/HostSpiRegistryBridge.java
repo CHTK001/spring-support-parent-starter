@@ -3,6 +3,7 @@ package com.chua.starter.osgi.support.publish;
 
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.definition.ServiceDefinition;
+import com.chua.common.support.spi.definition.ServiceDefinitionUtils;
 import com.chua.common.support.spi.resolver.OsgiServiceResolver;
 import lombok.extern.slf4j.Slf4j;
 
@@ -115,15 +116,10 @@ final class HostSpiRegistryBridge {
      * @return 服务定义
      */
     private ServiceDefinition buildDefinition(Class<?> type, Object instance, String name) {
-        ServiceDefinition definition = new ServiceDefinition();
-        definition.setName(name);
-        definition.setType(type);
-        definition.setImplClass(instance.getClass());
-        definition.setClassLoader(instance.getClass().getClassLoader());
-        definition.setObj(instance);
+        ServiceDefinition definition = ServiceDefinitionUtils.buildDefinitionAlias(type,
+                OsgiServiceResolver.class, instance, instance.getClass(), null, name, 0);
         definition.setLoaded(true);
         definition.setLoadTime(System.currentTimeMillis());
-        definition.setFinderType(OsgiServiceResolver.class);
         return definition;
     }
 
