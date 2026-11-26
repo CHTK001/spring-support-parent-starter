@@ -15,8 +15,12 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
 
     /**
      * 是否开启响应加密
+     *
+     * <p>默认关闭：与其配套的 {@code CodecRequestOpen} / {@code CodecTraceOpen} / {@code CodecSniffOpen}
+     * 同口径——加密与嗅探都属可选加固，缺省不得替业务方打开；需要时由
+     * {@code sys_setting}(group=config) 的 {@code CodecResponseOpen} 显式开启。</p>
      */
-    private boolean codecResponseOpen = true;
+    private boolean codecResponseOpen = false;
 
     /**
      * 无参构造方法
