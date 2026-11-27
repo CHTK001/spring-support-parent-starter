@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 默认微信支付网关实现
@@ -872,7 +873,7 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
      * @param extraParams extra参数
      */
     private void mergeExtraParams(Map<String, Object> body, Map<String, Object> extraParams) {
-        if (extraParams != null && !extraParams.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(extraParams)) {
             body.putAll(extraParams);
         }
     }

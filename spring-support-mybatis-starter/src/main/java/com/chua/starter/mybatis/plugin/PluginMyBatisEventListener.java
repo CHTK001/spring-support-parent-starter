@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 插件 MyBatis 映射器 事件监听器
@@ -59,7 +60,7 @@ public class PluginMyBatisEventListener {
      */
     @EventListener
     public void onPluginBeanRegistered(PluginBeanRegisteredEvent event) {
-        if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
+        if (CollectionUtils.isEmpty(sqlSessionFactories)) {
             log.debug("[PluginMyBatis][事件]SqlSessionFactory 不可用，跳过 Mapper 注册: {}", event.getBeanName());
             return;
         }
@@ -104,7 +105,7 @@ public class PluginMyBatisEventListener {
      */
     @EventListener
     public void onPluginBeanUnregistered(PluginBeanUnregisteredEvent event) {
-        if (sqlSessionFactories == null || sqlSessionFactories.isEmpty()) {
+        if (CollectionUtils.isEmpty(sqlSessionFactories)) {
             log.debug("[PluginMyBatis][事件]SqlSessionFactory 不可用，跳过 Mapper 卸载: {}", event.getPluginFilePath());
             return;
         }
@@ -112,7 +113,7 @@ public class PluginMyBatisEventListener {
         String pluginFilePath = event.getPluginFilePath();
         Set<String> beanNames = event.getBeanNames();
 
-        if (beanNames == null || beanNames.isEmpty()) {
+        if (CollectionUtils.isEmpty(beanNames)) {
             return;
         }
 

@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 余额查询结果。
@@ -89,7 +90,7 @@ public class CreditResult implements Serializable {
         result.source = source;
         result.parts = parts;
         result.raw = truncate(raw);
-        if (parts != null && !parts.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(parts)) {
             BalancePart first = parts.get(0);
             result.amount = first.getAmount();
             result.currency = first.getCurrency();

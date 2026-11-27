@@ -12,6 +12,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 把 {@link HttpServletRequest} 适配成 common-starter 的 {@code ServerRequest}。
@@ -57,13 +58,13 @@ public class ServletServerRequest extends AbstractServerRequest {
      */
     public ServletServerRequest(HttpServletRequest request, String path, String query) {
         this.request = request;
-        this.path = path == null || path.isEmpty() ? "/" : path;
+        this.path = StringUtils.isEmpty(path) ? "/" : path;
         this.query = query;
     }
 
     @Override
     public String getUri() {
-        return query == null || query.isEmpty() ? path : path + "?" + query;
+        return StringUtils.isEmpty(query) ? path : path + "?" + query;
     }
 
     @Override
@@ -103,7 +104,7 @@ public class ServletServerRequest extends AbstractServerRequest {
             return params;
         }
         Map<String, String> parsed = new LinkedHashMap<>();
-        if (query != null && !query.isEmpty()) {
+        if (StringUtils.isNotEmpty(query)) {
             for (String pair : query.split("&")) {
                 if (pair.isEmpty()) {
                     continue;

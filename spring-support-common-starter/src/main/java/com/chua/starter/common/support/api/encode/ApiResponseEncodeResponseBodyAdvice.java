@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.StringUtils;
 
 
 /**
@@ -168,7 +169,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
        * @return 字节数组
        */
     private byte[] convertToBinary(String str) {
-        if (str == null || str.isEmpty()) {
+        if (StringUtils.isEmpty(str)) {
             return new byte[0];
         }
         

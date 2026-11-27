@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据库映射加载器，启动时从数据库表加载 数据同步 映射配置。
@@ -171,7 +172,7 @@ public class DatabaseMappingLoader implements InitializingBean {
      * @return 解析参数的结果
      */
     private Map<String, Object> parseParams(String paramsJson) {
-        if (paramsJson == null || paramsJson.isEmpty()) {
+        if (StringUtils.isEmpty(paramsJson)) {
             return Map.of();
         }
         try {

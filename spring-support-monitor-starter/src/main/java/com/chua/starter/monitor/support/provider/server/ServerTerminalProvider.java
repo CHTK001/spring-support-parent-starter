@@ -15,6 +15,7 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 服务器终端采集 提供者(SSH)
@@ -96,7 +97,7 @@ public class ServerTerminalProvider implements MetricProvider {
 
         JsonObject config = Json.getJsonObject(context.getTask().getCollectConfig());
         String command = str(config.getObject("command"));
-        if (command == null || command.isEmpty()) {
+        if (StringUtils.isEmpty(command)) {
             return result.fail("collect_config 缺少 command");
         }
 

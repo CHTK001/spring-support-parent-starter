@@ -35,6 +35,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 数据库文档导出。
@@ -526,7 +528,7 @@ public class DbDocumentController {
      */
     private static String primaryExtension(DocumentProvider provider) {
         String[] extensions = provider.getExtensions();
-        String ext = extensions != null && extensions.length > 0 ? extensions[0] : ".txt";
+        String ext = ArrayUtils.isNotEmpty(extensions) ? extensions[0] : ".txt";
         return ext.startsWith(".") ? ext : "." + ext;
     }
 
@@ -607,7 +609,7 @@ public class DbDocumentController {
      * @return 过滤后的表清单
      */
     private static List<TableData> filterTables(List<TableData> all, String tables) {
-        if (all == null || all.isEmpty()) {
+        if (CollectionUtils.isEmpty(all)) {
             return List.of();
         }
         if (tables == null || tables.isBlank()) {

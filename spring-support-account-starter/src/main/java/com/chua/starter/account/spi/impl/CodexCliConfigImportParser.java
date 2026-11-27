@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Codex CLI 配置解析（{@code config.toml} + {@code auth.json}）。
@@ -27,7 +29,7 @@ public class CodexCliConfigImportParser extends AbstractChannelConfigImportParse
 
     @Override
     public List<ChannelImportEntry> parse(List<ChannelImportFile> files) {
-        if (files == null || files.isEmpty()) {
+        if (CollectionUtils.isEmpty(files)) {
             throw new IllegalArgumentException("请提供 Codex CLI 的 config.toml 与 auth.json");
         }
         ChannelImportFile tomlFile = findBySuffix(files, ".toml");
@@ -52,7 +54,7 @@ public class CodexCliConfigImportParser extends AbstractChannelConfigImportParse
             Map<String, String> root = toml.getOrDefault("", Map.of());
             modelId = root.getOrDefault("model", "");
             String modelProvider = root.get("model_provider");
-            if (modelProvider != null && !modelProvider.isEmpty()) {
+            if (StringUtils.isNotEmpty(modelProvider)) {
                 Map<String, String> section = toml.get("model_providers." + modelProvider);
                 if (section != null) {
                     baseUrl = section.getOrDefault("base_url", "");

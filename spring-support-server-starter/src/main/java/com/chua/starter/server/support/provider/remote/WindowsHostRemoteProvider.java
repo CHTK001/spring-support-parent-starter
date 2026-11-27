@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * Windows 主机远程操作实现（OpenSSH + PowerShell）
@@ -353,7 +354,7 @@ public class WindowsHostRemoteProvider implements HostRemoteProvider {
     public String join(String... parts) {
         StringBuilder sb = new StringBuilder();
         for (String part : parts) {
-            if (part == null || part.isEmpty()) {
+            if (StringUtils.isEmpty(part)) {
                 continue;
             }
             if (sb.length() > 0 && sb.charAt(sb.length() - 1) != '\\' && sb.charAt(sb.length() - 1) != '/') {

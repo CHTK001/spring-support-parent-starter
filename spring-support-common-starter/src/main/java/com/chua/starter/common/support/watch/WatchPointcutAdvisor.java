@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 切面
@@ -305,7 +306,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         String pid  = null;
         for (int i = 0; i < source.size(); i++) {
             Span span = source.get(i);
-            if(null != span.getFrom() && span.getFrom().equals(parent)) {
+            if(ObjectUtils.nullSafeEquals(span.getFrom(), parent)) {
                 pid = span.getId();
             }
 

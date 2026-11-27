@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * SSE Socket 会话模板实现
@@ -87,7 +88,7 @@ public class SseSocketSessionTemplate implements SocketSessionTemplate {
      * @return SseEmitter
      */
     public SseEmitter createConnection(String clientId) {
-        if (clientId == null || clientId.isEmpty()) {
+        if (StringUtils.isEmpty(clientId)) {
             clientId = UUID.randomUUID().toString().replace("-", "");
         }
 

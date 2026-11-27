@@ -10,6 +10,7 @@ import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 文件服务器装配器：内置形态（Servlet 过滤器）与独立形态（独立 HTTP 服务）共用同一套装配逻辑。
@@ -192,7 +193,7 @@ public final class FileStorageServerAssembler {
             return;
         }
         Set<String> buckets = setting.getPrivateBuckets();
-        String csv = buckets == null || buckets.isEmpty() ? "" : String.join(",", buckets);
+        String csv = CollectionUtils.isEmpty(buckets) ? "" : String.join(",", buckets);
         oauth.updateConfig(Map.of("privateBuckets", csv));
     }
 }

@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * IP2Proxy LITE 离线 IP 质量检测器（基于 IP2Proxy Java 库）。
@@ -117,7 +118,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
 
     @Override
     public IpQuality detect(String ip) {
-        if (ip == null || ip.isEmpty()) {
+        if (StringUtils.isEmpty(ip)) {
             return null;
         }
         if (ip2Proxy == null) {

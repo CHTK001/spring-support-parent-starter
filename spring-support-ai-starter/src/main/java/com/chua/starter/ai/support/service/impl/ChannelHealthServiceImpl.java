@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 渠道健康探针服务实现。
@@ -705,7 +706,7 @@ public class ChannelHealthServiceImpl implements ChannelHealthService {
         refreshAttempts.put(connectionId, now);
         try {
             Map<String, Object> renewed = impl.refresh(conn.getCredentials());
-            if (renewed == null || renewed.isEmpty()) {
+            if (CollectionUtils.isEmpty(renewed)) {
                 log.warn("[ChannelHealthProbe] 续期返回空凭据 connection={} channel={}",
                         connectionId, conn.getProviderId());
                 return null;

@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 嵌入模式的 APM 接口 Servlet。
@@ -113,7 +115,7 @@ public class ApmServlet extends HttpServlet {
      */
     private String path(HttpServletRequest request) {
         String pathInfo = request.getPathInfo();
-        if (pathInfo != null && !pathInfo.isEmpty()) {
+        if (StringUtils.isNotEmpty(pathInfo)) {
             return pathInfo;
         }
         return request.getRequestURI();
@@ -128,7 +130,7 @@ public class ApmServlet extends HttpServlet {
     private Map<String, String> params(HttpServletRequest request) {
         Map<String, String> params = new LinkedHashMap<>();
         request.getParameterMap().forEach((key, values) -> {
-            if (values != null && values.length > 0) {
+            if (ArrayUtils.isNotEmpty(values)) {
                 params.put(key, values[0]);
             }
         });

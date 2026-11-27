@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 基于宿主数据源的时序引擎（默认实现）。
@@ -114,7 +115,7 @@ public class BeanTimeSeriesEngine implements DeviceTimeSeriesEngine {
 
     @Override
     public int writeBatch(List<DeviceSeriesPoint> points) {
-        if (points == null || points.isEmpty()) {
+        if (CollectionUtils.isEmpty(points)) {
             return 0;
         }
         List<Object[]> batch = new ArrayList<>(points.size());
@@ -295,7 +296,7 @@ public class BeanTimeSeriesEngine implements DeviceTimeSeriesEngine {
      * @return JSON 文本
      */
     private static String toJson(Map<String, String> extra) {
-        if (extra == null || extra.isEmpty()) {
+        if (CollectionUtils.isEmpty(extra)) {
             return null;
         }
         try {

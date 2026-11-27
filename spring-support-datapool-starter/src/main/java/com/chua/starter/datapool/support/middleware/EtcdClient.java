@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * etcd 客户端（走 etcd 的 gRPC-gateway JSON API，不引 gRPC 依赖）。
@@ -543,7 +544,7 @@ public class EtcdClient {
      * @return 字节
      */
     public static byte[] decode(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return new byte[0];
         }
         try {

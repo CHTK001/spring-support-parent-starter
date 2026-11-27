@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 任务执行日志事件 (record)。
@@ -229,7 +230,7 @@ public record JobLogEvent(
         int depth = 0;
         while (cur != null && depth++ < 10) {
             String msg = cur.getMessage();
-            if (msg != null && !msg.isEmpty()) {
+            if (StringUtils.isNotEmpty(msg)) {
                 return msg;
             }
             cur = cur.getCause();
@@ -273,7 +274,7 @@ public record JobLogEvent(
      * @return 从json的结果
      */
     public static JobLogEvent fromJson(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return null;
         }
         try {
@@ -331,7 +332,7 @@ public record JobLogEvent(
      */
     private static long readLongField(String text, String name) {
         String v = readField(text, name);
-        if (v == null || v.isEmpty() || "null".equals(v)) {
+        if (StringUtils.isEmpty(v) || "null".equals(v)) {
             return 0L;
         }
         try {
@@ -387,7 +388,7 @@ public record JobLogEvent(
      * @return 原文，null 表示无
      */
     private static String decodeField(String encoded) {
-        if (encoded == null || encoded.isEmpty() || "null".equals(encoded)) {
+        if (StringUtils.isEmpty(encoded) || "null".equals(encoded)) {
             return null;
         }
         try {
@@ -405,7 +406,7 @@ public record JobLogEvent(
      * @return 结果字符串
      */
     private static String decodeLogContent(String encoded) {
-        if (encoded == null || encoded.isEmpty()) {
+        if (StringUtils.isEmpty(encoded)) {
             return null;
         }
         try {

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.LongAdder;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 多级缓存实现
@@ -413,7 +414,7 @@ public class MultiLevelCache implements Cache {
      * @return 受影响的缓存层级数量
      */
     public int evictByPattern(String pattern) {
-        if (pattern == null || pattern.isEmpty()) {
+        if (StringUtils.isEmpty(pattern)) {
             return 0;
         }
         String lowerPattern = pattern.toLowerCase();

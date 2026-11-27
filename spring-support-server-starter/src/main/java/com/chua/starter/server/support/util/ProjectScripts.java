@@ -2,6 +2,7 @@ package com.chua.starter.server.support.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * 发布项目「启动 / 停止 / 重启 / 状态」四个脚本的内置通用模板。
@@ -509,7 +510,7 @@ public final class ProjectScripts {
        * @return 启动脚本
        */
     private static String winStart(String exe, String args, String matchName) {
-        String tail = args == null || args.isEmpty() ? "" : " " + args;
+        String tail = StringUtils.isEmpty(args) ? "" : " " + args;
         String inner = exe + tail;
         String match = matchName == null || matchName.isBlank() ? exe : matchName;
           // 启动器内容由 Java 侧拼好，避免在 PowerShell 里再拼一次命令行导致引号层级失控。
@@ -882,7 +883,7 @@ public final class ProjectScripts {
        * @return 展开后的脚本（模板为空返回空）
        */
     public static String apply(String template, String mainEntry, String projectPath, String logPath, String appName) {
-        if (template == null || template.isEmpty()) {
+        if (StringUtils.isEmpty(template)) {
             return template;
         }
         String path = trim(projectPath);
@@ -939,7 +940,7 @@ public final class ProjectScripts {
        * @return 加前缀后的文本
        */
     private static String indent(String text, String prefix) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         StringBuilder sb = new StringBuilder();

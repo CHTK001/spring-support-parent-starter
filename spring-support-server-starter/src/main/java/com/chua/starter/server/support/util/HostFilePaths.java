@@ -2,6 +2,7 @@ package com.chua.starter.server.support.util;
 
 import java.util.Locale;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 主机文件路径与类型工具。
@@ -118,7 +119,7 @@ public final class HostFilePaths {
      */
     public static String normalizeDir(String path) {
         String key = normalizeKey(path);
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return "";
         }
         return key + SEPARATOR;
@@ -175,7 +176,7 @@ public final class HostFilePaths {
      * @return 名称；空 key 返回空串
      */
     public static String nameOf(String key) {
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return "";
         }
         int index = key.lastIndexOf(SEPARATOR);

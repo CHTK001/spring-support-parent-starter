@@ -216,7 +216,7 @@ public class MagpieRouteSource implements ChannelRouteSource {
     private AccountChannelAuthManager magpieManager() {
         for (Map.Entry<String, AccountChannelAuthManager> entry
                 : ServiceProvider.of(AccountChannelAuthManager.class).list().entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(CHANNEL)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), CHANNEL)) {
                 return entry.getValue();
             }
         }

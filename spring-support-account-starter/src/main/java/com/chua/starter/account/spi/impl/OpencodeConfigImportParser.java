@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * opencode 配置解析（{@code opencode.json} / {@code opencode.jsonc}）。
@@ -56,7 +57,7 @@ public class OpencodeConfigImportParser extends AbstractChannelConfigImportParse
             while (modelFields.hasNext()) {
                 Map.Entry<String, JsonNode> modelField = modelFields.next();
                 String modelId = modelField.getKey();
-                if (modelId == null || modelId.isEmpty()) {
+                if (StringUtils.isEmpty(modelId)) {
                     continue;
                 }
                 JsonNode m = obj(modelField.getValue());

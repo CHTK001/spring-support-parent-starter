@@ -9,6 +9,7 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.lang.NonNull;
 
 import java.io.IOException;
+import com.chua.common.support.utils.StringUtils;
 
 import static com.chua.starter.logger.constant.MdcConstant.X_TRACE_ID;
 
@@ -35,7 +36,7 @@ public class RestTemplateTraceIdInterceptor implements ClientHttpRequestIntercep
     public ClientHttpResponse intercept(@NonNull HttpRequest request, @NonNull byte[] body,
                                          @NonNull ClientHttpRequestExecution execution) throws IOException {
         String traceId = MDC.get(MdcConstant.TRACE_ID);
-        if (traceId != null && !traceId.isEmpty()) {
+        if (StringUtils.isNotEmpty(traceId)) {
             request.getHeaders().add(X_TRACE_ID, traceId);
         }
         return execution.execute(request, body);

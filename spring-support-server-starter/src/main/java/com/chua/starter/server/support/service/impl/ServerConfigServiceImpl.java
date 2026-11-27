@@ -19,6 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 服务器系统配置服务实现
@@ -163,7 +165,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
      * @param keys 变更的配置键
      */
     private void publishChanged(Set<String> keys) {
-        if (keys == null || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
             return;
         }
         try {
@@ -256,7 +258,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
      * @return 是否numeric的结果
      */
     private boolean isNumeric(String s) {
-        if (s == null || s.isEmpty()) {
+        if (StringUtils.isEmpty(s)) {
             return false;
         }
         for (int i = 0; i < s.length(); i++) {

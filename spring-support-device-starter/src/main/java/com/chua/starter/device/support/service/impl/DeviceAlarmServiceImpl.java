@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 设备告警查询与处理服务实现。
@@ -77,7 +78,7 @@ public class DeviceAlarmServiceImpl implements DeviceAlarmService {
 
     @Override
     public int updateStatusBatch(List<String> ids, String status, String handler) {
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new IllegalArgumentException("未选择要处理的告警");
         }
         if (!VALID_STATUS.contains(status)) {

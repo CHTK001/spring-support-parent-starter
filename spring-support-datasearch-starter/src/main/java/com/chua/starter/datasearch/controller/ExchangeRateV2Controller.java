@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 顶栏汇率接口。
@@ -86,7 +87,7 @@ public class ExchangeRateV2Controller {
      * @return 展开后的币种对
      */
     private List<String> flatten(List<String> symbols) {
-        if (symbols == null || symbols.isEmpty()) {
+        if (CollectionUtils.isEmpty(symbols)) {
             return null;
         }
         return symbols.stream()

@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import java.math.BigDecimal;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * appKey 控制器，提供 appKey 的增删改查与启停切换。
@@ -113,7 +114,7 @@ public class AiAppKeyController {
     @DeleteMapping("/batch")
     public ReturnResult<Map<String, Object>> batchDelete(@RequestBody BatchDeleteRequest body) {
         List<Long> ids = body == null ? null : body.ids();
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
         int deleted = appKeyService.batchDelete(ids);

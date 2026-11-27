@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 抽取来源归一化：把变量里可能出现的任意宿主统一成文档、元素集合、文本或 JSON 结构。
@@ -449,7 +450,7 @@ public final class CollectDom {
      * @return 匹配结果，未命中返回 null
      */
     public static String regex(Object source, String pattern, Integer group) {
-        if (pattern == null || pattern.isEmpty()) {
+        if (StringUtils.isEmpty(pattern)) {
             return html(source);
         }
         Matcher matcher = compile(pattern).matcher(html(source));
@@ -470,7 +471,7 @@ public final class CollectDom {
     public static List<String> regexAll(Object source, String pattern, Integer group) {
         List<String> values = new ArrayList<>();
         String markup = html(source);
-        if (pattern == null || pattern.isEmpty()) {
+        if (StringUtils.isEmpty(pattern)) {
             values.add(markup);
             return values;
         }
@@ -901,7 +902,7 @@ public final class CollectDom {
      * @return 规范标题，未命中返回 null
      */
     private static String canonicalHead(String word) {
-        if (word == null || word.isEmpty()) {
+        if (StringUtils.isEmpty(word)) {
             return null;
         }
         String alias = HEAD_ALIASES.get(word);

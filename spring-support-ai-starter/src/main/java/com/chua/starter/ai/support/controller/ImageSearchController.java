@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 以图搜图控制器。
@@ -299,7 +300,7 @@ public class ImageSearchController {
                                         @RequestParam(value = "group", required = false) String group) {
         ImageSearchStore store = storeOf(group);
         byte[] original = store.readOriginal(id);
-        if (original != null && original.length > 0) {
+        if (ArrayUtils.isNotEmpty(original)) {
             return ResponseEntity.ok()
                     .contentType(imageMediaType(original))
                     // 图片字节可被任意变换后缓存，这里给短 max-age，避免改库后仍看到旧图

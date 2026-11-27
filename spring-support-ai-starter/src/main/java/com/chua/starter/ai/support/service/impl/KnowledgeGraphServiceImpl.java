@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 知识图谱服务实现。
@@ -323,7 +324,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                         .eq(SysAiKnowledgeGraphRef::getKnowledgeBaseId, knowledgeBaseId)
                         .and(w -> w.eq(SysAiKnowledgeGraphRef::getDocPath, oldPath)
                                 .or().likeRight(SysAiKnowledgeGraphRef::getDocPath, oldPath + "/")));
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return 0;
         }
         String prefix = oldPath + "/";
@@ -723,7 +724,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                 new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
                         .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
                         .eq(SysAiKnowledgeGraphEntity::getName, trimmed));
-        if (same != null && !same.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(same)) {
             // 主记录取权重最高的一条，保证多次抽取后仍是同一条在累加
             SysAiKnowledgeGraphEntity exists = same.stream()
                     .max(Comparator.comparingDouble(
@@ -803,7 +804,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         List<SysAiKnowledgeGraphEntity> all = graphEntityMapper.selectList(
                 new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
                         .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId));
-        if (all == null || all.isEmpty()) {
+        if (CollectionUtils.isEmpty(all)) {
             return 0;
         }
         Map<String, List<SysAiKnowledgeGraphEntity>> byName = all.stream()
@@ -900,7 +901,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
         List<SysAiKnowledgeGraphRelation> all = graphRelationMapper.selectList(
                 new LambdaQueryWrapper<SysAiKnowledgeGraphRelation>()
                         .eq(SysAiKnowledgeGraphRelation::getLibraryId, libraryId));
-        if (all == null || all.isEmpty()) {
+        if (CollectionUtils.isEmpty(all)) {
             return 0;
         }
         Map<String, List<SysAiKnowledgeGraphRelation>> byKey = all.stream()
@@ -1007,7 +1008,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
                 new LambdaQueryWrapper<SysAiKnowledgeGraphEntity>()
                         .eq(SysAiKnowledgeGraphEntity::getLibraryId, libraryId)
                         .eq(SysAiKnowledgeGraphEntity::getName, name.trim()));
-        if (hits == null || hits.isEmpty()) {
+        if (CollectionUtils.isEmpty(hits)) {
             return null;
         }
         // 同一名称可能因历史数据存在多条（不同类型），取任意一条即可，
@@ -1444,7 +1445,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
      * @return 返回值
     */
     public int deleteEntities(String knowledgeBaseId, Collection<String> uids) {
-        if (!StringUtils.hasText(knowledgeBaseId) || uids == null || uids.isEmpty()) {
+        if (!StringUtils.hasText(knowledgeBaseId) || CollectionUtils.isEmpty(uids)) {
             return 0;
         }
         Integer libraryId = findLibraryId(knowledgeBaseId);
@@ -1546,7 +1547,7 @@ public class KnowledgeGraphServiceImpl implements KnowledgeGraphService {
      * @return 返回值
     */
     public int deleteRelations(String knowledgeBaseId, Collection<String> uids) {
-        if (!StringUtils.hasText(knowledgeBaseId) || uids == null || uids.isEmpty()) {
+        if (!StringUtils.hasText(knowledgeBaseId) || CollectionUtils.isEmpty(uids)) {
             return 0;
         }
         Integer libraryId = findLibraryId(knowledgeBaseId);

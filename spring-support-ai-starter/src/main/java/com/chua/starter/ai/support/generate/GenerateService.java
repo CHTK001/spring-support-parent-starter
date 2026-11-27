@@ -40,6 +40,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 生成任务服务：文生图 / 文生视频的任务创建、轮询与历史。
@@ -456,7 +457,7 @@ public class GenerateService {
                         .in(SysAiGenerateTask::getStatus,
                                 SysAiGenerateTask.STATUS_PENDING, SysAiGenerateTask.STATUS_RUNNING)
                         .last("LIMIT 1"));
-        if (running != null && !running.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(running)) {
             throw new IllegalStateException("已有生成中的任务，请等它完成后再提交");
         }
     }
@@ -1151,7 +1152,7 @@ public class GenerateService {
        * @return 实际删除条数
        */
     public int deleteBatch(String userId, List<String> taskIds) {
-        if (userId == null || taskIds == null || taskIds.isEmpty()) {
+        if (userId == null || CollectionUtils.isEmpty(taskIds)) {
             return 0;
         }
         int removed = 0;

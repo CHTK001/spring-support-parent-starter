@@ -20,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 基于 Redis ZSET 的时序引擎。
@@ -112,7 +113,7 @@ public class RedisTimeSeriesEngine implements DeviceTimeSeriesEngine {
 
     @Override
     public int writeBatch(List<DeviceSeriesPoint> points) {
-        if (points == null || points.isEmpty()) {
+        if (CollectionUtils.isEmpty(points)) {
             return 0;
         }
         requireAvailable();
@@ -235,7 +236,7 @@ public class RedisTimeSeriesEngine implements DeviceTimeSeriesEngine {
             return Set.of(query.getDeviceId().trim());
         }
         Set<String> members = redis.opsForSet().members(devicesIndexKey(query.getCategory().trim()));
-        if (members == null || members.isEmpty()) {
+        if (CollectionUtils.isEmpty(members)) {
             return Set.of();
         }
         if (members.size() <= MAX_DEVICES) {

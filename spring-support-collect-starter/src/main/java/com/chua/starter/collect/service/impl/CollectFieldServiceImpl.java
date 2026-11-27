@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 采集结果字段服务实现。
@@ -74,7 +75,7 @@ public class CollectFieldServiceImpl extends ServiceImpl<CollectFieldMapper, Col
         remove(Wrappers.<CollectField>lambdaQuery()
                 .eq(CollectField::getCollectFieldFlowId, flowId)
                 .eq(CollectField::getCollectFieldNodeId, node));
-        if (fields == null || fields.isEmpty()) {
+        if (CollectionUtils.isEmpty(fields)) {
             return true;
         }
         List<CollectField> saves = new ArrayList<>();
@@ -114,7 +115,7 @@ public class CollectFieldServiceImpl extends ServiceImpl<CollectFieldMapper, Col
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int registerMissing(Integer flowId, String nodeId, Collection<String> names) {
-        if (flowId == null || names == null || names.isEmpty()) {
+        if (flowId == null || CollectionUtils.isEmpty(names)) {
             return 0;
         }
         String node = normalize(nodeId);

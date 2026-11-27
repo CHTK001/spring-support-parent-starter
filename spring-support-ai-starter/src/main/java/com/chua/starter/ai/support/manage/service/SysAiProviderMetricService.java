@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 厂商指标系数服务：按厂商取「一厂商一系数」的兜底指标。
@@ -287,7 +288,7 @@ public class SysAiProviderMetricService {
      * @return 中位数；列表为空返回 null
      */
     private static BigDecimal median(List<BigDecimal> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return null;
         }
         List<BigDecimal> sorted = new ArrayList<>(values);

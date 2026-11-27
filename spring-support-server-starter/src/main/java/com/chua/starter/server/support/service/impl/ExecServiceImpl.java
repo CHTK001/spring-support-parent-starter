@@ -40,6 +40,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 批量执行服务实现
@@ -120,7 +121,7 @@ public class ExecServiceImpl implements ExecService {
     @Override
     public ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds, Long jobId) {
         // 参数校验前置
-        if (hostIds == null || hostIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(hostIds)) {
             return ReturnResult.error("目标主机不能为空");
         }
         if (command == null || command.isBlank()) {
@@ -138,7 +139,7 @@ public class ExecServiceImpl implements ExecService {
 
     @Override
     public ReturnResult<List<MsExecLog>> distributeFile(List<Long> hostIds, String directory, MultipartFile file) {
-        if (hostIds == null || hostIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(hostIds)) {
             return ReturnResult.error("目标主机不能为空");
         }
         if (file == null || file.isEmpty()) {
@@ -268,7 +269,7 @@ public class ExecServiceImpl implements ExecService {
         if (job == null) {
             return ReturnResult.error("任务不存在: " + id);
         }
-        List<Long> targets = (hostIds == null || hostIds.isEmpty())
+        List<Long> targets = (CollectionUtils.isEmpty(hostIds))
                 ? parseHostIds(job.getServerExecJobHostIds()) : hostIds;
         int timeout = (timeoutSeconds == null || timeoutSeconds <= 0)
                 ? (job.getServerExecJobTimeout() == null ? DEFAULT_TIMEOUT_SECONDS : job.getServerExecJobTimeout())

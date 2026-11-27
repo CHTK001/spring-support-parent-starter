@@ -4,6 +4,7 @@ package com.chua.starter.ai.support.util;
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Function;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型指标键的兜底匹配规则：认「同一个模型的不同写法」，不认「另一个模型」。
@@ -104,7 +105,7 @@ public final class ModelMetricKeyMatcher {
      */
     public static <T> T selectNearest(String baseKey, Collection<T> candidates,
                                       Function<T, String> keyOf) {
-        if (baseKey == null || candidates == null || candidates.isEmpty()) {
+        if (baseKey == null || CollectionUtils.isEmpty(candidates)) {
             return null;
         }
         T best = null;

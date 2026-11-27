@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * APM 写操作 → {@code ms_apm_oper_log} 的落点实现。
@@ -109,7 +110,7 @@ public class MonitorApmOperLogSink implements ApmOperLogSink {
      * @return 逗号分隔的键名；没有设置项时返回 null
      */
     private String changedKeys(Map<String, String> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return null;
         }
         StringBuilder keys = new StringBuilder();

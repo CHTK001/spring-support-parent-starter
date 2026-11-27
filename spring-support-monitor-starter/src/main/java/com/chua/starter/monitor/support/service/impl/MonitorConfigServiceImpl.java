@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 /**
  * 监控配置服务实现。
  *
@@ -104,7 +106,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     */
     public boolean getBoolean(String key, boolean defaultValue) {
         String val = getString(key);
-        return val == null || val.isEmpty() ? defaultValue : Boolean.parseBoolean(val);
+        return StringUtils.isEmpty(val) ? defaultValue : Boolean.parseBoolean(val);
     }
 
     @Override
@@ -165,7 +167,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
      * @return upsert全部的结果
      */
     public ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities) {
-        if (entities == null || entities.isEmpty()) {
+        if (CollectionUtils.isEmpty(entities)) {
             return ReturnResult.ok(0);
         }
         int count = 0;

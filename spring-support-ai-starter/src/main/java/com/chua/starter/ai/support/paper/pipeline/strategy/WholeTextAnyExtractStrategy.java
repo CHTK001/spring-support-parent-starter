@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 整卷一次识别策略（默认）。
@@ -35,7 +36,7 @@ public class WholeTextAnyExtractStrategy implements AnyExtractStrategy {
             return new PaperScanner.AnyScan(List.of(), null, null);
         }
         List<PaperScanner.ScanBlock> blocks = context.blocks();
-        if (blocks != null && !blocks.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(blocks)) {
             List<PaperScanner.ScannedQuestion> byLayout = context.layoutQuestions();
             if (!byLayout.isEmpty()) {
                 List<PaperScanner.ScannedQuestion> withStem = context.fillStems(byLayout);

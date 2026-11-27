@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 内存版任务仓库, 默认实现, 适用于单机测试或调试场景。
@@ -120,7 +121,7 @@ public class InMemoryJobRepository implements JobRepository {
         String jobKey = spec.getJobKey().trim();
         // 任务键重命名（编辑时改键）：目标键未被占用才迁移
         String originKey = spec.getOriginJobKey() == null ? null : spec.getOriginJobKey().trim();
-        if (originKey != null && !originKey.isEmpty() && !originKey.equals(jobKey)
+        if (StringUtils.isNotEmpty(originKey) && !originKey.equals(jobKey)
                 && !table.containsKey(jobKey)) {
             JobDefinition origin = table.remove(originKey);
             JobSpec originSpec = specs.remove(originKey);
@@ -326,7 +327,7 @@ public class InMemoryJobRepository implements JobRepository {
         definition.setFixedDelayMs(0L);
         definition.setFixedRateMs(0L);
         String time = scheduleTime == null ? null : scheduleTime.trim();
-        if (time == null || time.isEmpty() || JobSpec.TYPE_NONE.equalsIgnoreCase(scheduleType)) {
+        if (StringUtils.isEmpty(time) || JobSpec.TYPE_NONE.equalsIgnoreCase(scheduleType)) {
             return;
         }
         if (JobSpec.TYPE_DELAY.equalsIgnoreCase(scheduleType)) {

@@ -445,8 +445,7 @@ public class FreeChannelChatClient implements RouterChatClient {
     private ChatClient buildUpstream(RouteTarget target, String apiKey, String upstreamModel) {
         RouteTarget effective = apiKey == null ? target : target.withApiKey(apiKey);
         ChatClientSetting upstreamSetting = effective.toSetting(setting);
-        if (setting.getProvider() != null
-                && setting.getProvider().equalsIgnoreCase(upstreamSetting.getProvider())) {
+        if (StringUtils.equalsIgnoreCase(setting.getProvider(), upstreamSetting.getProvider())) {
             // 防止路由目标指回本渠道自身（provider 与当前渠道同名）造成递归创建
             upstreamSetting.setProvider(ChatClient.OPENAI_EXTENSION);
         }

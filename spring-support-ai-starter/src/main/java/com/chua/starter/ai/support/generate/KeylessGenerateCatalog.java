@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 免登录生成类渠道（文生图 / 文生视频）的模型目录读取器。
@@ -89,7 +90,7 @@ public final class KeylessGenerateCatalog {
         } catch (Exception e) {
             return List.of();
         }
-        if (channels == null || channels.isEmpty()) {
+        if (CollectionUtils.isEmpty(channels)) {
             return List.of();
         }
         List<ChannelModel> rows = new ArrayList<>();

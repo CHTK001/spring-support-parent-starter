@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Mongo Shell 查询语句解析：把 {@code db.<集合>.<方法>(参数)[.limit(n)]} 拆成可执行结构。
@@ -174,7 +175,7 @@ public final class MongoShell {
      * @return 可被 {@code Document.parse} 直接解析的 JSON 文本
      */
     public static String normalizeJson(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "{}";
         }
         // 先做替换再统一引号：替换只碰字面量之外的壳，双引号内容原样保留

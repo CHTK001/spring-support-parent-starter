@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * appKey 服务实现类。
@@ -225,7 +226,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int batchDelete(List<Long> appKeyIds) {
-        if (appKeyIds == null || appKeyIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(appKeyIds)) {
             return 0;
         }
         for (Long appKeyId : appKeyIds) {

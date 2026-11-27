@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * OSGi 服务注册表 → 宿主 {@link ServiceProvider} 入口桥。
@@ -84,7 +85,7 @@ final class HostSpiRegistryBridge {
             return;
         }
         Set<HostRegistration> registrations = registrationsByBundle.remove(symbolicName);
-        if (registrations == null || registrations.isEmpty()) {
+        if (CollectionUtils.isEmpty(registrations)) {
             return;
         }
         for (HostRegistration registration : registrations) {

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AppKey 的模型范围解析：<b>所属分组的模型清单 ∩ Key 上的限定模型</b>。
@@ -186,7 +187,7 @@ public class AppKeyModelScope {
      * @return 过滤后的清单（不修改入参；{@code null} 入参返回空列表）
      */
     public static <T> List<T> filter(Set<String> scope, List<T> items, Function<T, String> codeOf) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return new ArrayList<>();
         }
         if (scope == null) {

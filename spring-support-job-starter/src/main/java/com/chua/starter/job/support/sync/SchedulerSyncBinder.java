@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 调度中心侧同步绑定器 (角色=调度器)。
@@ -138,7 +139,7 @@ public class SchedulerSyncBinder {
             try {
                 List<String> clients = syncServer.getConnectedClients();
                 log.info("[job] getConnectedClients()={} size={}", clients, clients == null ? 0 : clients.size());
-                if (clients == null || clients.isEmpty()) {
+                if (CollectionUtils.isEmpty(clients)) {
  // 0 在线执行器: 广播兜底（可能有未及时上报的客户端），并把丢单落到日志表，避免静默丢失
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
                     // 入近期缓冲：执行器重连上线时补偿重放（0 在线时的广播同样可能被错过）

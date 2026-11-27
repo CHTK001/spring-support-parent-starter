@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 默认支付宝网关实现
@@ -312,7 +313,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     public AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                                 AliyunAlipayNotifyRequest request) {
         Map<String, String> params = request.params();
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             /**
              * illegal状态异常。
              * @param "支付宝通知参数不能为空" "支付宝通知参数不能为空"
@@ -560,7 +561,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      * @return SDK 明细对象列表
      */
     private List<OpenApiRoyaltyDetailInfoPojo> toRoyaltyDetails(List<Map<String, Object>> royaltyParameters) {
-        if (royaltyParameters == null || royaltyParameters.isEmpty()) {
+        if (CollectionUtils.isEmpty(royaltyParameters)) {
             throw new IllegalArgumentException("支付宝分账明细不能为空");
         }
         List<OpenApiRoyaltyDetailInfoPojo> details = new ArrayList<>();
@@ -592,7 +593,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
      * @return 原始 Map 列表
      */
     private List<Map<String, Object>> toRoyaltyDetailMaps(List<RoyaltyDetail> royaltyDetails) {
-        if (royaltyDetails == null || royaltyDetails.isEmpty()) {
+        if (CollectionUtils.isEmpty(royaltyDetails)) {
             return null;
         }
         List<Map<String, Object>> result = new ArrayList<>();

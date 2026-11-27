@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 消息去重过滤器
@@ -35,7 +36,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     */
     public boolean filter(Message message) {
         String messageId = message.getId();
-        if (messageId == null || messageId.isEmpty()) {
+        if (StringUtils.isEmpty(messageId)) {
             return true; // 没有标识的消息直接通过
         }
 

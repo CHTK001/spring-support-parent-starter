@@ -1,5 +1,7 @@
 package com.chua.starter.common.support.data.materialized;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 物化视图 SQL 路由类
  *
@@ -62,7 +64,7 @@ public class MaterializedSqlRoute {
      * @return 已路由时返回 true
      */
     public boolean isRouted() {
-        return dataSourceName != null && !dataSourceName.isEmpty();
+        return StringUtils.isNotEmpty(dataSourceName);
     }
 
     /**

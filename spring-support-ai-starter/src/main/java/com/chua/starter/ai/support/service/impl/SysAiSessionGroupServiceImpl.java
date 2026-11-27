@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 会话分组 Service 实现
@@ -71,7 +72,7 @@ public class SysAiSessionGroupServiceImpl implements SysAiSessionGroupService {
 
     @Override
     public void deleteBatch(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             return;
         }
         // 去重，保持传入顺序

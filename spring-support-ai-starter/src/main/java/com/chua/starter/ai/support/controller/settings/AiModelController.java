@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 模型定义控制器，提供模型的增删改查和连通性测试。
@@ -115,7 +116,7 @@ public class AiModelController {
     @DeleteMapping("/batch")
     public ReturnResult<Map<String, Object>> batchDelete(@RequestBody BatchDeleteRequest body) {
         List<Long> ids = body == null ? null : body.ids();
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
         int deleted = modelService.batchDelete(ids);

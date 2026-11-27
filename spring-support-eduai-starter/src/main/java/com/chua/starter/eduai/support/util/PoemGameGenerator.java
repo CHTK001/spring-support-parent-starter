@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
+import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 古诗文趣味游戏题目生成器
@@ -113,7 +115,7 @@ public final class PoemGameGenerator {
      */
     public static List<Map<String, Object>> feihualing(List<EduPoem> poems, String keyword,
                                                        int count, Random random) {
-        String key = keyword == null || keyword.isEmpty()
+        String key = StringUtils.isEmpty(keyword)
                 ? FEIHUALING_KEYWORDS.get(random.nextInt(FEIHUALING_KEYWORDS.size()))
                 : keyword.trim();
         List<String> hits = new ArrayList<>();
@@ -449,7 +451,7 @@ public final class PoemGameGenerator {
                     if (options.size() >= OPTION_SIZE) {
                         break;
                     }
-                    if (group != null && group.equals(preferSameGroup.apply(other))) {
+                    if (ObjectUtils.nullSafeEquals(group, preferSameGroup.apply(other))) {
                         String value = answerPicker.apply(other);
                         if (value != null && !value.isBlank()) {
                             options.add(value);

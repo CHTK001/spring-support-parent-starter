@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 试卷扫描器 —— 阅卷的「版面还原 + 文字提取 + 结构化」环节。
@@ -279,7 +280,7 @@ public class PaperScanner {
      * @return 抽出的题目；切不出时为空
      */
     public List<ScannedQuestion> extractByLayout(List<ScanBlock> blocks) {
-        if (blocks == null || blocks.isEmpty()) {
+        if (CollectionUtils.isEmpty(blocks)) {
             return List.of();
         }
         var ordered = new ArrayList<>(blocks);
@@ -394,7 +395,7 @@ public class PaperScanner {
      * @return 数字值；解析不出返回 -1
      */
     private static int parseNoNum(String no) {
-        if (no == null || no.isEmpty()) {
+        if (StringUtils.isEmpty(no)) {
             return -1;
         }
         var m = java.util.regex.Pattern.compile("[0-9lLI]{1,4}").matcher(no);
@@ -492,7 +493,7 @@ public class PaperScanner {
      * @return 抽出的题目列表
      */
     public List<ScannedQuestion> extractSelfQuestions(List<ScanBlock> blocks, String text) {
-        if (blocks != null && !blocks.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(blocks)) {
             List<ScannedQuestion> byLayout = extractByLayout(blocks);
             if (!byLayout.isEmpty()) {
                 return byLayout;
@@ -659,7 +660,7 @@ public class PaperScanner {
      * @return 降噪后的作答
      */
     private static String stripAnswerNoise(String answer) {
-        if (answer == null || answer.isEmpty()) {
+        if (StringUtils.isEmpty(answer)) {
             return answer;
         }
         int cut = -1;
@@ -751,7 +752,7 @@ public class PaperScanner {
      * @return 剥离污染后的作答；为空或无法剥离时原样返回
      */
     public static String cleanScannedAnswer(String answer) {
-        if (answer == null || answer.isEmpty()) {
+        if (StringUtils.isEmpty(answer)) {
             return answer;
         }
         String text = stripAnswerNoise(answer);
@@ -1680,7 +1681,7 @@ public class PaperScanner {
      */
     private List<ScannedQuestion> fillStemsByModel(List<ScannedQuestion> byLayout, String text,
                                                    List<ScanBlock> blocks) {
-        if (byLayout == null || byLayout.isEmpty()) {
+        if (CollectionUtils.isEmpty(byLayout)) {
             return List.of();
         }
         // 把整卷文本按题号切成「一题一段」，题号→分段文本；切不出来时退回整卷一段

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 协同文档接口（{@code /v2/file/collab}）。
@@ -631,7 +632,7 @@ public class FileCollabController {
      * @return 解码后字节数
      */
     private static long base64DecodedLength(String body) {
-        if (body == null || body.isEmpty()) {
+        if (StringUtils.isEmpty(body)) {
             return 0;
         }
         int padding = 0;

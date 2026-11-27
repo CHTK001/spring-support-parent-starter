@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 外部 bundle SPI 自动发布器。
@@ -237,7 +238,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      * @param instances 已发布实例
      */
     private void unpublishAll(List<Object> instances) {
-        if (instances == null || instances.isEmpty() || publisher == null) {
+        if (CollectionUtils.isEmpty(instances) || publisher == null) {
             return;
         }
         int removed = 0;

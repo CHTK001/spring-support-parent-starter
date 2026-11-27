@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 免登录生成模型的物化器：把渠道 SPI 声明的内置模型（文生图 / 文生视频等全部任务类型）
@@ -132,7 +134,7 @@ public class KeylessGenerateModelMaterializer implements ApplicationRunner {
             log.warn("[KeylessMaterialize] 读取免登录渠道 SPI 失败: {}", e.getMessage());
             return List.of();
         }
-        if (channels == null || channels.isEmpty()) {
+        if (CollectionUtils.isEmpty(channels)) {
             return List.of();
         }
         List<SysAccountChannelModel> candidates = new ArrayList<>();
@@ -141,7 +143,7 @@ public class KeylessGenerateModelMaterializer implements ApplicationRunner {
                 continue;
             }
             List<String> tasks = channel.tasks();
-            if (tasks == null || tasks.isEmpty()) {
+            if (CollectionUtils.isEmpty(tasks)) {
                 continue;
             }
             List<Map<String, Object>> models;
@@ -182,7 +184,7 @@ public class KeylessGenerateModelMaterializer implements ApplicationRunner {
         List<Map<String, Object>> caps = new ArrayList<>(tasks.size());
         for (String task : tasks) {
             String name = task == null ? null : task.trim();
-            if (name == null || name.isEmpty()
+            if (StringUtils.isEmpty(name)
                     || !seen.add(name.toLowerCase(Locale.ROOT))) {
                 continue;
             }
@@ -192,7 +194,7 @@ public class KeylessGenerateModelMaterializer implements ApplicationRunner {
             // 并入 capabilities[].generate 节点，前端据此展示参考图入口。
             if (channel instanceof ImageChannelProvider) {
                 Map<String, Object> generate = ((ImageChannelProvider) channel).generateCapability(id);
-                if (generate != null && !generate.isEmpty()) {
+                if (CollectionUtils.isNotEmpty(generate)) {
                     cap.put("generate", generate);
                 }
             }

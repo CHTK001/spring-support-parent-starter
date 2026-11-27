@@ -2,6 +2,7 @@ package com.chua.starter.common.support.objects.struct;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 树形节点
@@ -125,6 +126,6 @@ public class TreeNode<T> {
      * @return 是否叶子节点
      */
     public boolean isLeaf() {
-        return children == null || children.isEmpty();
+        return CollectionUtils.isEmpty(children);
     }
 }

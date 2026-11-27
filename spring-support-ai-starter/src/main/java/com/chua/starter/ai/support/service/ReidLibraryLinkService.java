@@ -20,6 +20,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 人脸重识别底库的「DB 元数据 ↔ 向量索引」联动层，并负责把观测<b>汇聚成跨帧轨迹</b>。
@@ -201,8 +203,8 @@ public class ReidLibraryLinkService {
             return false;
         }
 
-        boolean hasReid = storage != null && feature != null && feature.length > 0;
-        boolean hasFace = faceStorage != null && faceFeature != null && faceFeature.length > 0;
+        boolean hasReid = storage != null && ArrayUtils.isNotEmpty(feature);
+        boolean hasFace = faceStorage != null && ArrayUtils.isNotEmpty(faceFeature);
         if (!hasReid && !hasFace) {
             // 向量能力未就绪：只落元数据，不算失败
             return true;
@@ -407,7 +409,7 @@ public class ReidLibraryLinkService {
      * @param groups 分组名列表；空表示不过滤
      */
     private static void appendGroupFilter(LambdaQueryWrapper<SysAiReidLibrary> query, List<String> groups) {
-        if (groups == null || groups.isEmpty()) {
+        if (CollectionUtils.isEmpty(groups)) {
             return;
         }
         query.and(w -> {
@@ -655,7 +657,7 @@ public class ReidLibraryLinkService {
      * @return JSON 字符串；入参为空返回 {@code null}
      */
     private String writeMeta(Map<String, Object> metadata) {
-        if (metadata == null || metadata.isEmpty()) {
+        if (CollectionUtils.isEmpty(metadata)) {
             return null;
         }
         try {

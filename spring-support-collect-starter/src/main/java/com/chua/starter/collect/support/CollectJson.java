@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * JSON 工具。
@@ -211,7 +212,7 @@ public final class CollectJson {
      * @return 下标值，越界或类型不符返回 null
      */
     private static Object subscript(Object current, String subscripts) {
-        if (subscripts == null || subscripts.isEmpty()) {
+        if (StringUtils.isEmpty(subscripts)) {
             return current;
         }
         Matcher matcher = SUBSCRIPT.matcher(subscripts);

@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 映射器 XML文件热重载加载器
@@ -169,7 +171,7 @@ public class MapperReload implements Reload, DisposableBean {
        */
     private void loadConfiguredDirectories() {
         List<MybatisPlusProperties.ReloadDirectory> directories = mybatisProperties.getReloadDirectories();
-        if (directories == null || directories.isEmpty()) {
+        if (CollectionUtils.isEmpty(directories)) {
             return;
         }
 
@@ -178,7 +180,7 @@ public class MapperReload implements Reload, DisposableBean {
                 String path = directory.getPath();
                 String pattern = directory.getPattern();
                 
-                if (path == null || path.isEmpty()) {
+                if (StringUtils.isEmpty(path)) {
                     continue;
                 }
 

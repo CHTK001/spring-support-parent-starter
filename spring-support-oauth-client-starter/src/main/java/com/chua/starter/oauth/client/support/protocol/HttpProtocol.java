@@ -496,7 +496,7 @@ public class HttpProtocol extends AbstractProtocol {
             return value;
         }
         return headers.toMap().entrySet().stream()
-                .filter(e -> e.getKey() != null && e.getKey().equalsIgnoreCase(name))
+                .filter(e -> StringUtils.equalsIgnoreCase(e.getKey(), name))
                 .map(Map.Entry::getValue)
                 .findFirst().orElse(null);
     }

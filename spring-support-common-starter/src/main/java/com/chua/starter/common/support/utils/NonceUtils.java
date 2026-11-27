@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * Nonce 与签名验证工具类
@@ -449,7 +450,7 @@ public class NonceUtils {
                 continue;
             }
             String[] values = entry.getValue();
-            if (values != null && values.length > 0) {
+            if (ArrayUtils.isNotEmpty(values)) {
                 result.put(key, values.length == 1 ? values[0] : String.join(",", values));
             }
         }

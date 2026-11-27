@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 主机文件指纹台账实现。
@@ -73,7 +74,7 @@ public class HostFileDigestServiceImpl implements HostFileDigestService {
         List<String> normalized = new ArrayList<>();
         for (String key : keys) {
             String value = HostFilePaths.normalizeKey(key);
-            if (value != null && !value.isEmpty()) {
+            if (StringUtils.isNotEmpty(value)) {
                 normalized.add(value);
             }
         }

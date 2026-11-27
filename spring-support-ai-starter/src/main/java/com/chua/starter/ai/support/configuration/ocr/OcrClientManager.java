@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * OCR 识别客户端管理器。
@@ -127,7 +129,7 @@ public class OcrClientManager {
      * @return 原图坐标结果
      */
     private List<OcrResult> restore(List<OcrResult> results, OcrImagePreprocessor.Result pre) {
-        if (results == null || results.isEmpty()) {
+        if (CollectionUtils.isEmpty(results)) {
             return results == null ? List.of() : results;
         }
         double minConfidence = settingReader.getInt(GROUP, "ocr_confidence_threshold", 0);
@@ -185,7 +187,7 @@ public class OcrClientManager {
      */
     public List<OcrResult> recognizeRegions(byte[] imageData,
                                            List<com.chua.deeplearning.support.model.PredictRectangle> regions) {
-        if (regions == null || regions.isEmpty()) {
+        if (CollectionUtils.isEmpty(regions)) {
             return List.of();
         }
         OcrImagePreprocessor.Result pre = preprocess(imageData);
@@ -260,7 +262,7 @@ public class OcrClientManager {
         byte[] work = pre.data();
         try {
             byte[] drawn = current().toDrawer(work);
-            if (drawn != null && drawn.length > 0) {
+            if (ArrayUtils.isNotEmpty(drawn)) {
                 return drawn;
             }
             log.warn("[Ocr] 管线标注返回空，回退到自绘标注");

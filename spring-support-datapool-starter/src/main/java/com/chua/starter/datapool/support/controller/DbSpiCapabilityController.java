@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据库 SPI 能力网关：把引擎侧 SPI 接到 HTTP 上。
@@ -949,7 +950,7 @@ public class DbSpiCapabilityController {
         if (value instanceof Iterable<?> iterable) {
             for (Object item : iterable) {
                 String text = item == null ? null : String.valueOf(item).trim();
-                if (text != null && !text.isEmpty()) {
+                if (StringUtils.isNotEmpty(text)) {
                     result.add(text);
                 }
             }

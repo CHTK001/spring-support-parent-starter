@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 模型指标库查询、全量同步、配置与手动修改端点。
@@ -339,7 +340,7 @@ public class ApiModelMetricsController {
             return manualError("400", "请求体为空");
         }
         String key = body.get("key") == null ? null : body.get("key").toString().trim();
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return manualError("400", "key 不能为空");
         }
 

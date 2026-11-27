@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 生成任务控制器：文生图 / 文生视频。
@@ -395,7 +396,7 @@ public class GenerateController {
      */
     private static boolean matchesTask(SysAccountChannelModel row, String kind) {
         List<Map<String, Object>> caps = row.getCapabilities();
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             return false;
         }
         String wanted = GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(kind)

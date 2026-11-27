@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 读取数据库存储过程与函数
@@ -48,7 +49,7 @@ public class ProcedureReader {
      */
     public List<ProcedureInfo> readAll(Connection conn) {
         List<ProcedureInfo> result = readViaJdbc(conn);
-        if (result != null && !result.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(result)) {
             return result;
         }
         // JDBC 没拿到，尝试方言 SQL

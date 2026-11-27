@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 配置导入解析器的公共工具基类。
@@ -261,7 +262,7 @@ public abstract class AbstractChannelConfigImportParser implements ChannelConfig
      */
     protected static String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isEmpty()) {
+            if (StringUtils.isNotEmpty(value)) {
                 return value;
             }
         }
@@ -279,7 +280,7 @@ public abstract class AbstractChannelConfigImportParser implements ChannelConfig
      * 正则取组（默认第 1 组），无命中返回空串。
      */
     protected static String match1(String text, String regex, int group) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         java.util.regex.Matcher matcher = Pattern.compile(regex).matcher(text);
@@ -306,7 +307,7 @@ public abstract class AbstractChannelConfigImportParser implements ChannelConfig
             Long maxOutputTokens, String task) {
         ChannelImportModelDraft model = new ChannelImportModelDraft();
         model.setId(id);
-        model.setName(name == null || name.isEmpty() ? id : name);
+        model.setName(StringUtils.isEmpty(name) ? id : name);
         model.setContextWindow(contextWindow);
         model.setMaxOutputTokens(maxOutputTokens);
         model.setTask(task);

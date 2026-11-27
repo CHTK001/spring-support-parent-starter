@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * Spring 请求指纹过滤器自动配置
@@ -153,7 +154,7 @@ public class RequestFingerprintAutoConfiguration {
                     if (v != null) { hasher.putString(k, StandardCharsets.UTF_8).putString(v, StandardCharsets.UTF_8); }
                 }
             }
-            if (cfg.isIncludeBody() && bodyBytes != null && bodyBytes.length > 0) {
+            if (cfg.isIncludeBody() && ArrayUtils.isNotEmpty(bodyBytes)) {
                 hasher.putBytes(bodyBytes);
             }
             return hasher.hash().toString();

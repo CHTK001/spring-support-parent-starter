@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 默认对象结构化实现
@@ -39,7 +40,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
      * @return 返回值
     */
     public List<TreeNode<T>> toTree(List<T> source) {
-        if (source == null || source.isEmpty()) {
+        if (CollectionUtils.isEmpty(source)) {
             return Collections.emptyList();
         }
 

@@ -2,6 +2,7 @@ package com.chua.starter.collect.engine;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 采集引擎的文本归一工具。
@@ -57,7 +58,7 @@ public final class CollectText {
      * @return 还原后的文本；无需还原时原样返回
      */
     public static String unescapeNewlines(String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return "";
         }
         if (raw.indexOf('\n') >= 0 || raw.indexOf('\r') >= 0) {

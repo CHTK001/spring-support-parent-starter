@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
@@ -308,7 +310,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
         // 在所有数据源注册完成后，应用全局负载均衡策略
         String loadBalance = settingProperties.getLoadBalance();
-        if (loadBalance != null && !loadBalance.isEmpty()) {
+        if (StringUtils.isNotEmpty(loadBalance)) {
             DataSourceGroupRegistry.setGlobalLoadBalanceStrategy(loadBalance);
         }
 
@@ -458,7 +460,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     private void applyHikariProperties(HikariDataSource hikari, String prefix) {
         String hikariPrefix = prefix + ".hikari";
         Map<String, Object> hikariProps = environmentSupport.getProperties(hikariPrefix + ".*");
-        if (hikariProps == null || hikariProps.isEmpty()) {
+        if (CollectionUtils.isEmpty(hikariProps)) {
             return;
         }
         DataSourcePropertyProvider<HikariDataSource> provider = DataSourcePropertyProviderFactory.getProvider(hikari);

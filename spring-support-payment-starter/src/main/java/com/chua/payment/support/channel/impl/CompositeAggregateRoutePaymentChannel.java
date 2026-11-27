@@ -21,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 运营商关联路由通道
@@ -162,7 +163,7 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
         if (targetChannelId == null) {
             throw new PaymentException("运营商关联配置未提供 targetChannelId 或 defaultChannelId");
         }
-        if (compositeChannel.getId() != null && compositeChannel.getId().equals(targetChannelId)) {
+        if (ObjectUtils.nullSafeEquals(compositeChannel.getId(), targetChannelId)) {
             throw new PaymentException("运营商关联配置不能指向自身");
         }
         MerchantChannel targetChannel = merchantChannelMapper.selectOne(new LambdaQueryWrapper<MerchantChannel>()

@@ -6,6 +6,7 @@ import com.chua.starter.common.support.channel.ChannelTaskProvider;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * WorkBuddy 成长任务实现。
@@ -45,7 +46,7 @@ public class WorkBuddyChannelTaskProvider implements ChannelTaskProvider {
 
     @Override
     public List<Map<String, Object>> tasks(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return List.of();
         }
         // global 域无成长任务体系（panel 的 D4 门控：CN 任务端点对 global 不发起任何调用）
@@ -57,8 +58,8 @@ public class WorkBuddyChannelTaskProvider implements ChannelTaskProvider {
 
     @Override
     public int acceptTasks(Map<String, Object> credentials, List<String> taskCodes) {
-        if (credentials == null || credentials.isEmpty()
-                || taskCodes == null || taskCodes.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)
+                || CollectionUtils.isEmpty(taskCodes)) {
             return 0;
         }
         if (delegate.isGlobalRealm(credentials)) {
@@ -69,7 +70,7 @@ public class WorkBuddyChannelTaskProvider implements ChannelTaskProvider {
 
     @Override
     public Map<String, Object> claimTask(Map<String, Object> credentials, String taskCode) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return Map.of("ok", false, "claimed", false, "message", "账号未绑定或凭据为空");
         }
         if (delegate.isGlobalRealm(credentials)) {

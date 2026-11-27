@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContextAware;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 基于Spring的RPC服务器实现
@@ -100,7 +101,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
         log.info("[Spring RPC] 服务器初始化: appName={}", appName);
 
         // 打印注册中心配置
-        if (registryConfigs != null && !registryConfigs.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(registryConfigs)) {
             log.info("[Spring RPC] 注册中心配置:");
             for (RpcRegistryConfig config : registryConfigs) {
                 log.info("  - address: {}, timeout: {}", config.getAddress(), config.getTimeout());

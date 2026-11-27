@@ -16,6 +16,8 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Neo4j 管理实现：标签与关系类型名走 {@code db.labels()/db.relationshipTypes()}，
@@ -243,7 +245,7 @@ public class Neo4jManageServiceImpl implements Neo4jManageService {
      * @return 首个值，空行为 null
      */
     private static Object firstValue(Map<String, Object> row) {
-        if (row == null || row.isEmpty()) {
+        if (CollectionUtils.isEmpty(row)) {
             return null;
         }
         return row.values().iterator().next();
@@ -294,7 +296,7 @@ public class Neo4jManageServiceImpl implements Neo4jManageService {
      * @return null 或原值
      */
     private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
+        return StringUtils.isEmpty(value) ? null : value;
     }
 
     /**

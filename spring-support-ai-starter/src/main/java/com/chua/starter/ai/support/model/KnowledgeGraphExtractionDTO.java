@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 单个知识点的大模型关系抽取结果。
@@ -35,7 +36,7 @@ public record KnowledgeGraphExtractionDTO(
      * @return 实体与关系都为空时返回 true
      */
     public boolean isEmpty() {
-        return (entities == null || entities.isEmpty()) && (relations == null || relations.isEmpty());
+        return (CollectionUtils.isEmpty(entities)) && (CollectionUtils.isEmpty(relations));
     }
 
     /**

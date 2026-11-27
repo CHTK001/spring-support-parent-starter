@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 教育 AI 业务服务 —— 只负责「教育业务要问模型什么」。
@@ -128,10 +129,10 @@ public class PaperAiService {
                 """;
         // 候选题目必须随 Prompt 一起给模型：早期 Prompt 未给候选、示例又写死 [101,102,103]，
         // 实测模型直接照抄示例数字（101~105 既非本学科也不存在于题库），落库后成为悬空引用。
-        String candidateIdList = fallbackIds == null || fallbackIds.isEmpty()
+        String candidateIdList = CollectionUtils.isEmpty(fallbackIds)
                 ? ""
                 : fallbackIds.stream().map(String::valueOf).collect(Collectors.joining(", "));
-        String exampleIds = fallbackIds == null || fallbackIds.isEmpty()
+        String exampleIds = CollectionUtils.isEmpty(fallbackIds)
                 ? ""
                 : fallbackIds.stream().limit(Math.min(3, fallbackIds.size()))
                         .map(String::valueOf).collect(Collectors.joining(", "));
@@ -177,7 +178,7 @@ public class PaperAiService {
             List<Long> ids = parseLongArray(response, "questionIds");
             // 只信任候选池里的题号：模型可能编造或照抄示例。候选池之外的 ID 一律丢弃，
             // 否则会落库成悬空引用/跨学科混题，破坏试卷结构（数据完整性）。
-            if (fallbackIds != null && !fallbackIds.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(fallbackIds)) {
                 Set<Long> candidateSet = new HashSet<>(fallbackIds);
                 List<Long> validIds = ids.stream()
                         .filter(id -> id != null && candidateSet.contains(id))
@@ -235,8 +236,8 @@ public class PaperAiService {
             return List.of();
         }
         int safeCount = Math.max(1, Math.min(count, 50));
-        String typeHint = (types == null || types.isEmpty()) ? "不限，按学科合理搭配" : String.join("、", types);
-        String kpHint = (knowledgePointNames == null || knowledgePointNames.isEmpty())
+        String typeHint = (CollectionUtils.isEmpty(types)) ? "不限，按学科合理搭配" : String.join("、", types);
+        String kpHint = (CollectionUtils.isEmpty(knowledgePointNames))
                 ? "不限" : String.join("、", knowledgePointNames);
         String diffHint = (difficulty == null || difficulty < 1 || difficulty > 5)
                 ? "不限（按学科常规难度分布）" : difficulty + "（1=很易，3=中等，5=很难）";

@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 任务分发自动配置。
@@ -181,7 +182,7 @@ public class TaskDistributionAutoConfiguration {
             List<TaskExecutor<?>> executors) {
         return args -> {
             String nodeId = properties.getNodeId();
-            if (nodeId == null || nodeId.isEmpty()) {
+            if (StringUtils.isEmpty(nodeId)) {
                 nodeId = "node-" + System.currentTimeMillis();
                 properties.setNodeId(nodeId);
             }

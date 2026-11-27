@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 告警监控服务 — 阈值巡检事件流（可配置规则 + 事件状态机）。
@@ -638,7 +639,7 @@ public class AlertMonitorService {
             long cutoff = System.currentTimeMillis() - 60_000L;
             List<TransmissionEvent> all =
                     storage.queryTransmissions(new Query().setLimit(100000).setStartTime(cutoff));
-            if (all == null || all.isEmpty()) {
+            if (CollectionUtils.isEmpty(all)) {
                 return 0.0;
             }
             long errors = all.stream()

@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 基于 InfluxDB 1.x HTTP 接口的时序引擎。
@@ -155,7 +156,7 @@ public class InfluxdbTimeSeriesEngine implements DeviceTimeSeriesEngine {
 
     @Override
     public int writeBatch(List<DeviceSeriesPoint> points) {
-        if (points == null || points.isEmpty()) {
+        if (CollectionUtils.isEmpty(points)) {
             return 0;
         }
         requireAvailable();
@@ -568,7 +569,7 @@ public class InfluxdbTimeSeriesEngine implements DeviceTimeSeriesEngine {
      * @return JSON 文本；空返回 {@code null}
      */
     private static String toJson(Map<String, String> extra) {
-        if (extra == null || extra.isEmpty()) {
+        if (CollectionUtils.isEmpty(extra)) {
             return null;
         }
         try {

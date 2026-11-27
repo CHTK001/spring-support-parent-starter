@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 全量模型指标库服务：全量同步、缓存读取、手动修改/锁定、计费取价回退、分页检索。
@@ -115,7 +116,7 @@ public class SysAiModelMetricsService {
     @CacheEvict(cacheNames = CACHE_NAME, allEntries = true)
     public int syncAll() {
         List<ProviderModelInfo> records = ProviderModelMetrics.all();
-        if (records == null || records.isEmpty()) {
+        if (CollectionUtils.isEmpty(records)) {
             log.warn("[ModelMetrics] 指标源无数据，跳过全量同步");
             return 0;
         }
@@ -197,7 +198,7 @@ public class SysAiModelMetricsService {
     @Transactional(rollbackFor = Exception.class)
     public int syncAvgOutputSpeedTps() {
         List<SysAiUsageMapper.ModelSpeedRow> rows = usageMapper.selectModelAvgSpeedTps(null, null);
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             log.info("[ModelMetrics] 无本地用量记录，avg_output_speed_tps 不回填");
             return 0;
         }
@@ -465,7 +466,7 @@ public class SysAiModelMetricsService {
             return new SyncResult(0, 0, 0);
         }
         Map<String, Map<String, Object>> modelMetrics = indicator.modelMetrics();
-        if (modelMetrics == null || modelMetrics.isEmpty()) {
+        if (CollectionUtils.isEmpty(modelMetrics)) {
             log.info("[ModelMetrics] indicator={} 无数据，跳过同步", indicator.source());
             return new SyncResult(0, 0, 0);
         }
@@ -667,7 +668,7 @@ public class SysAiModelMetricsService {
                                                      List<Map<String, Object>> rows,
                                                      String sourceUrl,
                                                      String source) {
-        if (providerId == null || providerId.isBlank() || rows == null || rows.isEmpty()) {
+        if (providerId == null || providerId.isBlank() || CollectionUtils.isEmpty(rows)) {
             return new UpstreamPricingResult(0, 0, 0);
         }
         String dataSource = source == null || source.isBlank() ? "upstream:/models" : source;
@@ -781,7 +782,7 @@ public class SysAiModelMetricsService {
                                                         List<Map<String, Object>> rows,
                                                         String sourceUrl,
                                                         String source) {
-        if (providerId == null || providerId.isBlank() || rows == null || rows.isEmpty()) {
+        if (providerId == null || providerId.isBlank() || CollectionUtils.isEmpty(rows)) {
             return new UpstreamPricingResult(0, 0, 0);
         }
         String dataSource = source == null || source.isBlank() ? "upstream:/models" : source;
@@ -1235,7 +1236,7 @@ public class SysAiModelMetricsService {
             return;
         }
         List<Map<String, Object>> caps = entity.getCapabilities();
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             caps = new ArrayList<>(1);
             caps.add(new LinkedHashMap<>(4));
             entity.setCapabilities(caps);
@@ -1350,7 +1351,7 @@ public class SysAiModelMetricsService {
         List<String> inputs = new ArrayList<>(4);
         for (Object item : listOf(metrics.get("input_modalities"))) {
             String text = item == null ? null : String.valueOf(item).trim().toLowerCase(java.util.Locale.ROOT);
-            if (text != null && !text.isEmpty() && !inputs.contains(text)) {
+            if (StringUtils.isNotEmpty(text) && !inputs.contains(text)) {
                 inputs.add(text);
             }
         }
@@ -1840,7 +1841,7 @@ public class SysAiModelMetricsService {
      */
     private static Boolean hasModality(ProviderModelInfo r, String modality) {
         List<String> inputs = r.getInputModalities();
-        return inputs == null || inputs.isEmpty() ? null : inputs.contains(modality);
+        return CollectionUtils.isEmpty(inputs) ? null : inputs.contains(modality);
     }
 
     /**
@@ -1932,7 +1933,7 @@ public class SysAiModelMetricsService {
      * @return 归一化后的白名单
      */
     private static Set<String> safeLowerSet(Set<String> raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (CollectionUtils.isEmpty(raw)) {
             return Set.of();
         }
         Set<String> out = new LinkedHashSet<>();

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 底库分组工具类。
@@ -111,7 +112,7 @@ public final class AiLibraryGroups {
      * @return 属于返回 {@code true}
      */
     public static boolean matches(String groupValue, List<String> groups) {
-        if (groups == null || groups.isEmpty()) {
+        if (CollectionUtils.isEmpty(groups)) {
             return true;
         }
         if (groupValue == null) {

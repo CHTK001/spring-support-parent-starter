@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 大华乐橙（IMOU / LeChange）开放平台会话。
@@ -467,7 +468,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
                 HttpResponse<byte[]> response = DOWNLOADER.send(request,
                         HttpResponse.BodyHandlers.ofByteArray());
                 byte[] body = response.body();
-                if (response.statusCode() == 200 && body != null && body.length > 0) {
+                if (response.statusCode() == 200 && ArrayUtils.isNotEmpty(body)) {
                     return new ByteArrayInputStream(body);
                 }
                 last = new IllegalStateException("乐橙抓图下载失败: HTTP " + response.statusCode());

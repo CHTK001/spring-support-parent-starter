@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 轮询负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 round 实现）
@@ -19,7 +20,7 @@ public class RoundRobinLoadBalancer implements RpcLoadBalancer {
      * 选择
     */
     public <T> T select(List<T> providers) {
-        if (providers == null || providers.isEmpty()) {
+        if (CollectionUtils.isEmpty(providers)) {
             return null;
         }
         return com.chua.common.support.lang.balance.LoadBalance.auto("round",

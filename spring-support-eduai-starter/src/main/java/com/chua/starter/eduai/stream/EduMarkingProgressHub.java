@@ -15,6 +15,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 阅卷进度 SSE 推送注册表。
@@ -143,7 +144,7 @@ public class EduMarkingProgressHub {
      */
     public int broadcast(String taskId, String event, Object payload) {
         Set<SseEmitter> set = subscribers.get(taskId);
-        if (set == null || set.isEmpty()) {
+        if (CollectionUtils.isEmpty(set)) {
             return 0;
         }
         int delivered = 0;

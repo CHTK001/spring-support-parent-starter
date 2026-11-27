@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * TRAE 任务实现。
@@ -73,7 +74,7 @@ public class TraeChannelTaskProvider implements ChannelTaskProvider {
      */
     @Override
     public List<Map<String, Object>> tasks(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return List.of();
         }
         boolean intl = TraeCreditQueryProvider.isIntl(credentials);
@@ -102,7 +103,7 @@ public class TraeChannelTaskProvider implements ChannelTaskProvider {
         Map<String, Object> result = new LinkedHashMap<>(5);
         result.put("ok", false);
         result.put("claimed", false);
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             result.put("message", "账号未绑定或凭据为空");
             return result;
         }

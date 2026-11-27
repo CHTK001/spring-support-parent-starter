@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 采集平台节点：把抽取结果落成采集平台自身的采集记录。
@@ -210,7 +211,7 @@ public class CollectOutputExecutor implements CollectShapeExecutor {
      * @throws IllegalStateException 主键超长
      */
     private void requireKeyWithinColumn(String key) {
-        if (key == null || key.isEmpty() || key.length() <= CollectDatabaseSink.KEY_LIMIT) {
+        if (StringUtils.isEmpty(key) || key.length() <= CollectDatabaseSink.KEY_LIMIT) {
             return;
         }
         throw new IllegalStateException("业务主键长度 " + key.length() + " 超出结果表列宽 "

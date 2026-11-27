@@ -27,6 +27,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * JDBC 驱动 jar 库服务：上传、列举、删除、按 id 取可连接的驱动文件。
@@ -188,8 +189,7 @@ public class JdbcDriverJarService {
         MsJdbcDriverJar existing = driverJarMapper.selectOne(new LambdaQueryWrapper<MsJdbcDriverJar>()
                 .eq(MsJdbcDriverJar::getStoredName, target.getFileName().toString()));
         if (existing != null) {
-            if (existing.getDriverClassName() != null
-                    && existing.getDriverClassName().equals(driverClass)
+            if (ObjectUtils.nullSafeEquals(existing.getDriverClassName(), driverClass)
                     && jarKind.equalsIgnoreCase(existing.getJarKind() == null ? JdbcDriverJarVO.KIND_JDBC : existing.getJarKind())) {
                 log.info("[datapool] 驱动 jar 已存在，直接复用登记: id={} file={}", existing.getId(), existing.getStoredName());
                 return ReturnResult.ok(toVO(existing));

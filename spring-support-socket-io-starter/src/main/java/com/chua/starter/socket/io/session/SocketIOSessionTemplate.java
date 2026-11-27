@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Socket.IO 会话模板实现
@@ -240,7 +242,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
             return Collections.emptyList();
         }
 
-        if (roomId == null || roomId.isEmpty()) {
+        if (StringUtils.isEmpty(roomId)) {
             return new java.util.ArrayList<>(sessions);
         }
 
@@ -307,7 +309,7 @@ public class SocketIOSessionTemplate implements SocketSessionTemplate {
         List<SocketProperties.Room> rooms = properties.getRoom();
         
         // 如果没有配置 room，不启动任何服务，作为空实现
-        if (rooms == null || rooms.isEmpty()) {
+        if (CollectionUtils.isEmpty(rooms)) {
             log.info("[SocketIO] 未配置 room，跳过服务启动");
             return;
         }

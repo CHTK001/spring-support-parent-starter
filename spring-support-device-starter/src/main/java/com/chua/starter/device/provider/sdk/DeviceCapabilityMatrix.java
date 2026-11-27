@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 平台能力矩阵：一个平台官方支持哪些能力位、每块能力对应多少接口。
@@ -148,7 +149,7 @@ public record DeviceCapabilityMatrix(
      * @param cells 能力位映射
      */
     public DeviceCapabilityMatrix {
-        if (cells == null || cells.isEmpty()) {
+        if (CollectionUtils.isEmpty(cells)) {
             cells = Collections.emptyMap();
         } else {
             EnumMap<DeviceCapability, Cell> copy = new EnumMap<>(DeviceCapability.class);

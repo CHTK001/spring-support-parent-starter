@@ -14,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 中间件 OpenAPI 的通用 HTTP 通道。
@@ -520,9 +522,9 @@ public final class MiddlewareHttp {
                 return "";
             }
             for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(name)) {
+                if (StringUtils.equalsIgnoreCase(entry.getKey(), name)) {
                     List<String> values = entry.getValue();
-                    return values == null || values.isEmpty() ? "" : values.get(0);
+                    return CollectionUtils.isEmpty(values) ? "" : values.get(0);
                 }
             }
             return "";
@@ -551,7 +553,7 @@ public final class MiddlewareHttp {
      * @return 编码结果，无参数时为空串
      */
     private static String formBody(Map<String, String> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return "";
         }
         StringJoiner joiner = new StringJoiner("&");

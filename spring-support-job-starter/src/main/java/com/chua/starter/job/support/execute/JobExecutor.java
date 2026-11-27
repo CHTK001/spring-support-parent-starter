@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 执行器 / 单个 角色任务执行入口。
@@ -486,7 +487,7 @@ public class JobExecutor {
         worker.start();
         worker.join(limitMs);
         String captured = sideLog.get();
-        if (captured != null && !captured.isEmpty()) {
+        if (StringUtils.isNotEmpty(captured)) {
             collected.append(captured);
         }
         if (worker.isAlive()) {

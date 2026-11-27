@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 记忆体服务实现。
@@ -215,7 +216,7 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
                 log.warn("[Memory] 抽取器 {} 执行失败（跳过）: {}", extractor.name(), e.getMessage());
                 continue;
             }
-            if (candidates == null || candidates.isEmpty()) {
+            if (CollectionUtils.isEmpty(candidates)) {
                 continue;
             }
             for (MemoryCandidateDTO candidate : candidates) {
@@ -332,7 +333,7 @@ public class SysAiMemoryServiceImpl implements SysAiMemoryService {
      * @return 注入文本，无内容时为空串
      */
     private String renderPromptBlock(List<AiMemoryDTO> items) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return "";
         }
         StringBuilder sb = new StringBuilder();

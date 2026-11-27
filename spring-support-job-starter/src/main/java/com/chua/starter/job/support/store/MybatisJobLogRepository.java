@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * MyBatis-Plus 版 {@link JobLogRepository}, 从 {@code sys_job_log} 读执行日志。
@@ -116,7 +117,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
 
     @Override
     public List<JobLogRecord> latestByJobKeys(Collection<String> jobKeys) {
-        if (jobKeys == null || jobKeys.isEmpty()) {
+        if (CollectionUtils.isEmpty(jobKeys)) {
             return List.of();
         }
         List<String> keys = jobKeys.stream().filter(key -> key != null && !key.isBlank()).distinct().toList();
@@ -132,7 +133,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
                     .in("sys_job_log_trigger_bean", keys)
                     .groupBy("sys_job_log_trigger_bean");
             List<Object> latestIds = jobLogMapper.selectObjs(latest);
-            if (latestIds == null || latestIds.isEmpty()) {
+            if (CollectionUtils.isEmpty(latestIds)) {
                 return List.of();
             }
             List<Long> ids = latestIds.stream()
@@ -175,7 +176,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
                     .groupBy("bucket_start")
                     .orderByAsc("bucket_start");
             List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
-            if (rows == null || rows.isEmpty()) {
+            if (CollectionUtils.isEmpty(rows)) {
                 return List.of();
             }
             List<JobLogTrendPoint> points = new ArrayList<>(rows.size());
@@ -212,7 +213,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
                     .orderByDesc("fail_count", "last_failure_time")
                     .last("LIMIT " + topN);
             List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
-            if (rows == null || rows.isEmpty()) {
+            if (CollectionUtils.isEmpty(rows)) {
                 return List.of();
             }
             List<JobLogFailureTop> tops = new ArrayList<>(rows.size());
@@ -248,7 +249,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
             long costSamples = 0L;
             Double avg = null;
             Long max = null;
-            if (rows != null && !rows.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(rows)) {
                 Map<String, Object> row = rows.get(0);
                 total = asLong(row.get("cnt_total"));
                 costSamples = asLong(row.get("cnt_cost"));
@@ -294,7 +295,7 @@ public class MybatisJobLogRepository implements JobLogRepository {
                 .orderByAsc("sys_job_log_cost")
                 .last("LIMIT 1 OFFSET " + offset);
         List<Map<String, Object>> rows = jobLogMapper.selectMaps(wrapper);
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return null;
         }
         return asLongOrNull(rows.get(0).get("sys_job_log_cost"));

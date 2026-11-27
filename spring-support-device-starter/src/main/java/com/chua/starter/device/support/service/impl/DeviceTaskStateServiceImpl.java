@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 任务状态服务实现（Trigger 模式）
@@ -150,7 +151,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
      * @return 删除的行数
     */
     public int deleteByCredentialId(String credentialId) {
-        if (credentialId == null || credentialId.isEmpty()) {
+        if (StringUtils.isEmpty(credentialId)) {
             return 0;
         }
         // 逐前缀精确匹配，避免 LIKE 下划线通配把别的凭据行一起带走

@@ -1,5 +1,7 @@
 package com.chua.starter.server.support.model;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * SSH 连接凭据（解密后的运行时对象，禁止落库与日志输出）
  *
@@ -18,6 +20,6 @@ public record SshCredential(String username, String password, String privateKey)
      * @return 是否携带私钥
      */
     public boolean hasKey() {
-        return privateKey != null && !privateKey.isEmpty();
+        return StringUtils.isNotEmpty(privateKey);
     }
 }

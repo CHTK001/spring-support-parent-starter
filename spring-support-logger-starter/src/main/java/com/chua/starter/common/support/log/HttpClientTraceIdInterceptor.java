@@ -5,6 +5,7 @@ import org.apache.hc.core5.http.HttpRequest;
 import org.apache.hc.core5.http.HttpRequestInterceptor;
 import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.MDC;
+import com.chua.common.support.utils.StringUtils;
 
 import static com.chua.starter.logger.constant.MdcConstant.TRACE_ID;
 import static com.chua.starter.logger.constant.MdcConstant.X_TRACE_ID;
@@ -26,7 +27,7 @@ public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
      */
     public void process(HttpRequest request, org.apache.hc.core5.http.EntityDetails entity, HttpContext context) {
         String traceId = MDC.get(TRACE_ID);
-        if (traceId != null && !traceId.isEmpty()) {
+        if (StringUtils.isNotEmpty(traceId)) {
             request.setHeader(X_TRACE_ID, traceId);
         }
     }

@@ -345,7 +345,7 @@ public class RSocketProtocol extends AbstractProtocol {
 
             // 解析响应
             String responseSerial = null;
-            if (responseMetadata != null && !responseMetadata.isEmpty()) {
+            if (StringUtils.isNotEmpty(responseMetadata)) {
                 try {
                     JsonObject responseMeta = Json.fromJson(responseMetadata, JsonObject.class);
                     responseSerial = responseMeta != null ? responseMeta.getObject("x-oauth-response-serial", String.class) : null;

@@ -27,6 +27,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * etcd 管理服务实现。
@@ -418,7 +419,7 @@ public class EtcdManageServiceImpl implements EtcdManageService {
      * @return null 或原值
      */
     private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
+        return StringUtils.isEmpty(value) ? null : value;
     }
 
     /**

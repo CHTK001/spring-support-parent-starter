@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * Calcite 联邦运行期管理器。
@@ -295,10 +296,10 @@ public class CalciteFederationManager {
         if (prev == null) {
             return false;
         }
-        if (prev.getSchemaName() != null && prev.getSchemaName().equals(member.getSchemaName())) {
+        if (ObjectUtils.nullSafeEquals(prev.getSchemaName(), member.getSchemaName())) {
             return true;
         }
-        return prev.getUrl() != null && prev.getUrl().equals(member.getUrl());
+        return ObjectUtils.nullSafeEquals(prev.getUrl(), member.getUrl());
     }
 
     /**

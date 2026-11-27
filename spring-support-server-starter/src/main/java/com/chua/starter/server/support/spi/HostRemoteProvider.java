@@ -6,6 +6,7 @@ import com.chua.starter.server.support.model.SshCredential;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * 主机远程操作 提供者 SPI（按系统类型路由）
@@ -249,7 +250,7 @@ public interface HostRemoteProvider {
         }
         String os = host.getServerHostOsType().trim().toUpperCase(Locale.ROOT);
         for (String type : osTypes()) {
-            if (type != null && type.equalsIgnoreCase(os)) {
+            if (StringUtils.equalsIgnoreCase(type, os)) {
                 return true;
             }
         }

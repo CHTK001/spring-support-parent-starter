@@ -7,6 +7,7 @@ import com.chua.starter.common.support.channel.MagpieSupport;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * magpie 上游 provider 的字段适配。
@@ -79,7 +80,7 @@ public class MagpieUpstreamProvider implements ChannelUpstreamProvider {
     @Override
     public Map<String, Object> modelMeta(Map<String, Object> model) {
         Map<String, Object> out = new LinkedHashMap<>(6);
-        if (model == null || model.isEmpty()) {
+        if (CollectionUtils.isEmpty(model)) {
             return out;
         }
         Long contextWindow = asLong(pick(model, CONTEXT_KEYS));

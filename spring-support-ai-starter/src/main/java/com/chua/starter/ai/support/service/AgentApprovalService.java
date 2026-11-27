@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Agent 工具审批单服务（切片四：审批闭环的持久化与广播）。
@@ -215,7 +216,7 @@ public class AgentApprovalService {
     public int resolveByReplyId(Long dialogId, String replyId, List<ConfirmationDecision> decisions,
                                 String decidedBy) {
         if (dialogId == null || replyId == null || replyId.isBlank()
-                || decisions == null || decisions.isEmpty()) {
+                || CollectionUtils.isEmpty(decisions)) {
             return 0;
         }
         int count = 0;

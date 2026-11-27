@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * cc-switch SQLite（{@code cc-switch.db} / {@code .sqlite}）解析。
@@ -74,7 +75,7 @@ public class CcSwitchConfigImportParser extends AbstractChannelConfigImportParse
     private ChannelImportEntry toEntry(String id, String appType, String rawName,
             String category, JsonNode cfg, int index) {
         String app = appType == null ? "" : appType.toLowerCase();
-        String display = rawName != null && !rawName.isEmpty()
+        String display = StringUtils.isNotEmpty(rawName)
                 && !"default".equalsIgnoreCase(rawName) ? rawName : appLabel(app);
 
         String baseUrl = "";
@@ -120,8 +121,8 @@ public class CcSwitchConfigImportParser extends AbstractChannelConfigImportParse
         }
 
         ChannelImportEntry entry = new ChannelImportEntry();
-        entry.setKey("cc-switch:" + app + ":" + (id != null && !id.isEmpty() ? id
-                : (rawName != null && !rawName.isEmpty() ? rawName : String.valueOf(index))));
+        entry.setKey("cc-switch:" + app + ":" + (StringUtils.isNotEmpty(id) ? id
+                : (StringUtils.isNotEmpty(rawName) ? rawName : String.valueOf(index))));
         entry.setSource("cc-switch");
         entry.setName(display);
         entry.setPlatform(platform);
@@ -159,6 +160,6 @@ public class CcSwitchConfigImportParser extends AbstractChannelConfigImportParse
         if ("grokbuild".equals(app)) {
             return "Grok";
         }
-        return app == null || app.isEmpty() ? "未命名" : app;
+        return StringUtils.isEmpty(app) ? "未命名" : app;
     }
 }

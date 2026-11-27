@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 管理控制台 sqlite 持久层（自包含 sqlite-JDBC，单连接同步访问）。
@@ -433,13 +434,13 @@ public class ConsoleSqliteStore implements AutoCloseable {
     public synchronized Map<String, String> listKv(String prefix) {
         Map<String, String> result = new LinkedHashMap<>();
         // [P3C 1.4 豁免] 拼接值为代码内常量/已校验，无外部输入：仅按条件拼入固定字面量片段，prefix 经 ? 参数绑定
-        String sql = "SELECT k, v FROM console_kv" + (prefix != null && !prefix.isEmpty() ? " WHERE k LIKE ?" : "");
+        String sql = "SELECT k, v FROM console_kv" + (StringUtils.isNotEmpty(prefix) ? " WHERE k LIKE ?" : "");
         /**
          * 尝试。
          * @param connection.prepareStatement(sql connection.prepare对账单(SQL
          */
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            if (prefix != null && !prefix.isEmpty()) {
+            if (StringUtils.isNotEmpty(prefix)) {
                 ps.setString(1, prefix + "%");
             }
             /**
@@ -584,7 +585,7 @@ public class ConsoleSqliteStore implements AutoCloseable {
      * @return 分割的结果
      */
     private static String[] split(String s) {
-        if (s == null || s.isEmpty()) {
+        if (StringUtils.isEmpty(s)) {
             return new String[0];
         }
         return s.split(",");

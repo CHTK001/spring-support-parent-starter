@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型目录同步：公开目录（models.dev）→ 服务商模型行 + 指标库。
@@ -328,7 +329,7 @@ public class ProviderCatalogSyncService {
         put(metrics, "last_updated", model.getLastUpdated());
         put(metrics, "description", model.getDescription());
         List<String> inputs = model.getInputModalities();
-        if (inputs != null && !inputs.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(inputs)) {
             // 模态列表原样保留：布尔位表达不了 vector / file，前端「输入」列需要原始列表
             metrics.put("input_modalities", new ArrayList<>(inputs));
             put(metrics, "image_input", inputs.contains("image"));

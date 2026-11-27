@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
@@ -76,7 +78,7 @@ public class FileStorageTemplate implements AutoCloseable {
                     storageMap.put(name, storage);
                     log.info("注册 Provider: {} ({})", highlight(name), highlight(inferType(config)));
                     if (defaultStorageName == null
-                            || (properties.getDefaultProvider() != null && properties.getDefaultProvider().equals(name))) {
+                            || (ObjectUtils.nullSafeEquals(properties.getDefaultProvider(), name))) {
                         defaultStorageName = name;
                     }
                 }
@@ -132,7 +134,7 @@ public class FileStorageTemplate implements AutoCloseable {
             return config.getType();
         }
         String endpoint = config.getEndpoint();
-        if (endpoint == null || endpoint.isEmpty()) {
+        if (StringUtils.isEmpty(endpoint)) {
             return "local";
         }
         String lower = endpoint.toLowerCase();

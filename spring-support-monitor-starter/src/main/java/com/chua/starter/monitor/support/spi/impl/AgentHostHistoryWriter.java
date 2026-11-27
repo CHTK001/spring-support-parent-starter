@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Agent 上报历史写入（主机域 → 监控域）。
@@ -127,7 +128,7 @@ public class AgentHostHistoryWriter implements HostAgentHistoryWriter {
      */
     private MsMonitor resolveMonitor(Long hostId) {
         List<MsMonitor> monitors = monitorService.listByServerHost(hostId).getData();
-        return monitors == null || monitors.isEmpty() ? null : monitors.get(0);
+        return CollectionUtils.isEmpty(monitors) ? null : monitors.get(0);
     }
 
     /**

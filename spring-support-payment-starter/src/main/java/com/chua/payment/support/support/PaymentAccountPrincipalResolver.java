@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import java.security.Principal;
 import java.util.Locale;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 /**
  * 从 HttpServletRequest 中解析当前登录账户主体的工具类
  *
@@ -75,7 +76,7 @@ public class PaymentAccountPrincipalResolver {
             return false;
         }
         Set<String> roles = userResume.getRoles();
-        if (roles == null || roles.isEmpty()) {
+        if (CollectionUtils.isEmpty(roles)) {
             return false;
         }
         return roles.stream().map(it -> it == null ? "" : it.trim().toUpperCase(Locale.ROOT))

@@ -50,6 +50,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 模拟-世界沙盒流式控制器（场景对话 SSE + 时间推进）。
@@ -919,7 +921,7 @@ public class WorldSimChatController {
         chosen.add(first);
         // 优先找与 first 同场景的
         List<SysAiWorldNpc> sameScene = pool.stream()
-                .filter(n -> n.getSceneId() != null && n.getSceneId().equals(first.getSceneId()))
+                .filter(n -> ObjectUtils.nullSafeEquals(n.getSceneId(), first.getSceneId()))
                 .toList();
         int extra = tick > 6 ? 2 : (tick > 2 ? 1 : 0);
         for (int i = 0; i < Math.min(extra, Math.min(sameScene.size(), 2)); i++) {
@@ -1268,7 +1270,7 @@ public class WorldSimChatController {
                 }
             }
             for (com.chua.starter.account.channel.store.SysAccountChannel cand : channelService.listAll()) {
-                if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
+                if (StringUtils.equalsIgnoreCase(cand.getName(), prefix)
                         && Boolean.TRUE.equals(cand.getEnabled())
                         && cand.getProviderId() != null && !cand.getProviderId().isBlank()) {
                     return cand.getProviderId();

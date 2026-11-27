@@ -57,6 +57,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BooleanSupplier;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 任务治理的公共实现 (与传输层无关)。
@@ -313,7 +314,7 @@ public class JobGovernanceService {
         if (jobProperties.isScheduler()) {
             SyncServer server = syncServerProvider.getIfAvailable();
             List<String> clients = server == null ? null : server.getConnectedClients();
-            if (clients == null || clients.isEmpty()) {
+            if (CollectionUtils.isEmpty(clients)) {
                 return ReturnResult.error("没有在线的执行器, 命令未派发: " + jobKey);
             }
         }
@@ -753,7 +754,7 @@ public class JobGovernanceService {
      * @return 回填后的出参（字段变化处为新实例）
      */
     private List<JobRuntimeVO> backfillLastExecution(List<JobRuntimeVO> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return rows;
         }
         Set<String> keys = new HashSet<>();

@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * ChatClient 热更新器
@@ -86,7 +88,7 @@ public class ChatClientHotUpdater {
 
             // 1. 从全局设置读取默认模型ID
             String defaultModelId = getSettingValue(settingField);
-            if (defaultModelId == null || defaultModelId.isEmpty()) {
+            if (StringUtils.isEmpty(defaultModelId)) {
                 log.warn("[ChatClientHotUpdater] 未配置默认 {} 模型", capability);
                 return;
             }
@@ -128,7 +130,7 @@ public class ChatClientHotUpdater {
             );
 
             String appKey = manufacturer.getAppKey();
-            if (keys != null && !keys.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(keys)) {
                 appKey = keys.get(0).getValue();
             }
 
@@ -142,7 +144,7 @@ public class ChatClientHotUpdater {
             if (ProviderRouteTargets.isFreeChannel(manufacturer.getCode())) {
                 Map<String, RouteTarget> channelRoutes =
                         modelClientResolver.collectChannelRoutes("_free");
-                if (channelRoutes != null && !channelRoutes.isEmpty()) {
+                if (CollectionUtils.isNotEmpty(channelRoutes)) {
                     builder.routes(channelRoutes);
                     log.info("[ChatClientHotUpdater] 免费渠道已注入 {} 条路由: provider={}",
                             channelRoutes.size(), manufacturer.getCode());

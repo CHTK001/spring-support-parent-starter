@@ -21,6 +21,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 已安装技能支撑：扫描技能根目录，产出可注入对话的技能指令与启用状态。
@@ -123,7 +125,7 @@ public class ChatSkillSupport {
      * @return 技能正文块；names 为空或无匹配时返回空串
      */
     public String promptBlock(Collection<String> names) {
-        if (names == null || names.isEmpty()) {
+        if (CollectionUtils.isEmpty(names)) {
             return "";
         }
         List<InstalledSkill> picked = new ArrayList<>();
@@ -248,7 +250,7 @@ public class ChatSkillSupport {
      */
     private Path resolveAgentRoot() {
         String root = skillsAgentRoot == null ? null : skillsAgentRoot.strip();
-        if (root == null || root.isEmpty()) {
+        if (StringUtils.isEmpty(root)) {
             return null;
         }
         if (root.startsWith("~")) {

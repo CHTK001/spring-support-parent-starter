@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 告警引擎服务实现
@@ -187,7 +188,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
             return;
         }
         List<MsMonitorAlarmRule> rules = ruleCache.get(metricName);
-        if (rules == null || rules.isEmpty()) {
+        if (CollectionUtils.isEmpty(rules)) {
             return;
         }
         Long hostId = hostScope != null ? hostScope : resolveMonitorHostId(targetId);

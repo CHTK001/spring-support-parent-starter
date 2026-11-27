@@ -2,6 +2,7 @@ package com.chua.starter.collect.support;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 敏感字段编解码。
@@ -38,7 +39,7 @@ public final class CollectSecrets {
      * @return 带前缀的存储值，空明文返回空串
      */
     public static String encode(String plain) {
-        if (plain == null || plain.isEmpty()) {
+        if (StringUtils.isEmpty(plain)) {
             return "";
         }
         if (plain.startsWith(PREFIX)) {

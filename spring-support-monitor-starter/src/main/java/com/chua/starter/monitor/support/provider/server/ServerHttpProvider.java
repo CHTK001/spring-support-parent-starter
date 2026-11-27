@@ -22,6 +22,7 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 服务器 HTTP 采集 提供者
@@ -85,7 +86,7 @@ public class ServerHttpProvider implements MetricProvider {
 
         JsonObject config = Json.getJsonObject(context.getTask().getCollectConfig());
         String url = str(config.getObject("url"));
-        if (url == null || url.isEmpty()) {
+        if (StringUtils.isEmpty(url)) {
             return result.fail("collect_config 缺少 url");
         }
 

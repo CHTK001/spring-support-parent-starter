@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型指标出口：按模型 id 问各个 {@link ProviderModelMetricsProvider}，把命中的字段合并成一份。
@@ -41,7 +42,7 @@ public final class ProviderModelMetrics {
      */
     public static List<ProviderModelMetricsProvider> providers() {
         List<ProviderModelMetricsProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderModelMetricsProvider.class);
             cached = current;
         }
@@ -121,7 +122,7 @@ public final class ProviderModelMetrics {
             metrics.put("max_output_tokens", info.getMaxOutputTokens());
         }
         List<String> inputs = info.getInputModalities();
-        if (inputs != null && !inputs.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(inputs)) {
             // 原始列表要保留：布尔位表达不了 vector / file，前端「输入」列读的是列表
             metrics.put("input_modalities", new ArrayList<>(inputs));
             metrics.put("image_input", inputs.contains("image"));
@@ -130,7 +131,7 @@ public final class ProviderModelMetrics {
             metrics.put("pdf_input", inputs.contains("pdf"));
         }
         List<String> outputs = info.getOutputModalities();
-        if (outputs != null && !outputs.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(outputs)) {
             metrics.put("output_modalities", new ArrayList<>(outputs));
         }
         if (info.getAttachment() != null) {
@@ -195,7 +196,7 @@ public final class ProviderModelMetrics {
                 log.debug("[provider-metrics] 实现[{}]全量枚举失败: {}", provider.name(), e.getMessage());
                 continue;
             }
-            if (items == null || items.isEmpty()) {
+            if (CollectionUtils.isEmpty(items)) {
                 continue;
             }
             for (ProviderModelInfo item : items) {

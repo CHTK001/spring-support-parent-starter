@@ -3,6 +3,7 @@ package com.chua.starter.server.support.util;
 import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.server.support.config.ServerProperties;
 import org.springframework.stereotype.Component;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 凭据加解密器
@@ -39,7 +40,7 @@ public class CredentialCipher {
      * @return 密文（hex），入参为空时原样返回
      */
     public String encrypt(String plain) {
-        if (plain == null || plain.isEmpty()) {
+        if (StringUtils.isEmpty(plain)) {
             return plain;
         }
         return codec.encodeHex(plain);
@@ -52,7 +53,7 @@ public class CredentialCipher {
      * @return 明文，入参为空时原样返回
      */
     public String decrypt(String hex) {
-        if (hex == null || hex.isEmpty()) {
+        if (StringUtils.isEmpty(hex)) {
             return hex;
         }
         try {

@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * SQL 监控门面
@@ -259,7 +260,7 @@ public class DataSourceSqlMonitor {
         }
 
         // 自定义监听器
-        if (listeners != null && !listeners.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(listeners)) {
             SqlExecutionEvent event = new SqlExecutionEvent(this, dataSourceName, sql, sqlType,
                     costMs, slowSql, success, errorMessage);
             for (SqlExecutionListener listener : listeners) {

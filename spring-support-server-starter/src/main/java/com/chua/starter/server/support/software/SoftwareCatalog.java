@@ -3,6 +3,7 @@ package com.chua.starter.server.support.software;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 软件识别目录：把进程名 / 命令行特征映射为软件类型。
@@ -95,7 +96,7 @@ public final class SoftwareCatalog {
             if (cmdKeywords == null || cmd == null || cmd.isBlank()) {
                 return false;
             }
-            if (names != null && names.length > 0 && !nameMatches(name)) {
+            if (ArrayUtils.isNotEmpty(names) && !nameMatches(name)) {
                 return false;
             }
             for (String k : cmdKeywords) {

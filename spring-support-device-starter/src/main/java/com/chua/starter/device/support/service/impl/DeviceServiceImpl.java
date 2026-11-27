@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 设备服务实现
@@ -515,7 +516,7 @@ public class DeviceServiceImpl implements DeviceService {
         for (DeviceProvider provider : providers) {
             try {
                 List<com.chua.starter.device.spi.model.OrganizationNode> nodes = provider.fetchOrganizations();
-                if (nodes == null || nodes.isEmpty()) {
+                if (CollectionUtils.isEmpty(nodes)) {
                     log.info("组织同步: vendor={} 无组织节点", provider.getVendor());
                     continue;
                 }

@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 统一账号服务实现。
@@ -452,7 +453,7 @@ public class ManageAccountServiceImpl implements ManageAccountService {
      * @return 规范化后的清单
      */
     private List<String> normalizeIds(List<String> accountIds) {
-        if (accountIds == null || accountIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(accountIds)) {
             return List.of();
         }
         Set<String> unique = new LinkedHashSet<>();

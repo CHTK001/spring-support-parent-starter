@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 成语游戏控制器
@@ -236,7 +237,7 @@ public class EduIdiomController {
                 continue;
             }
             String normalized = normalizeLevel(level.trim());
-            if (grades == null || grades.isEmpty()) {
+            if (CollectionUtils.isEmpty(grades)) {
                 insertIdiomGrade(idiom, normalized, null);
             } else {
                 for (String grade : grades) {

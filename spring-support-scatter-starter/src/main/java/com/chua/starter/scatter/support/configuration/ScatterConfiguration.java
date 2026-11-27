@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * scatter 组网自动装配。
@@ -116,7 +117,7 @@ public class ScatterConfiguration {
             builder.subnet(properties.getSubnet());
         }
         List<String> seeds = properties.getSeeds();
-        if (seeds != null && !seeds.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(seeds)) {
             builder.seeds(seeds);
         }
         if (properties.getAutoDiscoveryInterval() > 0) {

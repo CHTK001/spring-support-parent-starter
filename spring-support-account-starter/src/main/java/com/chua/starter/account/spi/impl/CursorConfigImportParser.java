@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Cursor state.vscdb 解析（键名启发式，best-effort）。
@@ -75,7 +76,7 @@ public class CursorConfigImportParser extends AbstractChannelConfigImportParser 
      * 单行 → 导入草稿；不命中返回 null。
      */
     private ChannelImportEntry toEntry(String table, String rowKey, String value) {
-        if (rowKey == null || rowKey.isEmpty()) {
+        if (StringUtils.isEmpty(rowKey)) {
             return null;
         }
         boolean keyHit = KEY_HINT.matcher(rowKey).find();

@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 余额查询出口：按 {@link CreditQuery#getKind()} 找到实现并执行。
@@ -41,7 +42,7 @@ public final class CreditQueries {
      */
     public static List<CreditQueryProvider> providers() {
         List<CreditQueryProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(CreditQueryProvider.class);
             cached = current;
         }

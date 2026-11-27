@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * RDP 直连桌面 webSocket 处理器
@@ -325,7 +326,7 @@ public class RdpDirectWebSocketHandler extends AbstractWebSocketHandler {
                     // 连接失败/被远端断开时，浏览器一直等首帧会永远停在加载层，
                     // 这里把原生层的错误原因明确回推一次。
                     String reason = Native.lastError(handle);
-                    sendErrorToBrowser(bridge, reason == null || reason.isEmpty() ? "RDP 连接已中断" : reason);
+                    sendErrorToBrowser(bridge, StringUtils.isEmpty(reason) ? "RDP 连接已中断" : reason);
                     return;
                 }
                 if (!Native.frameHeader(handle, header)) {

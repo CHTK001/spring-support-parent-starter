@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 来源提供商注册表
@@ -35,7 +36,7 @@ public class ProviderSourceRegistry {
      * @param sources 各来源模块上报的提供商列表（可为空）
      */
     public ProviderSourceRegistry(List<ProviderSource> sources) {
-        if (sources == null || sources.isEmpty()) {
+        if (CollectionUtils.isEmpty(sources)) {
             log.info("[Template] 未发现来源提供商上报者，左栏只展示库内提供商");
             return;
         }

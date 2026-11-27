@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Socket 自动配置类
@@ -98,7 +99,7 @@ public class SocketConfiguration {
     @ConditionalOnProperty(prefix = SocketProperties.PRE, name = "enable", havingValue = "true")
     public SocketSessionTemplate socketSessionTemplate(
             @Qualifier("socketSessionTemplates") Map<String, SocketSessionTemplate> templates) {
-        if (templates == null || templates.isEmpty()) {
+        if (CollectionUtils.isEmpty(templates)) {
             throw new IllegalStateException(
                     "[Socket] 未注册任何 SocketSessionTemplate，请配置 plugin.socket 协议（如 socketio）");
         }

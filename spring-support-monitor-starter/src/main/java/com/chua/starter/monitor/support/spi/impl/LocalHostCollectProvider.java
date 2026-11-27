@@ -18,6 +18,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import reactor.core.publisher.Mono;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 本机自采集 提供者（LOCAL / OSHI）。
@@ -85,7 +86,7 @@ public class LocalHostCollectProvider implements HostCollectProvider {
             }
             List<DiskRowVO> disks = localService.getDisks();
             long t3 = System.nanoTime();
-            if (disks != null && !disks.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(disks)) {
                 host.setServerHostDiskUsage(NumberUtils.round(disks.get(0).usage(), 1).doubleValue());
             }
             // 磁盘 IO（KB/s，保留 1 位小数）
@@ -103,7 +104,7 @@ public class LocalHostCollectProvider implements HostCollectProvider {
             try {
                 List<com.chua.starter.server.support.software.SoftwareInstanceVO> software =
                         localService.getSoftware();
-                if (software != null && !software.isEmpty()) {
+                if (CollectionUtils.isNotEmpty(software)) {
                     String json = new com.fasterxml.jackson.databind.ObjectMapper()
                             .writeValueAsString(software);
                     host.setServerHostSoftware(json);

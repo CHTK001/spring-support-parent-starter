@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
@@ -457,7 +458,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     @Override
     public int syncDescriptions(String group, Map<String, String> fieldToDescription) {
-        if (group == null || group.isBlank() || fieldToDescription == null || fieldToDescription.isEmpty()) {
+        if (group == null || group.isBlank() || CollectionUtils.isEmpty(fieldToDescription)) {
             return 0;
         }
         int updated = 0;

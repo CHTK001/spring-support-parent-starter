@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Socket 服务器信息获取接口
@@ -87,19 +88,19 @@ public class SocketServerController {
 
         if ("sse".equalsIgnoreCase(protocol)) {
  // sse://主机:端口/路径
-            if (path != null && !path.isEmpty()) {
+            if (StringUtils.isNotEmpty(path)) {
                 return "sse://" + host + ":" + port + path;
             }
             return "sse://" + host + ":" + port + "/sse/connect";
         } else if ("socketio".equalsIgnoreCase(protocol)) {
  // Socket://主机:端口/上下文
-            if (context != null && !context.isEmpty()) {
+            if (StringUtils.isNotEmpty(context)) {
                 return "socket://" + host + ":" + port + context;
             }
             return "socket://" + host + ":" + port + "/socket.io";
         } else if ("websocket".equalsIgnoreCase(protocol)) {
  // ws://主机:端口/路径
-            if (path != null && !path.isEmpty()) {
+            if (StringUtils.isNotEmpty(path)) {
                 return "ws://" + host + ":" + port + path;
             }
             return "ws://" + host + ":" + port + "/ws";

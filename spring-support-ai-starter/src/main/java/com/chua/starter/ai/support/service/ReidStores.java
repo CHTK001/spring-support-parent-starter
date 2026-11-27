@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 重识别向量库的**门面**：按当前登录账号把请求路由到该账号自己的重识别向量库。
@@ -587,7 +588,7 @@ public class ReidStores {
      * @return 归一化后的分组列表，至少一项
      */
     private static List<String> normalizeGroups(List<String> groups) {
-        if (groups == null || groups.isEmpty()) {
+        if (CollectionUtils.isEmpty(groups)) {
             return List.of(AiLibraryGroups.DEFAULT);
         }
         List<String> out = new ArrayList<>(groups.size());

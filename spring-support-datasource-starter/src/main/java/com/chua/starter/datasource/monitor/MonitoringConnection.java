@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.Statement;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * SQL 监控连接
@@ -112,7 +113,7 @@ public class MonitoringConnection implements InvocationHandler {
             Object result = ReflectUtils.invokeProxy(delegate, method, args);
             if (result instanceof Statement statement) {
  // 提取 SQL 文本：仅当第一个参数为 字符串（执行(sql) 形式）时携带
-                String sql = args != null && args.length > 0 && args[0] instanceof String sqlText ? sqlText : null;
+                String sql = ArrayUtils.isNotEmpty(args) && args[0] instanceof String sqlText ? sqlText : null;
                 return MonitoringStatement.wrap(statement, dataSourceName, monitor, sql);
             }
             return result;

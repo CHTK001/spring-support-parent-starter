@@ -13,6 +13,7 @@ import org.apache.guacamole.protocol.GuacamoleConfiguration;
 import org.apache.guacamole.protocol.GuacamoleInstruction;
 
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * guacd 隧道封装（对齐 Orion-Visor 的 guacdtunnel）
@@ -181,7 +182,7 @@ public class GuacdTunnel {
      * @param mimeTypes 类型列表
      */
     public void setAudioMimeTypes(java.util.List<String> mimeTypes) {
-        if (mimeTypes == null || mimeTypes.isEmpty()) {
+        if (CollectionUtils.isEmpty(mimeTypes)) {
             return;
         }
         clientConfig.getAudioMimetypes().addAll(mimeTypes);

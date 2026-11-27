@@ -4,6 +4,7 @@ package com.chua.starter.datapool.support.nginx;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Nginx 配置渲染器：把 {@link NginxNode} 语法树还原成配置文本。
@@ -119,7 +120,7 @@ public final class NginxRenderer {
             StringBuilder sb = new StringBuilder();
             sb.append(node.getName());
             String value = node.getValue();
-            if (value != null && !value.isEmpty()) {
+            if (StringUtils.isNotEmpty(value)) {
                 sb.append(' ').append(value);
             }
             sb.append(';');
@@ -137,7 +138,7 @@ public final class NginxRenderer {
         // 首行缩进由调用方给出，本方法不重复加，否则会出现双重缩进
         sb.append(node.getName());
         String headArg = node.getHeadArg();
-        if (headArg != null && !headArg.isEmpty()) {
+        if (StringUtils.isNotEmpty(headArg)) {
             sb.append(' ').append(headArg);
         }
         sb.append(" {\n");
@@ -189,7 +190,7 @@ public final class NginxRenderer {
      * @return 返回值
     */
     private static void appendOriginal(StringBuilder out, String original, String indent, int stripLen) {
-        if (original == null || original.isEmpty()) {
+        if (StringUtils.isEmpty(original)) {
             return;
         }
         String[] parts = original.split("\n", -1);
@@ -277,7 +278,7 @@ public final class NginxRenderer {
      * @return 缩进单位文本
      */
     private static String detectUnit(String original, int baseIndent) {
-        if (original == null || original.isEmpty()) {
+        if (StringUtils.isEmpty(original)) {
             return DEFAULT_INDENT;
         }
         String[] parts = original.split("\n", -1);
@@ -314,7 +315,7 @@ public final class NginxRenderer {
      * @return 首行，无内容返回空串
      */
     private static String firstLine(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         int idx = text.indexOf('\n');
@@ -328,7 +329,7 @@ public final class NginxRenderer {
      * @return 末行，无内容返回空串
      */
     private static String lastLine(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         int idx = text.lastIndexOf('\n');

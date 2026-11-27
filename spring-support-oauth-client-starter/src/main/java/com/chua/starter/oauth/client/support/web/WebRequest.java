@@ -38,6 +38,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
    * webrequest
@@ -247,7 +248,7 @@ public class WebRequest {
         Cookie[] tokenCookie = getCookie();
         String token = getToken();
         
-        boolean hasCookie = tokenCookie != null && tokenCookie.length > 0;
+        boolean hasCookie = ArrayUtils.isNotEmpty(tokenCookie);
         boolean hasToken = !Strings.isNullOrEmpty(token);
         
         log.debug("[WebRequest Token检查]Token状态 - URI: {}, Cookie数量: {}, Token存在: {}", 
@@ -513,7 +514,7 @@ public class WebRequest {
     private String getDefaultProtocol() {
           // 使用局部变量避免多次属性访问
         String defaultProtocol = authProperties != null ? authProperties.getProtocol() : null;
-        return (defaultProtocol != null && !defaultProtocol.isEmpty()) ? defaultProtocol : "custom";
+        return (StringUtils.isNotEmpty(defaultProtocol)) ? defaultProtocol : "custom";
     }
 
       /**
@@ -623,13 +624,13 @@ public class WebRequest {
         }
 
    // REFRESH 类型只需要 refresh令牌，不需要现有的 access令牌
-        if (upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty()) {
+        if (upgradeType == UpgradeType.REFRESH && StringUtils.isNotEmpty(refreshToken)) {
             return protocolExtension.upgrade(cookie, token,
                     upgradeType, refreshToken);
         }
 
           // 快速检查是否有可用的认证数据
-        if ((cookie == null || cookie.length == 0) && (token == null || token.isEmpty())) {
+        if ((cookie == null || cookie.length == 0) && (StringUtils.isEmpty(token))) {
             return null;
         }
         return protocolExtension.upgrade(cookie, token,

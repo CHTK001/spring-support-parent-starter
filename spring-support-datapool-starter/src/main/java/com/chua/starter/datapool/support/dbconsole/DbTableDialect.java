@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 表级属性、索引与主键的库级支撑（Navicat「表属性 / 索引 / 主键」三页）。
@@ -259,7 +260,7 @@ public final class DbTableDialect {
      */
     public static void setPrimaryKey(Connection conn, String table, List<String> columns) throws SQLException {
         String quotedTable = SqlName.quoteMysql(SqlName.checkSimple(table, "表名"), "表名");
-        if (columns == null || columns.isEmpty()) {
+        if (CollectionUtils.isEmpty(columns)) {
             // 先看有没有主键：有则清空
             if (hasPrimaryKey(conn, table)) {
                 execute(conn, "ALTER TABLE " + quotedTable + " DROP PRIMARY KEY");

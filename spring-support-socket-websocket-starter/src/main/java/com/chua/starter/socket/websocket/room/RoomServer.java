@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * P2P 房间信令服务器（服务管理里的 ROOM 节点）。
@@ -290,7 +291,7 @@ public class RoomServer extends AbstractServer {
             }
         }
         OutputStream out = connection.socket.getOutputStream();
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             out.write("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"
                     .getBytes(StandardCharsets.US_ASCII));
             out.flush();

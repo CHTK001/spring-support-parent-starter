@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 软件配置表 服务 实现
@@ -165,7 +166,7 @@ public class SoftConfigServiceImpl extends ServiceImpl<SoftConfigMapper, SoftCon
      * @return 返回值
     */
     public ReturnResult<Boolean> batchSaveOrUpdate(List<SoftConfig> configs) {
-        if (configs == null || configs.isEmpty()) {
+        if (CollectionUtils.isEmpty(configs)) {
             return ReturnResult.ok(true);
         }
         LocalDateTime now = LocalDateTime.now();

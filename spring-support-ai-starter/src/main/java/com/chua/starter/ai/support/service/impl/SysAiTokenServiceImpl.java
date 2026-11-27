@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
@@ -298,7 +299,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             return true;
         }
         List<SysAiToken> tokens = listByGroupId(groupId);
-        if (tokens == null || tokens.isEmpty()) {
+        if (CollectionUtils.isEmpty(tokens)) {
  // 分组未配置 令牌：不阻断（未启用计量限流的分组放行）
             return true;
         }

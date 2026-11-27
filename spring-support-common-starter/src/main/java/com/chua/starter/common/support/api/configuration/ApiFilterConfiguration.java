@@ -22,6 +22,7 @@ import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.StringUtils;
 
 
 /**
@@ -146,7 +147,7 @@ public class ApiFilterConfiguration  {
                 throws IOException, ServletException {
             if (versionArgumentResolver != null && response instanceof HttpServletResponse httpServletResponse) {
                 String version = versionArgumentResolver.version();
-                if (version != null && !version.isEmpty()) {
+                if (StringUtils.isNotEmpty(version)) {
                     httpServletResponse.setHeader(X_HEADER_VERSION, version);
                 }
             }

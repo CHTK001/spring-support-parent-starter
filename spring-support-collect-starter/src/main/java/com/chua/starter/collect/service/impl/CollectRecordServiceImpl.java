@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 采集结果服务实现。
@@ -83,7 +84,7 @@ public class CollectRecordServiceImpl extends ServiceImpl<CollectRecordMapper, C
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteRecords(List<Long> recordIds) {
-        if (recordIds == null || recordIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(recordIds)) {
             throw new IllegalArgumentException("至少要指定一条记录");
         }
         int deleted = 0;

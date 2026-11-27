@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 会话管理 Controller
@@ -50,7 +51,7 @@ public class SysAiSessionController {
         if (!AiUserContext.canAccessOthersData()) {
             wrapper.eq(SysAiSession::getSysUserId, AiUserContext.requireUserId());
         }
-        if (keyword != null && !keyword.isEmpty()) {
+        if (StringUtils.isNotEmpty(keyword)) {
             wrapper.like(SysAiSession::getTitle, keyword);
         }
         if (groupId != null) {

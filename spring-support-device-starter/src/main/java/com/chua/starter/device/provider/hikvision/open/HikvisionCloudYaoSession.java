@@ -30,6 +30,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 海康云曜（hikyun 外网云）OpenAPI 会话。
@@ -286,7 +288,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
             String token = firstToken(data);
-            if (token == null || token.isEmpty()) {
+            if (StringUtils.isEmpty(token)) {
                 throw new IllegalStateException("海康云曜 accessToken 为空");
             }
             cacheToken(token, firstExpires(data));
@@ -304,7 +306,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      */
     private static String firstToken(JsonNode data) {
         String token = data.path("access_token").asText(null);
-        if (token == null || token.isEmpty()) {
+        if (StringUtils.isEmpty(token)) {
             token = data.path("accessToken").asText(null);
         }
         return token;
@@ -450,7 +452,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
                         .build();
                 HttpResponse<byte[]> response = DOWNLOADER.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 byte[] body = response.body();
-                if (response.statusCode() == 200 && body != null && body.length > 0) {
+                if (response.statusCode() == 200 && ArrayUtils.isNotEmpty(body)) {
                     return new ByteArrayInputStream(body);
                 }
                 last = new IllegalStateException("海康云曜抓图下载失败: HTTP " + response.statusCode());

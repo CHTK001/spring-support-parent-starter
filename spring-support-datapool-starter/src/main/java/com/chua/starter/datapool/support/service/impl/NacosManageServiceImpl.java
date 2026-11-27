@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Nacos 管理实现：全部走 Nacos v1 OpenAPI，不落任何本地副本。
@@ -686,7 +687,7 @@ public class NacosManageServiceImpl implements NacosManageService {
      */
     private static String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isEmpty()) {
+            if (StringUtils.isNotEmpty(value)) {
                 return value;
             }
         }
@@ -730,6 +731,6 @@ public class NacosManageServiceImpl implements NacosManageService {
      * @return 非空原值或 null
      */
     private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
+        return StringUtils.isEmpty(value) ? null : value;
     }
 }

@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 成语服务实现
@@ -96,7 +98,7 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
         // 前端下拉/模块配置传 PRIMARY/JUNIOR 这类码值，映射表（edu_idiom_grade）里存的是中文名，
         // 不归一化就会「筛选恒为 0 条」——消消乐与接龙都从这里取数，必须在这一层统一。
         String level = GradeLevels.normalize(gradeLevel);
-        if (level == null || level.isEmpty()) {
+        if (StringUtils.isEmpty(level)) {
             return baseMapper.selectRandom(count, userId);
         }
         return baseMapper.selectByGradeLevel(level, grade, count, userId);
@@ -168,8 +170,8 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
             return false;
         }
         // 验证拼音和释义是否匹配
-        boolean pinyinMatch = pinyin != null && pinyin.equals(idiom.getIdiomPinyin());
-        boolean meaningMatch = meaning != null && meaning.equals(idiom.getIdiomMeaning());
+        boolean pinyinMatch = ObjectUtils.nullSafeEquals(pinyin, idiom.getIdiomPinyin());
+        boolean meaningMatch = ObjectUtils.nullSafeEquals(meaning, idiom.getIdiomMeaning());
         return pinyinMatch && meaningMatch;
     }
 
@@ -264,7 +266,7 @@ public class EduIdiomServiceImpl extends ServiceImpl<EduIdiomMapper, EduIdiom>
             out.put("message", "当前成语不合法");
             return out;
         }
-        if (input == null || input.isEmpty()) {
+        if (StringUtils.isEmpty(input)) {
             out.put("ok", false);
             out.put("message", "请输入要接的成语");
             return out;

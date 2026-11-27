@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Agent（Agent）控制器，替代 nomicore 的同名契约。
@@ -494,7 +495,7 @@ public class ApiAgentController {
      * @return extractapiKey的结果
      */
     private String extractApiKey(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return null;
         }
         Object single = credentials.get("api_key");

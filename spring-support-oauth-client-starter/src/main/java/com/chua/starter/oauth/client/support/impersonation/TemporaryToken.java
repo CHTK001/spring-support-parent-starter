@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 临时令牌（管理员代入他人身份）的标记与校验。
@@ -75,7 +76,7 @@ public final class TemporaryToken {
                 : new LinkedHashMap<>(userResult.getExt());
         ext.put(EXT_TEMPORARY, Boolean.TRUE);
         ext.put(EXT_GRANTED_BY, StringUtils.defaultString(grantedBy, "unknown"));
-        if (allowedUrls != null && !allowedUrls.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(allowedUrls)) {
             ext.put(EXT_ALLOWED_URLS, String.join(PATH_SEPARATOR, allowedUrls));
         }
         userResult.setExt(ext);

@@ -77,6 +77,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据库 web 管理器（navicat 风格）REST 接口。
@@ -2259,7 +2261,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @throws IllegalArgumentException 变量名不合法或引用了未提供的变量
      */
     private static String bindParams(String sql, Map<String, Object> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             if (SqlParameterBinder.hasPlaceholder(sql)) {
                 throw new IllegalArgumentException("SQL 里有 " + SqlParameterBinder.requiredNames(sql)
                         + " 占位符，但没有提供参数");
@@ -2738,7 +2740,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
      * @return 返回值
     */
     private static String describeSqlError(String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return "操作失败";
         }
         String msg = raw.trim();
@@ -2994,7 +2996,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         Object newValue = body.get("newValue");
         @SuppressWarnings("unchecked")
         Map<String, Object> primaryKey = (Map<String, Object>) body.getOrDefault("primaryKey", java.util.Collections.emptyMap());
-        if (primaryKey == null || primaryKey.isEmpty()) {
+        if (CollectionUtils.isEmpty(primaryKey)) {
             return ReturnResult.error("缺少主键定位条件 primaryKey");
         }
         // 标识符引用要按方言拼（MySQL 反引号 / 其余双引号），而方言只有拿到连接才知道，
@@ -3202,7 +3204,7 @@ private static final java.util.Set<String> SYSTEM_SCHEMAS = java.util.Set.of(
         boolean primary = Boolean.TRUE.equals(body.get("primary"));
         String indexType = body.get("indexType") == null ? null : String.valueOf(body.get("indexType"));
         List<Integer> prefixes = intListOrNull(body.get("prefixes"));
-        if (columns == null || columns.isEmpty()) {
+        if (CollectionUtils.isEmpty(columns)) {
             return ReturnResult.error("请至少选择一列");
         }
         Long dsId = queryOrBodyDatasourceId(datasourceId, body);

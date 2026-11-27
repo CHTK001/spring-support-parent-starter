@@ -194,7 +194,7 @@ public class RagController {
     @GetMapping("/document/{id}/content")
     public ReturnResult<String> getDocumentContent(@PathVariable String id) {
         String content = ragClient().readDocumentContent(id);
-        if (content == null || content.isEmpty()) {
+        if (StringUtils.isEmpty(content)) {
             return ReturnResult.error("文档内容不可读取或文件不存在");
         }
         return ReturnResult.ok(content);

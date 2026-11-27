@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
@@ -168,7 +169,7 @@ public class RpcMonitorController {
         List<String> services = new ArrayList<>();
         for (RpcServiceBean<?> serviceBean : applicationContext.getBeansOfType(RpcServiceBean.class).values()) {
             String interfaceName = serviceBean.getInterfaceName();
-            if (interfaceName != null && !interfaceName.isEmpty()) {
+            if (StringUtils.isNotEmpty(interfaceName)) {
                 services.add(interfaceName);
             }
         }

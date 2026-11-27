@@ -38,6 +38,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 监控采集调度器
@@ -122,7 +124,7 @@ public class MonitorScheduler {
         lastTickTime.set(now);
 
         List<MsMonitorTask> tasks = taskService.listEnabled().getData();
-        if (tasks == null || tasks.isEmpty()) {
+        if (CollectionUtils.isEmpty(tasks)) {
             return;
         }
         LocalDateTime nowTime = LocalDateTime.now();
@@ -202,7 +204,7 @@ public class MonitorScheduler {
      */
     private boolean isTriggered(MsMonitorTask task, LocalDateTime now) {
         String cron = task.getMonitorTaskCron();
-        if (cron == null || cron.isEmpty()) {
+        if (StringUtils.isEmpty(cron)) {
             return false;
         }
         try {
@@ -283,7 +285,7 @@ public class MonitorScheduler {
     private void applyParseRules(Long taskId, CollectResult result) {
         try {
             List<MsMonitorMetricConfig> rules = metricConfigService.listByTask(taskId).getData();
-            if (rules == null || rules.isEmpty() || result.getRawOutput() == null) {
+            if (CollectionUtils.isEmpty(rules) || result.getRawOutput() == null) {
                 return;
             }
             String rawOutput = result.getRawOutput();
@@ -307,7 +309,7 @@ public class MonitorScheduler {
      */
     private List<MetricPoint> parseByRule(MsMonitorMetricConfig rule, String rawOutput) {
         String parseRule = rule.getParseRule();
-        if (parseRule == null || parseRule.isEmpty()) {
+        if (StringUtils.isEmpty(parseRule)) {
             return Collections.emptyList();
         }
         try {

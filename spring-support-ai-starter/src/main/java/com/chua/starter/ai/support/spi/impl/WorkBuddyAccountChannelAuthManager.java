@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * WorkBuddy（腾讯 CodeBuddy / WorkBuddy 国际版）账号渠道鉴权管理器。
@@ -689,7 +691,7 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      * @return 受理条数
      */
     public int acceptTaskCodes(Map<String, Object> credentials, String realm, List<String> taskCodes) {
-        if (taskCodes == null || taskCodes.isEmpty()) {
+        if (CollectionUtils.isEmpty(taskCodes)) {
             return 0;
         }
         Map<String, Object> request = new LinkedHashMap<>(1);
@@ -1593,7 +1595,7 @@ public class WorkBuddyAccountChannelAuthManager implements AccountChannelAuthMan
      * @return 可安全使用时返回 {@code true}
      */
     static boolean validUID(String uid) {
-        if (uid == null || uid.isEmpty() || uid.length() > 64) {
+        if (StringUtils.isEmpty(uid) || uid.length() > 64) {
             return false;
         }
         for (int i = 0; i < uid.length(); i++) {

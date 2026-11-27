@@ -15,6 +15,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Elasticsearch REST 客户端
@@ -410,7 +411,7 @@ public class ElasticsearchClient {
     public JsonObject reindex(Target target, String source, String dest, List<String> sourceExcludes) {
         Map<String, Object> sourceSpec = new LinkedHashMap<>();
         sourceSpec.put("index", source);
-        if (sourceExcludes != null && !sourceExcludes.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(sourceExcludes)) {
             sourceSpec.put("_source", Map.of("excludes", sourceExcludes));
         }
         Map<String, Object> body = new LinkedHashMap<>();

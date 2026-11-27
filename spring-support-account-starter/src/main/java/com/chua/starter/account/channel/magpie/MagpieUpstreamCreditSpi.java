@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * magpie 上游的「自建余额」回落点。
@@ -115,7 +116,7 @@ final class MagpieUpstreamCreditSpi {
      */
     static Map<String, Object> credit(List<ChannelUpstreamProvider> impls, String providerId,
                                       String account, Map<String, Object> credentials) {
-        if (MagpieSupport.isBlank(providerId) || impls == null || impls.isEmpty()) {
+        if (MagpieSupport.isBlank(providerId) || CollectionUtils.isEmpty(impls)) {
             return null;
         }
         String wanted = providerId.trim();
@@ -151,7 +152,7 @@ final class MagpieUpstreamCreditSpi {
      */
     static List<Map<String, Object>> windowsOf(Map<String, Object> snapshot) {
         List<Map<String, Object>> windows = new ArrayList<>(2);
-        if (snapshot == null || snapshot.isEmpty()) {
+        if (CollectionUtils.isEmpty(snapshot)) {
             return windows;
         }
         Object packages = snapshot.get("packages");

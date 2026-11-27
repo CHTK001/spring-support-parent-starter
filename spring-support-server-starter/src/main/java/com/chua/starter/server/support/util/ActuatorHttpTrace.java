@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * Actuator {@code /actuator/httptrace}（Spring Boot 2.x）与
@@ -242,7 +244,7 @@ public final class ActuatorHttpTrace {
         }
         // 应用原样透传请求的 traceparent（网关/代理常见）：响应 span 与请求 span 相同，
         // 同样构成自指，必须清掉父引用——否则树状视图里会出现一条指向自己的边。
-        if (spanId != null && spanId.equals(parentSpanId)) {
+        if (ObjectUtils.nullSafeEquals(spanId, parentSpanId)) {
             parentSpanId = null;
         }
         Map<String, String> out = new LinkedHashMap<>();
@@ -366,7 +368,7 @@ public final class ActuatorHttpTrace {
      * @return 第一个值；取不到时返回 null
      */
     private static String first(List<String> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return null;
         }
         String v = values.get(0);

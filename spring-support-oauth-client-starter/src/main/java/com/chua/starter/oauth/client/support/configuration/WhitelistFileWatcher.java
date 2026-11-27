@@ -27,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * o认证客户端白名单文件监听器
@@ -105,7 +106,7 @@ public class WhitelistFileWatcher {
         
         // 添加配置文件中的白名单
         List<String> configWhitelist = authClientProperties.getWhitelist();
-        if (configWhitelist != null && !configWhitelist.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(configWhitelist)) {
             mergedWhitelist.addAll(configWhitelist);
             log.info("[白名单监听]加载配置文件白名单: {} 条", configWhitelist.size());
         }

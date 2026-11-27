@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * AI 服务实例管理器。
@@ -354,14 +356,14 @@ public class ServiceInstanceManager {
     private void writeOpenAiStream(StreamState st, String id, long created, String model,
                                    String text, String reasoning, boolean finish, AiUsage usage,
                                    Map<String, Object> reqBody) throws IOException {
-        if (reasoning != null && !reasoning.isEmpty()) {
+        if (StringUtils.isNotEmpty(reasoning)) {
             Map<String, Object> env = openAiChunkEnvelope(id, created, model);
             Map<String, Object> delta = new LinkedHashMap<>();
             delta.put("reasoning_content", reasoning);
             env.put("choices", List.of(choiceDelta(0, delta, null)));
             st.writeSseData(env);
         }
-        if (text != null && !text.isEmpty()) {
+        if (StringUtils.isNotEmpty(text)) {
             Map<String, Object> env = openAiChunkEnvelope(id, created, model);
             Map<String, Object> delta = new LinkedHashMap<>();
             delta.put("content", text);
@@ -997,7 +999,7 @@ public class ServiceInstanceManager {
     private void writeCcStream(StreamState st, String id, String model, String text, String reasoning,
                                boolean finish, AiUsage usage) throws IOException {
         // 动态块：thinking → text → tool_use，块下标按开启顺序分配
-        if (reasoning != null && !reasoning.isEmpty()) {
+        if (StringUtils.isNotEmpty(reasoning)) {
             int thinkingIndex = openCcThinkingBlock(st);
             Map<String, Object> delta = new LinkedHashMap<>();
             delta.put("type", "thinking_delta");
@@ -1005,7 +1007,7 @@ public class ServiceInstanceManager {
             st.writeSseEvent("content_block_delta",
                     Map.of("type", "content_block_delta", "index", thinkingIndex, "delta", delta));
         }
-        if (text != null && !text.isEmpty()) {
+        if (StringUtils.isNotEmpty(text)) {
             int textIndex = openCcTextBlock(st);
             Map<String, Object> delta = new LinkedHashMap<>();
             delta.put("type", "text_delta");
@@ -1105,7 +1107,7 @@ public class ServiceInstanceManager {
             int toolCallIndex = (int) tc.getIndex();
             int blockIndex = openCcToolBlock(st, toolCallIndex, tc.getId(), tc.getName());
             String partial = tc.getArguments();
-            if (partial != null && !partial.isEmpty()) {
+            if (StringUtils.isNotEmpty(partial)) {
                 Map<String, Object> delta = new LinkedHashMap<>();
                 delta.put("type", "input_json_delta");
                 delta.put("partial_json", partial);
@@ -1414,7 +1416,7 @@ public class ServiceInstanceManager {
      * @return 最后一条用户消息文本；没有用户消息时返回空字符串
      */
     private String lastUserPrompt(List<Map<String, Object>> messages) {
-        if (messages == null || messages.isEmpty()) {
+        if (CollectionUtils.isEmpty(messages)) {
             return "";
         }
         for (int i = messages.size() - 1; i >= 0; i--) {
@@ -1631,7 +1633,7 @@ public class ServiceInstanceManager {
                             }
                         },
                         reasoning -> {
-                            if (reasoning == null || reasoning.isEmpty() || st.closed) {
+                            if (StringUtils.isEmpty(reasoning) || st.closed) {
                                 return;
                             }
                             try {
@@ -1659,7 +1661,7 @@ public class ServiceInstanceManager {
                             }
                         },
                         toolCalls -> {
-                            if (toolCalls == null || toolCalls.isEmpty() || st.closed) {
+                            if (CollectionUtils.isEmpty(toolCalls) || st.closed) {
                                 return;
                             }
                             try {

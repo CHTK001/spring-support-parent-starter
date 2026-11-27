@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 邮件发送服务实现
@@ -83,7 +84,7 @@ public class MailService {
             helper.setText(content, true); // true表示HTML格式
 
             // 添加附件
-            if (files != null && !files.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(files)) {
                 for (String filePath : files) {
                     helper.addAttachment(filePath, new java.io.File(filePath));
                 }

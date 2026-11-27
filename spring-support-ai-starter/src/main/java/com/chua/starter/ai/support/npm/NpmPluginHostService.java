@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * npm 插件 Node 侧车宿主服务。
@@ -73,7 +74,7 @@ public class NpmPluginHostService {
      * @return 至少一个插件装载成功返回 true；全部失败返回 false（调用方应直通）
      */
     public boolean begin(String streamId, List<NpmPluginSpec> plugins) {
-        if (plugins == null || plugins.isEmpty()) {
+        if (CollectionUtils.isEmpty(plugins)) {
             return false;
         }
         ArrayNode arr = mapper.createArrayNode();

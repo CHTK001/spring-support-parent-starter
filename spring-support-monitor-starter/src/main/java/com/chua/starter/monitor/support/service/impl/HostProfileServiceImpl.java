@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiFunction;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 主机画像服务实现：所有分区数据经 {@link SystemInfoProvider} 通道取得。
@@ -643,14 +644,14 @@ public class HostProfileServiceImpl implements HostProfileService {
         }
         // 网卡完整列表落库：本机通道已内嵌，其余通道补一次采集
         List<NetworkInterfaceRowVO> nics = info.getNetworkInterfaces();
-        if (nics == null || nics.isEmpty()) {
+        if (CollectionUtils.isEmpty(nics)) {
             try {
                 nics = provider.networkInterfaces(host);
             } catch (Exception ignore) {
                 nics = java.util.Collections.emptyList();
             }
         }
-        if (nics != null && !nics.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(nics)) {
             try {
                 host.setServerHostNetworks(objectMapper.writeValueAsString(nics));
             } catch (com.fasterxml.jackson.core.JsonProcessingException ignore) {
@@ -703,7 +704,7 @@ public class HostProfileServiceImpl implements HostProfileService {
     private String deriveSoftware(SystemInfoProvider provider, MsServerHost host) {
         try {
             List<ProcessRowVO> procs = provider.processes(host, 1, 300);
-            if (procs == null || procs.isEmpty()) {
+            if (CollectionUtils.isEmpty(procs)) {
                 return null;
             }
             List<com.chua.starter.server.support.software.SoftwareInstanceVO> list =

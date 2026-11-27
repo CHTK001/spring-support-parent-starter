@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 会话级事件广播器（SSE，按用户广播）。
@@ -259,7 +260,7 @@ public class AiSessionEventBroadcaster {
             return;
         }
         Map<String, Connection> conns = userConnections.get(userId);
-        if (conns == null || conns.isEmpty()) {
+        if (CollectionUtils.isEmpty(conns)) {
             return;
         }
         Map<String, Object> event = new LinkedHashMap<>();
@@ -267,7 +268,7 @@ public class AiSessionEventBroadcaster {
         event.put("userId", userId);
         event.put("sessionId", sessionId);
         event.put("timestamp", Instant.now().toString());
-        if (payload != null && !payload.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(payload)) {
             event.put("payload", payload);
         }
         if (source != null && !source.isBlank()) {

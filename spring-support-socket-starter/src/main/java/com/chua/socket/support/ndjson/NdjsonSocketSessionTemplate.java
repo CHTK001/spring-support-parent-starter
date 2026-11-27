@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * NDJSON Socket 会话模板实现
@@ -90,7 +91,7 @@ public class NdjsonSocketSessionTemplate implements SocketSessionTemplate {
      * @return ResponseBodyEmitter
      */
     public ResponseBodyEmitter createConnection(String clientId) {
-        if (clientId == null || clientId.isEmpty()) {
+        if (StringUtils.isEmpty(clientId)) {
             clientId = UUID.randomUUID().toString().replace("-", "");
         }
 

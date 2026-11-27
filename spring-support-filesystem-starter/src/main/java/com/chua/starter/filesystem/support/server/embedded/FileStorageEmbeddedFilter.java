@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 内置形态：把文件存储的完整协议挂进宿主 Spring 应用（默认形态）。
@@ -105,7 +106,7 @@ public class FileStorageEmbeddedFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         String rawPath = request.getRequestURI();
         String context = request.getContextPath();
-        if (context != null && !context.isEmpty() && rawPath.startsWith(context)) {
+        if (StringUtils.isNotEmpty(context) && rawPath.startsWith(context)) {
             rawPath = rawPath.substring(context.length());
         }
         String resolved = resolvePath(pathPrefix, rawPath);
@@ -160,7 +161,7 @@ public class FileStorageEmbeddedFilter extends OncePerRequestFilter {
         if (path == null) {
             return null;
         }
-        if (prefix == null || prefix.isEmpty()) {
+        if (StringUtils.isEmpty(prefix)) {
             return path;
         }
         if (path.equals(prefix)) {

@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * WorkBuddy 积分查询实现。
@@ -93,7 +94,7 @@ public class WorkBuddyCreditQueryProvider implements CreditQueryProvider {
      * @return 积分快照（{@code remain/total/unit/packages/updatedAt}）；失败带 {@code error}
      */
     public Map<String, Object> credit(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             Map<String, Object> empty = new LinkedHashMap<>(2);
             empty.put("error", "账号未绑定或凭据为空");
             return empty;

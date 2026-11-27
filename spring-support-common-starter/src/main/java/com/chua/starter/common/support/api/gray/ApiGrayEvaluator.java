@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * API 灰度规则评估器
@@ -140,7 +141,7 @@ public class ApiGrayEvaluator {
      * @return 匹配角色whitelist的结果
      */
     private boolean matchRoleWhitelist(String[] roles, java.util.Collection<String> userRoles) {
-        if (roles == null || roles.length == 0 || userRoles == null || userRoles.isEmpty()) {
+        if (roles == null || roles.length == 0 || CollectionUtils.isEmpty(userRoles)) {
             return false;
         }
         for (String role : roles) {

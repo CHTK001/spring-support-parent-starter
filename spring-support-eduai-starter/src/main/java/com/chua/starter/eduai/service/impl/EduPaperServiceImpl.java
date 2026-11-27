@@ -53,6 +53,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 试卷服务实现
@@ -641,7 +642,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
      * @return 批量加题的结果
      */
     public int addQuestions(Long paperId, List<PaperQuestionItemDTO> items) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return 0;
         }
         EduPaper paper = requireEditableDraft(paperId);

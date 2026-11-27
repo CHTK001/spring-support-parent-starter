@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 内网穿透统一入口自动配置。
@@ -59,7 +60,7 @@ public class TunnelAutoConfiguration {
         providers.orderedStream().forEach(all::add);
 
         List<String> whitelist = properties.getProviders();
-        if (whitelist != null && !whitelist.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(whitelist)) {
             List<String> wanted = whitelist.stream()
                     .filter(name -> name != null && !name.isBlank())
                     .map(name -> name.trim().toLowerCase(Locale.ROOT))

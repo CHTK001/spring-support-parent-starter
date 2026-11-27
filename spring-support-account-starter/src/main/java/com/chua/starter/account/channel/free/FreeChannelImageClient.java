@@ -21,6 +21,8 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 免费渠道聚合 {@link ImageClient}。
@@ -190,7 +192,7 @@ public class FreeChannelImageClient implements ImageClient {
         byte[] reference = this.referenceImage;
         this.referenceImage = null;
         ImageGenerationResult result;
-        if (reference != null && reference.length > 0) {
+        if (ArrayUtils.isNotEmpty(reference)) {
             if (!channel.supportsReferenceImage(model)) {
                 throw new IllegalStateException("模型 " + model + " 所在渠道不支持参考图（图生图）");
             }
@@ -275,7 +277,7 @@ public class FreeChannelImageClient implements ImageClient {
      */
     private static boolean declares(ImageChannelProvider channel) {
         List<Map<String, Object>> models = channel.listModels();
-        return models != null && !models.isEmpty();
+        return CollectionUtils.isNotEmpty(models);
     }
 
     /**

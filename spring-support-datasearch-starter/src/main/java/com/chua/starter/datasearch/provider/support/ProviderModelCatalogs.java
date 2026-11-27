@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型目录出口：按顺序问各个 {@link ProviderModelCatalogProvider}，命中结果<b>合并</b>。
@@ -39,7 +40,7 @@ public final class ProviderModelCatalogs {
      */
     public static List<ProviderModelCatalogProvider> providers() {
         List<ProviderModelCatalogProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderModelCatalogProvider.class);
             cached = current;
         }

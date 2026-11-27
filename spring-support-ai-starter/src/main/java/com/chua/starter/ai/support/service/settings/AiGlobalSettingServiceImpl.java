@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 全局设置服务实现（单条记录 标识=1 的语义，落地到 {@code sys_ai_global_setting} 键值表）。
@@ -396,7 +397,7 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         for (java.util.Map.Entry<String, java.util.Map<String, Object>> storageEntry
                 : submitted.entrySet()) {
             String storageName = storageEntry.getKey() == null ? null : storageEntry.getKey().trim();
-            if (storageName == null || storageName.isEmpty()) {
+            if (StringUtils.isEmpty(storageName)) {
                 continue;
             }
             VectorStorageDescriptor descriptor = descriptors.get(storageName.toLowerCase());
@@ -415,7 +416,7 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
             if (submittedFields != null) {
                 for (java.util.Map.Entry<String, Object> fieldEntry : submittedFields.entrySet()) {
                     String key = fieldEntry.getKey() == null ? null : fieldEntry.getKey().trim();
-                    if (key == null || key.isEmpty()) {
+                    if (StringUtils.isEmpty(key)) {
                         continue;
                     }
                     if (!allowed.contains(key)) {

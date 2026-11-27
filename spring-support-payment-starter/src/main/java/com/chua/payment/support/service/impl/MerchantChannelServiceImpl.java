@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 客户渠道服务实现，负责支付渠道的增删改查、启用、禁用及路由配置。
@@ -485,7 +487,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
             if (targetChannelId == null) {
                 throw new PaymentException("运营配置必须在 extConfig 中提供 targetChannelId 或 defaultChannelId");
             }
-            if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
+            if (ObjectUtils.nullSafeEquals(channel.getId(), targetChannelId)) {
                 throw new PaymentException("运营配置不能指向自己");
             }
             MerchantChannel targetChannel = channelMapper.selectById(targetChannelId);
@@ -664,7 +666,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
      * @return 序列化后的扩展配置文本
      */
     private String writeExtConfig(Map<String, Object> config) {
-        if (config == null || config.isEmpty()) {
+        if (CollectionUtils.isEmpty(config)) {
             return null;
         }
         try {

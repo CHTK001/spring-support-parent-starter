@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * ONNX 模型级运行参数服务。
@@ -264,7 +265,7 @@ public class OnnxModelParamService {
      * @return 清洗后的参数
      */
     private Map<String, Object> sanitize(Map<String, Object> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return new LinkedHashMap<>();
         }
         Map<String, Object> cleaned = new LinkedHashMap<>();

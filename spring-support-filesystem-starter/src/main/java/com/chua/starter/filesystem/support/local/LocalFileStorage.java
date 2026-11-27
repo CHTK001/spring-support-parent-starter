@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 本地文件系统存储 SPI 实现。
@@ -105,7 +106,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     private String resolveRoot(BucketSetting setting) {
         Map<String, String> extra = setting.getExtraProperties();
         String base = extra == null ? null : extra.get(BASE_PATH_KEY);
-        if (base != null && !base.isEmpty()) {
+        if (StringUtils.isNotEmpty(base)) {
             return base + "/" + (bucket != null ? bucket : "default");
         }
         return Optional.ofNullable(System.getProperty(TEMP_PATH_KEY))
@@ -121,7 +122,7 @@ public class LocalFileStorage extends AbstractFileStorage {
      * @return 归一化后的绝对路径，越界返回 null
      */
     private Path resolveSafely(String key) {
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return null;
         }
         Path target = rootPath.resolve(key).normalize();
@@ -369,7 +370,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         try {
             List<Metadata> metadataList = new java.util.ArrayList<>();
             String dir = request.getFilePath();
-            Path targetDir = dir == null || dir.isEmpty() ? rootPath : resolveSafely(dir);
+            Path targetDir = StringUtils.isEmpty(dir) ? rootPath : resolveSafely(dir);
             if (targetDir == null || !Files.exists(targetDir) || !Files.isDirectory(targetDir)) {
                 return ListObjectResult.builder()
                         .resultCode(ObjectResult.ResultCode.SUCCESS)
@@ -433,7 +434,7 @@ public class LocalFileStorage extends AbstractFileStorage {
      * @return resolveKey的结果
      */
     private String resolveKey(String filePath, String fileName) {
-        if (filePath == null || filePath.isEmpty()) {
+        if (StringUtils.isEmpty(filePath)) {
             return fileName;
         }
         return filePath + "/" + fileName;

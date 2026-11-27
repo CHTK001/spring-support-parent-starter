@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 导入时按源数据自动建表（对齐 Navicat 第 5 步「新建表」）。
@@ -63,7 +64,7 @@ public final class DbImportDdl {
      */
     static void createTable(Connection conn, String table, List<ColumnSpec> columns,
                             List<Map<String, Object>> rows) throws SQLException {
-        if (columns == null || columns.isEmpty()) {
+        if (CollectionUtils.isEmpty(columns)) {
             throw new SQLException("没有可建表的列");
         }
         StringBuilder ddl = new StringBuilder("CREATE TABLE ")
@@ -101,7 +102,7 @@ public final class DbImportDdl {
      */
     static List<ColumnSpec> planColumns(Map<String, String> mapping, List<String> sourceColumns) {
         List<ColumnSpec> specs = new ArrayList<>();
-        if (mapping != null && !mapping.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(mapping)) {
             List<String> targets = sanitizeAll(new ArrayList<>(mapping.values()));
             int index = 0;
             for (Map.Entry<String, String> entry : mapping.entrySet()) {

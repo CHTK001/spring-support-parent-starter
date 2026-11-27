@@ -31,6 +31,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * InfluxDB 管理实现：按服务端大版本分发。
@@ -1051,7 +1052,7 @@ public class InfluxdbManageServiceImpl implements InfluxdbManageService {
      * @return null 或原值
      */
     private static String emptyToNull(String value) {
-        return value == null || value.isEmpty() ? null : value;
+        return StringUtils.isEmpty(value) ? null : value;
     }
 
     /**

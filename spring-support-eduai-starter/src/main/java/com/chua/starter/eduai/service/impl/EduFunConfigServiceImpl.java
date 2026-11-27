@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 趣味模块配置服务实现
@@ -117,7 +118,7 @@ public class EduFunConfigServiceImpl extends ServiceImpl<EduFunConfigMapper, Edu
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<EduFunConfig> saveBatchScoped(List<EduFunConfig> configs) {
-        if (configs == null || configs.isEmpty()) {
+        if (CollectionUtils.isEmpty(configs)) {
             return List.of();
         }
         Set<String> keys = new HashSet<>();

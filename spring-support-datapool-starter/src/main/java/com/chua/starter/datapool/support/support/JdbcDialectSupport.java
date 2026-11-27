@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * JDBC 跨方言支撑：库切换、库/表/列存在性、库 DDL 与列定义变更、列注释。
@@ -392,7 +394,7 @@ public final class JdbcDialectSupport {
         if (isMysqlFamily(conn)) {
             return;
         }
-        String literal = comment == null || comment.isEmpty() ? "NULL" : "'" + comment.replace("'", "''") + "'";
+        String literal = StringUtils.isEmpty(comment) ? "NULL" : "'" + comment.replace("'", "''") + "'";
         executeFirstQuietly(conn, List.of(
                 "COMMENT ON COLUMN \"" + table + "\".\"" + column + "\" IS " + literal,
                 "COMMENT ON COLUMN " + table + "." + column + " IS " + literal));
@@ -416,7 +418,7 @@ public final class JdbcDialectSupport {
         if (isMysqlFamily(conn)) {
             return;
         }
-        String literal = comment == null || comment.isEmpty() ? "NULL" : "'" + comment.replace("'", "''") + "'";
+        String literal = StringUtils.isEmpty(comment) ? "NULL" : "'" + comment.replace("'", "''") + "'";
         executeFirstQuietly(conn, List.of(
                 "COMMENT ON TABLE " + quote(conn, table) + " IS " + literal,
                 "COMMENT ON TABLE " + table + " IS " + literal));
@@ -437,7 +439,7 @@ public final class JdbcDialectSupport {
      * @return 待执行的注释语句；无额外语句时返回 {@code null}
      */
     public static String tableCommentSql(Connection conn, String table, String comment) {
-        if (isMysqlFamily(conn) || comment == null || comment.isEmpty()) {
+        if (isMysqlFamily(conn) || StringUtils.isEmpty(comment)) {
             return null;
         }
         return "COMMENT ON TABLE " + quote(conn, table) + " IS '" + comment.replace("'", "''") + "'";
@@ -567,7 +569,7 @@ public final class JdbcDialectSupport {
                 ddl.append(" COMMENT '").append(column.comment().replace("'", "''")).append('\'');
             }
         }
-        if (primaryKey != null && !primaryKey.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(primaryKey)) {
             List<String> quoted = new ArrayList<>(primaryKey.size());
             for (String key : primaryKey) {
                 quoted.add(quote(conn, key));
@@ -575,7 +577,7 @@ public final class JdbcDialectSupport {
             ddl.append(", PRIMARY KEY (").append(String.join(", ", quoted)).append(')');
         }
         ddl.append(')');
-        if (mysql && comment != null && !comment.isEmpty()) {
+        if (mysql && StringUtils.isNotEmpty(comment)) {
             ddl.append(" COMMENT='").append(comment.replace("'", "''")).append('\'');
         }
         return ddl.toString();

@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 提供商接入凭据控制器
@@ -179,7 +180,7 @@ public class ProviderCredentialController {
     @PostMapping("/test-all")
     public ReturnResult<List<CredentialHealthResult>> testAll(
             @RequestBody(required = false) List<String> ids) {
-        Set<String> wanted = (ids == null || ids.isEmpty()) ? null : new HashSet<>(ids);
+        Set<String> wanted = (CollectionUtils.isEmpty(ids)) ? null : new HashSet<>(ids);
         List<DeviceProviderCredential> targets = new ArrayList<>();
         for (DeviceProviderCredential credential : credentialService.list(null)) {
             if (Boolean.FALSE.equals(credential.getDeviceCredentialEnabled())) {

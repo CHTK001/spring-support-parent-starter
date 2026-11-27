@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 联网搜索服务。
@@ -230,7 +231,7 @@ public class WebSearchService {
         // 1) 选中的付费源在短优先窗口内成功 → 采用高质量付费结果
         try {
             List<WebResult> pr = paidFut.get(PAID_PREFERRED_MS, TimeUnit.MILLISECONDS);
-            if (pr != null && !pr.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(pr)) {
                 soFut.cancel(true);
                 log.info("[WebSearch] 使用 {} 检索成功，{} 条", provider, pr.size());
                 return pr;
@@ -242,7 +243,7 @@ public class WebSearchService {
         // 2) 采用免费 360（此时通常已并行完成）
         try {
             List<WebResult> sr = soFut.get(12, TimeUnit.SECONDS);
-            if (sr != null && !sr.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(sr)) {
                 paidFut.cancel(true);
                 log.info("[WebSearch] 使用 360 检索成功，{} 条", sr.size());
                 return sr;
@@ -254,7 +255,7 @@ public class WebSearchService {
         // 3) 360 失败：再给付费源机会（可能较慢但有效）
         try {
             List<WebResult> pr = paidFut.get(12, TimeUnit.SECONDS);
-            if (pr != null && !pr.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(pr)) {
                 log.info("[WebSearch] 使用 {} 检索成功，{} 条", provider, pr.size());
                 return pr;
             }

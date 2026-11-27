@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 独立 HTTP 服务器（非 Servlet 容器）的 OAuth 鉴权过滤器。
@@ -206,7 +207,7 @@ public class OAuthServerFilter implements ServerFilter {
        */
     @Override
     public void updateConfig(Map<String, Object> config) {
-        if (config == null || config.isEmpty()) {
+        if (CollectionUtils.isEmpty(config)) {
             return;
         }
         Object buckets = config.get("privateBuckets");
@@ -593,7 +594,7 @@ public class OAuthServerFilter implements ServerFilter {
        */
     boolean isOriginAllowed(String origin) {
         Set<String> allowed = this.corsAllowedOrigins;
-        if (allowed == null || allowed.isEmpty()) {
+        if (CollectionUtils.isEmpty(allowed)) {
             return false;
         }
         String normalized = normalizeOrigin(origin);

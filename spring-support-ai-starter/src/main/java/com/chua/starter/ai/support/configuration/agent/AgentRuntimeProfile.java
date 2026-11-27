@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 单个 managed Agent 的运行时配置不可变快照。
@@ -166,7 +167,7 @@ public record AgentRuntimeProfile(
                 && (mcp == CapabilitySwitch.ON
                 || subAgent == CapabilitySwitch.ON
                 || planning
-                 || (defaultSkills != null && !defaultSkills.isEmpty()));
+                 || (CollectionUtils.isNotEmpty(defaultSkills)));
         return agentName != null || !memory || capability || maxToolIterations > 0 || maxTotalTokens > 0L;
     }
 

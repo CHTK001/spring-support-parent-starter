@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 厂商平台 打开api 会话基类（基于 common-starter http客户端）
@@ -255,7 +257,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     private void logRequest(String method, String path, Map<String, String> headers, Object params) {
         log.info("[OpenAPI-DEBUG] -> {} {}{}", method, baseUrl, path);
-        if (headers != null && !headers.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(headers)) {
             log.info("[OpenAPI-DEBUG] -> headers: {}", maskHeaders(headers));
         }
         if (params instanceof Map<?, ?> map && !map.isEmpty()) {
@@ -274,7 +276,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     private void logResponse(String method, String path, ClientResponse response, String respBody) {
         log.info("[OpenAPI-DEBUG] <- {} {}{} status={}", method, baseUrl, path, response.getStatusCode());
-        if (respBody != null && !respBody.isEmpty()) {
+        if (StringUtils.isNotEmpty(respBody)) {
             String snippet = respBody.length() > RESPONSE_LOG_MAX_BYTES
                     ? respBody.substring(0, RESPONSE_LOG_MAX_BYTES) + "...(truncated)"
                     : respBody;

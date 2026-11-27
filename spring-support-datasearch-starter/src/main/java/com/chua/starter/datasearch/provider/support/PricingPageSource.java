@@ -26,6 +26,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 通用官方价格页读取器：配置决定页面结构，代码只负责四种通用解析方式。
@@ -394,7 +396,7 @@ public final class PricingPageSource {
     private static Map<Integer, String> itemColumns(List<String> headers, PricingSourceConfig config) {
         Map<Integer, String> out = new LinkedHashMap<>();
         Map<String, String> configured = config.getColumns();
-        if (configured == null || configured.isEmpty()) {
+        if (CollectionUtils.isEmpty(configured)) {
             return out;
         }
         for (int i = 0; i < headers.size(); i++) {
@@ -485,14 +487,14 @@ public final class PricingPageSource {
         }
         if (config.getStripPrefixes() != null) {
             for (String prefix : config.getStripPrefixes()) {
-                if (prefix != null && !prefix.isEmpty() && value.startsWith(prefix)) {
+                if (StringUtils.isNotEmpty(prefix) && value.startsWith(prefix)) {
                     value = value.substring(prefix.length()).trim();
                 }
             }
         }
         if (config.getStripSuffixes() != null) {
             for (String suffix : config.getStripSuffixes()) {
-                if (suffix != null && !suffix.isEmpty() && value.endsWith(suffix)) {
+                if (StringUtils.isNotEmpty(suffix) && value.endsWith(suffix)) {
                     value = value.substring(0, value.length() - suffix.length()).trim();
                 }
             }

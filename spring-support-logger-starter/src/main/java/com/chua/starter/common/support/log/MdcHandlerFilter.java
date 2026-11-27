@@ -10,6 +10,7 @@ import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.util.UUID;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * MDC处理过滤器
@@ -33,7 +34,7 @@ public class MdcHandlerFilter implements Filter {
             
  // 设置追踪标识
             String traceId = httpRequest.getHeader(MdcConstant.X_TRACE_ID);
-            if (traceId == null || traceId.isEmpty()) {
+            if (StringUtils.isEmpty(traceId)) {
                 traceId = UUID.randomUUID().toString().replace("-", "");
             }
             MDC.put(MdcConstant.TRACE_ID, traceId);
@@ -45,11 +46,11 @@ public class MdcHandlerFilter implements Filter {
             
  // 设置用户标识，如果没有则设置为N/A
             String userId = RequestUtils.getUserId();
-            MDC.put(MdcConstant.USER_ID, (userId != null && !userId.isEmpty()) ? userId : "N/A");
+            MDC.put(MdcConstant.USER_ID, (StringUtils.isNotEmpty(userId)) ? userId : "N/A");
             
             // 设置请求IP，如果没有则设置为N/A
             String requestIp = RequestUtils.getIpAddress(httpRequest);
-            MDC.put(MdcConstant.REQUEST_IP, (requestIp != null && !requestIp.isEmpty()) ? requestIp : "N/A");
+            MDC.put(MdcConstant.REQUEST_IP, (StringUtils.isNotEmpty(requestIp)) ? requestIp : "N/A");
             
             chain.doFilter(request, response);
         } finally {

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 服务信息横幅渲染器 (纯布局, 不依赖 Spring 容器, 便于单独验证)。
@@ -418,7 +419,7 @@ final class ServiceInfoBanner {
          * @return 添加的结果
          */
         Line add(String text) {
-            if (text == null || text.isEmpty()) {
+            if (StringUtils.isEmpty(text)) {
                 return this;
             }
             segments.add(text);

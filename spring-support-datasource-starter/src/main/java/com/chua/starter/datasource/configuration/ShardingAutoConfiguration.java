@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 分库分表sphere 分库分表自动配置。
@@ -97,7 +98,7 @@ public class ShardingAutoConfiguration {
                 String timeUnit = tableConfig.getTimeUnit();
                 String strategy = tableConfig.getStrategy();
 
-                if (timeUnit != null && !timeUnit.isEmpty()) {
+                if (StringUtils.isNotEmpty(timeUnit)) {
  // 时间分片：使用 间隔 算法
                     String algoName = "interval_" + logicTable;
                     Map<String, String> algoProps = new HashMap<>();

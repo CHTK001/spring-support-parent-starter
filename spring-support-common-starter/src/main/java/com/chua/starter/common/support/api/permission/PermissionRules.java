@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * {@link Permission} 的判定规则。
@@ -93,7 +94,7 @@ public final class PermissionRules {
      */
     private static boolean containsIgnoreCase(Collection<String> values, String value) {
         for (String item : values) {
-            if (item != null && item.equalsIgnoreCase(value)) {
+            if (StringUtils.equalsIgnoreCase(item, value)) {
                 return true;
             }
         }

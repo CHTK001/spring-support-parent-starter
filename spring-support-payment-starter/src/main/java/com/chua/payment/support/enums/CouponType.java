@@ -1,5 +1,7 @@
 package com.chua.payment.support.enums;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 优惠券类型
  *
@@ -47,7 +49,7 @@ public enum CouponType {
      * @return 枚举值，未匹配返回 null
      */
     public static CouponType parse(String name) {
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return null;
         }
         for (CouponType value : values()) {

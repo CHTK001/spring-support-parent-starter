@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 路由组业务：成员表读写、顺序调整、成员模型删除级联、配置解析。
@@ -133,7 +134,7 @@ public class RouterGroupService {
                 continue;
             }
             // 自己不能引用自己，否则会递归构建
-            if (groupId != null && groupId.equals(providerId)) {
+            if (ObjectUtils.nullSafeEquals(groupId, providerId)) {
                 log.warn("[RouterGroup] 忽略自引用成员 {}:{}", providerId, model);
                 continue;
             }
@@ -302,8 +303,8 @@ public class RouterGroupService {
         }
         for (Object item : members) {
             if (item instanceof Map<?, ?> m
-                    && providerId != null && providerId.equals(str(m, "provider_id"))
-                    && model != null && model.equals(str(m, "model"))) {
+                    && ObjectUtils.nullSafeEquals(providerId, str(m, "provider_id"))
+                    && ObjectUtils.nullSafeEquals(model, str(m, "model"))) {
                 return true;
             }
         }

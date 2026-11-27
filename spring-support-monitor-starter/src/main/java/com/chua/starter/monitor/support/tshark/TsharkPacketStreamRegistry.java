@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 抓包数据包的 SSE 订阅者注册表。
@@ -121,7 +122,7 @@ public class TsharkPacketStreamRegistry {
             return 0;
         }
         Set<SseEmitter> set = subscribers.get(sessionId);
-        if (set == null || set.isEmpty()) {
+        if (CollectionUtils.isEmpty(set)) {
             return 0;
         }
         int delivered = 0;
@@ -181,7 +182,7 @@ public class TsharkPacketStreamRegistry {
      */
     public void removeAll(Long sessionId) {
         Set<SseEmitter> set = subscribers.remove(sessionId);
-        if (set == null || set.isEmpty()) {
+        if (CollectionUtils.isEmpty(set)) {
             return;
         }
         for (SseEmitter emitter : set) {

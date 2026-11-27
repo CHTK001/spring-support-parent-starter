@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Prometheus 控制台服务实现。
@@ -883,7 +884,7 @@ public class PrometheusManageServiceImpl implements PrometheusManageService {
      */
     private static List<PrometheusFileVO> parseFileRows(String stdout, String main) {
         List<PrometheusFileVO> out = new ArrayList<>();
-        if (stdout == null || stdout.isEmpty()) {
+        if (StringUtils.isEmpty(stdout)) {
             return out;
         }
         for (String line : stdout.split("\n")) {

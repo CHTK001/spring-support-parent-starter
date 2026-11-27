@@ -21,6 +21,8 @@ import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * self-balance Filter：本节点收到请求时，按负载均衡从 scatter 服务池选中一个 HTTP 实例；
@@ -196,7 +198,7 @@ public class SelfBalanceFilter implements Filter {
                 .method(method);
         copyRequestHeaders(request, builder);
         builder.header(FORWARDED_MARKER_HEADER, selfServerId);
-        if (body != null && body.length > 0) {
+        if (ArrayUtils.isNotEmpty(body)) {
             builder.body(body);
         }
 
@@ -212,7 +214,7 @@ public class SelfBalanceFilter implements Filter {
         response.setStatus(clientResponse.getStatusCode());
         copyResponseHeaders(clientResponse, response);
         byte[] respBody = clientResponse.getBody();
-        if (respBody != null && respBody.length > 0) {
+        if (ArrayUtils.isNotEmpty(respBody)) {
             response.setContentLength(respBody.length);
             response.getOutputStream().write(respBody);
             response.getOutputStream().flush();
@@ -249,7 +251,7 @@ public class SelfBalanceFilter implements Filter {
     private String buildPathAndQuery(HttpServletRequest request) {
         String uri = request.getRequestURI();
         String query = request.getQueryString();
-        return query == null || query.isEmpty() ? uri : uri + "?" + query;
+        return StringUtils.isEmpty(query) ? uri : uri + "?" + query;
     }
 
     /**

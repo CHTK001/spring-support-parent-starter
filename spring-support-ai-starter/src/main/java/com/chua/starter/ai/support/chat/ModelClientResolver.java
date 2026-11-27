@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型 → 对话客户端 解析器（辅助场景统一出口）。
@@ -699,7 +700,7 @@ public class ModelClientResolver {
         for (ChannelRouteSource source : channelRouteSources()) {
             try {
                 Map<String, RouteTarget> part = source.routes(ownerScope);
-                if (part == null || part.isEmpty()) {
+                if (CollectionUtils.isEmpty(part)) {
                     continue;
                 }
                 if (source.fallbackOnly()) {

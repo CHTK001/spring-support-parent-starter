@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 指标 SSE 推送载荷。
@@ -46,7 +47,7 @@ public record NginxMetricPushVO(
      * @return 指标名 → 点
      */
     public Map<String, NginxTrendVO.Point> byName() {
-        if (points == null || points.isEmpty()) {
+        if (CollectionUtils.isEmpty(points)) {
             return Map.of();
         }
         Map<String, NginxTrendVO.Point> map = points.stream()

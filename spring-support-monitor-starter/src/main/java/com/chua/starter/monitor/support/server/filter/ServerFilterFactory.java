@@ -19,6 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 服务管理 —— 服务端过滤器 插件工厂。
@@ -131,7 +132,7 @@ public class ServerFilterFactory {
        */
     public List<ServerFilter> createFilters(List<ServerFilterDescriptor> descriptors, ServerSetting setting) {
         List<ServerFilter> filters = new ArrayList<>();
-        if (descriptors == null || descriptors.isEmpty()) {
+        if (CollectionUtils.isEmpty(descriptors)) {
             return filters;
         }
         for (ServerFilterDescriptor descriptor : descriptors) {
@@ -343,7 +344,7 @@ public class ServerFilterFactory {
        * @param params         参数
        */
     private void applySettingParams(Object storageSetting, Map<String, String> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return;
         }
         for (Map.Entry<String, String> entry : params.entrySet()) {

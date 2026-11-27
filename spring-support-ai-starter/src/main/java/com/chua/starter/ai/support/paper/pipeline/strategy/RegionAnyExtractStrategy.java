@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 按版面区域分块识别策略。
@@ -38,7 +39,7 @@ public class RegionAnyExtractStrategy implements AnyExtractStrategy {
         }
         List<PaperScanner.LayoutBox> regions = context.layoutBoxes();
         List<PaperScanner.ScanBlock> blocks = context.blocks();
-        if (regions == null || regions.isEmpty() || blocks == null || blocks.isEmpty()) {
+        if (CollectionUtils.isEmpty(regions) || CollectionUtils.isEmpty(blocks)) {
             log.info("[EduScan] region 策略：无版面区域，回退整卷识别");
             return fallbackWhole(context);
         }

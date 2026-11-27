@@ -22,6 +22,7 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 文件资产服务实现
@@ -210,7 +211,7 @@ public class FileAssetServiceImpl implements FileAssetService {
     private FileAssetItemVO toItem(String dir, Metadata metadata) {
         String name = metadata.getName() == null ? "" : metadata.getName();
         String stored = metadata.getPath();
-        String base = stored == null || stored.isEmpty() ? dir : normalize(stored);
+        String base = StringUtils.isEmpty(stored) ? dir : normalize(stored);
         return new FileAssetItemVO(name, joinKey(base, name), metadata.isDirectory(),
                 metadata.getSize(), metadata.getLastModified());
     }
@@ -279,7 +280,7 @@ public class FileAssetServiceImpl implements FileAssetService {
      * @return 完整相对路径
      */
     private String joinKey(String dir, String name) {
-        return dir == null || dir.isEmpty() ? name : dir + SEPARATOR + name;
+        return StringUtils.isEmpty(dir) ? name : dir + SEPARATOR + name;
     }
 
     /**

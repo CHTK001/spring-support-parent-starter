@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 官方限制登记表的适配层：把「数据侧」登记项翻成「机制侧」快照。
@@ -67,7 +68,7 @@ public final class ProviderLimitPresets {
          * @return 限制快照
          */
         public ProviderLimit toLimit() {
-            ProviderLimit limit = limits == null || limits.isEmpty()
+            ProviderLimit limit = CollectionUtils.isEmpty(limits)
                     ? new ProviderLimit()
                     : MAPPER.convertValue(limits, ProviderLimit.class);
             limit.setKind("doc");

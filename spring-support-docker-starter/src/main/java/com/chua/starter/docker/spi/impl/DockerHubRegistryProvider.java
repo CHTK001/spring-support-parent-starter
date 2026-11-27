@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Docker Hub 镜像库实现（type = {@code dockerhub}）。
@@ -111,7 +112,7 @@ public class DockerHubRegistryProvider implements DockerRegistryProvider {
             namespace = name.substring(0, slash);
             name = name.substring(slash + 1);
         }
-        String repo = (namespace == null || namespace.isEmpty() ? LIBRARY : namespace) + "/" + name;
+        String repo = (StringUtils.isEmpty(namespace) ? LIBRARY : namespace) + "/" + name;
         String url = HUB_API + "/v2/repositories/" + repo + "/tags?page_size=" + TAG_LIMIT;
         try {
             RegistryHttp.Result result = RegistryHttp.get(url, cfg, "application/json");

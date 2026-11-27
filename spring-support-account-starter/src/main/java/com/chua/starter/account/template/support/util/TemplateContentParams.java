@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 模板占位符解析
@@ -37,7 +38,7 @@ public final class TemplateContentParams {
      * @return 参数名列表（去重，保持首次出现的顺序）；内容为空时返回空列表
      */
     public static List<String> of(String content) {
-        if (content == null || content.isEmpty()) {
+        if (StringUtils.isEmpty(content)) {
             return new ArrayList<>();
         }
         Set<String> names = new LinkedHashSet<>();

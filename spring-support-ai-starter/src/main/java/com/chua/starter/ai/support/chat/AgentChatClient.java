@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Agent 对话客户端 —— 将 Agent 运行时包装为 对话客户端。
@@ -174,7 +175,7 @@ public class AgentChatClient implements ChatClient {
                         switch (event.getType()) {
                             case REASONING_DELTA: {
                                 String delta = event.getDelta();
-                                if (delta != null && !delta.isEmpty()) {
+                                if (StringUtils.isNotEmpty(delta)) {
                                     fullOutput.append(delta);
                                     consumer.accept(ChatResponse.builder()
                                             .state(ChatResponse.State.STREAMING)
@@ -185,7 +186,7 @@ public class AgentChatClient implements ChatClient {
                             }
                             case THINKING_DELTA: {
                                 String delta = event.getDelta();
-                                if (delta != null && !delta.isEmpty()) {
+                                if (StringUtils.isNotEmpty(delta)) {
                                     consumer.accept(ChatResponse.builder()
                                             .state(ChatResponse.State.STREAMING)
                                             .reasoningContent(delta)
@@ -319,7 +320,7 @@ public class AgentChatClient implements ChatClient {
                         switch (event.getType()) {
                             case REASONING_DELTA: {
                                 String delta = event.getDelta();
-                                if (delta != null && !delta.isEmpty()) {
+                                if (StringUtils.isNotEmpty(delta)) {
                                     fullOutput.append(delta);
                                     consumer.accept(ChatResponse.builder()
                                             .state(ChatResponse.State.STREAMING)
@@ -330,7 +331,7 @@ public class AgentChatClient implements ChatClient {
                             }
                             case THINKING_DELTA: {
                                 String delta = event.getDelta();
-                                if (delta != null && !delta.isEmpty()) {
+                                if (StringUtils.isNotEmpty(delta)) {
                                     consumer.accept(ChatResponse.builder()
                                             .state(ChatResponse.State.STREAMING)
                                             .reasoningContent(delta)

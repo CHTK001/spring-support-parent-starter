@@ -31,6 +31,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * AI 用量服务实现类
@@ -634,7 +636,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                 "COUNT(*) AS calls");
         List<Map<String, Object>> totalRows = usageMapper.selectMaps(totalWrapper);
         double grandTotal = 0;
-        if (totalRows != null && !totalRows.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(totalRows)) {
             grandTotal = switch (metricAlias) {
                 case "total_cost" -> doubleOf(totalRows.get(0), "total_cost");
                 case "calls" -> longOf(totalRows.get(0), "calls");
@@ -728,7 +730,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
             return row.get(key);
         }
         for (Map.Entry<String, Object> entry : row.entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), key)) {
                 return entry.getValue();
             }
         }

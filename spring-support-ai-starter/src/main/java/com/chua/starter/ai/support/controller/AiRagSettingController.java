@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * RAG 配置控制器 —— 提供 RAG 配置页所需的下拉数据源。
@@ -197,7 +198,7 @@ public class AiRagSettingController {
      */
     private static boolean isChatCapable(SysAccountChannelModel row) {
         List<Map<String, Object>> capabilities = row.getCapabilities();
-        if (capabilities == null || capabilities.isEmpty()) {
+        if (CollectionUtils.isEmpty(capabilities)) {
             return false;
         }
         return capabilities.stream()

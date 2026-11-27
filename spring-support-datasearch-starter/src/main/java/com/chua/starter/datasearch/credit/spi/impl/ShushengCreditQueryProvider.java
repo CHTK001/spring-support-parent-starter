@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 书生（InternAI）平台余额实现（discovery.intern-ai.org.cn 墨点余额接口）。
@@ -209,7 +210,7 @@ public class ShushengCreditQueryProvider implements CreditQueryProvider {
         putDecimal(extra, "total_credits", data.path("total_credits"));
         putDecimal(extra, "limit_credits", data.path("limit_credits"));
         putDecimal(extra, "used_credits", data.path("used_credits"));
-        if (usagePool != null && !usagePool.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(usagePool)) {
             extra.put("pools", List.of(usagePool));
         }
         extra.put("unit", CREDIT_UNIT);

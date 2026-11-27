@@ -3,6 +3,7 @@ package com.chua.starter.datasearch.provider.spi;
 import com.chua.starter.datasearch.provider.model.ProviderDescriptor;
 
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 供应商登记表扩展接口。
@@ -56,7 +57,7 @@ public interface ProviderRegistryProvider {
             return null;
         }
         for (ProviderDescriptor entry : entries()) {
-            if (entry.getId() != null && entry.getId().equalsIgnoreCase(providerId.trim())) {
+            if (StringUtils.equalsIgnoreCase(entry.getId(), providerId.trim())) {
                 return entry;
             }
         }

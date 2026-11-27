@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * MongoDB 管理实现：探测、逻辑库/集合浏览、只读查询与单文档查看。
@@ -207,7 +208,7 @@ public class MongoManageServiceImpl implements MongoManageService {
      * @return 首行截断结果
      */
     private String firstLine(String message) {
-        if (message == null || message.isEmpty()) {
+        if (StringUtils.isEmpty(message)) {
             return "未知错误";
         }
         String line = message.split("\n")[0].trim();

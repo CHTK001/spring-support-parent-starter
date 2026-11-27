@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 学生中心服务实现
@@ -789,7 +790,7 @@ public class EduStudentCenterServiceImpl implements IEduStudentCenterService {
      */
     private int streakDays(Long studentId, LocalDate today) {
         List<LocalDate> dates = dailyMapper.selectActiveDates(studentId, today, STREAK_LOOKBACK);
-        if (dates == null || dates.isEmpty()) {
+        if (CollectionUtils.isEmpty(dates)) {
             return 0;
         }
         // 今天还没学不算断：从昨天起算仍然连续

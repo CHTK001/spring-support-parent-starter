@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 默认 OSGi 服务发布门面：委托 {@link FelixOsgiLauncher} 的框架
@@ -90,7 +91,7 @@ public class DefaultOsgiServicePublisher implements OsgiServicePublisher, Dispos
     @Override
     public boolean unpublish(Object service) {
         List<ServiceRegistration<?>> list = registrations.remove(service);
-        if (list == null || list.isEmpty()) {
+        if (CollectionUtils.isEmpty(list)) {
             return false;
         }
         for (ServiceRegistration<?> registration : list) {

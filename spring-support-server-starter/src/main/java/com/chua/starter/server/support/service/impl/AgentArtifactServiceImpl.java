@@ -37,6 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Agent 构件投放服务实现。
@@ -486,14 +487,14 @@ public class AgentArtifactServiceImpl implements AgentArtifactService {
                         pendingName = trimNul(meta);
                     } else if (type != 'g') {
                         String longPath = paxPath(meta);
-                        if (longPath != null && !longPath.isEmpty()) {
+                        if (StringUtils.isNotEmpty(longPath)) {
                             pendingName = longPath;
                         }
                     }
                     skipExactly(in, padding);
                     continue;
                 }
-                if (pendingName != null && !pendingName.isEmpty()) {
+                if (StringUtils.isNotEmpty(pendingName)) {
                     name = pendingName;
                     pendingName = null;
                 }

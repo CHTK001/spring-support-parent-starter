@@ -20,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * P2P 房间信令引擎（ZestSend Room 协议服务端实现）。
@@ -138,7 +139,7 @@ public class RoomService {
         // 续接旧连接（同房间/同代数/同端点/续练未过期）
         // 注意：ConcurrentHashMap 不接受 null key，首次进房时 resumeToken 为空，
         // 这里必须先判空，否则 hello 直接抛 NPE，welcome 永不下发。
-        ResumeToken token = (resumeToken == null || resumeToken.isEmpty()) ? null : resumeTokens.get(resumeToken);
+        ResumeToken token = (StringUtils.isEmpty(resumeToken)) ? null : resumeTokens.get(resumeToken);
         if (token != null && token.getEpoch().equals(room.getEpoch())) {
             SlotState alive = room.findSlot(token.getSlotId()).orElse(null);
             // 续接的语义：端点上一轮连接已断（isDisconnected），但只要租约未过期，

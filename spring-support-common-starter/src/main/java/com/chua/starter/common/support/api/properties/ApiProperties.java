@@ -624,7 +624,7 @@ import java.util.Map;
         private boolean extInject = false;
 
         /**
-         * 解码器类型（sm4/aes等）。
+         * 传输解码器类型（keylog/aes）。
          * <p>YAML：{@code plugin.api.decode.codec-type}，默认 {@code aes}；
          * 可选值 keylog/aes。</p>
          */

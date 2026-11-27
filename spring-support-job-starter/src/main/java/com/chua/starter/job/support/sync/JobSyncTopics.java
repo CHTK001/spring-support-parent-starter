@@ -3,6 +3,8 @@ package com.chua.starter.job.support.sync;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 自研同步通道使用的 topic 常量。
@@ -463,7 +465,7 @@ public final class JobSyncTopics {
      * @return 脚本正文
      */
     private static String decodeSource(String encoded) {
-        if (encoded == null || encoded.isEmpty()) {
+        if (StringUtils.isEmpty(encoded)) {
             return null;
         }
         try {
@@ -551,7 +553,7 @@ public final class JobSyncTopics {
         String role = null;
         String serverUrl = null;
         java.util.List<String> handlers = new java.util.ArrayList<>();
-        if (payload != null && !payload.isEmpty()) {
+        if (StringUtils.isNotEmpty(payload)) {
             for (String pair : payload.split("&")) {
                 int eq = pair.indexOf('=');
                 if (eq <= 0) {
@@ -585,7 +587,7 @@ public final class JobSyncTopics {
      * @return 拼接文本
      */
     private static String joinHandlers(java.util.Collection<String> handlers) {
-        if (handlers == null || handlers.isEmpty()) {
+        if (CollectionUtils.isEmpty(handlers)) {
             return "";
         }
         return String.join(",", handlers);

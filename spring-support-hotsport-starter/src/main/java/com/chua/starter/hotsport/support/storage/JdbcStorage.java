@@ -36,6 +36,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 基于 JDBC 的 APM 存储后端（MySQL / MariaDB）。
@@ -1064,7 +1066,7 @@ public class JdbcStorage implements ApmStorage {
      * @param value  值；空则不追加
      */
     private static void appendLike(StringBuilder sql, List<Object> params, String column, String value) {
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return;
         }
         sql.append(" AND ").append(column).append(" LIKE ?");
@@ -1223,7 +1225,7 @@ public class JdbcStorage implements ApmStorage {
      * @return 端点
      */
     private static Endpoint parseEndpoint(String json) {
-        if (json == null || json.isEmpty()) {
+        if (StringUtils.isEmpty(json)) {
             return new Endpoint();
         }
         try {
@@ -1244,7 +1246,7 @@ public class JdbcStorage implements ApmStorage {
      * @return 枚举值或 null
      */
     private static <E extends Enum<E>> E parseEnum(Class<E> type, String value) {
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return null;
         }
         try {
@@ -1286,7 +1288,7 @@ public class JdbcStorage implements ApmStorage {
      * @return JSON；空返回 null
      */
     private static String attributesToJson(Map<String, String> attributes) {
-        if (attributes == null || attributes.isEmpty()) {
+        if (CollectionUtils.isEmpty(attributes)) {
             return null;
         }
         try {
@@ -1303,7 +1305,7 @@ public class JdbcStorage implements ApmStorage {
      * @return 属性；失败返回空 Map
      */
     private static Map<String, String> attributesFromJson(String value) {
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return new LinkedHashMap<>();
         }
         try {
@@ -1500,10 +1502,10 @@ public class JdbcStorage implements ApmStorage {
      */
     private Connection openConnection() throws SQLException {
         Properties props = new Properties();
-        if (user != null && !user.isEmpty()) {
+        if (StringUtils.isNotEmpty(user)) {
             props.setProperty("user", user);
         }
-        if (password != null && !password.isEmpty()) {
+        if (StringUtils.isNotEmpty(password)) {
             props.setProperty("password", password);
         }
         props.setProperty("connectTimeout", "5000");
@@ -1594,7 +1596,7 @@ public class JdbcStorage implements ApmStorage {
      * @return 脱敏后的 URL
      */
     private static String maskUrl(String jdbcUrl) {
-        if (jdbcUrl == null || jdbcUrl.isEmpty()) {
+        if (StringUtils.isEmpty(jdbcUrl)) {
             return "";
         }
         return jdbcUrl.replaceAll("(?i)(password=)[^&;]*", "$1***");

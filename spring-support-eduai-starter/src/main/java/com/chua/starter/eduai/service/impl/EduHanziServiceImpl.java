@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 汉字基础数据服务实现。
@@ -182,7 +183,7 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
      * @param records 当前页记录
      */
     private void fillTongjia(List<EduHanzi> records) {
-        if (records == null || records.isEmpty()) {
+        if (CollectionUtils.isEmpty(records)) {
             return;
         }
         List<Long> ids = records.stream().map(EduHanzi::getHanziId).filter(Objects::nonNull).toList();
@@ -197,7 +198,7 @@ public class EduHanziServiceImpl extends ServiceImpl<EduHanziMapper, EduHanzi> i
         }
         for (EduHanzi hanzi : records) {
             List<String> chars = byOwner.get(hanzi.getHanziId());
-            hanzi.setHanziTongjia(chars == null || chars.isEmpty() ? null : String.join(",", chars));
+            hanzi.setHanziTongjia(CollectionUtils.isEmpty(chars) ? null : String.join(",", chars));
         }
     }
 

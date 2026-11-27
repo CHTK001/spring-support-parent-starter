@@ -4,6 +4,7 @@ package com.chua.starter.job.support.log;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 任务日志收集器 (执行器 端)。
@@ -55,7 +56,7 @@ public final class JobLogHelper {
      */
     public static String getAndClear() {
         StringBuilder sb = LOG_BUFFER.get();
-        if (sb == null || sb.isEmpty()) {
+        if (StringUtils.isEmpty(sb)) {
             LOG_BUFFER.remove();
             return null;
         }

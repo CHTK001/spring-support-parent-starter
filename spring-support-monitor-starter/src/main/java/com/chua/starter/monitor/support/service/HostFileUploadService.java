@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 主机文件上传统一入口：上传前做 md5 + 更新时间覆盖判定。
@@ -51,7 +52,7 @@ public class HostFileUploadService {
         String sourceMd5 = md5Of(file);
         RemoteFileStatVO target = statQuietly(provider, host, remotePath);
         if (target != null && target.exists()) {
-            if (sourceMd5 != null && sourceMd5.equalsIgnoreCase(target.md5())) {
+            if (StringUtils.equalsIgnoreCase(sourceMd5, target.md5())) {
                 return new UploadResultVO(UploadResultVO.SKIPPED_SAME, remotePath,
                         "目标文件内容一致，已跳过上传", sourceMd5, target.md5(), target.lastModifiedMillis());
             }

@@ -110,6 +110,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 前端 提供者 / 模型 / 协议管理控制器（对接 nomicore 契约）。
@@ -565,7 +567,7 @@ public class ApiProviderController {
                 if (!onnxRow) {
                     continue;
                 }
-                if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
+                if (ObjectUtils.nullSafeEquals(excludeProviderId, candidate.getProviderId())) {
                     continue;
                 }
                 throw new ApiException(ApiErrorCode.CONFLICT,
@@ -578,7 +580,7 @@ public class ApiProviderController {
                 if (!isWebRow(candidate)) {
                     continue;
                 }
-                if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
+                if (ObjectUtils.nullSafeEquals(excludeProviderId, candidate.getProviderId())) {
                     continue;
                 }
                 throw new ApiException(ApiErrorCode.CONFLICT,
@@ -1128,7 +1130,7 @@ public class ApiProviderController {
     private List<String> parseBatchProviderIds(Map<String, ?> body) {
         @SuppressWarnings("unchecked")
         List<String> ids = body == null ? null : (List<String>) body.get("ids");
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
         // 空 id 在进入渠道业务前就拦掉；「是否存在」由账号模块的整批定位负责，
@@ -1193,7 +1195,7 @@ public class ApiProviderController {
      * @return 删除的渠道数
      */
     private int doBatchDeleteProviders(List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             return 0;
         }
         int deleted = 0;
@@ -1574,7 +1576,7 @@ public class ApiProviderController {
             return ApiResult.ok(out);
         }
         Map<String, Object> hit = findIndicatorMetrics(entity, model.trim());
-        if (hit == null || hit.isEmpty()) {
+        if (CollectionUtils.isEmpty(hit)) {
             out.put("found", false);
             out.put("message", "该模型未被指标源收录，可手动填写配置");
             return ApiResult.ok(out);
@@ -2550,7 +2552,7 @@ public class ApiProviderController {
         try {
             Map<String, Object> extra = objectMapper.readValue(extraJson, new TypeReference<Map<String, Object>>() {
             });
-            return extra == null || extra.isEmpty() ? null : extra;
+            return CollectionUtils.isEmpty(extra) ? null : extra;
         } catch (Exception ignored) {
             // 快照 JSON 损坏：按无 extra 处理
         }
@@ -3213,7 +3215,7 @@ public class ApiProviderController {
      * 任一地址发送成功即算成功；全部失败返回 false。</p>
      */
     private boolean deliverCreditEmails(String title, String content, List<String> emails) {
-        if (emails == null || emails.isEmpty()) {
+        if (CollectionUtils.isEmpty(emails)) {
             log.debug("[credit] 邮件渠道未配置收件邮箱，跳过");
             return false;
         }
@@ -4897,7 +4899,7 @@ public class ApiProviderController {
         while (text.endsWith("/")) {
             text = text.substring(0, text.length() - 1);
         }
-        if (path == null || path.isEmpty()) {
+        if (StringUtils.isEmpty(path)) {
             return text;
         }
         return text + (path.startsWith("/") ? path : "/" + path);
@@ -5455,7 +5457,7 @@ public class ApiProviderController {
             return;
         }
         Map<String, Object> extra = entity.getExtra();
-        if (extra == null || extra.isEmpty() || !extra.containsKey("credit_kind")) {
+        if (CollectionUtils.isEmpty(extra) || !extra.containsKey("credit_kind")) {
             return;
         }
         try {
@@ -6485,7 +6487,7 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> batchDeleteProviderModels(@RequestBody Map<String, ?> body) {
         @SuppressWarnings("unchecked")
         List<String> ids = body == null ? null : (List<String>) body.get("ids");
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
 
@@ -6796,7 +6798,7 @@ public class ApiProviderController {
      */
     private Map<String, com.chua.starter.ai.support.entity.SysAiAppKey> loadAppKeyIdentities(
             List<com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper.AppKeyTrafficRow> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return java.util.Collections.emptyMap();
         }
         List<String> appKeys = new ArrayList<>(rows.size());
@@ -6928,7 +6930,7 @@ public class ApiProviderController {
         }
         @SuppressWarnings("unchecked")
         List<String> labels = body == null ? null : (List<String>) body.get("labels");
-        if (labels == null || labels.isEmpty()) {
+        if (CollectionUtils.isEmpty(labels)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "labels 不能为空");
         }
         com.chua.common.support.ai.chat.aggregate.RouterGroupSetting setting =
@@ -6978,7 +6980,7 @@ public class ApiProviderController {
             }
             String memberProviderId = m.get("provider_id") == null ? null : m.get("provider_id").toString().trim();
             String model = m.get("model") == null ? null : m.get("model").toString().trim();
-            if (memberProviderId == null || memberProviderId.isEmpty() || model == null || model.isEmpty()) {
+            if (StringUtils.isEmpty(memberProviderId) || model == null || model.isEmpty()) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "成员必须同时给出 provider_id 与 model");
             }
             if (groupId.equals(memberProviderId)) {
@@ -7003,7 +7005,7 @@ public class ApiProviderController {
             Long expireAt = parseRouterLong(m.get("expire_at"));
             members.add(new com.chua.common.support.ai.chat.aggregate.RouterGroupSetting.Member(
                     memberProviderId, model, true, weight,
-                    effort == null || effort.isEmpty() ? null : effort, free, expireAt));
+                    StringUtils.isEmpty(effort) ? null : effort, free, expireAt));
         }
         return members;
     }
@@ -7805,7 +7807,7 @@ public class ApiProviderController {
                 return null;
             }
             Map<String, Map<String, Object>> all = indicator.modelMetrics();
-            if (all == null || all.isEmpty()) {
+            if (CollectionUtils.isEmpty(all)) {
                 return null;
             }
             if (modelName == null || modelName.isBlank()) {
@@ -7848,7 +7850,7 @@ public class ApiProviderController {
     private boolean enrichFromIndicator(SysAccountChannel provider, SysAccountChannelModel model) {
         try {
             Map<String, Object> hit = findIndicatorMetrics(provider, model.getModel());
-            if (hit == null || hit.isEmpty()) {
+            if (CollectionUtils.isEmpty(hit)) {
                 return false;
             }
             Map<String, Object> current = model.getMetrics() == null
@@ -7953,7 +7955,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             return;
         }
         List<Map<String, Object>> caps = entity.getCapabilities();
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             caps = new ArrayList<>(1);
             caps.add(new LinkedHashMap<>(4));
             entity.setCapabilities(caps);
@@ -7987,7 +7989,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
             }
         }
         List<Map<String, Object>> caps = entity.getCapabilities();
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             caps = new ArrayList<>(1);
             caps.add(new LinkedHashMap<>(4));
             entity.setCapabilities(caps);
@@ -8750,7 +8752,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 log.debug("[Provider] 生成类渠道 {} 模型清单读取失败: {}", channel.channel(), e.getMessage());
                 continue;
             }
-            if (rows == null || rows.isEmpty()) {
+            if (CollectionUtils.isEmpty(rows)) {
                 continue;
             }
             String source = StringUtils.isBlank(channel.extension()) ? channel.channel() : channel.extension();
@@ -8775,7 +8777,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
                 m.put("provider", source);
                 m.put("baseUrl", "");
                 m.put("authScheme", "none");
-                m.put("tasks", tasks == null || tasks.isEmpty() ? List.of("chat") : tasks);
+                m.put("tasks", CollectionUtils.isEmpty(tasks) ? List.of("chat") : tasks);
                 // 生成类模型不是流式对话能力，只有上游行显式给出 traits 才带
                 m.put("traits", row.get("traits") instanceof List<?> traits ? traits : List.of());
                 m.put("description", modelLabel.isEmpty() || modelLabel.equals(id)
@@ -9116,7 +9118,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
     private void applyUpstreamMetrics(Map<String, Object> row, Map<String, Object> metrics) {
         // 免费渠道 / 路由聚合行的「模型」是路由键，没有上游指标；调用方会传 null，
         // 这里直接跳过，否则 NPE 会把整个 remote_models 打成 500（实测）。
-        if (metrics == null || metrics.isEmpty()) {
+        if (CollectionUtils.isEmpty(metrics)) {
             return;
         }
         putIfPresent(row, "context_window", metrics.get("context_window_tokens"));
@@ -9328,7 +9330,7 @@ List<Map<String, Object>> caps = new ArrayList<>(8); // 能力数量不可预估
      */
     private String extractApiKey(Map<String, Object> credentials) {
         // 没有凭证时直接返回空结果
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return null;
         }
         Object single = credentials.get("api_key");

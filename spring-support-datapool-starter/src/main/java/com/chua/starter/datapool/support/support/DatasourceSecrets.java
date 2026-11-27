@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据源口令的存储编解码。
@@ -96,7 +97,7 @@ public final class DatasourceSecrets {
      * @return 存储值
      */
     public static String encode(String plain) {
-        if (plain == null || plain.isEmpty()) {
+        if (StringUtils.isEmpty(plain)) {
             return "";
         }
         if (!isEncryptionEnabled()) {

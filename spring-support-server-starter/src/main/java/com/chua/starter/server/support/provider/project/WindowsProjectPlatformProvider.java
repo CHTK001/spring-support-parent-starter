@@ -5,6 +5,8 @@ import com.chua.starter.server.support.spi.ProjectPlatformProvider;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * Windows 平台发布命令提供者。
@@ -202,7 +204,7 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
     @Override
     public String applyJava(String script, String jdkHome) {
         String exe = javaExecutable(jdkHome);
-        if (script == null || script.isEmpty() || exe.isEmpty()) {
+        if (StringUtils.isEmpty(script) || exe.isEmpty()) {
             return script;
         }
         String home = exe.toLowerCase().endsWith("\\bin\\java.exe")
@@ -432,7 +434,7 @@ public class WindowsProjectPlatformProvider implements ProjectPlatformProvider {
        * @return 数组元素串
        */
     private String csv(List<String> items) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return "";
         }
         List<String> parts = new ArrayList<>();

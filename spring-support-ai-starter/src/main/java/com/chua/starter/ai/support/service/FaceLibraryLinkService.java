@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 人脸底库的「DB 元数据 ↔ 向量索引」联动层。
@@ -255,7 +256,7 @@ public class FaceLibraryLinkService {
         try {
             LambdaQueryWrapper<SysAiFaceLibrary> wrapper = new LambdaQueryWrapper<SysAiFaceLibrary>()
                     .eq(SysAiFaceLibrary::getUserId, userId);
-            if (groups != null && !groups.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(groups)) {
                 wrapper.and(w -> {
                     w.in(SysAiFaceLibrary::getGroupName, groups);
                     // 默认组额外带上 NULL：历史行没有分组值，语义上属于默认组
@@ -374,7 +375,7 @@ public class FaceLibraryLinkService {
      * @return JSON 字符串；入参为空时返回 {@code null}
      */
     private String writeMeta(Map<String, Object> metadata) {
-        if (metadata == null || metadata.isEmpty()) {
+        if (CollectionUtils.isEmpty(metadata)) {
             return null;
         }
         try {

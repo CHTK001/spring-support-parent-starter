@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 持久化日志存储（engine=datasource-bean / redis-bean）：
@@ -104,7 +106,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
 
     @Override
     public void append(List<LoggerEvent> events) {
-        if (events == null || events.isEmpty()) {
+        if (CollectionUtils.isEmpty(events)) {
             return;
         }
         Duration ttl = Duration.ofHours(retentionHours);
@@ -519,7 +521,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
     }
 
     private LoggerEvent parseEvent(String json) {
-        if (json == null || json.isEmpty()) {
+        if (StringUtils.isEmpty(json)) {
             return null;
         }
         try {
@@ -535,7 +537,7 @@ public class KvLoggerEventStore implements LoggerEventStore {
     }
 
     private Map<String, Object> readMap(String json) {
-        if (json == null || json.isEmpty()) {
+        if (StringUtils.isEmpty(json)) {
             return null;
         }
         try {

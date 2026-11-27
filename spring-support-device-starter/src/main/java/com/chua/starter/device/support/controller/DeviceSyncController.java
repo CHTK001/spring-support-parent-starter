@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 设备目录同步控制器（拉取 + 写回两条方向）。
@@ -109,7 +110,7 @@ public class DeviceSyncController {
      */
     @PostMapping("/push/batch")
     public ReturnResult<Map<String, Object>> pushDevices(@RequestBody List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new IllegalArgumentException("未选择要写回的设备");
         }
         return ReturnResult.ok(syncService.pushDevices(ids));

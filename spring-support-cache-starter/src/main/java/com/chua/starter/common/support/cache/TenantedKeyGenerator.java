@@ -121,7 +121,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     private String resolveTenantId() {
         if (tenantIdProvider != null) {
             String tenantId = tenantIdProvider.getCurrentTenantId();
-            if (tenantId != null && !tenantId.isEmpty()) {
+            if (StringUtils.isNotEmpty(tenantId)) {
                 return tenantId;
             }
         }

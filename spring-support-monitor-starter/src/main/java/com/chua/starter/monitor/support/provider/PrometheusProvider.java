@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Prometheus 采集 提供者
@@ -113,7 +114,7 @@ public class PrometheusProvider implements MetricProvider {
         try {
             promqls.forEach(promqlObj -> {
                 String promql = promqlObj == null ? null : String.valueOf(promqlObj);
-                if (promql == null || promql.isEmpty()) {
+                if (StringUtils.isEmpty(promql)) {
                     return;
                 }
                 QueryResult queryResult = client.query(promql).execute();

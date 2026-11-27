@@ -21,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 轻量 CDP JSON-RPC WebSocket 客户端
@@ -264,14 +265,14 @@ public class CdpWsClient implements AutoCloseable {
     private void dispatchEvent(String name, Map<String, Object> message) {
         List<Consumer<Map<String, Object>>> snapshot = new ArrayList<>();
         List<Consumer<Map<String, Object>>> list = handlers.get(name);
-        if (list != null && !list.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(list)) {
             synchronized (list) {
                 list = new ArrayList<>(list);
             }
             snapshot.addAll(list);
         }
         List<Consumer<Map<String, Object>>> allList = handlers.get("all");
-        if (allList != null && !allList.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(allList)) {
             synchronized (allList) {
                 list = new ArrayList<>(allList);
             }

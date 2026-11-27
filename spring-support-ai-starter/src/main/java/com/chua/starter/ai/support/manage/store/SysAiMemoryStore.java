@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * AI 记忆体存储 —— 记录、管理、自动使用、维护四段能力的落库层。
@@ -865,7 +866,7 @@ public class SysAiMemoryStore {
      */
     private static Set<String> bigrams(String normalized) {
         Set<String> grams = new LinkedHashSet<>();
-        if (normalized == null || normalized.isEmpty()) {
+        if (StringUtils.isEmpty(normalized)) {
             return grams;
         }
         if (normalized.length() == 1) {

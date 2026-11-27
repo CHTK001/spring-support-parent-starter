@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 提示词形态定义的增删改查。
@@ -268,7 +269,7 @@ public class SysAiPromptFormService {
      * @return 是否本人所有
      */
     private boolean ownedBy(SysAiPromptForm form, String userId) {
-        return form.getUserId() != null && form.getUserId().equals(userId);
+        return ObjectUtils.nullSafeEquals(form.getUserId(), userId);
     }
 
     /**

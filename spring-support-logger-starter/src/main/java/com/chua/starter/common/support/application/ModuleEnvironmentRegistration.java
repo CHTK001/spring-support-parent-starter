@@ -3,6 +3,7 @@ package com.chua.starter.common.support.application;
 import com.chua.common.support.application.GlobalSettingFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 模块环境注册器
@@ -39,7 +40,7 @@ public class ModuleEnvironmentRegistration {
      * @param enabled 是否启用
      */
     public ModuleEnvironmentRegistration(String group, Object config, boolean enabled) {
-        if (config == null || group == null || group.isEmpty()) {
+        if (config == null || StringUtils.isEmpty(group)) {
             return;
         }
         GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();

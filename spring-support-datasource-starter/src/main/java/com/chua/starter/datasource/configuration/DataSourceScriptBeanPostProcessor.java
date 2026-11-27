@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 数据源脚本 Bean 后处理器。
@@ -230,7 +231,7 @@ public class DataSourceScriptBeanPostProcessor implements BeanPostProcessor, Pri
      */
     private List<Class<?>> scanEntityClasses(DataSourceScriptProperties properties) {
         List<String> packages = properties.getEntityPackages();
-        if (packages == null || packages.isEmpty()) {
+        if (CollectionUtils.isEmpty(packages)) {
             log.warn("实体驱动模式已启用，但未配置 [{}]，跳过实体扫描",
                     DataSourceScriptProperties.PRE + ".entity-packages");
             return Collections.emptyList();

@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Nginx 管理 REST 接口。
@@ -401,7 +402,7 @@ public class NginxManageController {
      */
     private Long defaultDatasourceId() {
         List<Long> ids = nginxManageService.listNginxDatasourceIds();
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             throw new IllegalArgumentException("没有可用的 nginx 数据源");
         }
         return ids.get(0);

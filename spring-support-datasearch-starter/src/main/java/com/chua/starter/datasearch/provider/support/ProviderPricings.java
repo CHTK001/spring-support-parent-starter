@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 定价规则出口：各实现按登记顺序合并，同一 (厂商, 模型模式, 计费项, 单位) 以先命中为准。
@@ -40,7 +41,7 @@ public final class ProviderPricings {
      */
     public static List<ProviderPricingProvider> providers() {
         List<ProviderPricingProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderPricingProvider.class);
             cached = current;
         }
@@ -107,7 +108,7 @@ public final class ProviderPricings {
      * @return 命中规则
      */
     public static List<ProviderPricingRule> forModel(List<ProviderPricingRule> rules, String modelId) {
-        if (rules == null || rules.isEmpty()) {
+        if (CollectionUtils.isEmpty(rules)) {
             return Collections.emptyList();
         }
         List<ProviderPricingRule> hits = new ArrayList<>(rules.size());

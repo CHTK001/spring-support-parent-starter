@@ -19,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据同步的 JDBC 元数据与标识符工具。
@@ -486,7 +487,7 @@ public final class SyncJdbcSupport {
         try (ResultSet rs = meta.getTables(catalog, null, null, new String[]{"TABLE"})) {
             while (rs.next()) {
                 String name = rs.getString("TABLE_NAME");
-                if (name != null && name.equalsIgnoreCase(wanted)) {
+                if (StringUtils.equalsIgnoreCase(name, wanted)) {
                     return name;
                 }
             }
@@ -508,7 +509,7 @@ public final class SyncJdbcSupport {
      */
     private static String escapePattern(DatabaseMetaData meta, String value) throws SQLException {
         String escape = meta.getSearchStringEscape();
-        if (escape == null || escape.isEmpty()) {
+        if (StringUtils.isEmpty(escape)) {
             escape = "\\";
         }
         StringBuilder sb = new StringBuilder(value.length() + 8);

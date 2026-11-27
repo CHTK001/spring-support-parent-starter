@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 配置中心环境后置处理器
@@ -223,7 +224,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      */
     private void loadConfigIfExists(ConfigurableEnvironment environment, ConfigCenter configCenter, String configName) {
         Map<String, Object> configMap = configCenter.get(configName);
-        if (configMap == null || configMap.isEmpty()) {
+        if (CollectionUtils.isEmpty(configMap)) {
             log.debug("[配置中心]配置不存在，跳过: {}", configName);
             return;
         }
@@ -340,7 +341,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
             }
             
             Map<String, Object> newConfig = configCenter.get(configName);
-            if (newConfig == null || newConfig.isEmpty()) {
+            if (CollectionUtils.isEmpty(newConfig)) {
                 return;
             }
             

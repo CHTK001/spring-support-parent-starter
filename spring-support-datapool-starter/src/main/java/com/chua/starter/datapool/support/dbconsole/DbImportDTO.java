@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据导入请求（对齐 Navicat 导入向导第 2～7 步的全部选项）。
@@ -177,7 +178,7 @@ public record DbImportDTO(
      * @return 字符
      */
     private static char firstChar(String value, char fallback) {
-        return value == null || value.isEmpty() ? fallback : value.charAt(0);
+        return StringUtils.isEmpty(value) ? fallback : value.charAt(0);
     }
 
     /**
@@ -197,7 +198,7 @@ public record DbImportDTO(
         char qualifier = textQualifier == null
                 ? DelimitedOptions.DEFAULT_TEXT_QUALIFIER
                 : (textQualifier.isEmpty() ? 0 : textQualifier.charAt(0));
-        char decimal = decimalSymbol == null || decimalSymbol.isEmpty() ? '.' : decimalSymbol.charAt(0);
+        char decimal = StringUtils.isEmpty(decimalSymbol) ? '.' : decimalSymbol.charAt(0);
         String record = recordDelimiter == null || recordDelimiter.isBlank()
                 ? DelimitedOptions.DEFAULT_RECORD_DELIMITER : recordDelimiter;
         return new DelimitedOptions(fieldDelimiter, record, qualifier, namesLine, firstLine, lastLine,

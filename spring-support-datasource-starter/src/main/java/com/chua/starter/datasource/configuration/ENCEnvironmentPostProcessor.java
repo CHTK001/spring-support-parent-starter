@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * ENC 配置加密处理器
@@ -128,7 +129,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
      */
     private PasswordDecryptor createDecryptor(ConfigurableEnvironment environment) {
         String secretKey = environment.getProperty(SECRET_KEY_PROP);
-        if (secretKey != null && !secretKey.isEmpty()) {
+        if (StringUtils.isNotEmpty(secretKey)) {
             log.info("[ENC] 使用自定义密钥（配置项: {}）", SECRET_KEY_PROP);
             /**
              * aes密码decryptor。
@@ -221,7 +222,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
         String algorithm = matcher.group(1);
         String encryptedContent = matcher.group(2);
 
-        if (algorithm != null && !algorithm.isEmpty() && !decryptor.supports(algorithm)) {
+        if (StringUtils.isNotEmpty(algorithm) && !decryptor.supports(algorithm)) {
             log.warn("[ENC] 不支持的加密算法: {}, 返回原始值", algorithm);
             return encValue;
         }

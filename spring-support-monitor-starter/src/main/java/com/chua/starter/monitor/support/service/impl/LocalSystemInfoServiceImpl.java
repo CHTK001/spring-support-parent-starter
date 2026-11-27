@@ -50,6 +50,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 本机系统信息采集服务实现（OSHI + Windows 服务枚举）。
@@ -520,7 +521,7 @@ public class LocalSystemInfoServiceImpl implements LocalSystemInfoService {
     public List<ServiceRowVO> getServices() {
         // 平台专属枚举交给 SPI：Windows 实现走 Win32_Service，POSIX 返回 null 由 OSHI 兜底
         List<ServiceRowVO> platformRows = HostOperationsRegistry.localServices();
-        if (platformRows != null && !platformRows.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(platformRows)) {
             return platformRows;
         }
         List<ServiceRowVO> result = new ArrayList<>();

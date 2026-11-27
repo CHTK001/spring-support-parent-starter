@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Magpie 网关的配额 / 余额读数实现。
@@ -204,7 +206,7 @@ public class MagpieCreditQueryProvider implements CreditQueryProvider {
                                        String vendor, String provider, String account,
                                        Map<String, Object> credentials) {
         List<Map<String, Object>> scoped = scoped(quotas, vendor, provider, account);
-        if ((scoped == null || scoped.isEmpty()) && !MagpieSupport.isBlank(provider)) {
+        if ((CollectionUtils.isEmpty(scoped)) && !MagpieSupport.isBlank(provider)) {
             Map<String, Object> custom = MagpieUpstreamCreditSpi.credit(impls, provider, account, credentials);
             if (custom != null) {
                 return spiSnapshot(custom);
@@ -255,7 +257,7 @@ public class MagpieCreditQueryProvider implements CreditQueryProvider {
      */
     private static List<Map<String, Object>> scoped(List<Map<String, Object>> quotas, String vendor,
                                                    String provider, String account) {
-        if (MagpieSupport.isBlank(vendor) || quotas == null || quotas.isEmpty()) {
+        if (MagpieSupport.isBlank(vendor) || CollectionUtils.isEmpty(quotas)) {
             return quotas;
         }
         List<String> wanted = MagpieSupport.providerIdsOf(vendor);
@@ -306,7 +308,7 @@ public class MagpieCreditQueryProvider implements CreditQueryProvider {
      * @return 积分快照
      */
     private static Map<String, Object> snapshotOf(List<Map<String, Object>> quotas, String vendor, String account) {
-        if (!MagpieSupport.isBlank(vendor) && (quotas == null || quotas.isEmpty())) {
+        if (!MagpieSupport.isBlank(vendor) && (CollectionUtils.isEmpty(quotas))) {
             Map<String, Object> result = new LinkedHashMap<>(4);
             String scope = MagpieSupport.isBlank(account) ? vendor : vendor + " / " + account;
             result.put("error", "「" + scope + "」暂时读不到余额，请稍后重试");
@@ -325,7 +327,7 @@ public class MagpieCreditQueryProvider implements CreditQueryProvider {
      */
     static Map<String, Object> snapshot(List<Map<String, Object>> quotas) {
         Map<String, Object> result = new LinkedHashMap<>(10);
-        if (quotas == null || quotas.isEmpty()) {
+        if (CollectionUtils.isEmpty(quotas)) {
             result.put("error", "暂时读不到余额，请稍后重试");
             return result;
         }
@@ -610,7 +612,7 @@ public class MagpieCreditQueryProvider implements CreditQueryProvider {
      */
     private static boolean containsIgnoreCase(List<String> values, String target) {
         for (String value : values) {
-            if (value != null && value.equalsIgnoreCase(target)) {
+            if (StringUtils.equalsIgnoreCase(value, target)) {
                 return true;
             }
         }

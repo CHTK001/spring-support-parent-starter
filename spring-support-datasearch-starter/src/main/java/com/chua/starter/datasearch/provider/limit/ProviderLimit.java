@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 单个提供商的限制快照：并发 / 请求频率 / 配额 / 计费口径。
@@ -141,8 +142,8 @@ public class ProviderLimit implements Serializable {
                 || monthlyTokenQuota != null
                 || billingBasis != null
                 || (notes != null && !notes.isBlank())
-                || (modelConcurrency != null && !modelConcurrency.isEmpty())
-                || (observed != null && !observed.isEmpty());
+                || (CollectionUtils.isNotEmpty(modelConcurrency))
+                || (CollectionUtils.isNotEmpty(observed));
     }
 
     /**

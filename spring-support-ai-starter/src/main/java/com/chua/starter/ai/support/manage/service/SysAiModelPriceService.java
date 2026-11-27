@@ -21,6 +21,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 模型价格库服务（{@code sys_ai_model_price}）。
@@ -111,7 +113,7 @@ public class SysAiModelPriceService {
     public String upsertFromSnapshot(String modelId, String providerId,
                                      Map<String, Object> snapshot, String dataSource) {
         String key = truncate(AiModelMetricKeys.normalizeKey(modelId), 160);
-        if (key.isEmpty() || snapshot == null || snapshot.isEmpty()) {
+        if (key.isEmpty() || CollectionUtils.isEmpty(snapshot)) {
             return null;
         }
         long now = System.currentTimeMillis();
@@ -189,12 +191,12 @@ public class SysAiModelPriceService {
     public String replaceFromSnapshot(String modelId, String providerId,
                                       Map<String, Object> snapshot, String dataSource) {
         String key = truncate(AiModelMetricKeys.normalizeKey(modelId), 160);
-        if (key.isEmpty() || snapshot == null || snapshot.isEmpty()) {
+        if (key.isEmpty() || CollectionUtils.isEmpty(snapshot)) {
             return "skipped";
         }
         SysAiModelPrice cur = findByKey(key);
         if (cur != null) {
-            boolean sameSource = cur.getSource() != null && cur.getSource().equals(dataSource);
+            boolean sameSource = ObjectUtils.nullSafeEquals(cur.getSource(), dataSource);
             if (!sameSource || !lockedPriceFields(cur).isEmpty()) {
                 return "skipped";
             }
@@ -428,7 +430,7 @@ public class SysAiModelPriceService {
     public static List<Map<String, Object>> mergeProviderRules(List<Map<String, Object>> current,
                                                                List<Map<String, Object>> incoming,
                                                                String providerId) {
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             return incoming;
         }
         // providerId 是网关注册的临时/实例 id，规则里的 provider_id 是定价登记表的厂商 id

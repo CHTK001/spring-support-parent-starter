@@ -89,6 +89,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 阅卷服务实现
@@ -449,10 +451,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             throw new BusinessException("试卷未发布（仅已发布试卷可阅卷）");
         }
         List<EduPaperQuestion> rows = relations;
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             rows = paperQuestionMapper.selectByPaperId(paperId);
         }
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             throw new BusinessException("该试卷下没有题目，无法阅卷");
         }
         return rows;
@@ -687,7 +689,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      * @return 题号 -> 题目（题库中不存在的题号不映射，调用方按 null 处理，与原逐条查询行为一致）
      */
     private Map<Long, EduQuestion> loadQuestions(List<MarkingSubmitDTO.AnswerItem> answers) {
-        if (answers == null || answers.isEmpty()) {
+        if (CollectionUtils.isEmpty(answers)) {
             return Map.of();
         }
         Set<Long> ids = new HashSet<>();
@@ -766,7 +768,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 入参快速校验（不落库）
         boolean anyMode = !PaperScanner.MODE_SELF.equalsIgnoreCase(mode);
         List<byte[]> validImages = images == null ? List.of()
-                : images.stream().filter(v -> v != null && v.length > 0).toList();
+                : images.stream().filter(v -> ArrayUtils.isNotEmpty(v)).toList();
         if (validImages.isEmpty()) {
             throw new BusinessException("上传图片为空");
         }
@@ -908,7 +910,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             log.warn("[EduAi] 续跑查询失败（阅卷任务表可能尚未建立）: {}", e.getMessage());
             return;
         }
-        if (tasks == null || tasks.isEmpty()) {
+        if (CollectionUtils.isEmpty(tasks)) {
             return;
         }
         log.info("[EduAi] 发现 {} 个未完成的阅卷任务，开始续跑", tasks.size());
@@ -2278,7 +2280,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     private static EduPaperQuestion findNextUnusedByPrefix(String no, List<EduPaperQuestion> relations,
                                                            Set<Long> used) {
         String digits = normalizeNo(no).replaceAll("[^0-9]", "");
-        if (digits.isEmpty() || relations == null || relations.isEmpty()) {
+        if (digits.isEmpty() || CollectionUtils.isEmpty(relations)) {
             return null;
         }
         for (EduPaperQuestion relation : relations) {
@@ -2832,7 +2834,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     static boolean shouldSplitLegacyAggregate(List<Map<String, Object>> questions,
                                               List<Map<String, Object>> pages) {
-        if (questions == null || questions.size() != 1 || pages == null || pages.isEmpty()) {
+        if (questions == null || questions.size() != 1 || CollectionUtils.isEmpty(pages)) {
             return false;
         }
         Map<String, Object> only = questions.getFirst();
@@ -3832,7 +3834,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         // 其次按试卷题目分值，最后退到配置的兜底单题分。
         Map<Long, Integer> fullScores = resolveFullScores(sheet);
         double wrongRate = properties.getMarking().getWrongScoreRate();
-        Set<Long> excluded = excludeQuestionIds == null || excludeQuestionIds.isEmpty()
+        Set<Long> excluded = CollectionUtils.isEmpty(excludeQuestionIds)
                 ? Set.of() : new HashSet<>(excludeQuestionIds);
 
         int recorded = 0;

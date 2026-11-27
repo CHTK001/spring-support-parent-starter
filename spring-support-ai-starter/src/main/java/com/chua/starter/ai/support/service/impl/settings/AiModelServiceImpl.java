@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 模型定义服务实现类
@@ -166,7 +167,7 @@ public class AiModelServiceImpl implements AiModelService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int batchDelete(List<Long> modelIds) {
-        if (modelIds == null || modelIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(modelIds)) {
             return 0;
         }
         for (Long modelId : modelIds) {
@@ -464,7 +465,7 @@ public class AiModelServiceImpl implements AiModelService {
      * @return 结果字符串
      */
     private String toJsonArray(List<String> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return "[]";
         }
         return Json.toJson(values);

@@ -34,6 +34,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 采集流程执行引擎。
@@ -305,7 +308,7 @@ public class CollectEngine {
      * @param seed    调用方传入的变量
      */
     private void applySeed(CollectContext context, Map<String, Object> seed) {
-        if (seed == null || seed.isEmpty()) {
+        if (CollectionUtils.isEmpty(seed)) {
             return;
         }
         for (Map.Entry<String, Object> entry : seed.entrySet()) {
@@ -852,7 +855,7 @@ public class CollectEngine {
                 continue;
             }
             Object before = incoming.get(entry.getKey());
-            if (before != null && before.equals(entry.getValue())) {
+            if (ObjectUtils.nullSafeEquals(before, entry.getValue())) {
                 continue;
             }
             if (builder.length() > 0) {
@@ -872,7 +875,7 @@ public class CollectEngine {
         }
         // 数据库节点的结构化出参拼在最前面：表名与行数是排查"数据去哪了"的第一信息，
         // 通用变量预览（集合只记条数）反而在后。
-        String result = database == null || database.isEmpty()
+        String result = StringUtils.isEmpty(database)
                 ? builder.toString()
                 : (builder.length() == 0 ? database : database + "; " + builder);
         return result.length() > limit * 4 ? result.substring(0, limit * 4) : result;

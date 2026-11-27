@@ -4,6 +4,8 @@ import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.server.support.spi.ProjectPlatformProvider;
 
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * POSIX 平台（Linux）发布命令提供者。
@@ -144,7 +146,7 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
     @Override
     public String applyJava(String script, String jdkHome) {
         String exe = javaExecutable(jdkHome);
-        if (script == null || script.isEmpty() || exe.isEmpty()) {
+        if (StringUtils.isEmpty(script) || exe.isEmpty()) {
             return script;
         }
         String home = exe.endsWith("/bin/java")
@@ -387,7 +389,7 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
        * @return 内联字符串
        */
     private String quotedArgs(List<String> items) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return "";
         }
         var sb = new StringBuilder();
@@ -410,7 +412,7 @@ public class PosixProjectPlatformProvider implements ProjectPlatformProvider {
        * @return 内联字符串
        */
     private String joinInline(List<String> items) {
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             return "";
         }
         var sb = new StringBuilder();

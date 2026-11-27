@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 可执行流程图。
@@ -76,7 +77,7 @@ public class CollectGraph {
             if (dto.shape() == null || dto.shape().isBlank()) {
                 throw new CollectGraphException("节点 " + dto.id() + " 缺少类型");
             }
-            if (knownShapes != null && !knownShapes.isEmpty() && !knownShapes.contains(dto.shape())) {
+            if (CollectionUtils.isNotEmpty(knownShapes) && !knownShapes.contains(dto.shape())) {
                 throw new CollectGraphException("节点 " + dto.id() + " 的类型未注册: " + dto.shape());
             }
             if (graph.nodes.containsKey(dto.id())) {

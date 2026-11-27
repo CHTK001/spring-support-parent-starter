@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
 
@@ -656,7 +658,7 @@ public class SyncProperties {
          * @return 获取effectiveinstances的结果
          */
         public List<ServerInstance> getEffectiveInstances() {
-            if (instances == null || instances.isEmpty()) {
+            if (CollectionUtils.isEmpty(instances)) {
                 var defaultInstance = new ServerInstance();
                 defaultInstance.name = "default";
                 defaultInstance.host = host;
@@ -1607,7 +1609,7 @@ public class SyncProperties {
          * @return 获取effective服务端地址的结果
          */
         public String getEffectiveServerAddress() {
-            if (serverAddress != null && !serverAddress.isEmpty()) {
+            if (StringUtils.isNotEmpty(serverAddress)) {
                 return serverAddress;
             }
             return serverHost + ":" + serverPort;

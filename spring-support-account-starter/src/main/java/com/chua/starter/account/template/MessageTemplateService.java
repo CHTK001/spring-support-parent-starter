@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 短信 / 邮件消息模板服务 —— 模板的增删改查、默认模板选择与变量渲染。
@@ -224,7 +226,7 @@ public class MessageTemplateService {
                         .eq(SysAiChannelMessageTemplate::getTemplateEnabled, true)
                         .orderByAsc(SysAiChannelMessageTemplate::getTemplateSortOrder)
                         .orderByDesc(SysAiChannelMessageTemplate::getTemplateUpdatedAt));
-        if (candidates == null || candidates.isEmpty()) {
+        if (CollectionUtils.isEmpty(candidates)) {
             return;
         }
         SysAiChannelMessageTemplate promoted = candidates.get(0);
@@ -300,7 +302,7 @@ public class MessageTemplateService {
      * @param extraVars 额外变量（如所属临时身份的 {@code phone} / {@code email}）
      */
     public void decorate(String kind, List<Map<String, Object>> messages, Map<String, Object> extraVars) {
-        if (messages == null || messages.isEmpty()) {
+        if (CollectionUtils.isEmpty(messages)) {
             return;
         }
         SysAiChannelMessageTemplate template;
@@ -483,7 +485,7 @@ public class MessageTemplateService {
      * @return 渲染结果
      */
     private static String substitute(String template, Map<String, Object> values, Set<String> missing) {
-        if (template == null || template.isEmpty()) {
+        if (StringUtils.isEmpty(template)) {
             return template;
         }
         Matcher matcher = VARIABLE_PATTERN.matcher(template);
@@ -523,7 +525,7 @@ public class MessageTemplateService {
      * @param names 收集器
      */
     private static void collectVariables(String text, Set<String> names) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return;
         }
         Matcher matcher = VARIABLE_PATTERN.matcher(text);
@@ -539,7 +541,7 @@ public class MessageTemplateService {
      * @return 验证码；未命中返回空串
      */
     private static String extractCode(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         Matcher matcher = CODE_PATTERN.matcher(text);

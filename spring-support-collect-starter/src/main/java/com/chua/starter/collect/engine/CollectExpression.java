@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 节点参数表达式求值。
@@ -51,7 +52,7 @@ public final class CollectExpression {
      * @return 求值结果，无占位符时返回原文
      */
     public static Object eval(String raw, Map<String, Object> variables) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return raw;
         }
         String single = singleExpression(raw);

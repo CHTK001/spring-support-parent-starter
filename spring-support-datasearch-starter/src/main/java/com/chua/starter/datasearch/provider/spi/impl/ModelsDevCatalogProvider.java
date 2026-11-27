@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * models.dev 目录实现：读随包发布的快照 {@code provider-catalog/models-dev.json.gz}。
@@ -178,7 +179,7 @@ public class ModelsDevCatalogProvider implements ProviderModelCatalogProvider {
         if (nodes == null) {
             nodes = current.byFoldedModelId.get(foldModelId(modelId));
         }
-        if (nodes == null || nodes.isEmpty()) {
+        if (CollectionUtils.isEmpty(nodes)) {
             return List.of();
         }
         List<ModelEntry> out = new ArrayList<>(nodes.size());

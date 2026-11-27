@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 限制查询出口：按顺序问各个 {@link ProviderLimitProvider}，命中结果<b>合并</b>。
@@ -45,7 +46,7 @@ public final class ProviderLimits {
      */
     public static List<ProviderLimitProvider> providers() {
         List<ProviderLimitProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderLimitProvider.class);
             cached = current;
         }
@@ -139,10 +140,10 @@ public final class ProviderLimits {
      * @return 合并后的表；两侧都空时返回 null（保留「未登记」语义）
      */
     private static Map<String, Object> mergeLimits(Map<String, Object> target, Map<String, Object> src) {
-        if (src == null || src.isEmpty()) {
+        if (CollectionUtils.isEmpty(src)) {
             return target;
         }
-        if (target == null || target.isEmpty()) {
+        if (CollectionUtils.isEmpty(target)) {
             return copyOf(src);
         }
         Map<String, Object> merged = new LinkedHashMap<>(target);
@@ -161,7 +162,7 @@ public final class ProviderLimits {
      * @return 新表；源为空时返回 null
      */
     private static Map<String, Object> copyOf(Map<String, Object> source) {
-        return source == null || source.isEmpty() ? null : new LinkedHashMap<>(source);
+        return CollectionUtils.isEmpty(source) ? null : new LinkedHashMap<>(source);
     }
 
     /**
@@ -172,8 +173,8 @@ public final class ProviderLimits {
      * @return 并集；两侧都空时返回 null（保留「未登记」语义）
      */
     private static List<String> union(List<String> left, List<String> right) {
-        boolean leftEmpty = left == null || left.isEmpty();
-        boolean rightEmpty = right == null || right.isEmpty();
+        boolean leftEmpty = CollectionUtils.isEmpty(left);
+        boolean rightEmpty = CollectionUtils.isEmpty(right);
         if (leftEmpty && rightEmpty) {
             return null;
         }

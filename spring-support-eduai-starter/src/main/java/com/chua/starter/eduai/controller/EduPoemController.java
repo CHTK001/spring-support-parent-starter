@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 古诗控制器：古诗库 CRUD + 趣味游戏（补全下句）
@@ -190,7 +191,7 @@ public class EduPoemController {
                 continue;
             }
             String normalized = GradeLevels.normalize(level.trim());
-            if (grades == null || grades.isEmpty()) {
+            if (CollectionUtils.isEmpty(grades)) {
                 insertPoemGrade(poem, normalized, null);
             } else {
                 for (String grade : grades) {

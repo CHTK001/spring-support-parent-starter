@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 人脸 / 重识别底库的**分组**口径。
@@ -114,7 +115,7 @@ public final class AiLibraryGroups {
      * @return 是否命中
      */
     public static boolean matches(String rowGroup, List<String> wantedGroups) {
-        if (wantedGroups == null || wantedGroups.isEmpty()) {
+        if (CollectionUtils.isEmpty(wantedGroups)) {
             return true;
         }
         String normalized = normalize(rowGroup);

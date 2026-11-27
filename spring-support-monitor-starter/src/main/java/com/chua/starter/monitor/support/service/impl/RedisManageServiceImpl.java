@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 数据源级 Redis 管理实现：每次操作临时建立 Jedis 连接，用完即关。
@@ -242,7 +243,7 @@ public class RedisManageServiceImpl implements RedisManageService {
 
     @Override
     public long deleteKeys(Long datasourceId, int db, List<String> keys) {
-        if (keys == null || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
             return 0L;
         }
         try (Jedis jedis = open(datasourceId, db)) {
@@ -448,7 +449,7 @@ public class RedisManageServiceImpl implements RedisManageService {
 
     @Override
     public String xadd(Long datasourceId, int db, String key, List<RedisHashFieldVO> fields) {
-        if (fields == null || fields.isEmpty()) {
+        if (CollectionUtils.isEmpty(fields)) {
             throw new IllegalArgumentException("流消息至少需要一个字段");
         }
         try (Jedis jedis = open(datasourceId, db)) {

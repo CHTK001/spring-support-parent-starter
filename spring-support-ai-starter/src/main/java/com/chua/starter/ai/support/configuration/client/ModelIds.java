@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.configuration.client;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 模型标识归一工具：把「设置页模型选择器值」收敛成裸模型名。
  *
@@ -29,7 +31,7 @@ public final class ModelIds {
      * @return 裸模型名；入参为 {@code null}/空串时原样返回（保留调用方的留空判断语义）
      */
     public static String bare(String modelRef) {
-        if (modelRef == null || modelRef.isEmpty()) {
+        if (StringUtils.isEmpty(modelRef)) {
             return modelRef;
         }
         String ref = modelRef.trim();

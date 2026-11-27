@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 资产联动服务 —— 聚合「主机台账 + 服务节点 + 通道状态」。
@@ -228,7 +229,7 @@ public class AssetLinkageService {
      * @return 最高级别；无则 空
      */
     private static String maxLevel(List<MsMonitorAlarmEvent> alarms) {
-        if (alarms == null || alarms.isEmpty()) {
+        if (CollectionUtils.isEmpty(alarms)) {
             return null;
         }
         String max = null;

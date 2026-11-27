@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * MCP 来源清单服务实现。
@@ -297,7 +298,7 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         args.add(pkg);
         args.addAll(extra);
         t.put("args", args);
-        if (env != null && !env.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(env)) {
             t.put("env", env);
         }
         return t;
@@ -315,7 +316,7 @@ public class McpCatalogServiceImpl implements McpCatalogService {
         t.put("type", "stdio");
         t.put("command", command);
         t.put("args", new ArrayList<>(args));
-        if (env != null && !env.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(env)) {
             t.put("env", env);
         }
         return t;

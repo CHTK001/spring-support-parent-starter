@@ -4,6 +4,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * HTTP 输入源（{@code HTTP_JSON} / {@code HTTP_HTML}）的扩展选项。
@@ -82,7 +83,7 @@ public record SyncHttpOptions(
      * @return 归一化后的选项
      */
     public SyncHttpOptions normalized() {
-        Map<String, String> safeHeaders = headers == null || headers.isEmpty() ? Map.of() : headers;
+        Map<String, String> safeHeaders = CollectionUtils.isEmpty(headers) ? Map.of() : headers;
         return new SyncHttpOptions(
                 isBlank(method) ? DEFAULT_METHOD : method.trim().toUpperCase(Locale.ROOT),
                 safeHeaders,

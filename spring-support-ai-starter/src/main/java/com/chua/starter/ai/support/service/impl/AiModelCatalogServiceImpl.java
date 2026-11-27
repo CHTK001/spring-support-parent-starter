@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 统一能力模型清单服务实现。
@@ -488,7 +489,7 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
      * @param models 模型
      */
     private void mergeCloud(Map<String, LinkedHashSet<String>> grouped, String capability, List<String> models) {
-        if (models == null || models.isEmpty()) {
+        if (CollectionUtils.isEmpty(models)) {
             return;
         }
         grouped.computeIfAbsent(capability, k -> new LinkedHashSet<>()).addAll(models);

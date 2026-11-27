@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 服务器本地采集 提供者
@@ -171,7 +172,7 @@ public class ServerLocalProvider implements MetricProvider {
      */
     private void collectCpu(MetricsSnapshot snapshot, CollectResult result) {
         List<CpuCore> cpuCores = snapshot.getCpuCores();
-        if (cpuCores == null || cpuCores.isEmpty()) {
+        if (CollectionUtils.isEmpty(cpuCores)) {
             return;
         }
 
@@ -245,7 +246,7 @@ public class ServerLocalProvider implements MetricProvider {
      */
     private void collectDisk(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskInfo> disks = snapshot.getDisks();
-        if (disks == null || disks.isEmpty()) {
+        if (CollectionUtils.isEmpty(disks)) {
             return;
         }
 
@@ -286,7 +287,7 @@ public class ServerLocalProvider implements MetricProvider {
      */
     private void collectDiskIo(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskIo> ioList = snapshot.getDiskIo();
-        if (ioList == null || ioList.isEmpty()) {
+        if (CollectionUtils.isEmpty(ioList)) {
             return;
         }
 
@@ -319,7 +320,7 @@ public class ServerLocalProvider implements MetricProvider {
      */
     private void collectNetwork(MetricsSnapshot snapshot, CollectResult result) {
         List<NetworkInterface> nets = snapshot.getNetworks();
-        if (nets == null || nets.isEmpty()) {
+        if (CollectionUtils.isEmpty(nets)) {
             return;
         }
 

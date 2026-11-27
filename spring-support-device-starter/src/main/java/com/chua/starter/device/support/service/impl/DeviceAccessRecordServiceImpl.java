@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 门禁出入记录服务实现。
@@ -82,7 +83,7 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
             }
             try {
                 List<AccessRecord> records = session.queryAccessRecords(new TimeRange(start, end));
-                if (records == null || records.isEmpty()) {
+                if (CollectionUtils.isEmpty(records)) {
                     continue;
                 }
                 for (AccessRecord record : records) {
@@ -112,7 +113,7 @@ public class DeviceAccessRecordServiceImpl implements DeviceAccessRecordService 
      * @return 需要跳过采集的设备 ID 集合（无则空集）
      */
     private Set<String> stoppedDeviceIds(List<String> deviceIds) {
-        if (deviceIds == null || deviceIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(deviceIds)) {
             return Set.of();
         }
         return deviceInfoMapper.selectBatchIds(deviceIds).stream()

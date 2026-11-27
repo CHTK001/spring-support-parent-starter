@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 表达式内置函数。
@@ -129,7 +130,7 @@ public final class CollectFunctions {
      * @return 原文
      */
     public static String base64Decode(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         return new String(Base64.getDecoder().decode(text), StandardCharsets.UTF_8);
@@ -176,7 +177,7 @@ public final class CollectFunctions {
      * @return 域名，解析失败返回空串
      */
     public static String urlHost(String url) {
-        if (url == null || url.isEmpty()) {
+        if (StringUtils.isEmpty(url)) {
             return "";
         }
         try {
@@ -460,7 +461,7 @@ public final class CollectFunctions {
      * @return 子串，原文为空返回空串
      */
     public static String substring(String text, int start, int end) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         int from = Math.min(Math.max(start, 0), text.length());
@@ -507,7 +508,7 @@ public final class CollectFunctions {
      * @return 结果，原文为空返回空串
      */
     public static String replace(String text, String target, String replacement) {
-        if (text == null || text.isEmpty() || target == null || target.isEmpty()) {
+        if (StringUtils.isEmpty(text) || StringUtils.isEmpty(target)) {
             return stringify(text);
         }
         return text.replace(target, replacement == null ? "" : replacement);
@@ -524,7 +525,7 @@ public final class CollectFunctions {
         if (text == null || text.isBlank()) {
             return List.of();
         }
-        String split = separator == null || separator.isEmpty() ? "," : separator;
+        String split = StringUtils.isEmpty(separator) ? "," : separator;
         List<String> parts = new ArrayList<>();
         for (String part : text.split(java.util.regex.Pattern.quote(split))) {
             parts.add(part);

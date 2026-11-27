@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 顶栏天气数据服务实现。
@@ -187,7 +188,7 @@ public class WeatherDataServiceImpl implements WeatherDataService {
      */
     private List<WeatherOverviewVO.Hour> toHours(List<HourlyWeather> hourly, String anchor, int max) {
         List<WeatherOverviewVO.Hour> result = new ArrayList<>();
-        if (hourly == null || hourly.isEmpty()) {
+        if (CollectionUtils.isEmpty(hourly)) {
             return result;
         }
         int from = 0;

@@ -3,6 +3,7 @@ package com.chua.starter.datapool.support.dbconsole;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 把一段 SQL 脚本切成单条语句。
@@ -305,7 +306,7 @@ public final class SqlScriptSplitter {
      */
     public static List<Span> codeSpans(String script) {
         List<Span> spans = new ArrayList<>();
-        if (script == null || script.isEmpty()) {
+        if (StringUtils.isEmpty(script)) {
             return spans;
         }
         int n = script.length();

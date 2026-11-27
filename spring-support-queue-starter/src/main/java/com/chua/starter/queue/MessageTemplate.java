@@ -3,6 +3,7 @@ package com.chua.starter.queue;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 统一消息模板接口
@@ -193,7 +194,7 @@ public interface MessageTemplate {
         } else {
             // 默认实现：创建多个消费者实例，每个使用不同的组名
             for (int i = 0; i < concurrency; i++) {
-                String groupWithConcurrency = (group != null && !group.isEmpty()) 
+                String groupWithConcurrency = (StringUtils.isNotEmpty(group)) 
                         ? group + "-concurrent-" + i 
                         : "concurrent-" + i;
                 /**

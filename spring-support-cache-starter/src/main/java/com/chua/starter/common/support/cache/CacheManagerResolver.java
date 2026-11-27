@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationContext;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.constant.CacheConstant.CAFFEINE_CACHE_MANAGER;
 import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_MULTI;
@@ -73,7 +74,7 @@ public final class CacheManagerResolver {
      * @return 选中的缓存管理器；集合为空时返回 {@code null}
      */
     public static CacheManager pick(Map<String, CacheManager> beans) {
-        if (beans == null || beans.isEmpty()) {
+        if (CollectionUtils.isEmpty(beans)) {
             return null;
         }
         for (String preferred : PREFERRED_CACHE_MANAGERS) {

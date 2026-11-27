@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 免费渠道聚合 {@link VideoClient}。
@@ -234,7 +235,7 @@ public class FreeChannelVideoClient implements VideoClient {
      */
     private static boolean declares(VideoChannelProvider channel) {
         List<Map<String, Object>> models = channel.listModels();
-        return models != null && !models.isEmpty();
+        return CollectionUtils.isNotEmpty(models);
     }
 
     /**

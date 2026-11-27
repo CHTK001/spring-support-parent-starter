@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
    * MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
@@ -166,7 +168,7 @@ public class MybatisJobRepository implements JobRepository {
         if (scanCache != null) {
             scanCache.put(group, preReadMs, preReadCount, now, candidates);
         }
-        if (candidates == null || candidates.isEmpty()) {
+        if (CollectionUtils.isEmpty(candidates)) {
             return List.of();
         }
         return executeScanLoop(candidates, now, null, preReadMs, preReadCount);
@@ -198,7 +200,7 @@ public class MybatisJobRepository implements JobRepository {
         long phase = entry.dbNowMs();
         long upperBound = phase + Math.max(preReadMs, 0L);
         List<JobEntity> candidates = entry.candidates();
-        if (candidates == null || candidates.isEmpty()) {
+        if (CollectionUtils.isEmpty(candidates)) {
             return List.of();
         }
           // Phase 1：用缓存行判断哪些已经到期
@@ -256,7 +258,7 @@ public class MybatisJobRepository implements JobRepository {
             }
               // 维系到期行：用主键批读回的新鲜行替换（写回与乐观条件必须基于最新行），
               // 没有新鲜行的继续用缓存行（行为与实路相同）
-            JobEntity target = freshByStateKey == null || freshByStateKey.isEmpty() ? entity : freshByStateKey.get(key);
+            JobEntity target = CollectionUtils.isEmpty(freshByStateKey) ? entity : freshByStateKey.get(key);
             if (target == null) {
                 target = entity;
             }
@@ -430,7 +432,7 @@ public class MybatisJobRepository implements JobRepository {
             String existingSource = existing == null ? null : existing.getSysJobGlueSource();
             Long existingAt = existing == null || existing.getSysJobGlueUpdatetime() == null
                     ? null : existing.getSysJobGlueUpdatetime().getTime();
-            glueAt = glueSource != null && glueSource.equals(existingSource) && existingAt != null
+            glueAt = ObjectUtils.nullSafeEquals(glueSource, existingSource) && existingAt != null
                     ? existingAt : System.currentTimeMillis();
         }
         if (existing == null) {
@@ -540,7 +542,7 @@ public class MybatisJobRepository implements JobRepository {
                 .and(w -> w.eq(JobEntity::getSysJobExecuteBean, jobKey)
                         .or().eq(JobEntity::getSysJobName, jobKey))
                 .eq(JobEntity::getSysJobIsDeleted, 0));
-        if (entities == null || entities.isEmpty()) {
+        if (CollectionUtils.isEmpty(entities)) {
             return;
         }
         for (JobEntity entity : entities) {

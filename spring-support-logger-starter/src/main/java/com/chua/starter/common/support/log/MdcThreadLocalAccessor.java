@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * MDC 的 {@link ThreadLocalAccessor} 适配器：把 SLF4J MDC 线程变量接入
@@ -99,7 +100,7 @@ public class MdcThreadLocalAccessor implements ThreadLocalAccessor<Map<String, S
     @Override
     public void restore() {
         Deque<Map<String, String>> stack = PREVIOUS.get();
-        Map<String, String> previous = (stack == null || stack.isEmpty()) ? null : stack.pop();
+        Map<String, String> previous = (CollectionUtils.isEmpty(stack)) ? null : stack.pop();
         if (stack != null && stack.isEmpty()) {
             PREVIOUS.remove();
         }

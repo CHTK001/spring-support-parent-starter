@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 基于 Spring 数据 Redis {@link StringRedisTemplate} 的 {@link KvEngine} 实现。
@@ -196,7 +197,7 @@ public class RedisKvEngine implements KvEngine {
      */
     @Override
     public Map<String, String> findAllByPrefix(String prefix) {
-        if (prefix == null || prefix.isEmpty()) {
+        if (StringUtils.isEmpty(prefix)) {
             return Map.of();
         }
         Map<String, String> result = new LinkedHashMap<>();

@@ -6,6 +6,7 @@ import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Druid数据源属性提供者
@@ -152,7 +153,7 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
      * @return 返回值
     */
     public void setFilters(DruidDataSource dataSource, String filters) {
-        if (filters != null && !filters.isEmpty()) {
+        if (StringUtils.isNotEmpty(filters)) {
             try {
                 dataSource.setFilters(filters);
             } catch (SQLException e) {

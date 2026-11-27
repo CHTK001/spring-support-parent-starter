@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 同步执行调试日志：内存缓冲（进行中实时追加）+ 数据库留档（历史可查）。
@@ -264,7 +265,7 @@ public class SyncTaskRunLogBuffer {
      * @return 正文；无行时为空串
      */
     private static String joinLines(List<SyncTaskRunLogVO.Line> lines) {
-        if (lines == null || lines.isEmpty()) {
+        if (CollectionUtils.isEmpty(lines)) {
             return "";
         }
         StringBuilder sb = new StringBuilder(lines.size() * 96);
@@ -359,7 +360,7 @@ public class SyncTaskRunLogBuffer {
                             .eq(MsSyncTaskRunLog::getRunLogTaskId, taskId)
                             .orderByDesc(MsSyncTaskRunLog::getRunLogRunTime)
                             .last("LIMIT " + MAX_DB_RUNS_PER_TASK));
-            if (rows == null || rows.isEmpty()) {
+            if (CollectionUtils.isEmpty(rows)) {
                 return;
             }
             java.util.Set<String> seen = new java.util.HashSet<>();

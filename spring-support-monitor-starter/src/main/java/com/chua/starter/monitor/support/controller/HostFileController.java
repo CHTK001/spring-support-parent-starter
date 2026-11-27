@@ -38,6 +38,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 主机文件管理统一控制器。
@@ -136,7 +137,7 @@ public class HostFileController {
         }
         try {
             List<com.chua.starter.monitor.support.model.DiskRowVO> disks = provider.disks(host);
-            if (disks == null || disks.isEmpty()) {
+            if (CollectionUtils.isEmpty(disks)) {
                 return;
             }
             String target = root.getPath() == null ? "" : root.getPath().trim();
@@ -385,7 +386,7 @@ public class HostFileController {
         if (slash < 0) {
             // 无父目录信息：尝试直接列该路径，能列出内容即视为目录
             List<FileEntryVO> entries = provider.files(host, trimmed);
-            return entries != null && !entries.isEmpty();
+            return CollectionUtils.isNotEmpty(entries);
         }
         String name = trimmed.substring(slash + 1);
         if (name.isEmpty()) {

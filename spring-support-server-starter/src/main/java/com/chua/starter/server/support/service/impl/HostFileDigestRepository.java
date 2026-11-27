@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 主机文件 MD5 台账的持久化仓库。
@@ -113,7 +114,7 @@ public class HostFileDigestRepository {
      */
     public Map<String, String> find(String bucket, Collection<String> keys) {
         Map<String, String> result = new HashMap<>();
-        if (jdbcTemplate == null || keys == null || keys.isEmpty()) {
+        if (jdbcTemplate == null || CollectionUtils.isEmpty(keys)) {
             return result;
         }
         // 占位符按实际条数拼：IN 列表不能用单参数展开，但 key 全部来自服务端归一化后的路径，

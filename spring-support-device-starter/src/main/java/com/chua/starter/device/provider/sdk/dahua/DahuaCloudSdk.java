@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 大华云开发者平台（open.cloud-dahua.com，IoT 开放平台）SDK 实现 —— 官方无 Java SDK，按官方文档 API 实现。
@@ -319,7 +320,7 @@ public class DahuaCloudSdk extends AbstractPlatformSdk {
      */
     private JsonNode sendGet(String path, Map<String, Object> params, Map<String, String> headers) {
         StringBuilder url = new StringBuilder(baseUrl()).append(path);
-        if (params != null && !params.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(params)) {
             char sep = '?';
             for (Map.Entry<String, Object> entry : params.entrySet()) {
                 if (entry.getKey() == null || entry.getValue() == null) {

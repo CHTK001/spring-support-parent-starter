@@ -5,6 +5,7 @@ import com.chua.common.support.ai.chat.route.RouteTarget;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 供应商路由表解析工具。
@@ -76,7 +77,7 @@ public final class ProviderRouteTargets {
      * @return 路由表；未配置或解析为空时返回 {@code null}
      */
     public static Map<String, RouteTarget> fromExtra(Map<String, Object> extra) {
-        if (extra == null || extra.isEmpty()) {
+        if (CollectionUtils.isEmpty(extra)) {
             return null;
         }
         Object raw = extra.get(ROUTES_KEY);

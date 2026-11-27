@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * <b>单个账号的单个分组</b>的以图搜图底库：图像特征向量的存取与相似度检索。
@@ -733,7 +735,7 @@ public class ImageSearchStore {
      * @return 逗号串；无标签返回 {@code null}
      */
     private static String joinTags(List<String> tags) {
-        if (tags == null || tags.isEmpty()) {
+        if (CollectionUtils.isEmpty(tags)) {
             return null;
         }
         return String.join(",", tags);
@@ -907,7 +909,7 @@ public class ImageSearchStore {
         // 这里只取 id 用于回查快照 —— 分数不采信管线给的近似值，稍后用余弦重算。
         List<ImageSearchHit> hits = store.search(query, Math.max(1, topK));
         List<Match> out = new ArrayList<>();
-        if (hits == null || hits.isEmpty()) {
+        if (CollectionUtils.isEmpty(hits)) {
             return out;
         }
         VectorCompareAlgorithm cosine = VectorCompareAlgorithm.cosine();
@@ -1041,7 +1043,7 @@ public class ImageSearchStore {
         ImagePipeline store = pipeline;
         if (store == null) {
             float[] vector = removedItem.getVector();
-            if (vector != null && vector.length > 0) {
+            if (ArrayUtils.isNotEmpty(vector)) {
                 try {
                     store = ensurePipeline(vector.length);
                 } catch (Exception ex) {

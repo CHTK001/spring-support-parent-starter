@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * ONNX 外部服务器模型目录服务。
@@ -332,7 +333,7 @@ public class OnnxExternalDirectoryService {
      * @return 公共祖先；集合为空时返回空串
      */
     private String commonAncestor(List<String> dirs) {
-        if (dirs == null || dirs.isEmpty()) {
+        if (CollectionUtils.isEmpty(dirs)) {
             return "";
         }
         Path common = Paths.get(dirs.get(0)).toAbsolutePath().normalize();

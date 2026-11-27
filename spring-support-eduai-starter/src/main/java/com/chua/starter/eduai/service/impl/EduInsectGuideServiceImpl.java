@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 昆虫深度讲解与测验服务实现
@@ -107,7 +108,7 @@ public class EduInsectGuideServiceImpl extends ServiceImpl<EduInsectGuideMapper,
 
     @Override
     public int removeByCodes(List<String> insectCodes) {
-        if (insectCodes == null || insectCodes.isEmpty()) {
+        if (CollectionUtils.isEmpty(insectCodes)) {
             return 0;
         }
         return baseMapper.delete(new QueryWrapper<EduInsectGuide>().in("insect_code", insectCodes));

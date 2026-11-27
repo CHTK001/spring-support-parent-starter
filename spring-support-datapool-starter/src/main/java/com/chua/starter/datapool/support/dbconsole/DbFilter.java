@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Navicat 式结构化筛选条件（表数据页的「高级筛选」）。
@@ -108,7 +109,7 @@ public final class DbFilter {
      * @throws IllegalArgumentException 列名非法或运算符不认识
      */
     public static Compiled compile(List<Condition> conditions) {
-        if (conditions == null || conditions.isEmpty()) {
+        if (CollectionUtils.isEmpty(conditions)) {
             return new Compiled("", List.of());
         }
         List<String> parts = new ArrayList<>();

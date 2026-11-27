@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * new-api 模型价格同步服务实现。
@@ -244,7 +245,7 @@ public class AiNewApiPriceSyncServiceImpl implements AiNewApiPriceSyncService {
             return stripApiPrefixes(baseUrl.trim());
         }
         List<SysAccountChannel> rows = accountChannelService.listAll();
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return null;
         }
         for (SysAccountChannel row : rows) {

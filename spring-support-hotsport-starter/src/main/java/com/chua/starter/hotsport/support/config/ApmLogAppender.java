@@ -16,6 +16,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 应用日志采集器 — 把宿主进程**真实**产生的 logback 日志写入 APM 存储。
@@ -285,7 +286,7 @@ public class ApmLogAppender extends AppenderBase<ILoggingEvent> {
         if (captureCaller) {
             try {
                 StackTraceElement[] caller = event.getCallerData();
-                if (caller != null && caller.length > 0) {
+                if (ArrayUtils.isNotEmpty(caller)) {
                     className = caller[0].getClassName();
                     methodName = caller[0].getMethodName();
                 }

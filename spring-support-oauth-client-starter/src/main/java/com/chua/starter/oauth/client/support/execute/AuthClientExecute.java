@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.spring.support.utils.RequestUtils.*;
 
@@ -806,7 +807,7 @@ public class AuthClientExecute {
             // 构建扩展参数
             Map<String, Object> ext = new HashMap<>();
             ext.put("expireTime", actualExpire);
-            if (allowedUrls != null && !allowedUrls.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(allowedUrls)) {
                 ext.put("allowedUrls", String.join(",", allowedUrls));
             }
 
@@ -897,7 +898,7 @@ public class AuthClientExecute {
             }
             Map<String, Object> ext = new HashMap<>();
             ext.put("expireTime", actualExpire);
-            if (allowedUrls != null && !allowedUrls.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(allowedUrls)) {
                 ext.put("allowedUrls", String.join(",", allowedUrls));
             }
             // 目标身份整体下发：服务端不认识业务表，只负责「校验来源 + 拒绝提权 + 签发」

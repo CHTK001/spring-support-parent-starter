@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 服务管理 —— 节点列表的过滤 / 排序 / 分页切片（纯函数）。
@@ -138,7 +139,7 @@ public final class ServerNodePager {
      * @return 当前页的元素；页码越界时返回空列表，不抛异常
      */
     public static <T> List<T> slice(List<T> list, int page, int size) {
-        if (list == null || list.isEmpty()) {
+        if (CollectionUtils.isEmpty(list)) {
             return new ArrayList<>();
         }
         long from = (long) (page - 1) * size;

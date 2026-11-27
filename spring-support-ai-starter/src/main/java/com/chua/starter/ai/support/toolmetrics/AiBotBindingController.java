@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 微信 i链接 机器人 多绑定管理控制器。
@@ -450,7 +451,7 @@ public class AiBotBindingController {
     public ReturnResult<Map<String, Object>> updateGlobalConfig(@RequestBody Map<String, Object> body,
                                                                 HttpServletRequest httpRequest) {
         requireGlobalAdmin(httpRequest);
-        if (body == null || body.isEmpty()) {
+        if (CollectionUtils.isEmpty(body)) {
             return ReturnResult.illegal("请求体不能为空");
         }
         Object contextThinking = body.get("contextThinking");

@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 用量聚合任务
@@ -553,7 +554,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         // 先刷新会话超时上限，本批所有耗时截断判定都用这一轮的值
         refreshSessionTimeout();
         Map<String, UsageParser> parsers = collectParsers();
-        if (parsers == null || parsers.isEmpty()) {
+        if (CollectionUtils.isEmpty(parsers)) {
             log.debug("[UsageAggregation] 未发现 UsageParser 实现");
             /**
              * record日志。
@@ -683,7 +684,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * @param page 本页记录（解析器交付的一页，或上轮失败的重试批）
      */
     private void flushBatch(GroupSyncContext ctx, List<AiUsage> page) {
-        if (page == null || page.isEmpty()) {
+        if (CollectionUtils.isEmpty(page)) {
             return;
         }
         // 按 requestId 去重：库内已存在的跳过，新记录（含历史缺口/在途完成）照插
@@ -1102,7 +1103,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      */
     private List<AiUsage> pollRetry(String groupName) {
         Deque<AiUsage> q = retryQueue.get(groupName);
-        if (q == null || q.isEmpty()) {
+        if (CollectionUtils.isEmpty(q)) {
             return List.of();
         }
         List<AiUsage> out = new ArrayList<>(q);
@@ -1147,7 +1148,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         try {
             List<LocalDate> rawDays = usageMapper.selectDistinctUsageDays();
-            if (rawDays == null || rawDays.isEmpty()) {
+            if (CollectionUtils.isEmpty(rawDays)) {
                 return;
             }
             Set<LocalDate> dailyDays = new HashSet<>();

@@ -8,6 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.socket.support.properties.SocketProperties.PRE;
 
@@ -154,7 +156,7 @@ public class SocketProperties {
      * @return 协议配置列表
      */
     public List<ProtocolConfig> getEffectiveProtocols() {
-        if (protocols != null && !protocols.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(protocols)) {
             return protocols;
         }
         // 兼容旧配置：转换为单元素列表
@@ -170,7 +172,7 @@ public class SocketProperties {
      * @return 是否配置了多协议
      */
     public boolean isMultiProtocol() {
-        return protocols != null && !protocols.isEmpty();
+        return CollectionUtils.isNotEmpty(protocols);
     }
 
     /**
@@ -772,7 +774,7 @@ public class SocketProperties {
          * @return 实际主机地址
          */
         public String getActualHost(String mainHost) {
-            return host != null && !host.isEmpty() ? host : mainHost;
+            return StringUtils.isNotEmpty(host) ? host : mainHost;
         }
     }
 }

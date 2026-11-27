@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * CDP 浏览器引擎服务（核心）
@@ -530,7 +531,7 @@ public class CdpEngineService {
             eventBuffer.record(enriched);
             trackTargetUrlChange(method, enriched);
             List<Consumer<Map<String, Object>>> subs = globalSubscribers.get(method);
-            if (subs == null || subs.isEmpty()) {
+            if (CollectionUtils.isEmpty(subs)) {
                 return;
             }
             for (Consumer<Map<String, Object>> sub : new ArrayList<>(subs)) {
@@ -587,7 +588,7 @@ public class CdpEngineService {
                 trackFrameNavigatedUrl(targetId, enriched);
             }
             List<Consumer<Map<String, Object>>> subs = globalSubscribers.get(method);
-            if (subs == null || subs.isEmpty()) {
+            if (CollectionUtils.isEmpty(subs)) {
                 return;
             }
             for (Consumer<Map<String, Object>> sub : new ArrayList<>(subs)) {
@@ -1198,7 +1199,7 @@ public class CdpEngineService {
      * @return 回填后的列表（原列表不做原地修改）
      */
     private List<Map<String, Object>> enrichTargetUrls(List<Map<String, Object>> list) {
-        if (list == null || list.isEmpty()) {
+        if (CollectionUtils.isEmpty(list)) {
             return list;
         }
         Set<String> alive = ConcurrentHashMap.newKeySet();

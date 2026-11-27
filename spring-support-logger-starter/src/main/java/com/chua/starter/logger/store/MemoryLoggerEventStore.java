@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 有界内存日志存储（engine=memory）：开发、联调与单机验证用。
@@ -39,7 +41,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
 
     @Override
     public void append(List<LoggerEvent> events) {
-        if (events == null || events.isEmpty()) {
+        if (CollectionUtils.isEmpty(events)) {
             return;
         }
         synchronized (deque) {
@@ -154,10 +156,10 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
         if (instance != null && !instance.isBlank() && !instance.equals(e.getInstance())) {
             return false;
         }
-        if (levels != null && !levels.isEmpty() && !levels.contains(e.getLevel())) {
+        if (CollectionUtils.isNotEmpty(levels) && !levels.contains(e.getLevel())) {
             return false;
         }
-        if (keyword != null && !keyword.isEmpty()) {
+        if (StringUtils.isNotEmpty(keyword)) {
             String message = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
             String logger = e.getLogger() == null ? "" : e.getLogger().toLowerCase();
             if (!message.contains(keyword) && !logger.contains(keyword)) {
@@ -355,7 +357,7 @@ public class MemoryLoggerEventStore implements LoggerEventStore {
                 return points;
             }
             for (List<Object> tuple : tuples) {
-                if (tuple == null || tuple.isEmpty()) {
+                if (CollectionUtils.isEmpty(tuple)) {
                     continue;
                 }
                 Map<String, Object> point = new LinkedHashMap<>();

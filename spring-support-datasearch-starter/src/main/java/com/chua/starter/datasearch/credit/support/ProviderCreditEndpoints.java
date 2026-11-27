@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 官方余额接口登记表：读 {@code provider-catalog/provider-credit-endpoints.json}。
@@ -159,7 +160,7 @@ public final class ProviderCreditEndpoints {
             return true;
         }
         String presetDomain = baseDomain(preset);
-        return presetDomain != null && presetDomain.equals(baseDomain(actual));
+        return ObjectUtils.nullSafeEquals(presetDomain, baseDomain(actual));
     }
 
     /**

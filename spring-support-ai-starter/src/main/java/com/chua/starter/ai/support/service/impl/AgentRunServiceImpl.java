@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * Agent 运行记录服务实现：落库 + 汇总维护 + 会话 SSE 广播。
@@ -148,7 +149,7 @@ public class AgentRunServiceImpl implements AgentRunService {
     @Override
     public AgentRunRecord cancelRun(String runId, String operatorId) {
         AgentRunRecord run = requireRun(runId);
-        boolean owner = operatorId != null && operatorId.equals(run.userId());
+        boolean owner = ObjectUtils.nullSafeEquals(operatorId, run.userId());
         if (!AiUserContext.isAdmin() && !owner) {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "无权取消该运行");
         }

@@ -37,6 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * AI 人脸重识别服务实现。
@@ -491,7 +493,7 @@ public class AiReidServiceImpl implements AiReidService {
         }
         String account = AiUserContext.requireUserId();
         List<String> wanted = AiLibraryGroups.parse(
-                groups == null || groups.isEmpty() ? null : String.join(",", groups));
+                CollectionUtils.isEmpty(groups) ? null : String.join(",", groups));
         String primary = wanted.getFirst();
         FaceReidPipeline pipeline = pipelineFor(account, primary);
         FacePipeline detector = clientManager.currentLowThresholdDetector();
@@ -500,7 +502,7 @@ public class AiReidServiceImpl implements AiReidService {
         }
         // 检测一律走低阈值管线：太早丢框就判不出「不合规」这一档，也看不见模糊人脸
         List<PredictRectangle> boxes = detector.detectBoxes(imageData);
-        if (boxes == null || boxes.isEmpty()) {
+        if (CollectionUtils.isEmpty(boxes)) {
             return List.of();
         }
         int limit = topK <= 0 ? settingReader.getInt(GROUP, "top_k", DEFAULT_TOP_K) : topK;
@@ -518,7 +520,7 @@ public class AiReidServiceImpl implements AiReidService {
             List<ReidHit> hits = List.of();
             if (reason == null) {
                 byte[] face = ImageCropUtils.crop(imageData, box);
-                if (face != null && face.length > 0) {
+                if (ArrayUtils.isNotEmpty(face)) {
                     hits = MatchType.FACE.name().equals(decision)
                             ? faceIdentityHits(account, wanted, primary, face, faceMatchThreshold, limit)
                             : reidIdentityHits(account, wanted, primary, pipeline, face,
@@ -584,7 +586,7 @@ public class AiReidServiceImpl implements AiReidService {
         // 查**重识别底库的人脸特征索引**（reid-face），不是独立的人脸库：
         // 登记时两个特征是一起写的，认人这一半必须落在同一条底库记录上。
         List<Vector> faceHits = reidStores.searchFace(groups, feature, limit);
-        if (faceHits == null || faceHits.isEmpty()) {
+        if (CollectionUtils.isEmpty(faceHits)) {
             return List.of();
         }
         List<ReidHit> hits = new ArrayList<>();
@@ -712,7 +714,7 @@ public class AiReidServiceImpl implements AiReidService {
             // 1:N 定库检索：命中即「这是谁」。按请求的分组走，不越组去认人。
             // 查重识别底库的人脸特征索引 —— 与登记写入的是同一套，换 ReID 模型不影响认人。
             List<Vector> faceHits = reidStores.searchFace(groups, feature, 1);
-            if (faceHits == null || faceHits.isEmpty()) {
+            if (CollectionUtils.isEmpty(faceHits)) {
                 return null;
             }
             Vector hit = faceHits.getFirst();

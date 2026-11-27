@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型信息的合并口径：多个 SPI 实现各给一半字段时，合成一份完整的模型信息。
@@ -202,10 +203,10 @@ public final class ProviderModelInfos {
      * @return 并集；两侧都空时返回 null（保留「未声明」语义，不写成空列表）
      */
     private static List<String> union(List<String> left, List<String> right) {
-        if (left == null || left.isEmpty()) {
-            return right == null || right.isEmpty() ? left : new ArrayList<>(right);
+        if (CollectionUtils.isEmpty(left)) {
+            return CollectionUtils.isEmpty(right) ? left : new ArrayList<>(right);
         }
-        if (right == null || right.isEmpty()) {
+        if (CollectionUtils.isEmpty(right)) {
             return left;
         }
         List<String> merged = new ArrayList<>(left.size() + right.size());

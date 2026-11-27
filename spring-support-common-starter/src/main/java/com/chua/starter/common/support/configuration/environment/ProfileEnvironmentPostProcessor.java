@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * DevOps 环境配置后置处理器
@@ -228,7 +229,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                                   List<String> loadedConfigs,
                                   Set<String> includeProfiles) {
  // 未配置 spring.配置文件.include 时不加载任何 application-xxx 配置
-        if (includeProfiles == null || includeProfiles.isEmpty()) {
+        if (CollectionUtils.isEmpty(includeProfiles)) {
             log.info("[OPS配置]spring.profiles.include 未配置，跳过目录: {}/", profileDir);
             return;
         }
@@ -335,7 +336,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
      * @return 是否需要加载
      */
     private boolean isIncludedConfig(String filename, Set<String> includeProfiles) {
-        if (includeProfiles == null || includeProfiles.isEmpty()) {
+        if (CollectionUtils.isEmpty(includeProfiles)) {
             return false;
         }
         if (!filename.startsWith("application-")) {

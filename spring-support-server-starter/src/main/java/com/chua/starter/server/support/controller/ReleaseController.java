@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 发布管理控制器
@@ -726,7 +727,7 @@ public class ReleaseController {
         java.util.List<Long> ids = toLongList(body == null ? null : body.get("projectIds"));
         Object raw = body == null ? null : body.get("backup");
         String backup = raw == null ? null : String.valueOf(raw).trim();
-        return releaseService.batchRollback(ids, backup == null || backup.isEmpty() ? null : backup);
+        return releaseService.batchRollback(ids, StringUtils.isEmpty(backup) ? null : backup);
     }
 
     /**

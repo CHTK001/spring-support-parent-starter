@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 同步服务端实例。
@@ -492,10 +493,10 @@ public class SyncServerInstance {
             return;
         }
         List<SyncMessageHandler> handlers = handlerMap.get(topic);
-        if ((handlers == null || handlers.isEmpty()) && syncProperties.getTopics().containsKey(topic)) {
+        if ((CollectionUtils.isEmpty(handlers)) && syncProperties.getTopics().containsKey(topic)) {
             handlers = handlerMap.get(topic);
         }
-        if (handlers == null || handlers.isEmpty()) {
+        if (CollectionUtils.isEmpty(handlers)) {
             return;
         }
         Map<String, Object> dataMap = new HashMap<>();

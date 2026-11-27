@@ -41,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 海康云眸（Cloud Eye / 外部独立应用开发）OpenAPI 会话。
@@ -903,7 +905,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
                         .build();
                 HttpResponse<byte[]> response = DOWNLOADER.send(request, HttpResponse.BodyHandlers.ofByteArray());
                 byte[] body = response.body();
-                if (response.statusCode() == 200 && body != null && body.length > 0) {
+                if (response.statusCode() == 200 && ArrayUtils.isNotEmpty(body)) {
                     return new ByteArrayInputStream(body);
                 }
                 last = new IllegalStateException(tag + "抓图下载失败: HTTP " + response.statusCode());
@@ -1608,7 +1610,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
                     .header("Authorization", "Bearer " + accessToken);
             ClientResponse response = builder.body(body).post();
             String respBody = response.getBodyString();
-            return MAPPER.readTree(respBody == null || respBody.isEmpty() ? "{}" : respBody);
+            return MAPPER.readTree(StringUtils.isEmpty(respBody) ? "{}" : respBody);
         } catch (Exception ex) {
             throw new IllegalStateException("云眸表单调用失败: " + path + " -> " + ex.getMessage(), ex);
         }

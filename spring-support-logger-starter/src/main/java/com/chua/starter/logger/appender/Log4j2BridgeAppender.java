@@ -9,6 +9,7 @@ import org.apache.logging.log4j.core.config.Property;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Log4j2 桥接 Appender：把 {@link LogEvent} 转成 {@link LoggerEvent} 交给采集器。
@@ -40,7 +41,7 @@ public class Log4j2BridgeAppender extends AbstractAppender {
                     .setThread(event.getThreadName())
                     .setLogger(event.getLoggerName())
                     .setMessage(event.getMessage() == null ? "" : event.getMessage().getFormattedMessage())
-                    .setMdc(contextData == null || contextData.isEmpty() ? null : new HashMap<>(contextData))
+                    .setMdc(CollectionUtils.isEmpty(contextData) ? null : new HashMap<>(contextData))
                     .setTraceId(contextData == null ? null : contextData.get(MdcConstant.TRACE_ID));
             if (event.getThrown() != null) {
                 target.setStacktrace(StackTraces.stacktraceOf(event.getThrown()));

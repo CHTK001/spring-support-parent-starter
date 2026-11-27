@@ -74,6 +74,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.util.stream.Stream;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 知识库命名空间控制器（替代 Rust 后端 nomicore 的 知识 契约）。
@@ -3145,7 +3146,7 @@ public class ApiKnowledgeController {
             final int pageSize = 100;
             for (int page = 1; page <= 50; page++) {
                 List<RagDocument> batch = client.listDocuments(page, pageSize);
-                if (batch == null || batch.isEmpty()) {
+                if (CollectionUtils.isEmpty(batch)) {
                     break;
                 }
                 List<RagDocument> matched = batch.stream()

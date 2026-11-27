@@ -8,6 +8,7 @@ import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 「纯文本或 JSON」混合类型处理器。
@@ -108,7 +109,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
      * @return 结构化对象（JSON）或原字符串
      */
     private Object parse(String value) {
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return value;
         }
         char first = value.charAt(0);

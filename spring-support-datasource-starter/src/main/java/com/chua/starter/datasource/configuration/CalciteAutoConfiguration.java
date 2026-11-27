@@ -24,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Calcite 聚合数据源自动配置。
@@ -270,7 +271,7 @@ public class CalciteAutoConfiguration {
         String customBeanName = properties.getBeanName() == null ? null : properties.getBeanName().trim();
 
         List<String> includeNames = properties.getDataSources();
-        if (includeNames == null || includeNames.isEmpty()) {
+        if (CollectionUtils.isEmpty(includeNames)) {
             for (Map.Entry<String, DataSource> entry : allDataSources.entrySet()) {
                 String name = entry.getKey();
                 DataSource ds = entry.getValue();

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 同步记录查询服务实现。
@@ -90,7 +91,7 @@ public class DeviceSyncRecordServiceImpl implements DeviceSyncRecordService {
     @Override
     public Map<String, DeviceSyncRecord> latestByCredentialIds(List<String> credentialIds) {
         Map<String, DeviceSyncRecord> latest = new LinkedHashMap<>();
-        if (credentialIds == null || credentialIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentialIds)) {
             return latest;
         }
         for (String credentialId : credentialIds) {

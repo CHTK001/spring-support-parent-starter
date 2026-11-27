@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * sub2api 模型价格同步服务实现。
@@ -234,7 +235,7 @@ public class AiSub2ApiPriceSyncServiceImpl implements AiSub2ApiPriceSyncService 
             return stripApiPrefixes(baseUrl.trim());
         }
         List<SysAccountChannel> rows = accountChannelService.listAll();
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return null;
         }
         for (SysAccountChannel row : rows) {

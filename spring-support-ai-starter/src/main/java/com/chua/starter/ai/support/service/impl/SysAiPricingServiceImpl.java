@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 定价服务实现类。
@@ -205,7 +206,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
             // 逐源加载并按优先级排序，来源优先级高的先写入，同键后者不覆盖前者
             List<com.chua.common.support.ai.chat.ModelDefinition> models =
                     loadBySourcePriority();
-            if (models == null || models.isEmpty()) {
+            if (CollectionUtils.isEmpty(models)) {
                 log.info("[Pricing] 无定价数据可同步，清空旧数据（人工单价 {} 条保留）", manualRows.size());
                 pricingMapper.delete(null);
                 manualRows.forEach(pricingMapper::insert);
@@ -285,7 +286,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
         } catch (Exception e) {
             return com.chua.common.support.datasearch.pricing.PricingSyncer.loadAll(null);
         }
-        if (providers == null || providers.isEmpty()) {
+        if (CollectionUtils.isEmpty(providers)) {
             return com.chua.common.support.datasearch.pricing.PricingSyncer.loadAll(null);
         }
         List<com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider> ordered =

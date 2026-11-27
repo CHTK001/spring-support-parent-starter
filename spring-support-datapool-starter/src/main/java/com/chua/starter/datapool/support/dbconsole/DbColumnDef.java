@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 列定义的完整模型（对齐 Navicat「列属性」页的全部维度）。
@@ -300,12 +301,12 @@ public record DbColumnDef(
     private static List<String> normalizeEnum(String type, List<String> values) {
         boolean isEnum = "ENUM".equals(type) || "SET".equals(type);
         if (!isEnum) {
-            if (values != null && !values.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(values)) {
                 throw new IllegalArgumentException("只有 ENUM / SET 才能配置取值列表");
             }
             return List.of();
         }
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             throw new IllegalArgumentException(type + " 必须至少配置一个取值");
         }
         // 去重但保持顺序（内核按顺序编号，顺序变了语义就变了）

@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 
 /**
@@ -211,7 +212,7 @@ public class CollectJdbcSupport {
      * @return 命中的值集合（去重），无命中返回空集合
      */
     public Set<Object> queryIn(String reference, String table, String column, Collection<?> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return new LinkedHashSet<>();
         }
         List<Object> distinct = new ArrayList<>(new LinkedHashSet<>(values));
@@ -347,7 +348,7 @@ public class CollectJdbcSupport {
      * @return 受影响行数
      */
     public int insertBatch(String reference, String table, List<Map<String, Object>> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return 0;
         }
         List<String> columns = new ArrayList<>();
@@ -591,10 +592,10 @@ public class CollectJdbcSupport {
     private KeyWriteResult writeByKey(String reference, String table, List<String> keys,
                                       List<Map<String, Object>> rows, boolean skipExisting,
                                       boolean fillBlank) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return new KeyWriteResult(0, 0, 0);
         }
-        if (keys == null || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
             throw new IllegalArgumentException("按主键写入必须声明至少一个主键列");
         }
         List<String> columns = new ArrayList<>();
@@ -887,7 +888,7 @@ public class CollectJdbcSupport {
      * @param rows      本批待写入行
      */
     public void widenTextColumns(String reference, String table, List<Map<String, Object>> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return;
         }
         Map<String, Integer> longest = new LinkedHashMap<>();

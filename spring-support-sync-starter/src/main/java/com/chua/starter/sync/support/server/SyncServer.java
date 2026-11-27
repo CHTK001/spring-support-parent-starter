@@ -24,6 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 同步服务器，负责客户端连接管理、健康检查与消息分发。
@@ -485,13 +486,13 @@ public class SyncServer implements InitializingBean, DisposableBean {
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
             ClientInfo clientInfo = entry.getValue();
 
-            if (host != null && host.equals(clientInfo.getClientIpAddress())) {
+            if (ObjectUtils.nullSafeEquals(host, clientInfo.getClientIpAddress())) {
                 if (port <= 0 || port == clientInfo.getClientPort()) {
                     return entry.getKey();
                 }
             }
 
-            if (appName != null && appName.equals(clientInfo.getClientApplicationName())) {
+            if (ObjectUtils.nullSafeEquals(appName, clientInfo.getClientApplicationName())) {
                 return entry.getKey();
             }
         }

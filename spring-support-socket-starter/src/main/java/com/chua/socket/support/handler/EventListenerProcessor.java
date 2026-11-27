@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 事件监听器处理器
@@ -90,7 +91,7 @@ public class EventListenerProcessor {
      */
     public void fireEvent(String eventName, SocketSession session, Object data) {
         List<EventHandler> handlers = eventHandlers.get(eventName);
-        if (handlers == null || handlers.isEmpty()) {
+        if (CollectionUtils.isEmpty(handlers)) {
             log.debug("[EventProcessor] 未找到事件处理器: event={}", eventName);
             return;
         }
@@ -113,7 +114,7 @@ public class EventListenerProcessor {
      */
     public boolean hasHandler(String eventName) {
         List<EventHandler> handlers = eventHandlers.get(eventName);
-        return handlers != null && !handlers.isEmpty();
+        return CollectionUtils.isNotEmpty(handlers);
     }
 
     /**

@@ -65,6 +65,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 账号渠道鉴权管理控制器。
@@ -364,7 +367,7 @@ public class ApiChannelAuthController {
         String owner = ownerId();
         SysAccountChannelConnection conn = connectionMapper.selectById(connectionId);
         boolean visible = conn != null
-                && (owner != null && owner.equals(conn.getUserId())
+                && (ObjectUtils.nullSafeEquals(owner, conn.getUserId())
                     || (AccountUserContext.isAdmin() && conn.getUserId() == null));
         if (!visible) {
             // 不存在或不属于自己：返回空列表而不是 404，前端按「无数据」渲染空态
@@ -619,7 +622,7 @@ public class ApiChannelAuthController {
      */
     private static Map<String, Object> modelMetrics(Map<String, Object> meta) {
         Map<String, Object> metrics = new LinkedHashMap<>(6);
-        if (meta == null || meta.isEmpty()) {
+        if (CollectionUtils.isEmpty(meta)) {
             return metrics;
         }
         Double priceInput = metricDouble(meta, "priceInput", "price_input_per_musd");
@@ -693,7 +696,7 @@ public class ApiChannelAuthController {
      * @param metrics 模型行的 metrics JSON（可空）
      */
     private static void putModelMetrics(Map<String, Object> target, Map<String, Object> metrics) {
-        if (metrics == null || metrics.isEmpty()) {
+        if (CollectionUtils.isEmpty(metrics)) {
             return;
         }
         Double priceInput = metricDouble(metrics, "price_input_per_musd", "priceInput");
@@ -2260,7 +2263,7 @@ public class ApiChannelAuthController {
      */
     private static void putCheckinInfo(Map<String, Object> cm, SysAccountChannelConnection c) {
         Map<String, Object> credentials = c == null ? null : c.getCredentials();
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return;
         }
         Long at = toEpochMillis(credentials.get("checkin_at"));
@@ -2298,7 +2301,7 @@ public class ApiChannelAuthController {
         }
         List<SysAccountChannelConnection> rest = connectionMapper.selectList(
                 wrapper.orderByAsc(SysAccountChannelConnection::getCreatedAt).last("LIMIT 1"));
-        if (rest == null || rest.isEmpty()) {
+        if (CollectionUtils.isEmpty(rest)) {
             return;
         }
         SysAccountChannelConnection next = rest.get(0);
@@ -2474,7 +2477,7 @@ public class ApiChannelAuthController {
             return exact;
         }
         for (Map.Entry<String, AccountChannelAuthManager> entry : managers.entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(channel)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), channel)) {
                 return entry.getValue();
             }
         }
@@ -2521,7 +2524,7 @@ public class ApiChannelAuthController {
             return null;
         }
         for (Map.Entry<String, ChannelTaskProvider> entry : taskProviders().entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(channel)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), channel)) {
                 return entry.getValue().supportsTask() ? entry.getValue() : null;
             }
         }
@@ -2662,7 +2665,7 @@ public class ApiChannelAuthController {
                 continue;
             }
             List<String> wanted = admin.providerIdsOf(channel);
-            if (wanted == null || wanted.isEmpty()) {
+            if (CollectionUtils.isEmpty(wanted)) {
                 continue;
             }
             SysAccountChannelConnection conn = findTargetConnection(admin.channel(), null, null);
@@ -3007,7 +3010,7 @@ public class ApiChannelAuthController {
      */
     private static Long expiresAtOf(SysAccountChannelConnection c) {
         Map<String, Object> credentials = c == null ? null : c.getCredentials();
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return null;
         }
         // 键名按各 SPI 实现的真实写入口径收集（逐个核对过源码）：

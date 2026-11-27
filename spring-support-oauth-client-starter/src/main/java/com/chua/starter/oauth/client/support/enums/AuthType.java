@@ -2,6 +2,8 @@
 
 package com.chua.starter.oauth.client.support.enums;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 认证类型枚举
  * <p>定义系统支持的认证方式</p>
@@ -167,7 +169,7 @@ public enum AuthType {
      * @return 认证类型枚举，未找到返回 无
      */
     public static AuthType fromCode(String code) {
-        if (code == null || code.isEmpty()) {
+        if (StringUtils.isEmpty(code)) {
             return NONE;
         }
         for (AuthType type : values()) {

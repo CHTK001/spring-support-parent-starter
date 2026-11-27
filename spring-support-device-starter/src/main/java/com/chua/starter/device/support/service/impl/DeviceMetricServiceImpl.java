@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 设备环境指标服务实现。
@@ -120,7 +121,7 @@ public class DeviceMetricServiceImpl implements DeviceMetricService {
             return 0;
         }
         List<DeviceMetric> metrics = session.readMetrics();
-        if (metrics == null || metrics.isEmpty()) {
+        if (CollectionUtils.isEmpty(metrics)) {
             return 0;
         }
 

@@ -63,6 +63,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.chua.common.support.utils.IdUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
    * 支付订单服务实现，负责订单创建、支付、退款、状态流转等核心业务。
@@ -1306,7 +1307,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (targetChannelId == null) {
             throw new PaymentException("运营配置未提供 targetChannelId 或 defaultChannelId");
         }
-        if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
+        if (ObjectUtils.nullSafeEquals(channel.getId(), targetChannelId)) {
             throw new PaymentException("运营配置不能指向自己");
         }
         MerchantChannel targetChannel = merchantChannelMapper.selectById(targetChannelId);

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 全局设置 Controller
@@ -380,7 +381,7 @@ public class SettingsController {
      */
     private List<Map<String, Object>> settingDefinitions(String group) {
         for (Map<String, Object> def : globalSettingDefinitions.definitions()) {
-            if (group != null && group.equals(def.get("group")) && def.get("items") instanceof List<?> items) {
+            if (ObjectUtils.nullSafeEquals(group, def.get("group")) && def.get("items") instanceof List<?> items) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> typed = (List<Map<String, Object>>) items;
                 return typed;

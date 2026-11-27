@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 把 common-starter 的 {@code ServerResponse} 适配到 {@link HttpServletResponse}。
@@ -115,7 +116,7 @@ public class ServletServerResponse implements ServerResponse {
     @Override
     public ServerResponse setBody(byte[] body) {
         buffer.reset();
-        if (body != null && body.length > 0) {
+        if (ArrayUtils.isNotEmpty(body)) {
             buffer.write(body, 0, body.length);
         }
         return this;
@@ -225,7 +226,7 @@ public class ServletServerResponse implements ServerResponse {
 
     @Override
     public void writeRaw(byte[] bytes) {
-        if (bytes != null && bytes.length > 0) {
+        if (ArrayUtils.isNotEmpty(bytes)) {
             buffer.write(bytes, 0, bytes.length);
         }
     }

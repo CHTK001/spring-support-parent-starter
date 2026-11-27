@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.ObjectUtils;
 
 import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
@@ -477,7 +478,7 @@ public class StaticProtocol extends AbstractProtocol {
         String keepHash = StringUtils.isBlank(keepToken) ? null : DigestUtils.sha256(keepToken);
         int revoked = 0;
         for (String hash : SESSIONS.tokenHashesOf(userKey)) {
-            if (null != keepHash && keepHash.equals(hash)) {
+            if (ObjectUtils.nullSafeEquals(keepHash, hash)) {
                 continue;
             }
             AbstractProtocol.revokeTokenHash(hash, null);

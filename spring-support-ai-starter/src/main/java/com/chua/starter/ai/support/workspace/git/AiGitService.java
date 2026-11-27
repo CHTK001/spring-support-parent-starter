@@ -48,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Git 工作区服务。
@@ -268,7 +269,7 @@ public class AiGitService {
     public GitModels.Status stage(String sessionId, List<String> paths) {
         WorkspacePaths pathsInfo = workspacePaths(sessionId);
         try (RepositoryHandle handle = openHandle(pathsInfo)) {
-            if (paths == null || paths.isEmpty()) {
+            if (CollectionUtils.isEmpty(paths)) {
                 handle.git().add().addFilepattern(".").call();
                 handle.git().add().setUpdate(true).addFilepattern(".").call();
             } else {
@@ -302,7 +303,7 @@ public class AiGitService {
         WorkspacePaths pathsInfo = workspacePaths(sessionId);
         try (RepositoryHandle handle = openHandle(pathsInfo)) {
             boolean hasHead = handle.repository().resolve(Constants.HEAD) != null;
-            if (paths == null || paths.isEmpty()) {
+            if (CollectionUtils.isEmpty(paths)) {
                 if (hasHead) {
                     handle.git().reset().call();
                 } else {
@@ -335,7 +336,7 @@ public class AiGitService {
      * @return 操作后的仓库状态
      */
     public GitModels.Status discard(String sessionId, List<String> paths) {
-        if (paths == null || paths.isEmpty()) {
+        if (CollectionUtils.isEmpty(paths)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "请选择要丢弃的文件");
         }
         WorkspacePaths pathsInfo = workspacePaths(sessionId);

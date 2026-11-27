@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
@@ -1215,7 +1217,7 @@ public class ApmQueryService {
             // 选最慢的直接子 Span
             Map<String, Object> slowestChild = null;
             for (Map<String, Object> s : spans) {
-                if (cursor.get("spanId") != null && cursor.get("spanId").equals(s.get("parentSpanId"))) {
+                if (ObjectUtils.nullSafeEquals(cursor.get("      "), s.get("parentSpanId"))) {
                     if (slowestChild == null
                             || ((Number) s.get("durationMs")).longValue()
                             > ((Number) slowestChild.get("durationMs")).longValue()) {
@@ -1325,7 +1327,7 @@ public class ApmQueryService {
         if (msg.isEmpty() && e.getErrorMessage() != null) {
             msg = e.getErrorMessage();
         }
-        if (msg == null || msg.isEmpty()) {
+        if (StringUtils.isEmpty(msg)) {
             return "ERROR";
         }
         String oneLine = msg.replace('\n', ' ').replace('\r', ' ');

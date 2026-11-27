@@ -6,6 +6,7 @@ import javax.sql.DataSource;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据源分组注册表
@@ -190,7 +191,7 @@ public class DataSourceGroupRegistry {
      * @return 组名，不适用时返回 空
      */
     static String extractGroupName(String dsName) {
-        if (dsName == null || dsName.isEmpty()) {
+        if (StringUtils.isEmpty(dsName)) {
             return null;
         }
         int lastUnderscore = dsName.lastIndexOf(SEPARATOR);

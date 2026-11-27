@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * AI 生效配置端点：{@code GET /actuator/ai-config}。
@@ -108,7 +109,7 @@ public class AiConfigEndpoint {
                     ? environment.getProperty(yamlKey)
                     : fromDb ? current.get(field) : defaultValue;
             boolean secret = isSecret(field);
-            boolean masked = secret && value != null && !value.isEmpty();
+            boolean masked = secret && StringUtils.isNotEmpty(value);
 
             Map<String, Object> node = new LinkedHashMap<>();
             node.put("value", masked ? MASK : value == null ? "" : value);

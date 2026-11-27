@@ -12,6 +12,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Enumeration;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 插件 MyBatis 映射器 注册工具默认实现。
@@ -87,7 +88,7 @@ public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegis
             return;
         }
 
-        if (mapperXmlPath == null || mapperXmlPath.isEmpty()) {
+        if (StringUtils.isEmpty(mapperXmlPath)) {
             log.warn("[PluginMyBatis][注册]Mapper XML 路径为空");
             return;
         }

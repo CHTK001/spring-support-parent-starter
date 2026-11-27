@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.sql.CallableStatement;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * SQL 监控 对账单
@@ -170,7 +171,7 @@ public class MonitoringStatement implements InvocationHandler {
      */
     private String resolveSql(Object[] args) {
  // 显式传入的 SQL（执行(sql) / 执行查询(sql) / 执行更新(sql)）
-        if (args != null && args.length > 0 && args[0] instanceof String s) {
+        if (ArrayUtils.isNotEmpty(args) && args[0] instanceof String s) {
             return s;
         }
  // prepared对账单 模板 SQL

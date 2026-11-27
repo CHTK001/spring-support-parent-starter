@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * TRAE 积分 / 权益查询实现。
@@ -192,7 +193,7 @@ public class TraeCreditQueryProvider implements CreditQueryProvider {
     private static List<Map<String, Object>> rootsOf(Map<String, Object>... roots) {
         List<Map<String, Object>> out = new ArrayList<>(roots.length * 2);
         for (Map<String, Object> root : roots) {
-            if (root == null || root.isEmpty()) {
+            if (CollectionUtils.isEmpty(root)) {
                 continue;
             }
             out.add(root);

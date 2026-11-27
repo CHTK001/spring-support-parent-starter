@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
@@ -84,7 +86,7 @@ public class FileServerManager implements AutoCloseable {
      */
     public void startAll() {
         List<FileStorageProperties.ServerConfig> servers = properties.getServers();
-        if (servers == null || servers.isEmpty()) {
+        if (CollectionUtils.isEmpty(servers)) {
             log.info("未配置文件服务器，跳过启动");
             return;
         }
@@ -183,7 +185,7 @@ public class FileServerManager implements AutoCloseable {
      * @throws Exception 创建失败时抛出
      */
     private Server createServer(String type, ServerSetting setting) throws Exception {
-        if (type == null || type.isEmpty() || "jdk".equalsIgnoreCase(type)) {
+        if (StringUtils.isEmpty(type) || "jdk".equalsIgnoreCase(type)) {
             /**
              * jdkhttp服务端。
              * @param setting setting

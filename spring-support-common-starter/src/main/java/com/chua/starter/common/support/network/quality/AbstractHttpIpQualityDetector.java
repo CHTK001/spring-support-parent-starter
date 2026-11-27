@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 基于 HTTP API 的 IP 质量检测器抽象基类
@@ -73,7 +74,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
      * @return 返回值
     */
     public IpQuality detect(String ip) {
-        if (ip == null || ip.isEmpty()) {
+        if (StringUtils.isEmpty(ip)) {
             return null;
         }
         try {

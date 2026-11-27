@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 业务自渲染登录页（非前后端分离模式）。
@@ -203,7 +204,7 @@ public class LocalLoginPageProvider {
      * @return 转义后字符串；空输入返回空串
      */
     public static String escapeHtml(String value) {
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return "";
         }
         StringBuilder out = new StringBuilder(value.length() + 16);

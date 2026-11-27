@@ -66,6 +66,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 服务器主机服务实现
@@ -543,7 +544,7 @@ public class ServerHostServiceImpl implements ServerHostService {
             return tested;
         }
         List<Long> bound = listBoundIdentityIds(id).getData();
-        if (bound == null || bound.isEmpty()) {
+        if (CollectionUtils.isEmpty(bound)) {
               // 无绑定身份时仍走一次解析：纯 VNC 主机的回落凭据在这里给出
             return ReturnResult.error(resolveCredential(id, null).getMsg());
         }
@@ -1148,7 +1149,7 @@ public class ServerHostServiceImpl implements ServerHostService {
        * @return JSON 字符串
        */
     private String toPortsJson(List<NmapScanner.PortInfo> ports) {
-        if (ports == null || ports.isEmpty()) {
+        if (CollectionUtils.isEmpty(ports)) {
             return "[]";
         }
         try {
@@ -1399,13 +1400,13 @@ public class ServerHostServiceImpl implements ServerHostService {
     public ReturnResult<HostSyncSummaryVO> syncHosts(java.util.List<Long> hostIds) {
         try {
             List<MsServerHost> targets;
-            if (hostIds == null || hostIds.isEmpty()) {
+            if (CollectionUtils.isEmpty(hostIds)) {
                 targets = hostMapper.selectList(new LambdaQueryWrapper<MsServerHost>()
                         .eq(MsServerHost::getServerHostStatus, 1));
             } else {
                 targets = hostMapper.selectBatchIds(hostIds);
             }
-            if (targets == null || targets.isEmpty()) {
+            if (CollectionUtils.isEmpty(targets)) {
                 return ReturnResult.error("无可同步的主机");
             }
             java.util.concurrent.atomic.AtomicInteger ok = new java.util.concurrent.atomic.AtomicInteger(0);

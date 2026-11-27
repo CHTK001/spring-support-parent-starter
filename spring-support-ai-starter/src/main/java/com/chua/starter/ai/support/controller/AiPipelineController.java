@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 管线目录控制器。
@@ -139,7 +140,7 @@ public class AiPipelineController {
      * @return 命中的能力，无命中时为 {@code null}
      */
     private static String matchCapability(List<String> capabilities, Map<String, Object> definition) {
-        if (capabilities == null || capabilities.isEmpty()) {
+        if (CollectionUtils.isEmpty(capabilities)) {
             return null;
         }
         return capabilities.stream()

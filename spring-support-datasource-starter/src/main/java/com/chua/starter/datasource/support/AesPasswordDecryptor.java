@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 默认 AES 密码解密器
@@ -108,7 +109,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
 
     @Override
     public boolean supports(String algorithm) {
-        return algorithm == null || algorithm.isEmpty() || "AES".equalsIgnoreCase(algorithm);
+        return StringUtils.isEmpty(algorithm) || "AES".equalsIgnoreCase(algorithm);
     }
 
     @Override

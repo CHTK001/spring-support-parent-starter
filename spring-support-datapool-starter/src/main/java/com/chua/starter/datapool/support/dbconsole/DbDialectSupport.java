@@ -13,6 +13,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 数据库管理器的库级 DDL 支撑。
@@ -97,7 +99,7 @@ public final class DbDialectSupport {
         String body = fields == null ? "" : fields.trim();
         StringBuilder ddl = new StringBuilder("CREATE TABLE ").append(quotedTable)
                 .append(" (").append(body).append(')');
-        if (mysql && comment != null && !comment.isEmpty()) {
+        if (mysql && StringUtils.isNotEmpty(comment)) {
             ddl.append(" COMMENT='").append(comment.replace("'", "''")).append('\'');
         }
         execute(conn, ddl.toString());
@@ -133,7 +135,7 @@ public final class DbDialectSupport {
     public static void createTable(Connection conn, String table, List<DbColumnDef> columns,
                                    List<String> primaryKey, String comment) throws SQLException {
         String safeTable = SqlName.checkSimple(table, "表名");
-        if (columns == null || columns.isEmpty()) {
+        if (CollectionUtils.isEmpty(columns)) {
             throw new SQLException("至少需要一列");
         }
         boolean mysql = isMysqlFamilyQuiet(conn);
@@ -177,7 +179,7 @@ public final class DbDialectSupport {
             ddl.append(')');
         }
         ddl.append(')');
-        if (mysql && comment != null && !comment.isEmpty()) {
+        if (mysql && StringUtils.isNotEmpty(comment)) {
             ddl.append(" COMMENT='").append(comment.replace("'", "''")).append('\'');
         }
         execute(conn, ddl.toString());
@@ -298,7 +300,7 @@ public final class DbDialectSupport {
      * @param comment 注释；空值表示不写注释
      */
     private static void applyTableComment(Connection conn, String table, String comment) {
-        if (comment == null || comment.isEmpty()) {
+        if (StringUtils.isEmpty(comment)) {
             return;
         }
         String literal = "'" + comment.replace("'", "''") + "'";
@@ -749,7 +751,7 @@ public final class DbDialectSupport {
         String safeTable = SqlName.checkSimple(table, "表名");
         String safeColumn = SqlName.checkSimple(column, "列名");
         String quoted = SqlName.quote(safeTable, "表名") + "." + SqlName.quote(safeColumn, "列名");
-        if (comment == null || comment.isEmpty()) {
+        if (StringUtils.isEmpty(comment)) {
             executeFirstQuietly(conn, List.of("COMMENT ON COLUMN " + quoted + " IS NULL"));
             return;
         }

@@ -3,6 +3,7 @@ package com.chua.starter.datasource.spy;
 import com.p6spy.engine.spy.appender.MessageFormattingStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * P6Spy SQL 日志格式化器
@@ -37,7 +38,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
         }
         String mapperMethod = MDC.get("mapper");
         String formattedSql = sql.replaceAll("[\\s]+", " ");
-        if (mapperMethod != null && !mapperMethod.isEmpty()) {
+        if (StringUtils.isNotEmpty(mapperMethod)) {
             return " 耗时: " + elapsed + " ms " + now + "\n 执行的方法 ：" + mapperMethod + " \n 执行的SQL ：" + formattedSql + "\n";
         }
         return " 耗时: " + elapsed + " ms " + now + "\n 执行的SQL：" + formattedSql + "\n";

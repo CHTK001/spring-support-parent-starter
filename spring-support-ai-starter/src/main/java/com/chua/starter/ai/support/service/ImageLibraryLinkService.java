@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 图像底库的「DB 元数据 ↔ 向量索引」联动层。
@@ -238,7 +239,7 @@ public class ImageLibraryLinkService {
      * @return JSON 字符串；入参为空时返回 {@code null}
      */
     private String writeMeta(java.util.Map<String, Object> meta) {
-        if (meta == null || meta.isEmpty()) {
+        if (CollectionUtils.isEmpty(meta)) {
             return null;
         }
         try {

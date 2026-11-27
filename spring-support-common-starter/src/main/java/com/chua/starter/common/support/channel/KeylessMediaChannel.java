@@ -2,6 +2,8 @@ package com.chua.starter.common.support.channel;
 
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 免登录生成类渠道（文生图 / 文生视频）的中立契约。
@@ -77,7 +79,7 @@ public interface KeylessMediaChannel {
             return false;
         }
         List<String> tasks = channel.tasks();
-        if (tasks == null || tasks.isEmpty()) {
+        if (CollectionUtils.isEmpty(tasks)) {
             return false;
         }
         for (String task : tasks) {
@@ -86,7 +88,7 @@ public interface KeylessMediaChannel {
             }
             String name = task.trim();
             for (String expect : wanted) {
-                if (expect != null && expect.equalsIgnoreCase(name)) {
+                if (StringUtils.equalsIgnoreCase(expect, name)) {
                     return true;
                 }
             }

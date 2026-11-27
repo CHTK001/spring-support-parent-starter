@@ -1,5 +1,7 @@
 package com.chua.starter.oauth.client.support.advice.def;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 默认凭据占位（已废弃）。
  *
@@ -39,7 +41,7 @@ public class DefSecret {
      */
     private static String env(String name) {
         String v = System.getenv(name);
-        if (v == null || v.isEmpty()) {
+        if (StringUtils.isEmpty(v)) {
             v = System.getProperty(name);
         }
         return v == null ? "" : v;

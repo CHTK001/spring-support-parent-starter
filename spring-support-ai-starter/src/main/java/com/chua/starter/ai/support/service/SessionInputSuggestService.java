@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 会话输入框预测服务。
@@ -301,7 +302,7 @@ public class SessionInputSuggestService {
                 .orderByDesc(SysAiMessage::getId)
                 .last("LIMIT " + limit);
         List<SysAiMessage> desc = messageMapper.selectList(wrapper);
-        if (desc == null || desc.isEmpty()) {
+        if (CollectionUtils.isEmpty(desc)) {
             return List.of();
         }
         List<SysAiMessage> ordered = new ArrayList<>(desc);

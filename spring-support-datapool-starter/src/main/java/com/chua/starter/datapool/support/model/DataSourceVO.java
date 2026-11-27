@@ -1,5 +1,7 @@
 package com.chua.starter.datapool.support.model;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 数据源配置视图。
  *
@@ -110,7 +112,7 @@ public record DataSourceVO(
      * @return 口令为空串的副本；本来就没口令时返回自身
      */
     public DataSourceVO masked() {
-        if (password == null || password.isEmpty()) {
+        if (StringUtils.isEmpty(password)) {
             return this;
         }
         return new DataSourceVO(id, name, type, host, port, database, username, "", remark, status,

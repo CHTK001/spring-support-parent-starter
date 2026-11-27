@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 云厂商余额接口的 AK/SK 签名（只读出口）。
@@ -152,7 +153,7 @@ public final class CreditSigner {
         String host = uri.getHost();
         String path = pathOf(uri);
         String query = uri.getRawQuery();
-        String pathWithQuery = path + (query == null || query.isEmpty() ? "" : "?" + query);
+        String pathWithQuery = path + (StringUtils.isEmpty(query) ? "" : "?" + query);
         String method = "GET";
         // 官方 Java SDK signQiniuAuthorization：GET 且无 Content-Type 时签名串不写 Content-Type 行，
         // 形如 "GET /path?query\nHost: host\n\n"；带 padding 的 URL-safe Base64。
@@ -249,7 +250,7 @@ public final class CreditSigner {
         // Action/Version 已在统一入口地址的 query 里，解析出来按规范重排
         TreeMap<String, String> params = new TreeMap<>();
         String rawQuery = uri.getRawQuery();
-        if (rawQuery != null && !rawQuery.isEmpty()) {
+        if (StringUtils.isNotEmpty(rawQuery)) {
             for (String pair : rawQuery.split("&")) {
                 int eq = pair.indexOf('=');
                 String key = eq < 0 ? pair : pair.substring(0, eq);
@@ -494,7 +495,7 @@ public final class CreditSigner {
      */
     private static String pathOf(URI uri) {
         String path = uri.getPath();
-        return path == null || path.isEmpty() ? "/" : path;
+        return StringUtils.isEmpty(path) ? "/" : path;
     }
 
     /**

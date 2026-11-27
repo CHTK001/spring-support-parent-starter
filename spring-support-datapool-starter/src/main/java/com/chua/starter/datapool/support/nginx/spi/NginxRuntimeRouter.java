@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Nginx 运行时路由器：把「一个 Nginx 数据源」解析成
@@ -164,7 +165,7 @@ public class NginxRuntimeRouter {
                 platform = Platforms.LINUX;
             } else {
                 platform = detectPlatform(datasource, executor, target);
-                if (platform == null || platform.isEmpty()) {
+                if (StringUtils.isEmpty(platform)) {
                     probeFailUntil.put(key, System.currentTimeMillis() + PROBE_FAIL_COOLDOWN_MILLIS);
                     platform = Platforms.LINUX;
                 }
@@ -242,7 +243,7 @@ public class NginxRuntimeRouter {
             try {
                 NginxExecutor.ExecResult result = executor.exec(target, probe, 15);
                 String platform = provider.parsePlatform(result.output());
-                if (platform != null && !platform.isEmpty()) {
+                if (StringUtils.isNotEmpty(platform)) {
                     log.info("[nginx] 平台探测命中 {} -> {}（数据源 {}）", provider.name(), platform, datasource.name());
                     return platform;
                 }

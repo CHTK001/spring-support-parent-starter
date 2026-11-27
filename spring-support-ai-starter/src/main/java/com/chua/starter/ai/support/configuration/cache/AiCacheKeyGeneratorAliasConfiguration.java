@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * AI 缓存 Key 生成器别名配置。
@@ -28,7 +29,7 @@ public class AiCacheKeyGeneratorAliasConfiguration {
     public KeyGenerator aiCacheKeyGenerator() {
         return (target, method, params) -> {
             StringBuilder sb = new StringBuilder("ai:cache:");
-            if (params != null && params.length > 0) {
+            if (ArrayUtils.isNotEmpty(params)) {
                 for (Object param : params) {
                     if (param != null) {
                         sb.append(param.hashCode()).append(":");

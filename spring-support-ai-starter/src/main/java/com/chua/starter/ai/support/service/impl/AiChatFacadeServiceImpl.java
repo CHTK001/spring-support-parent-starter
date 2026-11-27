@@ -87,6 +87,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * AI 对话门面服务实现。
@@ -504,7 +506,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             }
                             // 思考内容分流（深度思考），不受正文为空影响；未开启时丢弃
                             String reasoning = response.getReasoningContent();
-                            if (forwardThinking && reasoning != null && !reasoning.isEmpty()
+                            if (forwardThinking && StringUtils.isNotEmpty(reasoning)
                                     && onThinkingChunk != null) {
                                 try {
                                     onThinkingChunk.accept(reasoning);
@@ -514,7 +516,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             }
                             // 工具调用增量分流（函数调用），与正文相互独立
                             List<ChatToolCallData> toolCalls = response.getToolCalls();
-                            if (toolCalls != null && !toolCalls.isEmpty() && onToolCall != null) {
+                            if (CollectionUtils.isNotEmpty(toolCalls) && onToolCall != null) {
                                 try {
                                     onToolCall.accept(toolCalls);
                                 } catch (Exception e) {
@@ -708,7 +710,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                                 lastUsage[0] = response.getUsage();
                             }
                             String reasoning = response.getReasoningContent();
-                            if (forwardThinking && reasoning != null && !reasoning.isEmpty()) {
+                            if (forwardThinking && StringUtils.isNotEmpty(reasoning)) {
                                 try {
                                     emitter.send(SseEmitter.event().name("thinking").data(reasoning));
                                 } catch (Exception e) {
@@ -861,7 +863,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             log.warn("[AiChat] 读取分组模型关联失败，按不限制处理: {}", e.getMessage());
             return null;
         }
-        if (codes == null || codes.isEmpty()) {
+        if (CollectionUtils.isEmpty(codes)) {
             return null;
         }
         Set<String> scope = new LinkedHashSet<>();
@@ -1282,7 +1284,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (Boolean.TRUE.equals(request.getUseSkill())
                 && (AiUserContext.isAdmin() || isUserToolAccessAllowed())) {
             List<String> pickedNames = request.getSkillNames();
-            skills = (pickedNames != null && !pickedNames.isEmpty())
+            skills = (CollectionUtils.isNotEmpty(pickedNames))
                     ? chatSkillSupport.promptBlock(pickedNames)
                     : chatSkillSupport.promptBlock();
         }
@@ -1883,7 +1885,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         // 会话级显式选择优先于角色默认
         java.util.Collection<String> sessionIds = toIdSet(m.get("serverIds"), null);
-        if (sessionIds != null && !sessionIds.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(sessionIds)) {
             return new McpSelection(sessionIds, null);
         }
         String filter = m.get("toolkits_filter") != null
@@ -1895,7 +1897,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         if ("deny".equals(filter)) {
             java.util.Collection<String> deny = toIdSet(m.get("toolkits_deny"), "mcp_");
-            if (deny != null && !deny.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(deny)) {
                 return new McpSelection(null, deny);
             }
         }
@@ -1919,7 +1921,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 continue;
             }
             String v = String.valueOf(o).trim();
-            if (stripPrefix != null && !stripPrefix.isEmpty() && v.startsWith(stripPrefix)) {
+            if (StringUtils.isNotEmpty(stripPrefix) && v.startsWith(stripPrefix)) {
                 v = v.substring(stripPrefix.length());
             }
             if (!v.isEmpty()) {
@@ -2251,7 +2253,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * @return 存在 system 消息时返回 true
      */
     private static boolean hasSystemMessage(List<Map<String, Object>> messages) {
-        if (messages == null || messages.isEmpty()) {
+        if (CollectionUtils.isEmpty(messages)) {
             return false;
         }
         for (Map<String, Object> msg : messages) {

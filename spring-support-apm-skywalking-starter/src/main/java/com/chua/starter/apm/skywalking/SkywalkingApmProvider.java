@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * SkyWalking 的 {@link ApmProvider} 实现。
@@ -107,7 +108,7 @@ public class SkywalkingApmProvider implements ApmProvider {
      */
     @Override
     public void applyRuntimeSettings(Map<String, String> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return;
         }
         String url = values.get(KEY_OAP_URL);

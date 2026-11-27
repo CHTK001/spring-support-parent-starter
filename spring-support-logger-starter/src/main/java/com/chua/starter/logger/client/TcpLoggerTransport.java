@@ -7,6 +7,7 @@ import com.chua.common.support.network.sync.impl.TcpSyncClient;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 日志传输通道：utils 层 {@link TcpSyncClient} 的懒连接包装。
@@ -81,7 +82,7 @@ public class TcpLoggerTransport implements AutoCloseable {
      * @param payload 载荷
      */
     public void send(String payload) {
-        if (closed || payload == null || payload.isEmpty()) {
+        if (closed || StringUtils.isEmpty(payload)) {
             return;
         }
         TcpSyncClient current = ensureConnected();

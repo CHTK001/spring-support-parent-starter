@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * WorkBuddy（腾讯 CodeBuddy / WorkBuddy 国际版）对话客户端。
@@ -755,7 +756,7 @@ public class WorkBuddyChatClient implements ChatClient {
         if (topP != null) {
             body.put("top_p", topP);
         }
-        if (stop != null && !stop.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(stop)) {
             body.put("stop", stop);
         }
         if (seed != null) {
@@ -764,7 +765,7 @@ public class WorkBuddyChatClient implements ChatClient {
         if (StringUtils.isNotBlank(responseFormat) && !"text".equalsIgnoreCase(responseFormat)) {
             body.put("response_format", Map.of("type", responseFormat));
         }
-        if (tools != null && !tools.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(tools)) {
             body.put("tools", buildTools());
             if (StringUtils.isNotBlank(toolChoice)) {
                 // 上游 tool_choice 只认字符串形态，对象形态会 400 code=11101
@@ -820,7 +821,7 @@ public class WorkBuddyChatClient implements ChatClient {
             return;
         }
         history.add(ChatMessage.builder().role("user").content(prompt).build());
-        if (answer != null && !answer.isEmpty()) {
+        if (StringUtils.isNotEmpty(answer)) {
             history.add(ChatMessage.builder().role("assistant").content(answer).build());
         }
     }
@@ -949,7 +950,7 @@ public class WorkBuddyChatClient implements ChatClient {
      */
     private static String headerValue(Map<String, String> headers, String name) {
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(name)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), name)) {
                 return entry.getValue();
             }
         }

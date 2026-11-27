@@ -444,7 +444,7 @@ public class AiProtocolController extends BaseAiController {
                 Map<String, Object> result = aiChatFacadeService.call(chatRequest);
                 String text = resolveResultText(result);
                 // 发送内容增量事件
-                if (text != null && !text.isEmpty()) {
+                if (StringUtils.isNotEmpty(text)) {
                     emitter.send(SseEmitter.event().name("content_block_delta")
                             .data("{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":"
                                     + toJson(text) + "}}", MediaType.APPLICATION_JSON));
@@ -605,7 +605,7 @@ public class AiProtocolController extends BaseAiController {
                                 + ",\"annotations\":[]}}", MediaType.APPLICATION_JSON));
 
                 // 分块发送文本增量事件
-                if (text != null && !text.isEmpty()) {
+                if (StringUtils.isNotEmpty(text)) {
                     int chunkSize = 80;
                     for (int i = 0; i < text.length(); i += chunkSize) {
                         int end = Math.min(i + chunkSize, text.length());
@@ -980,7 +980,7 @@ public class AiProtocolController extends BaseAiController {
             for (Object part : list) {
                 if (part instanceof Map<?, ?> m) {
                     String text = toString(m.get("text"));
-                    if (text != null && !text.isEmpty()) {
+                    if (StringUtils.isNotEmpty(text)) {
                         return text;
                     }
                 }

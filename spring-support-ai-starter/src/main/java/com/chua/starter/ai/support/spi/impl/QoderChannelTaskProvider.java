@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Qoder 成长任务实现（活动领奖，国际版 / 国内版共用协议）。
@@ -91,7 +92,7 @@ public class QoderChannelTaskProvider implements ChannelTaskProvider {
      */
     @Override
     public List<Map<String, Object>> tasks(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return List.of();
         }
         String accessToken = readString(credentials, "access_token");

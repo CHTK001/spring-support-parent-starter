@@ -31,6 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
  * 上传任务管理器：任务化、异步化的文件上传核心。
@@ -610,7 +612,7 @@ public class UploadTaskManager {
         String ext = extOf(fileName);
         meta.put("ext", ext);
         meta.put("mime", mimeOf(ext));
-        if (isImage(ext) && content != null && content.length > 0) {
+        if (isImage(ext) && ArrayUtils.isNotEmpty(content)) {
             int[] wh = imageDimension(content, ext);
             if (wh != null) {
                 meta.put("width", wh[0]);
@@ -626,7 +628,7 @@ public class UploadTaskManager {
      * @return 返回值
     */
     private static String mimeOf(String ext) {
-        if (ext == null || ext.isEmpty()) {
+        if (StringUtils.isEmpty(ext)) {
             return "application/octet-stream";
         }
         return switch (ext) {

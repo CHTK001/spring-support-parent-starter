@@ -55,6 +55,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模拟（世界沙盒）服务实现。
@@ -1991,7 +1993,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             mat.head().put("status", st);
             if ("SUCCESS".equals(task.getStatus())) {
                 List<String> urls = GenerateService.mediaUrls(task);
-                String raw = urls == null || urls.isEmpty() ? null : urls.get(0);
+                String raw = CollectionUtils.isEmpty(urls) ? null : urls.get(0);
                 // raw 是后端自用的原始值（media: 句柄），供图生视频取首帧；
                 // url 是给浏览器用的可播放地址
                 mat.head().put("raw", raw);
@@ -2161,7 +2163,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             mat.head().put("status", st);
             if ("SUCCESS".equals(st)) {
                 List<String> urls = GenerateService.mediaUrls(task);
-                String raw = urls == null || urls.isEmpty() ? null : urls.get(0);
+                String raw = CollectionUtils.isEmpty(urls) ? null : urls.get(0);
                 mat.head().put("raw", raw);
                 mat.head().put("url", raw == null ? null : playableUrl(task, raw));
                 mat.head().put("status", MEDIA_OK);
@@ -2284,7 +2286,7 @@ public class WorldSimServiceImpl implements WorldSimService {
      * @param failedTypes 失败类型集合
      */
     private static void persistFailedTypes(Map<String, Object> json, Set<String> failedTypes) {
-        if (failedTypes == null || failedTypes.isEmpty()) {
+        if (CollectionUtils.isEmpty(failedTypes)) {
             json.remove(FAILED_TYPES_KEY);
             return;
         }
@@ -2750,7 +2752,7 @@ public class WorldSimServiceImpl implements WorldSimService {
             // 落盘结果给的是 media:xxx 句柄，交生成侧的存储按同口径读回字节
             if (GenerateMediaStore.isHandle(url)) {
                 GenerateMediaStore.Stored stored = generateMediaStore.load(url);
-                if (stored != null && stored.bytes() != null && stored.bytes().length > 0) {
+                if (stored != null && ArrayUtils.isNotEmpty(stored.bytes())) {
                     return stored.bytes();
                 }
             }

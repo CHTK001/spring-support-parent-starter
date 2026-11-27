@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.chua.starter.datapool.support.dbconsole.SqlScriptSplitter.Span;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * SQL 参数占位符替换（查询控制台的「参数化」）。
@@ -48,7 +49,7 @@ public final class SqlParameterBinder {
      * @throws IllegalArgumentException 引用了未提供的变量
      */
     public static String substitute(String script, Map<String, Object> params) {
-        if (script == null || script.isEmpty()) {
+        if (StringUtils.isEmpty(script)) {
             return script;
         }
         Map<String, Object> table = params == null ? Map.of() : params;

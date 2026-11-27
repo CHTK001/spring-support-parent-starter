@@ -68,6 +68,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
+import com.chua.common.support.utils.ArrayUtils;
 
 /**
    * tshark 网络抓包服务
@@ -392,7 +395,7 @@ public class TsharkCaptureService {
     private <T> T withPacketDb(Long sessionId, Supplier<T> supplier) {
         this.ensurePacketDb(sessionId);
         String previous = DataSourceContextSupport.getDbType();
-        if (previous != null && previous.equals(this.sqliteRegistry.dbName(sessionId))) {
+        if (ObjectUtils.nullSafeEquals(previous, this.sqliteRegistry.dbName(sessionId))) {
             return supplier.get();
         }
         DataSourceContextSupport.setDbType(this.sqliteRegistry.dbName(sessionId));
@@ -1578,7 +1581,7 @@ public class TsharkCaptureService {
        * @param messages  还原消息
        */
     private void applyRestoredHttp(Long sessionId, List<TsharkHttpStreamRestorer.RestoredHttp> messages) {
-        if (messages == null || messages.isEmpty()) {
+        if (CollectionUtils.isEmpty(messages)) {
             return;
         }
         Map<Long, PacketHttpFrame> merged = new LinkedHashMap<>();
@@ -2771,7 +2774,7 @@ public class TsharkCaptureService {
           // 压缩体：截断过的半截流解不开，直接走十六进制预览，别把异常当正文
         if (!truncated && (enc.contains("gzip") || enc.contains("deflate"))) {
             byte[] inf = inflate(raw, enc.contains("gzip"));
-            if (inf != null && inf.length > 0) {
+            if (ArrayUtils.isNotEmpty(inf)) {
                 bytes = inf;
             }
         }
@@ -3254,7 +3257,7 @@ public class TsharkCaptureService {
        * @return 报文非空且 id 相等返回 true
        */
     private static boolean isSamePacket(MsTsharkPacket packet, Long id) {
-        return packet != null && packet.getId() != null && packet.getId().equals(id);
+        return packet != null && ObjectUtils.nullSafeEquals(packet.getId(), id);
     }
 
       /**
@@ -3613,7 +3616,7 @@ public class TsharkCaptureService {
                 new LambdaQueryWrapper<MsTsharkSession>()
                         .orderByAsc(MsTsharkSession::getCreateTime)
                         .orderByAsc(MsTsharkSession::getId));
-        if (sessions == null || sessions.isEmpty()) {
+        if (CollectionUtils.isEmpty(sessions)) {
             return 0;
         }
         int deleted = 0;

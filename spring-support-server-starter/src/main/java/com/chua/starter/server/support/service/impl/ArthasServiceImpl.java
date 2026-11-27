@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * Arthas 诊断工具管理服务实现。
@@ -167,7 +168,7 @@ public class ArthasServiceImpl implements ArthasService {
             return ReturnResult.error("无法获取项目 JVM PID，请确认项目已启动");
         }
         String pid = extractPid(pidLogs.getData().get(0).getServerExecLogOutput());
-        if (pid == null || pid.isEmpty()) {
+        if (StringUtils.isEmpty(pid)) {
             return ReturnResult.error("未找到运行中的 JVM PID，请确认项目已启动");
         }
 
@@ -316,7 +317,7 @@ public class ArthasServiceImpl implements ArthasService {
        */
     private String defaultArthasJarPath(MsServerProject project) {
         String projectPath = project.getProjectPath();
-        return projectPath != null && !projectPath.isEmpty()
+        return StringUtils.isNotEmpty(projectPath)
                 ? projectPath + "/lib/arthas/arthas-boot.jar"
                 : "/opt/arthas/arthas-boot.jar";
     }
@@ -375,7 +376,7 @@ public class ArthasServiceImpl implements ArthasService {
     private String buildPidQueryCommand(OperationContext ctx) {
         String appName = ctx.project.getProjectName();
         String path = ctx.project.getProjectPath();
-        String pidFile = (path != null && !path.isEmpty()) ? path + "/app.pid" : "app.pid";
+        String pidFile = (StringUtils.isNotEmpty(path)) ? path + "/app.pid" : "app.pid";
         if (ctx.windows) {
               // Windows: 先读 pid 文件，不存在则用 wmic / PowerShell 查找
             return String.format(
@@ -384,7 +385,7 @@ public class ArthasServiceImpl implements ArthasService {
                     pidFile, pidFile, path != null ? path : appName);
         }
           // Linux: 先读 pid 文件，不存在则用 ps | grep 查找
-        String search = (path != null && !path.isEmpty()) ? path : appName;
+        String search = (StringUtils.isNotEmpty(path)) ? path : appName;
         return String.format(
                 "if [ -f \"%s\" ]; then cat \"%s\"; else ps -eo pid,args | grep '[j]ava' | grep -i '%s' | awk '{print $1}' | head -1; fi",
                 pidFile, pidFile, search);

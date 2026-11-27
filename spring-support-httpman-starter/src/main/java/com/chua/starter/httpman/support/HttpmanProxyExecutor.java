@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 接口调试控制台 - HTTP 代理执行器
@@ -178,7 +179,7 @@ public class HttpmanProxyExecutor {
      */
     private URI buildUri(String url, Map<String, List<String>> params) throws Exception {
         URI uri = new URI(url);
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return uri;
         }
         String query = uri.getQuery();
@@ -248,7 +249,7 @@ public class HttpmanProxyExecutor {
      * @return 脱敏后的请求头映射
      */
     static Map<String, String> maskHeaders(Map<String, String> headers) {
-        if (headers == null || headers.isEmpty()) {
+        if (CollectionUtils.isEmpty(headers)) {
             return new HashMap<>();
         }
         Map<String, String> mask = new HashMap<>();

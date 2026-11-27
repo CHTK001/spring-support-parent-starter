@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * {@link ApiException} 全局兜底处理器。
@@ -40,7 +41,7 @@ public class AiApiExceptionAdvice {
         // 直接用异常自带的业务码：框架按 HTTP 状态映射会把 403 统一打成 A0403S0000，
         // 那个码是 oauth 表达「未登录/请重新登录」用的，会让越权被前端误判为会话失效
         Map<String, Object> detail = e.getDetail();
-        if (detail == null || detail.isEmpty()) {
+        if (CollectionUtils.isEmpty(detail)) {
             return ResponseEntity.status(httpStatus)
                     .body(ReturnResult.error(e.getErrorCode().getCode(), e.getMessage()));
         }

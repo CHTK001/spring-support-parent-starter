@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 实时页面代理会话管理器
@@ -310,7 +311,7 @@ public class ProxySessionManager {
             throw new IllegalArgumentException("上游地址缺少主机: " + uri);
         }
         List<String> allowedHosts = properties.getLiveProxy().getAllowedHosts();
-        if (allowedHosts != null && !allowedHosts.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(allowedHosts)) {
             String lower = host.toLowerCase();
             boolean allowed = false;
             for (String candidate : allowedHosts) {

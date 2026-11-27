@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 古诗文趣味游戏控制器
@@ -208,7 +209,7 @@ public class EduPoemChallengeController {
         int need = Math.max(count * POOL_MULTIPLIER, 60);
         List<EduPoem> poems = poemService.listByGradeLevel(gradeLevel, grade, need);
         boolean hasLevel = gradeLevel != null && !gradeLevel.isBlank();
-        if (hasLevel && (poems == null || poems.isEmpty())) {
+        if (hasLevel && (CollectionUtils.isEmpty(poems))) {
             // 本学段查不到诗（映射缺失/传了码值）：回落全库，否则各玩法都会出空题
             poems = poemService.listByGradeLevel(null, null, need);
         }

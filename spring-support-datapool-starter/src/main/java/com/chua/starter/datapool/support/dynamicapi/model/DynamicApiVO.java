@@ -5,6 +5,7 @@ import com.chua.starter.datapool.support.entity.MsDatasourceApi;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 动态接口视图（出参）。
@@ -109,7 +110,7 @@ public record DynamicApiVO(
      * @return JSON 文本；null 输入返回空文本
      */
     public static String toParamJson(List<ApiParamDef> params) {
-        if (params == null || params.isEmpty()) {
+        if (CollectionUtils.isEmpty(params)) {
             return "";
         }
         try {

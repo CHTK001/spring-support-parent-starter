@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 临时手机号短信暂存库（进程内单例，非 Spring Bean）。
@@ -104,7 +105,7 @@ public final class TempPhoneSmsStore {
      */
     public List<MailboxMessage> messages(String phone, MailboxQuery query) {
         List<MailboxMessage> bucket = inbox.get(phone);
-        if (bucket == null || bucket.isEmpty()) {
+        if (CollectionUtils.isEmpty(bucket)) {
             return List.of();
         }
         int limit = query == null || query.getLimit() == null ? 20 : Math.max(1, query.getLimit());

@@ -72,6 +72,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 微信 i链接 机器人 聊天引擎。
@@ -328,7 +329,7 @@ public class AiBotChatService {
                             .eq(SysAiBotBinding::getStatus, "online")
                             .eq(SysAiBotBinding::getVerifyToken, token)
                             .last("LIMIT 1"));
-            return bindings == null || bindings.isEmpty() ? null : challenge;
+            return CollectionUtils.isEmpty(bindings) ? null : challenge;
         } catch (Exception e) {
             log.warn("[BotChat] WhatsApp Webhook 校验失败: {}", e.getMessage());
             return null;
@@ -1790,7 +1791,7 @@ public class AiBotChatService {
             chatClient.system(effectiveSystemPrompt);
         }
         // 多轮历史：以 user/assistant role 消息注入（位于系统提示词之后、当前输入之前）
-        if (history != null && !history.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(history)) {
             chatClient.history(history);
         }
         if (Boolean.TRUE.equals(bot.getThinking())) {

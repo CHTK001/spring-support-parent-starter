@@ -97,7 +97,7 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         }
 
         // 检查环境配置
-        if (activeProfiles != null && activeProfiles.length > 0) {
+        if (ArrayUtils.isNotEmpty(activeProfiles)) {
             if (!isMatchProfile(method, handlerType)) {
                 return null;
             }

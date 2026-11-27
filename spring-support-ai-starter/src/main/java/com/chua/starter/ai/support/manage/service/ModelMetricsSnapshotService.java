@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型价格/指标快照服务。
@@ -456,7 +457,7 @@ public class ModelMetricsSnapshotService {
 
  // 合并模型自身实时 指标（用户维护/探测得到的延迟、智能、速度）
         Map<String, Object> metrics = row.getMetrics();
-        if (metrics != null && !metrics.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(metrics)) {
             /**
              * 合并not空。
              * @param out 出

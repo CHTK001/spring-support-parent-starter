@@ -8,6 +8,7 @@ import org.springframework.core.env.Profiles;
 
 import java.util.Arrays;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.datasource.monitor.SqlMonitorProperties.PRE;
 
@@ -121,7 +122,7 @@ public class SqlMonitorProperties {
         if (enabled != null) {
             return enabled;
         }
-        if (autoEnableEnvironments == null || autoEnableEnvironments.isEmpty() || environment == null) {
+        if (CollectionUtils.isEmpty(autoEnableEnvironments) || environment == null) {
             return false;
         }
         for (String envName : autoEnableEnvironments) {

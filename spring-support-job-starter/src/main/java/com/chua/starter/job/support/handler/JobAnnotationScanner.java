@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * {@link Job} 注解扫描器, 负责注册本地任务处理器, 并在单例初始化完成后
@@ -58,7 +59,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         } catch (Throwable ex) {
             log.error("[job] 扫描 @Job 失败, bean={}", beanName, ex);
         }
-        if (annotated == null || annotated.isEmpty()) {
+        if (CollectionUtils.isEmpty(annotated)) {
             return bean;
         }
         for (java.util.Map.Entry<Method, Job> entry : annotated.entrySet()) {

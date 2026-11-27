@@ -8,6 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据源脚本配置属性类
@@ -677,7 +678,7 @@ public class DataSourceScriptProperties {
          * @return 版本类型
          */
         public static ReleaseType fromSuffix(String versionSuffix) {
-            if (versionSuffix == null || versionSuffix.isEmpty()) {
+            if (StringUtils.isEmpty(versionSuffix)) {
                 return STABLE;
             }
             String lowerSuffix = versionSuffix.toLowerCase();

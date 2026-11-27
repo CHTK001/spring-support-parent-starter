@@ -22,6 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
@@ -406,7 +407,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         
  // 获取该目标的所有订阅者
         CopyOnWriteArrayList<EventBusSubscriber> subscribers = eventBusSubscribers.remove(destination);
-        if (subscribers != null && !subscribers.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(subscribers)) {
  // 获取对应的事件bus，取消注册所有订阅者
             EventBus eventBus = eventBuses.get(destination);
             if (eventBus != null) {
@@ -425,7 +426,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         this.subscribers.remove(destination);
         
  // 如果没有同步订阅者，移除事件bus
-        if (remainingHandlers == null || remainingHandlers.isEmpty()) {
+        if (CollectionUtils.isEmpty(remainingHandlers)) {
             eventBuses.remove(destination);
             log.debug("EventBus removed for destination: {} (no more subscribers)", destination);
 

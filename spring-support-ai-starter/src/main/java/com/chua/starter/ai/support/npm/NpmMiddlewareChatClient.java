@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * npm 中间件 ChatClient 装饰器。
@@ -177,8 +178,8 @@ public class NpmMiddlewareChatClient implements ChatClient {
     private ChatResponse transformStreaming(ChatResponse raw, String streamId, StreamState state) {
         String content = raw.getContent();
         String reasoning = raw.getReasoningContent();
-        boolean hasContent = content != null && !content.isEmpty();
-        boolean hasReasoning = reasoning != null && !reasoning.isEmpty();
+        boolean hasContent = StringUtils.isNotEmpty(content);
+        boolean hasReasoning = StringUtils.isNotEmpty(reasoning);
         if ((!hasContent && !hasReasoning) || state.degraded) {
             return raw;
         }
@@ -239,8 +240,8 @@ public class NpmMiddlewareChatClient implements ChatClient {
             JsonNode delta = out.path("choices").path(0).path("delta");
             String flushedContent = nonBlankText(delta, "content");
             String flushedReasoning = nonBlankText(delta, "reasoning_content");
-            if ((flushedContent != null && !flushedContent.isEmpty())
-                    || (flushedReasoning != null && !flushedReasoning.isEmpty())) {
+            if ((StringUtils.isNotEmpty(flushedContent))
+                    || (StringUtils.isNotEmpty(flushedReasoning))) {
                 if (flushedContent != null) {
                     state.content.append(flushedContent);
                 }
@@ -324,7 +325,7 @@ public class NpmMiddlewareChatClient implements ChatClient {
             return null;
         }
         String text = f.asText();
-        return text == null || text.isEmpty() ? null : text;
+        return StringUtils.isEmpty(text) ? null : text;
     }
 
     /**

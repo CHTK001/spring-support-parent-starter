@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 服务管理 —— 协议服务器节点管理服务实现。
@@ -1171,7 +1172,7 @@ public class ServerManageServiceImpl implements ServerManageService {
     private List<ServerPluginParamVO> paramsOf(ServiceDefinition definition) {
         List<ServerPluginParamVO> params = new ArrayList<>();
         List<DescribeOptional> optional = definition.getDescribeOptional();
-        if (optional == null || optional.isEmpty()) {
+        if (CollectionUtils.isEmpty(optional)) {
             return params;
         }
         for (DescribeOptional o : optional) {

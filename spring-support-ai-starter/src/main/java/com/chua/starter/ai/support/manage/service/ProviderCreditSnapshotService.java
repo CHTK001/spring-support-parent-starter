@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 供应商余额快照持久化服务。
@@ -56,7 +57,7 @@ public class ProviderCreditSnapshotService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int replaceAll(List<SysAiProviderCredit> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return 0;
         }
         String providerId = rows.get(0).getProviderId();
@@ -87,7 +88,7 @@ public class ProviderCreditSnapshotService {
      * @return 落库行数
      */
     public int appendHistory(List<SysAiProviderCreditHistory> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return 0;
         }
         int saved = 0;

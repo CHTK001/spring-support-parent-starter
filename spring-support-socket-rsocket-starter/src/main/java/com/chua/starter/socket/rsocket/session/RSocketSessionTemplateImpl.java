@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * rSocket 会话模板实现
@@ -134,7 +135,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
      * @return extract客户端id的结果
      */
     private String extractClientId(String path) {
-        if (path == null || path.isEmpty() || "/".equals(path)) {
+        if (StringUtils.isEmpty(path) || "/".equals(path)) {
             return "default";
         }
         
@@ -319,7 +320,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             return Collections.emptyList();
         }
 
-        if (roomId == null || roomId.isEmpty()) {
+        if (StringUtils.isEmpty(roomId)) {
             return new java.util.ArrayList<>(sessions);
         }
 

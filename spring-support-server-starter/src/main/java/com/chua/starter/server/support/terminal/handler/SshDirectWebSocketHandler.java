@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * SSH 直连终端 webSocket 处理器
@@ -724,7 +725,7 @@ public class SshDirectWebSocketHandler extends AbstractWebSocketHandler {
      */
     private void broadcastText(ShareRoom room, String json, String except) {
         for (ShareMember member : room.members.values()) {
-            if (except != null && except.equals(member.wsSession.getId())) {
+            if (ObjectUtils.nullSafeEquals(except, member.wsSession.getId())) {
                 continue;
             }
             try {

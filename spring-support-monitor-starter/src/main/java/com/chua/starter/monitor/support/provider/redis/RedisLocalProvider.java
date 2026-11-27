@@ -77,7 +77,7 @@ public class RedisLocalProvider implements MetricProvider {
 
         JsonObject config = Json.getJsonObject(context.getTask().getCollectConfig());
         String host = str(config.getObject("redis_host"));
-        if (host == null || host.isEmpty()) {
+        if (StringUtils.isEmpty(host)) {
             host = context.getMonitor() == null ? null : context.getMonitor().getMonitorHost();
         }
         if (host == null) {
@@ -225,7 +225,7 @@ public class RedisLocalProvider implements MetricProvider {
      * @return 解析double的结果
      */
     private static Double parseDouble(String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return null;
         }
         try {

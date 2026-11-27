@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * MyBatis-Plus 版 {@link JobLogSink}, 写入 {@code sys_job_log} 表。
@@ -277,7 +278,7 @@ public class MybatisJobLogSink implements JobLogSink {
      * @return 台账行, 无匹配返回 空
      */
     private JobEntity findLedger(String jobKey) {
-        if (jobMapper == null || jobKey == null || jobKey.isEmpty()) {
+        if (jobMapper == null || StringUtils.isEmpty(jobKey)) {
             return null;
         }
         try {

@@ -6,6 +6,7 @@ import com.chua.starter.datapool.support.model.NginxDirectiveMetaVO;
 import com.chua.starter.datapool.support.model.dto.NginxPatchDTO;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 配置语法树与前端模型之间的桥：树转 VO、补丁应用、统计。
@@ -156,7 +157,7 @@ public final class NginxConfigModelSupport {
      */
     public static List<String> applyPatches(NginxNode root, List<NginxPatchDTO> patches) {
         List<String> warnings = new ArrayList<>();
-        if (patches == null || patches.isEmpty()) {
+        if (CollectionUtils.isEmpty(patches)) {
             return warnings;
         }
         List<NginxPatchDTO> removes = new ArrayList<>();

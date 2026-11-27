@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 来源模板同步器注册表
@@ -41,7 +42,7 @@ public class SourceSyncerRegistry {
      * @param syncers 各来源模块注册的模板同步器列表（可为空）
      */
     public SourceSyncerRegistry(List<SourceSyncer> syncers) {
-        if (syncers == null || syncers.isEmpty()) {
+        if (CollectionUtils.isEmpty(syncers)) {
             log.info("[Template] 未发现来源模板同步器，库内仅展示自行创建的模板");
             return;
         }

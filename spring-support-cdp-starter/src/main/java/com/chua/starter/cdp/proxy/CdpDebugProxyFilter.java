@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 实时页面反向代理过滤器
@@ -91,7 +93,7 @@ public class CdpDebugProxyFilter implements ServerFilter {
     @Override
     public void doFilter(ServerRequest request, ServerResponse response, ServerFilterChain chain) throws Exception {
         String uri = request.getUri();
-        if (uri == null || uri.isEmpty()) {
+        if (StringUtils.isEmpty(uri)) {
             endText(response, HttpURLConnection.HTTP_BAD_REQUEST, "缺少请求路径");
             return;
         }
@@ -152,7 +154,7 @@ public class CdpDebugProxyFilter implements ServerFilter {
             builder.header("Cookie", cookie);
         }
         byte[] body = request.getBody();
-        boolean hasBody = body != null && body.length > 0;
+        boolean hasBody = ArrayUtils.isNotEmpty(body);
         builder.method(method, hasBody ? HttpRequest.BodyPublishers.ofByteArray(body) : HttpRequest.BodyPublishers.noBody());
         HttpResponse<byte[]> upstreamResponse = client.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
         int status = upstreamResponse.statusCode();
@@ -195,7 +197,7 @@ public class CdpDebugProxyFilter implements ServerFilter {
                 && !"identity".equalsIgnoreCase(contentEncoding);
         boolean injectable = !head && isHtml(contentType)
                 && properties.getLiveProxy().isInjectScript()
-                && responseBody != null && responseBody.length > 0;
+                && ArrayUtils.isNotEmpty(responseBody);
         if (injectable && compressed) {
             byte[] plain = "gzip".equalsIgnoreCase(contentEncoding) ? gunzip(responseBody) : null;
             if (plain != null) {
@@ -209,7 +211,7 @@ public class CdpDebugProxyFilter implements ServerFilter {
         if (compressed && contentEncoding != null) {
             response.setHeader("Content-Encoding", contentEncoding);
         }
-        if (responseBody != null && responseBody.length > 0 && !head) {
+        if (ArrayUtils.isNotEmpty(responseBody) && !head) {
             response.setBody(responseBody);
         }
         response.setHeader("Content-Length", String.valueOf(responseBody == null ? 0 : responseBody.length));

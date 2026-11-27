@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 视频控制 控制器
@@ -63,7 +64,7 @@ public class VideoController {
                                           @RequestParam(required = false, defaultValue = "main") String streamType) {
         DeviceSession session = requireOnline(deviceId);
         String url = session.getLiveUrl(channel, protocol, streamType);
-        if (url == null || url.isEmpty()) {
+        if (StringUtils.isEmpty(url)) {
             throw new RuntimeException("设备 " + deviceId + " 未返回拉流地址，请检查平台账号配置");
         }
         log.debug("设备拉流地址: deviceId={}, channel={}, protocol={}, streamType={}, url={}",
@@ -149,7 +150,7 @@ public class VideoController {
         TimeRange range = parseRange(start, end);
         // 优先使用 开放api 平台的回放 URL（HLS）
         String url = session.getPlaybackUrl(channel, range);
-        if (url == null || url.isEmpty()) {
+        if (StringUtils.isEmpty(url)) {
             throw new RuntimeException("设备 " + deviceId + " 不支持录像回放或未返回回放 URL");
         }
         log.debug("设备回放 URL: deviceId={}, channel={}, url={}", deviceId, channel, mask(url));

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 模型级「生成参数」配置的读写契约。
@@ -174,7 +175,7 @@ public final class GenerateConfigSupport {
         }
         List<Map<String, Object>> caps = modelCfg.getCapabilities();
         Map<String, Object> node;
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             caps = new ArrayList<>(1);
             node = new java.util.LinkedHashMap<>(8);
             caps.add(node);
@@ -221,7 +222,7 @@ public final class GenerateConfigSupport {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> findGenerateNode(SysAccountChannelModel modelCfg) {
         List<Map<String, Object>> caps = modelCfg == null ? null : modelCfg.getCapabilities();
-        if (caps == null || caps.isEmpty()) {
+        if (CollectionUtils.isEmpty(caps)) {
             return Map.of();
         }
         for (Map<String, Object> cap : caps) {

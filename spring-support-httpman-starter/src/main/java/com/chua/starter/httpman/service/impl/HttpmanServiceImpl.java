@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 接口调试控制台 - 服务实现
@@ -300,7 +301,7 @@ public class HttpmanServiceImpl implements HttpmanService {
 
     // [P3C MJ-方法注释 豁免]
     private void deleteRequestRecords(List<MsHttpmanRequest> requests) {
-        if (requests == null || requests.isEmpty()) {
+        if (CollectionUtils.isEmpty(requests)) {
             return;
         }
         List<String> requestIds = requests.stream().map(MsHttpmanRequest::getRequestId).collect(Collectors.toList());
@@ -551,7 +552,7 @@ public class HttpmanServiceImpl implements HttpmanService {
      */
     private List<Map<String, String>> resolveSensitiveList(Map<String, String> map, boolean mask) {
         List<Map<String, String>> list = new ArrayList<>();
-        if (map == null || map.isEmpty()) {
+        if (CollectionUtils.isEmpty(map)) {
             return list;
         }
         for (Map.Entry<String, String> entry : map.entrySet()) {

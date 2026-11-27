@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 渠道模型清单业务（账号模块唯一实现）。
@@ -416,7 +418,7 @@ public class AccountChannelModelService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int createMissing(String providerId, List<SysAccountChannelModel> candidates) {
-        if (providerId == null || providerId.isBlank() || candidates == null || candidates.isEmpty()) {
+        if (providerId == null || providerId.isBlank() || CollectionUtils.isEmpty(candidates)) {
             return 0;
         }
         Set<String> existing = new HashSet<>(16);
@@ -534,7 +536,7 @@ public class AccountChannelModelService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SysAccountChannelModel rename(String providerId, String oldName, String newName) {
-        if (newName != null && newName.equals(oldName)) {
+        if (ObjectUtils.nullSafeEquals(newName, oldName)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "新模型 ID 不能与原 ID 相同");
         }
         SysAccountChannelModel existing = find(providerId, oldName);
@@ -609,7 +611,7 @@ public class AccountChannelModelService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int deleteBatch(List<String> compositeIds) {
-        if (compositeIds == null || compositeIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(compositeIds)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "ids 不能为空");
         }
         List<ModelKey> keys = new ArrayList<>(compositeIds.size());

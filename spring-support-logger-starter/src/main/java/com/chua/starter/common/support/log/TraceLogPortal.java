@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 链路日志汇聚内核（纯 JDK，不依赖任何日志框架/Spring）。
@@ -130,7 +131,7 @@ public final class TraceLogPortal {
             return;
         }
         String traceId = (event.mdc == null) ? null : event.mdc.get("traceId");
-        if (traceId == null || traceId.isEmpty()) {
+        if (StringUtils.isEmpty(traceId)) {
             return;
         }
         Group group = GROUPS.compute(traceId, (key, old) -> {
@@ -156,7 +157,7 @@ public final class TraceLogPortal {
      * @param traceId 当前链路标识
      */
     public static void flushCurrent(String traceId) {
-        if (!enabled || traceId == null || traceId.isEmpty()) {
+        if (!enabled || StringUtils.isEmpty(traceId)) {
             return;
         }
         flush(traceId);

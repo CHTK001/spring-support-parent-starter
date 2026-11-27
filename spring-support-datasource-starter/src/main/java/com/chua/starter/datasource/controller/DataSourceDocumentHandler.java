@@ -10,6 +10,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 文档控制器注册器
@@ -171,7 +172,7 @@ public class DataSourceDocumentHandler {
      * @return 修剪trailingslash的结果
      */
     private static String trimTrailingSlash(String s) {
-        if (s == null || s.isEmpty()) {
+        if (StringUtils.isEmpty(s)) {
             return "";
         }
         return s.endsWith("/") ? s.substring(0, s.length() - 1) : s;

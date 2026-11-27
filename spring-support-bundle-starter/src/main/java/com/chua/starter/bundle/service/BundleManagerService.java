@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * osgi Bundle 管理器服务。
@@ -193,8 +194,8 @@ public class BundleManagerService {
      * @param artifactId   Maven 坐标中的 artifactId
      */
     private void markManaged(String symbolicName, String artifactId) {
-        String key = symbolicName == null || symbolicName.isEmpty() ? artifactId : symbolicName;
-        if (key != null && !key.isEmpty()) {
+        String key = StringUtils.isEmpty(symbolicName) ? artifactId : symbolicName;
+        if (StringUtils.isNotEmpty(key)) {
             managedBundles.put(key, artifactId);
         }
     }

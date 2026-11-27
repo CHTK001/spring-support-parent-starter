@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 数据源指标的 SSE 订阅者注册表。
@@ -126,7 +127,7 @@ public class DatasourceMetricStreamRegistry {
      */
     public int broadcast(Long datasourceId, String event, Object payload) {
         Set<SseEmitter> set = subscribers.get(datasourceId);
-        if (set == null || set.isEmpty()) {
+        if (CollectionUtils.isEmpty(set)) {
             return 0;
         }
         int delivered = 0;

@@ -42,6 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 酒馆群聊流式控制器（SSE）。
@@ -582,7 +583,7 @@ public class TavernChatController {
             // 供应商表只有几家，全量加载在应用层匹配即可
             for (com.chua.starter.account.channel.store.SysAccountChannel cand
                     : channelService.listAll()) {
-                if (cand.getName() != null && cand.getName().equalsIgnoreCase(prefix)
+                if (StringUtils.equalsIgnoreCase(cand.getName(), prefix)
                         && Boolean.TRUE.equals(cand.getEnabled())
                         && cand.getProviderId() != null && !cand.getProviderId().isBlank()) {
                     return cand.getProviderId();

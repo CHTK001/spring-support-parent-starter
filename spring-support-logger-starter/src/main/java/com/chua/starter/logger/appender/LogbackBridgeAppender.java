@@ -10,6 +10,7 @@ import com.chua.starter.logger.event.LoggerEvent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Logback 桥接 Appender：把 {@link ILoggingEvent} 转成 {@link LoggerEvent} 交给采集器。
@@ -40,7 +41,7 @@ public class LogbackBridgeAppender extends AppenderBase<ILoggingEvent> {
                     .setThread(eventObject.getThreadName())
                     .setLogger(eventObject.getLoggerName())
                     .setMessage(eventObject.getFormattedMessage())
-                    .setMdc(mdc == null || mdc.isEmpty() ? null : new LinkedHashMap<>(mdc))
+                    .setMdc(CollectionUtils.isEmpty(mdc) ? null : new LinkedHashMap<>(mdc))
                     .setTraceId(mdc == null ? null : mdc.get(MdcConstant.TRACE_ID));
             IThrowableProxy proxy = eventObject.getThrowableProxy();
             if (proxy != null) {

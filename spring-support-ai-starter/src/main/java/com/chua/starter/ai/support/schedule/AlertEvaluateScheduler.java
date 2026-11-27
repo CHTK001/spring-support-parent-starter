@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 告警规则定时评估：按周期把启用的告警规则（sys_ai_alert）真算一遍——
@@ -286,7 +287,7 @@ public class AlertEvaluateScheduler {
     private void evaluateAll() {
         List<SysAiAlert> rules = alertMapper.selectList(new LambdaQueryWrapper<SysAiAlert>()
                 .eq(SysAiAlert::getAlertEnabled, true));
-        if (rules == null || rules.isEmpty()) {
+        if (CollectionUtils.isEmpty(rules)) {
             return;
         }
         LocalDateTime todayZero = LocalDate.now().atStartOfDay();
@@ -474,7 +475,7 @@ public class AlertEvaluateScheduler {
     }
 
     private Object rawOf(List<Map<String, Object>> rows, String key) {
-        if (rows == null || rows.isEmpty() || rows.get(0) == null) {
+        if (CollectionUtils.isEmpty(rows) || rows.get(0) == null) {
             return null;
         }
         return rows.get(0).get(key);

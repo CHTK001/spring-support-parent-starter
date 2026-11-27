@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 供应商余额「账号密码登录」执行器。
@@ -1650,7 +1651,7 @@ public class ProviderCreditLoginService {
      * @return 源；解析失败返回 null
      */
     private static String originOf(String url) {
-        if (url == null || url.isEmpty()) {
+        if (StringUtils.isEmpty(url)) {
             return null;
         }
         try {

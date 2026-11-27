@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 维度管理服务。
@@ -861,7 +862,7 @@ public class EduDimensionService {
         int seconds = expireSeconds == null || expireSeconds <= 0
                 ? DEFAULT_IMPERSONATE_SECONDS
                 : expireSeconds;
-        List<String> scope = allowedUrls == null || allowedUrls.isEmpty()
+        List<String> scope = CollectionUtils.isEmpty(allowedUrls)
                 ? STUDENT_SCOPE_PATHS
                 : allowedUrls;
 
@@ -918,7 +919,7 @@ public class EduDimensionService {
         if (result != null && result.getCode() != null && result.getCode() == 401) {
             return true;
         }
-        if (message == null || message.isEmpty()) {
+        if (StringUtils.isEmpty(message)) {
             return false;
         }
         return message.contains("未认证") || message.contains("未登录") || message.contains("已失效")

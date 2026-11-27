@@ -1,5 +1,7 @@
 package com.chua.payment.support.enums;
 
+import com.chua.common.support.utils.StringUtils;
+
 /**
  * 用户优惠券状态
  *
@@ -58,7 +60,7 @@ public enum CouponStatus {
      * @return 枚举值，未匹配返回 null
      */
     public static CouponStatus parse(String name) {
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return null;
         }
         for (CouponStatus value : values()) {

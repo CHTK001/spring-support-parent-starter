@@ -30,6 +30,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.stream.Stream;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 技能来源清单服务实现。
@@ -393,7 +394,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
      */
     private Path resolveAgentRoot() {
         String root = skillsAgentRoot == null ? null : skillsAgentRoot.strip();
-        if (root == null || root.isEmpty()) {
+        if (StringUtils.isEmpty(root)) {
             log.info("[SkillCatalog] 未配置 Agent 技能根目录，跳过扫描");
             return null;
         }
@@ -467,7 +468,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
                 }
                 // 分类：frontmatter 显式声明优先，其次内置映射，最后「内置工具」
                 String frontCategory = front.get("category");
-                String category = frontCategory == null || frontCategory.isEmpty()
+                String category = StringUtils.isEmpty(frontCategory)
                         ? BUILTIN_CATEGORY.getOrDefault(idOrName, "内置工具") : frontCategory;
                 List<String> labels = new ArrayList<>();
                 labels.add(category);

@@ -3,6 +3,7 @@ package com.chua.starter.datasearch.provider.support;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 协议级能力判定：把「流式 / 异步」从公开目录拿不到的维度，按<b>可辩护的口径</b>补齐。
@@ -98,7 +99,7 @@ public final class ProviderProtocolCapabilities {
             return null;
         }
         String expected = BATCH_VENDORS.get(vendor);
-        return expected != null && expected.equals(current) ? Boolean.TRUE : null;
+        return ObjectUtils.nullSafeEquals(expected, current) ? Boolean.TRUE : null;
     }
 
     /**

@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Spring 原生 {@link Scheduled} 注解扫描器。
@@ -80,7 +81,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         } catch (Throwable ex) {
             log.error("[job] 扫描 @Scheduled 失败, bean={}", beanName, ex);
         }
-        if (annotated == null || annotated.isEmpty()) {
+        if (CollectionUtils.isEmpty(annotated)) {
             return bean;
         }
         for (java.util.Map.Entry<Method, Scheduled> entry : annotated.entrySet()) {

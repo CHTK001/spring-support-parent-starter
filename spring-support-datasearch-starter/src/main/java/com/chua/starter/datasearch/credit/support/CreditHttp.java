@@ -6,6 +6,8 @@ import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.starter.datasearch.credit.model.CreditQuery;
 
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 余额查询的 HTTP 出口。
@@ -113,7 +115,7 @@ public final class CreditHttp {
                 builder.header(entry.getKey(), entry.getValue());
             }
             String body = signed.getBody();
-            if (body != null && !body.isEmpty()) {
+            if (StringUtils.isNotEmpty(body)) {
                 builder.body(body);
             }
             String method = signed.getMethod() == null ? "GET" : signed.getMethod().toUpperCase();
@@ -163,7 +165,7 @@ public final class CreditHttp {
         Map<String, String> params = query.getParams();
         if (hasBody) {
             builder.json().body(body);
-        } else if (params != null && !params.isEmpty()) {
+        } else if (CollectionUtils.isNotEmpty(params)) {
             if ("GET".equals(methodOf(query))) {
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     builder.query(entry.getKey(), entry.getValue());
@@ -209,7 +211,7 @@ public final class CreditHttp {
             builder.header(entry.getKey(), entry.getValue());
         }
         String body = signed.getBody();
-        if (body != null && !body.isEmpty()) {
+        if (StringUtils.isNotEmpty(body)) {
             // Content-Type 已由签名器写进 headers，这里只设 body，不再 json() 重复设头
             builder.body(body);
         }

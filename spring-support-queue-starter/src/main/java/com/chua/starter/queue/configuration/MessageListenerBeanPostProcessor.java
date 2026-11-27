@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
@@ -72,7 +74,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
      * @throws BeansException 异常
     */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (messageTemplates == null || messageTemplates.isEmpty()) {
+        if (CollectionUtils.isEmpty(messageTemplates)) {
             return bean;
         }
 
@@ -137,7 +139,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
         MessageHandler handler = createHandler(bean, method, payloadType, autoAck);
 
         // 使用支持 concurrency 的方法
-        if (group != null && !group.isEmpty()) {
+        if (StringUtils.isNotEmpty(group)) {
             template.subscribe(destination, group, handler, autoAck, concurrency);
         } else {
             template.subscribe(destination, handler, autoAck, concurrency);
@@ -261,7 +263,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
         MessageHandler handler = createEventHandler(bean, method, eventType, autoAck, republish);
 
         // 使用支持 concurrency 的方法
-        if (group != null && !group.isEmpty()) {
+        if (StringUtils.isNotEmpty(group)) {
             template.subscribe(destination, group, handler, autoAck, concurrency);
         } else {
             template.subscribe(destination, handler, autoAck, concurrency);

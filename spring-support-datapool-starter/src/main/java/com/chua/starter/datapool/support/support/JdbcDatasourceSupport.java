@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * JDBC 建连与探活的公共机制：连接串拼装、连接属性、SSH 隧道、空闲复用、方言指标。
@@ -212,7 +213,7 @@ public class JdbcDatasourceSupport {
         String fromJar = driverJarService.driverClassNameOf(
                 row == null ? null : row.getDatasourceDriverJarId(), null);
         String name = fromJar != null ? fromJar : (fromRow == null ? null : fromRow.trim());
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             throw new IllegalStateException("数据源 " + (row == null ? null : row.getId())
                     + " 使用上传的驱动 jar，但既没登记驱动类名、jar 台账里也没有；"
                     + "请在数据源上填写驱动类名（如 org.h2.Driver）或重新上传时填写");

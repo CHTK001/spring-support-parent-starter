@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 平台能力集路由器：把「目标主机真实平台」解析成 {@link HostOperations} 实现。
@@ -174,7 +175,7 @@ public final class HostOperationsRegistry {
      */
     public static String platformOf(SystemInfoProvider channel, MsServerHost host) {
         String platform = channel == null ? "" : channel.platform(host);
-        if (platform == null || platform.isEmpty()) {
+        if (StringUtils.isEmpty(platform)) {
             platform = Platforms.normalize(System.getProperty("os.name"));
         }
         return platform;

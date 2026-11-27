@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 聊天流式编排（传输无关）。
@@ -666,7 +668,7 @@ public class ChatStreamOrchestrator {
                         if (sink.isCancelled()) {
                             return;
                         }
-                        if (chunk != null && !chunk.isEmpty()) {
+                        if (StringUtils.isNotEmpty(chunk)) {
                             if (firstChunkAt[0] == 0L) {
                                 firstChunkAt[0] = System.currentTimeMillis();
                             }
@@ -852,7 +854,7 @@ public class ChatStreamOrchestrator {
                         }
                     },
                     toolCalls -> {
-                        if (toolCalls == null || toolCalls.isEmpty()) {
+                        if (CollectionUtils.isEmpty(toolCalls)) {
                             return;
                         }
                         // 累积轨迹（落库用），再照常转发给前端
@@ -1361,7 +1363,7 @@ public class ChatStreamOrchestrator {
                                 sink.sendEvent(cEvent);
                             }
                             String reasoning = response.getReasoningContent();
-                            if (reasoning != null && !reasoning.isEmpty()) {
+                            if (StringUtils.isNotEmpty(reasoning)) {
                                 // 累积思考增量：恢复轮同样只发 SSE，刷新后靠 confirmation 还原。
                                 resumeReasoning.append(reasoning);
                                 Map<String, Object> thinkEvent = new LinkedHashMap<>();
@@ -1374,7 +1376,7 @@ public class ChatStreamOrchestrator {
                                 usageHolder[0] = response.getUsage();
                             }
                             String chunk = response.getContent();
-                            if (chunk == null || chunk.isEmpty()) {
+                            if (StringUtils.isEmpty(chunk)) {
                                 return;
                             }
                             if (resumeFirstChunkAt[0] == 0L) {
@@ -1536,7 +1538,7 @@ public class ChatStreamOrchestrator {
      * @return 合并后的 JSON；无路由信息时原样返回
      */
     private String attachRouteInfo(String json, Map<String, Object> routeInfo) {
-        if (routeInfo == null || routeInfo.isEmpty()) {
+        if (CollectionUtils.isEmpty(routeInfo)) {
             return json;
         }
         try {
@@ -1601,7 +1603,7 @@ public class ChatStreamOrchestrator {
         int history = 0;
         int summary = 0;
         List<Map<String, Object>> messages = request == null ? null : request.getMessages();
-        if (messages != null && !messages.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(messages)) {
             int lastUserIndex = -1;
             for (int i = messages.size() - 1; i >= 0; i--) {
                 Map<String, Object> m = messages.get(i);
@@ -1765,7 +1767,7 @@ public class ChatStreamOrchestrator {
      * @return 估算 Token 数
      */
     private int estimateTokens(String text) {
-        return text == null || text.isEmpty() ? 0 : (int) (text.length() * 1.5);
+        return StringUtils.isEmpty(text) ? 0 : (int) (text.length() * 1.5);
     }
 
     /**
@@ -1864,7 +1866,7 @@ public class ChatStreamOrchestrator {
      * @return 合并后的 JSON；extra 为空时原样返回
      */
     private String attachUsageExtra(String json, Map<String, Object> extra) {
-        if (extra == null || extra.isEmpty()) {
+        if (CollectionUtils.isEmpty(extra)) {
             return json;
         }
         try {
@@ -1963,15 +1965,15 @@ public class ChatStreamOrchestrator {
             Map<String, Object> errorMeta = new LinkedHashMap<>();
             errorMeta.put("finishReason", "error");
             errorMeta.put("errorDetail", errorMessage);
-            if (toolCalls != null && !toolCalls.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(toolCalls)) {
                 errorMeta.put("toolCalls", toolCalls);
             }
-            if (toolTraces != null && !toolTraces.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(toolTraces)) {
                 errorMeta.put("toolTraces", toolTraces);
             }
             // 失败轮更要记下路由信息：报错往往正是发到了预期之外的供应商，
             // 刷新后仍能对照「当时到底是哪家供应商应答的」来定位
-            if (routeInfo != null && !routeInfo.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(routeInfo)) {
                 errorMeta.put("route", routeInfo);
             }
             // 失败轮同样要保住已流出的思考正文：confirmation.reasoning 是刷新后
@@ -2358,7 +2360,7 @@ public class ChatStreamOrchestrator {
                 return;
             }
             String normalized = csv == null ? null : csv.trim();
-            row.setMcpServerIds(normalized == null || normalized.isEmpty() ? null : normalized);
+            row.setMcpServerIds(StringUtils.isEmpty(normalized) ? null : normalized);
             sysAiSessionMapper.updateById(row);
             log.info("[ChatStream] 首次发送已写入会话 MCP 选择 dialogId={} mcp={}", dialogId, row.getMcpServerIds());
         } catch (Exception e) {
@@ -2424,7 +2426,7 @@ public class ChatStreamOrchestrator {
      * @return 返回值
     */
     private static void mergeSessionMcp(Map<String, Object> roleSettings, List<String> ids) {
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             return;
         }
         Object pluginsObj = roleSettings.get("plugins");

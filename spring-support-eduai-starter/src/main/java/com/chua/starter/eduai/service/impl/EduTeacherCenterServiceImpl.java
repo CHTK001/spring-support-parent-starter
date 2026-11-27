@@ -41,6 +41,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 教师中心服务实现
@@ -465,7 +466,7 @@ public class EduTeacherCenterServiceImpl implements IEduTeacherCenterService {
      * @return 返回值
     */
     private void fillStudentNames(List<EduMarkingTask> tasks) {
-        if (tasks == null || tasks.isEmpty()) {
+        if (CollectionUtils.isEmpty(tasks)) {
             return;
         }
         Set<String> pendingNos = new LinkedHashSet<>();

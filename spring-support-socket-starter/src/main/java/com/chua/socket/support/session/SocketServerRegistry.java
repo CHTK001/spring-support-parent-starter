@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Socket 服务器动态注册服务
@@ -111,7 +112,7 @@ public class SocketServerRegistry {
         if (keys != null) {
             for (String key : keys) {
                 Map<Object, Object> info = redisTemplate.opsForHash().entries(key);
-                if (info != null && !info.isEmpty()) {
+                if (CollectionUtils.isNotEmpty(info)) {
                     SocketServerInfo server = parseServerInfo(info);
                     if (server != null && isOnline(server)) {
                         result.add(server);
@@ -121,7 +122,7 @@ public class SocketServerRegistry {
         }
 
         List<SocketServerInfo> dbServers = getDatabaseServers();
-        if (dbServers != null && !dbServers.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(dbServers)) {
             for (SocketServerInfo dbServer : dbServers) {
                 boolean exists = result.stream().anyMatch(s -> Objects.equals(s.getId(), dbServer.getId()));
                 if (!exists) {

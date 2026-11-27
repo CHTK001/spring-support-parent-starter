@@ -11,6 +11,7 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * XML 工具本地适配器。
@@ -37,7 +38,7 @@ public class Xml {
             return new byte[0];
         }
         String json = jsonObject.toJSONString();
-        if (json == null || json.isEmpty()) {
+        if (StringUtils.isEmpty(json)) {
             return new byte[0];
         }
         String xml = jsonToXml(json);

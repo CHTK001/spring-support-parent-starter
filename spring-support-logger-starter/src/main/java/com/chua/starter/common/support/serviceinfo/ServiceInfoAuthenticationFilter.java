@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 服务信息 端点认证过滤器。
@@ -127,7 +128,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
      */
     private boolean isIpWhitelisted(String ip) {
         Set<String> whitelist = properties.getAuthIpWhitelist();
-        if (whitelist == null || whitelist.isEmpty() || ip == null) {
+        if (CollectionUtils.isEmpty(whitelist) || ip == null) {
             return false;
         }
         return whitelist.stream().anyMatch(p -> IpUtils.matchIp(ip, p));

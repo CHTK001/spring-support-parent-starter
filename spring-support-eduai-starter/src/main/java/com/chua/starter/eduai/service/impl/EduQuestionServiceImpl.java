@@ -42,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 题目服务实现
@@ -399,7 +400,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
         if (!EduUserContext.isAdmin()) {
             throw new BusinessException("只有管理员可以审核题目");
         }
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             return 0;
         }
         if (!passed && !StringUtils.hasText(remark)) {
@@ -673,7 +674,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
             log.warn("[EduAi] AI 出题失败: subject={}, err={}", dto.subject(), e.getMessage());
             throw new BusinessException("AI 出题失败：" + e.getMessage());
         }
-        if (drafts == null || drafts.isEmpty()) {
+        if (CollectionUtils.isEmpty(drafts)) {
             // ai 侧仅在「AI 未配置可用模型」时返回空列表
             throw new BusinessException("AI 服务不可用，暂无法出题，请检查 AI 模型配置");
         }

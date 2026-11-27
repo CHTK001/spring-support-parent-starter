@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 终端共享存储器（内存态）。
@@ -209,7 +210,7 @@ public class TerminalShareStore {
      * @return 新集合，source 为 null 时返回空集合
      */
     private static Set<String> copy(Set<String> source) {
-        if (source == null || source.isEmpty()) {
+        if (CollectionUtils.isEmpty(source)) {
             return new LinkedHashSet<>();
         }
         return new LinkedHashSet<>(source);

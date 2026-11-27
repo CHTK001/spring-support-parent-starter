@@ -2,6 +2,7 @@ package com.chua.starter.datapool.support.nginx;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Nginx 配置语法树节点（区块或指令，二合一）。
@@ -143,7 +144,7 @@ public class NginxNode {
      * @return 标题文本
      */
     public String displayName() {
-        if (headArg == null || headArg.isEmpty()) {
+        if (StringUtils.isEmpty(headArg)) {
             return name;
         }
         return name + " " + headArg;

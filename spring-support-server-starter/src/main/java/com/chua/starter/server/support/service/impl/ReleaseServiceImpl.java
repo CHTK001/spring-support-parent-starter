@@ -82,6 +82,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 发布管理服务实现
@@ -1787,7 +1789,7 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     public ReturnResult<List<Map<String, Object>>> batchUpgrade(List<Long> projectIds, Map<String, Object> config) {
-        if (projectIds == null || projectIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(projectIds)) {
             return ReturnResult.error("请选择要升级的项目");
         }
         List<Map<String, Object>> results = new ArrayList<>();
@@ -1816,7 +1818,7 @@ public class ReleaseServiceImpl implements ReleaseService {
 
     @Override
     public ReturnResult<List<Map<String, Object>>> batchRollback(List<Long> projectIds, String backupName) {
-        if (projectIds == null || projectIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(projectIds)) {
             return ReturnResult.error("请选择要回滚的项目");
         }
         List<Map<String, Object>> results = new ArrayList<>();
@@ -2314,7 +2316,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @return 带退出码与首行错误信息的简述
        */
     private static String execFailureDetail(java.util.List<MsExecLog> logs) {
-        if (logs == null || logs.isEmpty()) {
+        if (CollectionUtils.isEmpty(logs)) {
             return "退出码非 0（无执行日志）";
         }
         MsExecLog first = logs.get(0);
@@ -2935,7 +2937,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @return 注入后的脚本
        */
     private String materializeVars(String script, MsServerProject project, ProjectPlatformProvider pf) {
-        if (script == null || script.isEmpty()) {
+        if (StringUtils.isEmpty(script)) {
             return script;
         }
         List<EnvVar> envs = readEnvList(project.getEnvVars());
@@ -3314,7 +3316,7 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @return 有任一主机失败时为 {@code true}；日志为空按失败处理（无法确认成功）
        */
     private static boolean anyExecFailed(java.util.List<MsExecLog> logs) {
-        if (logs == null || logs.isEmpty()) {
+        if (CollectionUtils.isEmpty(logs)) {
             return true;
         }
         for (MsExecLog log : logs) {
@@ -3612,10 +3614,10 @@ public class ReleaseServiceImpl implements ReleaseService {
        * @return 返回值
       */
     public ReturnResult<Map<String, Object>> copyProjects(List<Long> projectIds, List<Long> releaseIds) {
-        if (projectIds == null || projectIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(projectIds)) {
             return ReturnResult.error("请选择要复制的项目");
         }
-        if (releaseIds == null || releaseIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(releaseIds)) {
             return ReturnResult.error("请选择目标服务器");
         }
         List<Map<String, Object>> copied = new ArrayList<>();
@@ -3937,7 +3939,7 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @return 是否预热期
      */
     private boolean isWarmupState(int code, String body) {
-        if (code != 503 || body == null || body.isEmpty()) {
+        if (code != 503 || StringUtils.isEmpty(body)) {
             return false;
         }
         String text = body.toUpperCase();
@@ -4660,7 +4662,7 @@ public class ReleaseServiceImpl implements ReleaseService {
      * @return base64 文本；空值或空串返回空串
      */
     private static String encodeBase64(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return "";
         }
         return java.util.Base64.getEncoder()

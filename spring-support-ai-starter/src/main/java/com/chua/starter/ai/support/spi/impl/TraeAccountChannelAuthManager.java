@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * TRAE 账号渠道鉴权管理器实现。
@@ -340,7 +341,7 @@ public class TraeAccountChannelAuthManager implements AccountChannelAuthManager 
             credential.put("nickname", nickname);
             credential.putIfAbsent("email", nickname);
         }
-        if (enterpriseId != null && !enterpriseId.isEmpty()) {
+        if (StringUtils.isNotEmpty(enterpriseId)) {
             credential.put("enterprise_id", enterpriseId);
         }
         if (machineId != null) { credential.put("machine_id", machineId); }

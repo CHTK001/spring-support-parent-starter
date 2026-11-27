@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 分隔符文件的解析选项（对齐 Navicat 第 3～4 步的「附加选项」）。
@@ -340,7 +341,7 @@ public record DelimitedOptions(
      * @return true 表示只由数字组成
      */
     private static boolean isDigits(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return false;
         }
         for (int i = 0; i < text.length(); i++) {

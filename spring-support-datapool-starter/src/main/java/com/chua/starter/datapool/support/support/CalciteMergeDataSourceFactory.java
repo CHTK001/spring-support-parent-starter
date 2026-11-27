@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Logger;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * Calcite 合并数据源装配器：把合并台账（{@code type=calcite}）的成员 id 列表
@@ -106,7 +108,7 @@ public class CalciteMergeDataSourceFactory {
             return "合并数据源没有任何成员";
         }
         for (Long id : ids) {
-            if (row.getId() != null && row.getId().equals(id)) {
+            if (ObjectUtils.nullSafeEquals(row.getId(), id)) {
                 return "合并数据源不能包含自身";
             }
         }
@@ -256,7 +258,7 @@ public class CalciteMergeDataSourceFactory {
             return "ds_" + id;
         }
         String cleaned = name.replaceAll("[^a-zA-Z0-9_\\u4e00-\\u9fa5]", "_").trim();
-        return (cleaned == null || cleaned.isEmpty()) ? "ds_" + id : cleaned;
+        return (StringUtils.isEmpty(cleaned)) ? "ds_" + id : cleaned;
     }
 
     /**

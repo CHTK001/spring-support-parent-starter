@@ -38,6 +38,8 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 主机文件服务实现。
@@ -225,7 +227,7 @@ public class HostFileServiceImpl implements HostFileService {
     @Override
     public ReturnResult<HostFileEntryVO> rename(String bucket, String key, String name) {
         String normalized = HostFilePaths.normalizeKey(key);
-        if (normalized == null || normalized.isEmpty()) {
+        if (StringUtils.isEmpty(normalized)) {
             return ReturnResult.illegal("文件 key 不合法");
         }
         if (!HostFilePaths.isSafeName(name)) {
@@ -238,7 +240,7 @@ public class HostFileServiceImpl implements HostFileService {
     public ReturnResult<HostFileEntryVO> move(String bucket, String key, String targetDir) {
         String normalized = HostFilePaths.normalizeKey(key);
         String dir = HostFilePaths.normalizeKey(targetDir);
-        if (normalized == null || normalized.isEmpty() || dir == null) {
+        if (StringUtils.isEmpty(normalized) || dir == null) {
             return ReturnResult.illegal("路径不合法");
         }
         String name = HostFilePaths.nameOf(normalized);
@@ -255,7 +257,7 @@ public class HostFileServiceImpl implements HostFileService {
             return ReturnResult.error(DISABLED_MESSAGE);
         }
         String normalized = HostFilePaths.normalizeKey(key);
-        if (normalized == null || normalized.isEmpty()) {
+        if (StringUtils.isEmpty(normalized)) {
             return ReturnResult.illegal("文件 key 不合法");
         }
         try {
@@ -281,7 +283,7 @@ public class HostFileServiceImpl implements HostFileService {
 
     @Override
     public ReturnResult<HostFileDeleteVO> deleteBatch(String bucket, List<String> keys) {
-        if (keys == null || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
             return ReturnResult.illegal("请选择要删除的条目");
         }
         int succeeded = 0;
@@ -344,7 +346,7 @@ public class HostFileServiceImpl implements HostFileService {
                     .build();
         }
         String normalized = HostFilePaths.normalizeKey(key);
-        if (normalized == null || normalized.isEmpty()) {
+        if (StringUtils.isEmpty(normalized)) {
             return GetObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.FAILURE)
                     .message("文件 key 不合法")
@@ -549,7 +551,7 @@ public class HostFileServiceImpl implements HostFileService {
         for (Metadata meta : result.getMetadata()) {
             String name = meta.getName();
             String key = HostFilePaths.normalizeKey(dir + name);
-            if (key == null || key.isEmpty()) {
+            if (StringUtils.isEmpty(key)) {
                 continue;
             }
             entries.add(entryOf(storage, key, name, meta.isDirectory(), meta.getSize(), meta.getLastModified()));
@@ -661,7 +663,7 @@ public class HostFileServiceImpl implements HostFileService {
      */
     private Path resolveLocal(Path root, String key) {
         String normalized = HostFilePaths.normalizeKey(key);
-        if (normalized == null || normalized.isEmpty()) {
+        if (StringUtils.isEmpty(normalized)) {
             return root;
         }
         Path target = root.resolve(normalized).normalize();

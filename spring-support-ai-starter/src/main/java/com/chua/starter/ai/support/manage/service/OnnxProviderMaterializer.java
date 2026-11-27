@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * ONNX 供应商的模型镜像同步服务。
@@ -241,7 +242,7 @@ public class OnnxProviderMaterializer {
      * @return 需要回填返回 {@code true}
      */
     private boolean isLegacyCredentials(Map<String, Object> credentials) {
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return true;
         }
         Object apiKey = credentials.get("api_key");

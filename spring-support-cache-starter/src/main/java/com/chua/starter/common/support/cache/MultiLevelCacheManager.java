@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 多级缓存管理器
@@ -128,13 +130,13 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
         String normalized = level == null ? "" : level.trim().toUpperCase();
         if ("CAFFEINE".equals(normalized)) {
             String bean = properties.getCaffeineBean();
-            if (bean != null && !bean.isEmpty()) {
+            if (StringUtils.isNotEmpty(bean)) {
                 return bean.toUpperCase();
             }
         }
         if ("REDIS".equals(normalized)) {
             String bean = properties.getRedisBean();
-            if (bean != null && !bean.isEmpty()) {
+            if (StringUtils.isNotEmpty(bean)) {
                 return bean.toUpperCase();
             }
         }
@@ -148,7 +150,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
      * @return 返回值
     */
     public Cache getCache(String name) {
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return null;
         }
         return cacheMap.computeIfAbsent(name, this::buildCache);
@@ -246,7 +248,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
      * @param data      待预热数据
      */
     public void warmUp(String cacheName, Map<Object, Object> data) {
-        if (data == null || data.isEmpty()) {
+        if (CollectionUtils.isEmpty(data)) {
             return;
         }
         Cache cache = getCache(cacheName);

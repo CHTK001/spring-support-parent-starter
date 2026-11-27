@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 终端输出日志写入器（每个聊天会话一个文件，追加写入 + 满额截尾）。
@@ -112,7 +113,7 @@ final class TerminalLogWriter implements Closeable {
      * @return 实际写入的字节数，写入失败返回 0
      */
     synchronized long append(String text) {
-        if (failed || outputStream == null || text == null || text.isEmpty()) {
+        if (failed || outputStream == null || StringUtils.isEmpty(text)) {
             return 0L;
         }
         try {

@@ -18,6 +18,7 @@ import org.springframework.core.env.Environment;
 import javax.sql.DataSource;
 import java.util.Collections;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 分库分表数据源注册器。
@@ -112,7 +113,7 @@ public class ShardingDataSourceRegistrar implements BeanFactoryPostProcessor {
         } catch (Exception e) {
             log.debug("[Sharding] 按列表绑定 {} 失败，尝试旧单对象写法: {}", CONFIG_PREFIX, e.getMessage());
         }
-        if (list != null && !list.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(list)) {
             return list;
         }
         try {

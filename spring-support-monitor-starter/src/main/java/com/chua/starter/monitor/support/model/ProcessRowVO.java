@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 进程行视图。
@@ -72,7 +73,7 @@ public record ProcessRowVO(
      * @return 标记后的新列表，永不为 null
      */
     public static List<ProcessRowVO> markOrphans(List<ProcessRowVO> rows) {
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return rows;
         }
         Set<Long> pids = new HashSet<>(rows.size() * 2);

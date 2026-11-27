@@ -3,6 +3,7 @@ package com.chua.starter.filesystem.support.server.filter;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * HTTP 请求过滤器链接口。
@@ -30,7 +31,7 @@ public interface FilterChain {
      * @return 构建的过滤器链实例
      */
     static FilterChain build(List<ServerFilter> filters, ServerFilter finalHandler) {
-        if (filters == null || filters.isEmpty()) {
+        if (CollectionUtils.isEmpty(filters)) {
             return exchange -> finalHandler.doFilter(exchange, null);
         }
         /**

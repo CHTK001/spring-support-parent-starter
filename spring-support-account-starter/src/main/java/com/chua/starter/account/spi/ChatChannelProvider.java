@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * ChatClient 渠道 SPI —— 把任意 {@code ChatClient} SPI 扩展登记成「渠道管理」里的一条渠道。
@@ -147,7 +148,7 @@ public interface ChatChannelProvider extends ChannelProvider {
         ChatClient client = chatClient();
         try {
             List<ModelDefinition> definitions = client.models();
-            if (definitions == null || definitions.isEmpty()) {
+            if (CollectionUtils.isEmpty(definitions)) {
                 return List.of();
             }
             List<Map<String, Object>> models = new ArrayList<>(definitions.size());

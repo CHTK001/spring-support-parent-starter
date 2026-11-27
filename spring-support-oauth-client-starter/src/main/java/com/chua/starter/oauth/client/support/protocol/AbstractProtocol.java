@@ -35,6 +35,7 @@ import org.springframework.context.ApplicationContext;
 import com.chua.common.support.utils.BeanUtils;
 
 import java.util.Objects;
+import com.chua.common.support.utils.CollectionUtils;
 
 import static com.chua.common.support.lang.code.ReturnCode.RESOURCE_OAUTH_ERROR;
 import static com.chua.common.support.lang.code.ReturnCode.RESULT_ACCESS_UNAUTHORIZED;
@@ -461,7 +462,7 @@ public abstract class AbstractProtocol implements Protocol {
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
    // REFRESH 类型只需要 refresh令牌，不需要现有的 Cookie/access令牌
-        boolean isRefresh = upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty();
+        boolean isRefresh = upgradeType == UpgradeType.REFRESH && StringUtils.isNotEmpty(refreshToken);
         if (!isRefresh && !hasValid(cookie, token)) {
               /**
                * IllegalArgumentException。
@@ -783,7 +784,7 @@ public abstract class AbstractProtocol implements Protocol {
             return;
         }
         java.util.Set<String> roles = userResume.getRoles();
-        if (roles != null && !roles.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(roles)) {
             return;
         }
         try {
@@ -795,7 +796,7 @@ public abstract class AbstractProtocol implements Protocol {
                 return;
             }
             java.util.Set<String> supplement = resolver.resolve(userResume.getUserId(), userResume.getUsername());
-            if (supplement != null && !supplement.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(supplement)) {
                 userResume.setRoles(supplement);
                 log.info("[OAuth角色补充] userId={}, roles={}", userResume.getUserId(), supplement);
             }

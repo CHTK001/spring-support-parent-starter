@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 协同文档存储器（内存态读写 + 定时落盘）。
@@ -884,7 +885,7 @@ public class FileCollabStore {
         this.history.clear();
         if (history != null) {
             history.forEach((id, entries) -> {
-                if (id != null && entries != null && !entries.isEmpty()) {
+                if (id != null && CollectionUtils.isNotEmpty(entries)) {
                     // 装载进来的列表也要是并发安全容器：读侧可能在请求线程上遍历它
                     this.history.put(id, new CopyOnWriteArrayList<>(entries));
                 }

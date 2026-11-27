@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 新邮件轮询器。
@@ -104,7 +105,7 @@ public class MailNewMessagePoller {
             log.warn("[mail-notify] 读取邮件账号失败: {}", e.getMessage());
             return;
         }
-        if (accounts == null || accounts.isEmpty()) {
+        if (CollectionUtils.isEmpty(accounts)) {
             return;
         }
         for (SysAccount account : accounts) {
@@ -148,7 +149,7 @@ public class MailNewMessagePoller {
             log.warn("[mail-notify] 轮询账号失败: accountId={}, error={}", accountId, e.getMessage());
             return;
         }
-        if (messages == null || messages.isEmpty()) {
+        if (CollectionUtils.isEmpty(messages)) {
             return;
         }
         // 更新基线为当前时间：只推送本次发现的新邮件

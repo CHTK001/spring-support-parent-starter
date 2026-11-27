@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * OAuth Principal实现
@@ -151,7 +152,7 @@ public class OAuthPrincipal implements Principal {
      * @return 是否包含值的结果
      */
     private static boolean hasValue(String value) {
-        return value != null && !value.isEmpty();
+        return StringUtils.isNotEmpty(value);
     }
 
     /**

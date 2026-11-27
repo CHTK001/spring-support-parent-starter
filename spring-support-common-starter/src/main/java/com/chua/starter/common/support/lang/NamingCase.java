@@ -1,6 +1,7 @@
 package com.chua.starter.common.support.lang;
 
 import com.chua.common.support.lang.bean.NamingStyle;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 命名转换工具。
@@ -23,7 +24,7 @@ public final class NamingCase {
      * @return 转为camel大小写的结果
      */
     public static String toCamelCase(String name) {
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return name;
         }
         String normalized = name.toLowerCase().replace('-', '_').replace(' ', '_');
@@ -37,7 +38,7 @@ public final class NamingCase {
      * @return 转为第一个大写大小写的结果
      */
     public static String toFirstUpperCase(String name) {
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             return name;
         }
         String camel = toCamelCase(name);

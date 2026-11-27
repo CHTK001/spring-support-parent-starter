@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 渠道生命周期业务（账号模块唯一实现）。
@@ -405,7 +407,7 @@ public class AccountChannelService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int delete(List<String> providerIds) {
-        if (providerIds == null || providerIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(providerIds)) {
             return 0;
         }
         List<SysAccountChannel> targets = new ArrayList<>(providerIds.size());
@@ -518,7 +520,7 @@ public class AccountChannelService {
             return;
         }
         for (SysAccountChannel candidate : listByPlatform(platform)) {
-            if (excludeProviderId != null && excludeProviderId.equals(candidate.getProviderId())) {
+            if (ObjectUtils.nullSafeEquals(excludeProviderId, candidate.getProviderId())) {
                 continue;
             }
             String candidateName = candidate.getName() == null ? ""
@@ -566,7 +568,7 @@ public class AccountChannelService {
     private void syncProtocol(String providerId, String protocol) {
         for (SysAccountChannelModel model : modelsOf(providerId)) {
             List<java.util.Map<String, Object>> caps = model.getCapabilities();
-            if (caps == null || caps.isEmpty()) {
+            if (CollectionUtils.isEmpty(caps)) {
                 continue;
             }
             for (java.util.Map<String, Object> cap : caps) {

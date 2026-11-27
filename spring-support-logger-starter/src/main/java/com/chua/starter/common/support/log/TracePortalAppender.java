@@ -19,6 +19,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 链路日志汇聚 Appender（logback 适配层，薄）。
@@ -120,7 +121,7 @@ public class TracePortalAppender extends AppenderBase<ILoggingEvent> {
             throwableText = ThrowableProxyUtil.asString(throwable);
         }
         Map<String, String> mdc = event.getMDCPropertyMap();
-        Map<String, String> snapshot = (mdc == null || mdc.isEmpty())
+        Map<String, String> snapshot = (CollectionUtils.isEmpty(mdc))
                 ? Map.of() : new HashMap<>(mdc);
         return new TraceLogPortal.Event(
                 event.getTimeStamp(),

@@ -21,6 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 采集平台运行参数服务实现。
@@ -147,7 +148,7 @@ public class CollectSettingsServiceImpl extends ServiceImpl<CollectSettingMapper
 
     @Override
     public synchronized List<CollectSettingVO> saveSettings(Map<String, String> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return listSettings();
         }
         Map<String, String> normalized = new LinkedHashMap<>();
@@ -174,7 +175,7 @@ public class CollectSettingsServiceImpl extends ServiceImpl<CollectSettingMapper
     @Override
     public synchronized List<CollectSettingVO> resetSettings(List<String> keys) {
         List<String> targets;
-        if (keys == null || keys.isEmpty()) {
+        if (CollectionUtils.isEmpty(keys)) {
             targets = new ArrayList<>(overrides.keySet());
         } else {
             targets = new ArrayList<>(keys);

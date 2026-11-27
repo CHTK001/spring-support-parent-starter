@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 能力位出口：按顺序问各个 {@link ProviderCapabilityProvider}，命中结果<b>按字段合并</b>。
@@ -40,7 +41,7 @@ public final class ProviderCapabilities {
      */
     public static List<ProviderCapabilityProvider> providers() {
         List<ProviderCapabilityProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderCapabilityProvider.class);
             cached = current;
         }

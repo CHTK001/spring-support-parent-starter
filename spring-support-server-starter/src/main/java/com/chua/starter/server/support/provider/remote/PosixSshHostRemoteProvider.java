@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * POSIX 系主机远程操作实现（SSH + SFTP）
@@ -300,7 +301,7 @@ public class PosixSshHostRemoteProvider implements HostRemoteProvider {
     public String join(String... parts) {
         StringBuilder sb = new StringBuilder();
         for (String part : parts) {
-            if (part == null || part.isEmpty()) {
+            if (StringUtils.isEmpty(part)) {
                 continue;
             }
             if (sb.length() > 0 && sb.charAt(sb.length() - 1) != '/') {

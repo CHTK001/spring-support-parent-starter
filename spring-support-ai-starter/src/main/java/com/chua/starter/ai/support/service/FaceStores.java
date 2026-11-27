@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import com.chua.common.support.utils.ArrayUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 人脸底库的**门面**：按当前登录账号把请求路由到该账号自己的人脸库。
@@ -486,7 +488,7 @@ public class FaceStores {
      * @return 归一化后的分组列表，至少一项
      */
     private static List<String> normalizeGroups(List<String> groups) {
-        if (groups == null || groups.isEmpty()) {
+        if (CollectionUtils.isEmpty(groups)) {
             return List.of(AiLibraryGroups.DEFAULT);
         }
         List<String> out = new ArrayList<>(groups.size());
@@ -1146,7 +1148,7 @@ public class FaceStores {
         }
         // 防御索引与快照分叉：用同一特征重推一次（档案本身不随索引回传，见上）
         FacePipeline pipeline = st.pipeline();
-        if (pipeline != null && old.feature() != null && old.feature().length > 0) {
+        if (pipeline != null && ArrayUtils.isNotEmpty(old.feature())) {
             try {
                 pipeline.enroll(id, old.feature(), metadata == null ? Map.of() : metadata, id);
             } catch (Exception ex) {

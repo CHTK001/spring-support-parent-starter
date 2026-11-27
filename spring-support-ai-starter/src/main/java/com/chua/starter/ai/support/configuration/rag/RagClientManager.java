@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * RAG 客户端管理器（<b>按账号隔离</b>）。
@@ -207,7 +208,7 @@ public class RagClientManager implements RagClientProvider {
         Set<String> providers = ServiceProvider.of(EmbeddingClient.class).getExtensions();
         boolean registered = false;
         for (String provider : providers) {
-            if (provider != null && provider.equalsIgnoreCase(engine)) {
+            if (StringUtils.equalsIgnoreCase(provider, engine)) {
                 registered = true;
                 break;
             }
@@ -1027,7 +1028,7 @@ public class RagClientManager implements RagClientProvider {
      */
     private List<String> extractApiKeys(Map<String, Object> credentials) {
         List<String> keys = new ArrayList<>();
-        if (credentials == null || credentials.isEmpty()) {
+        if (CollectionUtils.isEmpty(credentials)) {
             return keys;
         }
         Object multi = credentials.get("api_keys");
@@ -1201,7 +1202,7 @@ public class RagClientManager implements RagClientProvider {
             }
             // 只有真的注册了对应 EmbeddingClient SPI 才算可用引擎，避免选了个跑不了的
             for (String registered : ServiceProvider.of(EmbeddingClient.class).getExtensions()) {
-                if (registered != null && registered.equalsIgnoreCase(platform)) {
+                if (StringUtils.equalsIgnoreCase(registered, platform)) {
                     return platform;
                 }
             }
@@ -1240,7 +1241,7 @@ public class RagClientManager implements RagClientProvider {
             // 「未注册」并静默降级成占位向量。
             boolean registered = false;
             for (String provider : providers) {
-                if (provider != null && provider.equalsIgnoreCase(engine)) {
+                if (StringUtils.equalsIgnoreCase(provider, engine)) {
                     registered = true;
                     break;
                 }

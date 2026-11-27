@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 设备分组服务实现。
@@ -181,7 +182,7 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
         // 先清空该分组原设备
         gdMapper.deleteByGroupId(groupId);
         // 再批量插入
-        if (deviceIds == null || deviceIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(deviceIds)) {
             return;
         }
         for (int i = 0; i < deviceIds.size(); i++) {
@@ -221,7 +222,7 @@ public class DeviceGroupServiceImpl implements DeviceGroupService {
         LambdaQueryWrapper<DeviceGroupDevice> q = new LambdaQueryWrapper<>();
         q.eq(DeviceGroupDevice::getDeviceId, deviceId);
         gdMapper.delete(q);
-        if (groupIds == null || groupIds.isEmpty()) {
+        if (CollectionUtils.isEmpty(groupIds)) {
             return;
         }
         int order = 0;

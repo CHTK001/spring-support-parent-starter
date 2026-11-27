@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * AI 对话聊天控制器。
@@ -205,7 +206,7 @@ public class AIChatController extends BaseAiController {
             ctx.put("content", "以下是之前对话的摘要上下文：\n" + compression.getSysAiCompressionContext());
             msgList.add(ctx);
             // 仅追加本轮最新的用户消息，保证当前问题被回答
-            if (messages != null && !messages.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(messages)) {
                 ChatMessage last = messages.getLast();
                 if (last != null && last.getContent() != null && !last.getContent().isEmpty()) {
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -215,7 +216,7 @@ public class AIChatController extends BaseAiController {
                 }
             }
             log.debug("[AIChat] 会话 {} 命中压缩上下文，用压缩摘要替代 {} 条历史", dialogId, messages != null ? messages.size() : 0);
-        } else if (messages != null && !messages.isEmpty()) {
+        } else if (CollectionUtils.isNotEmpty(messages)) {
             // 未命中压缩上下文：使用前端传入的完整历史消息
             for (ChatMessage msg : messages) {
                 Map<String, Object> map = new LinkedHashMap<>();
@@ -351,7 +352,7 @@ public class AIChatController extends BaseAiController {
         CompressionSettings settings = ctx.settings;
         try {
             List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
-            if (history == null || history.isEmpty()) {
+            if (CollectionUtils.isEmpty(history)) {
                 return;
             }
             // 估算当前历史令牌用量，结合余量百分比判断是否触发
@@ -454,7 +455,7 @@ public class AIChatController extends BaseAiController {
     private static void append(StringBuilder sb, ChatMessage msg) {
         String role = msg.getRole() != null ? msg.getRole() : "user";
         String content = msg.getContent();
-        if (content == null || content.isEmpty()) {
+        if (StringUtils.isEmpty(content)) {
             return;
         }
         sb.append("[").append(role).append("]: ").append(content).append("\n");
@@ -485,7 +486,7 @@ public class AIChatController extends BaseAiController {
      */
     private static int messageTokens(ChatMessage msg) {
         String content = msg.getContent();
-        if (content == null || content.isEmpty()) {
+        if (StringUtils.isEmpty(content)) {
             return 0;
         }
         int tokens = 0;
@@ -637,14 +638,14 @@ public class AIChatController extends BaseAiController {
      * @return 生成的摘要；无可用模型、返回空白或调用异常时返回 null，由调用方降级为原文截断
      */
     private String generateSummary(Long dialogId, String historyText, String currentModel, String modelId) {
-        if (historyText == null || historyText.isEmpty()) {
+        if (StringUtils.isEmpty(historyText)) {
             return null;
         }
         try {
             // 压缩模型优先级：runtime.modelId > runtime.compression_model > 本轮对话模型
             String compressionModel = firstNonBlank(modelId, getStringSetting("compression_model", ""),
                     currentModel == null ? "" : currentModel.trim());
-            if (compressionModel == null || compressionModel.isEmpty()) {
+            if (StringUtils.isEmpty(compressionModel)) {
                 log.warn("[AIChat] 会话 {} 无可用的摘要生成模型，跳过压缩", dialogId);
                 return null;
             }

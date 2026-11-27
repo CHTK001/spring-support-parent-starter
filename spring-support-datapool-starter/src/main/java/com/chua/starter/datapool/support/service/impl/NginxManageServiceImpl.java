@@ -68,6 +68,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Nginx 管理实现：全部经 SSH 在目标主机执行 nginx 命令。
@@ -1226,7 +1228,7 @@ public class NginxManageServiceImpl implements NginxManageService {
     @Override
     public NginxBackupDeleteVO deleteBackups(Long datasourceId, List<String> backupNames) {
         DataSourceVO ds = requireDatasource(datasourceId);
-        if (backupNames == null || backupNames.isEmpty()) {
+        if (CollectionUtils.isEmpty(backupNames)) {
             throw new IllegalArgumentException("要删除的备份文件名不能为空");
         }
         if (backupNames.size() > 100) {
@@ -2140,7 +2142,7 @@ public class NginxManageServiceImpl implements NginxManageService {
      * @return true 表示绝对路径
      */
     private static boolean isAbsolutePath(String path) {
-        if (path == null || path.isEmpty()) {
+        if (StringUtils.isEmpty(path)) {
             return false;
         }
         if (path.startsWith("/") || path.startsWith("\\")) {
@@ -2989,7 +2991,7 @@ public class NginxManageServiceImpl implements NginxManageService {
                         .ge(MsMonitorNginxMetric::getCollectTime,
                                 LocalDateTime.now().withNano(0).minusMinutes(REALTIME_WINDOW_MINUTES))
                         .orderByAsc(MsMonitorNginxMetric::getCollectTime));
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return List.of();
         }
         // 复用与 HTTP 趋势完全相同的换算逻辑，保证两条口径一致
@@ -3067,7 +3069,7 @@ public class NginxManageServiceImpl implements NginxManageService {
                         .ge(MsMonitorNginxMetric::getCollectTime, from)
                         .le(MsMonitorNginxMetric::getCollectTime, to)
                         .orderByAsc(MsMonitorNginxMetric::getCollectTime));
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return NginxTrendVO.empty(datasourceId, from, to, step,
                     "最近 " + h + " 小时没有采集到数据。趋势依赖后台定时采集，"
                             + "请确认目标机已配置 stub_status（/nginx_status）且可访问。");

@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 日志事件总线：服务端收到事件后经总线分发给存储与 SSE 订阅者。
@@ -42,7 +43,7 @@ public class LoggerEventBus {
      * @param events 事件列表
      */
     public void publish(List<LoggerEvent> events) {
-        if (events == null || events.isEmpty()) {
+        if (CollectionUtils.isEmpty(events)) {
             return;
         }
         for (LoggerEvent event : events) {

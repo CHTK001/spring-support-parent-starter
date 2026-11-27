@@ -79,6 +79,8 @@ import java.util.Set;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 监控模块 REST 接口
@@ -794,7 +796,7 @@ public class MonitorController {
                 for (Map.Entry<Object, Object> entry : info.entrySet()) {
                     String key = String.valueOf(entry.getKey());
                     String value = String.valueOf(entry.getValue());
-                    if (key == null || key.isEmpty() || key.startsWith("db")) {
+                    if (StringUtils.isEmpty(key) || key.startsWith("db")) {
                         continue;
                     }
                     Double num = parseRedisDouble(value);
@@ -1005,7 +1007,7 @@ public class MonitorController {
      * @return 数值或 空
      */
     private static Double parseRedisDouble(String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return null;
         }
         try {
@@ -1474,7 +1476,7 @@ public class MonitorController {
             return;
         }
         List<MsMonitor> linked = monitorService.listByServerHost(hostId).getData();
-        if (linked == null || linked.isEmpty()) {
+        if (CollectionUtils.isEmpty(linked)) {
             return;
         }
         java.time.LocalDateTime start = java.time.LocalDateTime.now().minusHours(1);
@@ -1483,7 +1485,7 @@ public class MonitorController {
                 continue;
             }
             List<MsMonitorMetricCpu> history = metricService.getCpuHistory(monitor.getId(), start, null).getData();
-            if (history == null || history.isEmpty()) {
+            if (CollectionUtils.isEmpty(history)) {
                 continue;
             }
             appendCpuStats(prompt, history);

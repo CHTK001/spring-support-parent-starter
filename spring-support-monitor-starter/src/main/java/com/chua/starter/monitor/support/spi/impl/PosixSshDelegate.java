@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * Unix SSH 系统信息 Provider（Linux + macOS）。
@@ -524,7 +525,7 @@ public class PosixSshDelegate implements SystemInfoProvider {
      * @param addr 地址，空值忽略
      */
     private static void appendIpv4(NetworkInterfaceRowVO vo, String addr) {
-        if (addr != null && !addr.isEmpty()) {
+        if (StringUtils.isNotEmpty(addr)) {
             vo.setIpv4(vo.getIpv4() == null || vo.getIpv4().isEmpty() ? addr : vo.getIpv4() + ";" + addr);
         }
     }
@@ -536,7 +537,7 @@ public class PosixSshDelegate implements SystemInfoProvider {
      * @param addr 地址，空值忽略
      */
     private static void appendIpv6(NetworkInterfaceRowVO vo, String addr) {
-        if (addr != null && !addr.isEmpty()) {
+        if (StringUtils.isNotEmpty(addr)) {
             vo.setIpv6(vo.getIpv6() == null || vo.getIpv6().isEmpty() ? addr : vo.getIpv6() + ";" + addr);
         }
     }
@@ -879,7 +880,7 @@ public class PosixSshDelegate implements SystemInfoProvider {
      * @return 类型标识
      */
     private static String fstypeOf(String device) {
-        if (device == null || device.isEmpty()) {
+        if (StringUtils.isEmpty(device)) {
             return "";
         }
         if (device.startsWith("/dev/")) {

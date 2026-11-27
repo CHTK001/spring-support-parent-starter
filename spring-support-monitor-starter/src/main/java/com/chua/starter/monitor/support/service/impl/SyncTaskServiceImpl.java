@@ -84,6 +84,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import com.chua.common.support.utils.CollectionUtils;
+import com.chua.common.support.utils.StringUtils;
 
 /**
    * 数据同步任务服务实现。
@@ -518,7 +520,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             List<SyncColumnVO> sourceColumns = resolvePreviewSourceColumns(request, false);
             List<SyncColumnVO> targetColumns = loadTargetColumns(request.targetDatasourceId(), request.targetTable());
             List<SyncFieldMappingVO> mapping = request.mapping();
-            boolean configured = mapping != null && !mapping.isEmpty();
+            boolean configured = CollectionUtils.isNotEmpty(mapping);
             if (!configured) {
                 mapping = autoMatch(sourceColumns, targetColumns);
             }
@@ -547,7 +549,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                 throw new IllegalArgumentException("文件不存在或不是普通文件: " + file);
             }
             List<BulkImportDTO.BulkImportOutputDTO> outputs = request.getOutputs();
-            if (outputs == null || outputs.isEmpty()) {
+            if (CollectionUtils.isEmpty(outputs)) {
                 throw new IllegalArgumentException("至少需要配置一个输出目标");
             }
               // 源文件统一读成行流（Map<列名, 值>），与 datasync 文件源同源，一次读、多目标复用
@@ -676,7 +678,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        */
     private List<String> outputColumns(BulkImportDTO.BulkImportOutputDTO output, List<String> fileHeaders) {
         List<BulkImportDTO.BulkImportMappingDTO> mapping = output.getColumnMapping();
-        if (mapping != null && !mapping.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(mapping)) {
             List<String> columns = new ArrayList<>(mapping.size());
             for (BulkImportDTO.BulkImportMappingDTO m : mapping) {
                 if (m.getTarget() != null && !m.getTarget().isBlank()) {
@@ -904,7 +906,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
                                     MsSyncTaskRunLog::getRunLogTaskId)
                             .ge(MsSyncTaskRunLog::getRunLogRunTime,
                                     LocalDateTime.now().minusDays(30)));
-            if (rows == null || rows.isEmpty()) {
+            if (CollectionUtils.isEmpty(rows)) {
                 return ReturnResult.ok(new SyncRunLogStatsVO(0, 0, 0, 0, 0, List.of(), List.of()));
             }
             long total = rows.size();
@@ -1676,7 +1678,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        * @return 水位串；取不到返回 null
        */
     private static String seqOfIncFields(Map<String, Object> row, List<String> incFields) {
-        if (incFields == null || incFields.isEmpty()) {
+        if (CollectionUtils.isEmpty(incFields)) {
             return null;
         }
         if (incFields.size() == 1) {
@@ -1685,7 +1687,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         List<String> values = new ArrayList<>(incFields.size());
         for (String field : incFields) {
             String value = seqOf(row.get(field));
-            if (value == null || value.isEmpty()) {
+            if (StringUtils.isEmpty(value)) {
                 return null;
             }
             values.add(value);
@@ -2034,7 +2036,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        */
     private List<SyncTargetDTO> normalizeTargets(SyncTaskDTO request) {
         List<SyncTargetDTO> raw = request.targets();
-        if (raw == null || raw.isEmpty()) {
+        if (CollectionUtils.isEmpty(raw)) {
             return List.of();
         }
         List<SyncTargetDTO> targets = new ArrayList<>(raw.size());
@@ -2208,7 +2210,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             task.setSyncTaskTargetSeqs(null);
             return;
         }
-        if (seqs == null || seqs.isEmpty()) {
+        if (CollectionUtils.isEmpty(seqs)) {
             return;
         }
         Map<String, List<String>> previous = previousTargetIncFields(previousJson);
@@ -2242,7 +2244,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         }
         try {
             List<SyncTargetDTO> parsed = objectMapper.readValue(json, new TypeReference<List<SyncTargetDTO>>() { });
-            if (parsed == null || parsed.isEmpty()) {
+            if (CollectionUtils.isEmpty(parsed)) {
                 return Map.of();
             }
             Map<String, List<String>> result = new HashMap<>();
@@ -2505,7 +2507,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        * @throws IllegalArgumentException 有字段不存在
        */
     private static void requireFieldsInColumns(List<String> incFields, List<SyncColumnVO> columns) {
-        if (incFields == null || incFields.isEmpty()) {
+        if (CollectionUtils.isEmpty(incFields)) {
             return;
         }
         List<String> missing = new ArrayList<>();
@@ -2625,7 +2627,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
        * @return 水位串；全为空返回 null
        */
     private static String joinSeqValues(List<String> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return null;
         }
         if (values.size() == 1) {
@@ -2691,7 +2693,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
         List<String> values = new ArrayList<>(incFields.size());
         for (String field : incFields) {
             String value = seqOf(row.get(field));
-            if (value == null || value.isEmpty()) {
+            if (StringUtils.isEmpty(value)) {
                 return;
             }
             values.add(value);
@@ -2930,7 +2932,7 @@ public class SyncTaskServiceImpl implements SyncTaskService {
             } catch (Exception e) {
                 throw new IllegalArgumentException("多目标配置格式不合法: " + e.getMessage());
             }
-            if (parsed != null && !parsed.isEmpty()) {
+            if (CollectionUtils.isNotEmpty(parsed)) {
                 List<SyncTargetPlan> plans = new ArrayList<>(parsed.size());
                 for (SyncTargetDTO item : parsed) {
                     if (item == null || item.targetDatasourceId() == null

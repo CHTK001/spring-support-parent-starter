@@ -9,6 +9,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 供应商登记表出口：按顺序问各个 {@link ProviderRegistryProvider}，第一个命中的算数。
@@ -39,7 +41,7 @@ public final class ProviderRegistries {
      */
     public static List<ProviderRegistryProvider> providers() {
         List<ProviderRegistryProvider> current = cached;
-        if (current == null || current.isEmpty()) {
+        if (CollectionUtils.isEmpty(current)) {
             current = SpiProviders.list(ProviderRegistryProvider.class);
             cached = current;
         }
@@ -169,7 +171,7 @@ public final class ProviderRegistries {
             return false;
         }
         List<String> hosts = descriptor.getHosts();
-        if (hosts == null || hosts.isEmpty()) {
+        if (CollectionUtils.isEmpty(hosts)) {
             return false;
         }
         if (baseUrl == null || baseUrl.isBlank()) {
@@ -239,7 +241,7 @@ public final class ProviderRegistries {
         // 查登记表
         ProviderDescriptor descriptor = find(null, trimmed);
         String suffix = descriptor == null ? null : pathOf(descriptor.getBaseUrl());
-        if (suffix == null || suffix.isEmpty()) {
+        if (StringUtils.isEmpty(suffix)) {
             suffix = "/v1";
         }
         // 拼接：去掉末尾斜杠再补

@@ -31,6 +31,7 @@ import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.util.AiUserContext;
 import com.chua.starter.ai.support.workspace.SessionWorkspaceResolver;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 会话控制器
@@ -1700,7 +1701,7 @@ public class AiSessionController {
                 .orderByDesc(SysAiMessage::getId)
                 .last("LIMIT 12");
         List<SysAiMessage> recent = messageMapper.selectList(wrapper);
-        if (recent == null || recent.isEmpty()) {
+        if (CollectionUtils.isEmpty(recent)) {
             result.put("skipped", true);
             result.put("reason", "会话还没有消息，无法生成标题");
             return ReturnResult.ok(result);
@@ -2798,7 +2799,7 @@ public class AiSessionController {
         @SuppressWarnings("unchecked")
         List<String> ids = (List<String>) body.get("ids");
         
-        if (ids == null || ids.isEmpty()) {
+        if (CollectionUtils.isEmpty(ids)) {
             Map<String, Object> result = new HashMap<>();
             result.put("success", false);
             result.put("message", "ids is required");

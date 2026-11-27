@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 字符终端配色方案接口。
@@ -169,7 +170,7 @@ public class TerminalThemeController {
     @Operation(summary = "保存终端配色")
     @PutMapping
     public ReturnResult<Map<String, String>> save(@RequestBody Map<String, String> body) {
-        if (body == null || body.isEmpty()) {
+        if (CollectionUtils.isEmpty(body)) {
             return ReturnResult.error("配色不能为空");
         }
         // 底稿是「库里的当前配色」，不是默认配色：以前以默认值为底，只传一个键的
@@ -357,7 +358,7 @@ public class TerminalThemeController {
         Map<String, String> theme = new LinkedHashMap<>(DEFAULT_THEME);
         ReturnResult<List<MsServerConfig>> all = configService.listAll();
         List<MsServerConfig> rows = all == null ? null : all.getData();
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return theme;
         }
         for (MsServerConfig row : rows) {
@@ -415,7 +416,7 @@ public class TerminalThemeController {
         List<Preset> list = new ArrayList<>();
         ReturnResult<List<MsServerConfig>> all = configService.listAll();
         List<MsServerConfig> rows = all == null ? null : all.getData();
-        if (rows == null || rows.isEmpty()) {
+        if (CollectionUtils.isEmpty(rows)) {
             return list;
         }
         for (MsServerConfig row : rows) {
@@ -510,7 +511,7 @@ public class TerminalThemeController {
      */
     private Map<String, String> normalize(Map<String, String> provided) {
         Map<String, String> theme = new LinkedHashMap<>(DEFAULT_THEME);
-        if (provided == null || provided.isEmpty()) {
+        if (CollectionUtils.isEmpty(provided)) {
             return theme;
         }
         for (Map.Entry<String, String> entry : provided.entrySet()) {

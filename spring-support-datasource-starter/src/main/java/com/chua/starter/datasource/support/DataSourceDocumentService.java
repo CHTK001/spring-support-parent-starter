@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 数据源文档服务
@@ -181,7 +182,7 @@ public class DataSourceDocumentService {
      * @return 过滤器tables的结果
      */
     private List<TableData> filterTables(List<TableData> source) {
-        if (source == null || source.isEmpty()) {
+        if (CollectionUtils.isEmpty(source)) {
             return source;
         }
         List<TablePatternMatcher.Matcher> includes = TablePatternMatcher.build(properties.getIncludeTables());

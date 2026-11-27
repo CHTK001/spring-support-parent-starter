@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 官网技能市场（ai.dingd.cn）来源实现。
@@ -91,12 +92,12 @@ public class DingdSkillMarketProvider implements SkillMarketProvider {
     */
     private List<SkillMarketEntry> ensureCache() {
         List<SkillMarketEntry> snapshot = cache;
-        if (snapshot != null && !snapshot.isEmpty() && System.currentTimeMillis() - cacheAt < CACHE_TTL) {
+        if (CollectionUtils.isNotEmpty(snapshot) && System.currentTimeMillis() - cacheAt < CACHE_TTL) {
             return snapshot;
         }
         synchronized (this) {
             snapshot = cache;
-            if (snapshot != null && !snapshot.isEmpty() && System.currentTimeMillis() - cacheAt < CACHE_TTL) {
+            if (CollectionUtils.isNotEmpty(snapshot) && System.currentTimeMillis() - cacheAt < CACHE_TTL) {
                 return snapshot;
             }
             snapshot = fetch();

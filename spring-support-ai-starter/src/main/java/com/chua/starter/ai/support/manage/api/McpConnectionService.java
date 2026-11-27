@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * MCP 真实连接服务。
@@ -249,7 +250,7 @@ public class McpConnectionService {
     private void applyHeaders(
             HttpClientStreamableHttpTransport.Builder builder,
             Map<String, Object> headers) {
-        if (headers == null || headers.isEmpty()) {
+        if (CollectionUtils.isEmpty(headers)) {
             return;
         }
         Map<String, String> flat = new HashMap<>(8);
@@ -273,7 +274,7 @@ public class McpConnectionService {
     private void applyHeaders(
             HttpClientSseClientTransport.Builder builder,
             Map<String, Object> headers) {
-        if (headers == null || headers.isEmpty()) {
+        if (CollectionUtils.isEmpty(headers)) {
             return;
         }
         Map<String, String> flat = new HashMap<>(8);

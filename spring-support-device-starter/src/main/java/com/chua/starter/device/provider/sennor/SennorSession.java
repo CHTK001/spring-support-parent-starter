@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 精讯畅通（Sennor）精讯云设备会话。
@@ -639,7 +640,7 @@ public class SennorSession implements DeviceSession {
      * @return 编码后的字符串
      */
     private static String formEncode(Map<String, Object> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return "";
         }
         StringBuilder result = new StringBuilder();

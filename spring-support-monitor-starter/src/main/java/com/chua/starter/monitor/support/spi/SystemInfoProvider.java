@@ -31,6 +31,7 @@ import com.chua.starter.server.support.entity.MsServerHost;
 
 import java.io.InputStream;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 系统信息提供者 SPI 扩展点。
@@ -318,7 +319,7 @@ public interface SystemInfoProvider {
      * @return 完整路径
      */
     private static String joinUsage(String parent, String name, char sep) {
-        if (parent == null || parent.isEmpty()) {
+        if (StringUtils.isEmpty(parent)) {
             return name;
         }
         return parent.endsWith(String.valueOf(sep)) ? parent + name : parent + sep + name;
@@ -332,7 +333,7 @@ public interface SystemInfoProvider {
      * @return 名称
      */
     private static String basename(String path, char sep) {
-        if (path == null || path.isEmpty()) {
+        if (StringUtils.isEmpty(path)) {
             return "/";
         }
         int i = Math.max(path.lastIndexOf(sep), path.lastIndexOf(sep == '\\' ? '/' : '\\'));

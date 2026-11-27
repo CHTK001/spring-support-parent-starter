@@ -18,6 +18,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 基于 Spring Bean 的 RPC 客户端实现（springbean 协议）
@@ -233,7 +234,7 @@ public class SpringBeanRpcClient implements RpcClient, ApplicationContextAware {
         Object bean = getLocalBean(targetType);
         if (bean == null && this.exception) {
             String message = "未在本地 Spring Application Context 中找到本地 Bean: " + targetType.getName()
-                    + (this.appName != null && !this.appName.isEmpty() ? " (app: " + this.appName + ")" : "");
+                    + (StringUtils.isNotEmpty(this.appName) ? " (app: " + this.appName + ")" : "");
             log.warn("[SpringBean RPC] {}", message);
             throw new RpcException(RpcException.Type.TRANSPORT, message);
         }

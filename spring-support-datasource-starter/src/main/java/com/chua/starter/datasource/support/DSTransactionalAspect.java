@@ -13,6 +13,7 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
 import java.util.Optional;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * {@code @DSTransactional} 注解的切面实现
@@ -137,10 +138,10 @@ public class DSTransactionalAspect {
      */
     private String getTransactionName(ProceedingJoinPoint pjp, DSTransactional dsTransactional) {
         String name = dsTransactional.value();
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             name = dsTransactional.name();
         }
-        if (name == null || name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             // 默认使用方法签名
             MethodSignature signature = (MethodSignature) pjp.getSignature();
             name = signature.getDeclaringType().getSimpleName() + "." + signature.getMethod().getName();

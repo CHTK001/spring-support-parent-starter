@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 读取数据库全部表 → 表节点信息
@@ -225,7 +226,7 @@ public class TableGraphReader {
      * @return 空转为空的结果
      */
     private static String emptyToNull(String s) {
-        return (s == null || s.isEmpty()) ? null : s;
+        return (StringUtils.isEmpty(s)) ? null : s;
     }
 
     /**

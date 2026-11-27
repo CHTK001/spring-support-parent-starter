@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Moss 模型价格同步服务实现。
@@ -474,7 +475,7 @@ public class AiMossPriceSyncServiceImpl implements AiMossPriceSyncService {
      * @return 中位数；空列表返回 null
      */
     private static BigDecimal median(List<BigDecimal> values) {
-        if (values == null || values.isEmpty()) {
+        if (CollectionUtils.isEmpty(values)) {
             return null;
         }
         List<BigDecimal> sorted = new ArrayList<>(values);

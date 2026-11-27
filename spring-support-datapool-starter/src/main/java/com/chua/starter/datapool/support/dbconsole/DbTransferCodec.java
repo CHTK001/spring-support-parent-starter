@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 数据导入 / 导出的格式编解码。
@@ -137,7 +138,7 @@ public final class DbTransferCodec {
     private static List<List<String>> readAllRecords(String text, char delimiter,
                                                     char textQualifier, char[] recordSeparators) {
         List<List<String>> records = new ArrayList<>();
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return records;
         }
         boolean useQualifier = textQualifier != 0;

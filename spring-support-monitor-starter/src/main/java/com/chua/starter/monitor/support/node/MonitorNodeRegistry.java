@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 在线节点注册表。
@@ -59,7 +60,7 @@ public class MonitorNodeRegistry {
      * @param data 上报内容（服务端已注入 {@code __syncClientId__}）
      */
     public void onAppReport(Map<String, Object> data) {
-        if (data == null || data.isEmpty()) {
+        if (CollectionUtils.isEmpty(data)) {
             return;
         }
         String clientId = asString(data.get(SYNC_SOURCE_CLIENT_ID));

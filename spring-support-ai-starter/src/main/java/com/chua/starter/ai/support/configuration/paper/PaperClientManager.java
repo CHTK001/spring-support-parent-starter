@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 试卷识别客户端管理器（ai-starter 直接提供的试卷 Bean）。
@@ -377,7 +378,7 @@ public class PaperClientManager implements PaperClient {
      * @return 有效字符数
      */
     private static long chars(List<OcrResult> results) {
-        if (results == null || results.isEmpty()) {
+        if (CollectionUtils.isEmpty(results)) {
             return 0L;
         }
         return results.stream()

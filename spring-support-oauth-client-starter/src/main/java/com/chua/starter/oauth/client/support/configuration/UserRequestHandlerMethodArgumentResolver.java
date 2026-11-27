@@ -159,7 +159,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         // 未认证（无 UserResume）时，所有标量参数安全降级为 null / 默认值，禁止再解引用
         if (null == userResume) {
             String dv = defaultFunction.apply(methodParameter);
-            return (dv == null || dv.isEmpty()) ? null : dv;
+            return (StringUtils.isEmpty(dv)) ? null : dv;
         }
 
         String paramName = nameFunction.apply(methodParameter);

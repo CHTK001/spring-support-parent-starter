@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.chua.common.support.utils.ObjectUtils;
 
 /**
  * 分库分表规则运行期管理器。
@@ -499,10 +500,10 @@ public class ShardingRuleManager {
         if (prev == null) {
             return false;
         }
-        if (prev.getName() != null && prev.getName().equals(member.getName())) {
+        if (ObjectUtils.nullSafeEquals(prev.getName(), member.getName())) {
             return true;
         }
-        return prev.getUrl() != null && prev.getUrl().equals(member.getUrl());
+        return ObjectUtils.nullSafeEquals(prev.getUrl(), member.getUrl());
     }
 
     /**

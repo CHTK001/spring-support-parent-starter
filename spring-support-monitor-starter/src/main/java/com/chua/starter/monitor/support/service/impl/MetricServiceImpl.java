@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 监控指标 服务 实现
@@ -174,7 +176,7 @@ public class MetricServiceImpl implements MetricService {
 
             for (MetricPoint point : result.getPoints()) {
                 String target = point.getTargetTable();
-                if (target == null || target.isEmpty() || "ms_monitor_metric".equals(target)) {
+                if (StringUtils.isEmpty(target) || "ms_monitor_metric".equals(target)) {
                     genericBatch.add(buildGenericMetric(monitorId, point, collectTime));
                 } else if ("ms_monitor_metric_cpu".equals(target)) {
                     cpuBatch.add(buildCpuMetric(monitorId, point, collectTime));
@@ -256,7 +258,7 @@ public class MetricServiceImpl implements MetricService {
      */
     public ReturnResult<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime) {
         try {
-            if (points == null || points.isEmpty()) {
+            if (CollectionUtils.isEmpty(points)) {
                 return ReturnResult.ok();
             }
             LocalDateTime ct = collectTime != null ? collectTime : LocalDateTime.now();
@@ -739,7 +741,7 @@ public class MetricServiceImpl implements MetricService {
     */
     public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(
         Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
-        boolean filtered = metricName != null && !metricName.isEmpty();
+        boolean filtered = StringUtils.isNotEmpty(metricName);
         List<MsMonitorMetric> stamps = metricMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetric>()
                         .select(MsMonitorMetric::getCollectTime)
@@ -777,7 +779,7 @@ public class MetricServiceImpl implements MetricService {
         return ReturnResult.ok(statisticsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorMetricStatistics>()
                         .eq(MsMonitorMetricStatistics::getMonitorId, monitorId)
-                        .eq(metricName != null && !metricName.isEmpty(), MsMonitorMetricStatistics::getMetricName, metricName)
+                        .eq(StringUtils.isNotEmpty(metricName), MsMonitorMetricStatistics::getMetricName, metricName)
                         .ge(startTime != null, MsMonitorMetricStatistics::getHourBucket, startTime)
                         .le(endTime != null, MsMonitorMetricStatistics::getHourBucket, endTime)
                         .orderByAsc(MsMonitorMetricStatistics::getHourBucket)));
@@ -797,7 +799,7 @@ public class MetricServiceImpl implements MetricService {
         return ReturnResult.ok(redisMetricStatsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
                         .eq(MsMonitorRedisMetricStatistics::getMonitorId, monitorId)
-                        .eq(metricName != null && !metricName.isEmpty(), MsMonitorRedisMetricStatistics::getMetricName, metricName)
+                        .eq(StringUtils.isNotEmpty(metricName), MsMonitorRedisMetricStatistics::getMetricName, metricName)
                         .ge(startTime != null, MsMonitorRedisMetricStatistics::getHourBucket, startTime)
                         .le(endTime != null, MsMonitorRedisMetricStatistics::getHourBucket, endTime)
                         .orderByAsc(MsMonitorRedisMetricStatistics::getHourBucket)));
@@ -819,7 +821,7 @@ public class MetricServiceImpl implements MetricService {
                     .eq(monitorId != null, MsMonitorMetric::getMonitorId, monitorId)
                     .ge(startTime != null, MsMonitorMetric::getCollectTime, startTime)
                     .le(endTime != null, MsMonitorMetric::getCollectTime, endTime);
-            if (metricName != null && !metricName.isEmpty()) {
+            if (StringUtils.isNotEmpty(metricName)) {
                 wrapper.eq(MsMonitorMetric::getMetricName, metricName);
             }
             List<MsMonitorMetric> metrics = metricMapper.selectList(wrapper);
@@ -829,7 +831,7 @@ public class MetricServiceImpl implements MetricService {
                     .eq(monitorId != null, MsMonitorRedisMetric::getMonitorId, monitorId)
                     .ge(startTime != null, MsMonitorRedisMetric::getCollectTime, startTime)
                     .le(endTime != null, MsMonitorRedisMetric::getCollectTime, endTime);
-            if (metricName != null && !metricName.isEmpty()) {
+            if (StringUtils.isNotEmpty(metricName)) {
                 redisWrapper.eq(MsMonitorRedisMetric::getMetricName, metricName);
             }
             List<MsMonitorRedisMetric> redisMetrics = redisMetricMapper.selectList(redisWrapper);
@@ -880,7 +882,7 @@ public class MetricServiceImpl implements MetricService {
      * @return 转义后的值
      */
     private String escapeCsv(String raw) {
-        if (raw == null || raw.isEmpty()) {
+        if (StringUtils.isEmpty(raw)) {
             return "";
         }
         if (raw.indexOf('"') < 0 && raw.indexOf(',') < 0

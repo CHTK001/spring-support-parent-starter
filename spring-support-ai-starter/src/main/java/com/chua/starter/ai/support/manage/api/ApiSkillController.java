@@ -79,6 +79,8 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 前端技能控制器（对接 nomicore {@code skills.*} 契约）。
@@ -256,7 +258,7 @@ public class ApiSkillController {
     public ApiResult<List<Map<String, Object>>> fromAgent() {
         List<Map<String, Object>> result = new ArrayList<>();
         Map<String, SkillOfflineProvider> providers = ServiceProvider.of(SkillOfflineProvider.class).list();
-        if (providers == null || providers.isEmpty()) {
+        if (CollectionUtils.isEmpty(providers)) {
             log.warn("[ApiSkill] 未发现任何 SkillOfflineProvider 实现");
             return ApiResult.ok(result);
         }
@@ -1007,7 +1009,7 @@ public class ApiSkillController {
         List<Map<String, Object>> sources = new ArrayList<>();
         Map<String, SkillMarketSourceProvider> providers =
                 ServiceProvider.of(SkillMarketSourceProvider.class).list();
-        if (providers == null || providers.isEmpty()) {
+        if (CollectionUtils.isEmpty(providers)) {
  // Spring Boot fat jar 下 BOOT-INF/类 内嵌的 服务提供者 静态发现
  // 可能失败，回退到显式枚举全部 skill市场源提供者 SPI 实现。
             providers = new LinkedHashMap<>();
@@ -1420,7 +1422,7 @@ public class ApiSkillController {
             return direct;
         }
         for (Map.Entry<String, SkillOfflineProvider> entry : providers.entrySet()) {
-            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+            if (StringUtils.equalsIgnoreCase(entry.getKey(), key)) {
                 return entry.getValue();
             }
         }
@@ -2472,7 +2474,7 @@ public class ApiSkillController {
             TarArchiveEntry entry;
             while ((entry = stream.getNextEntry()) != null) {
                 String relative = stripArchiveRoot(entry.getName());
-                if (relative == null || relative.isEmpty()) {
+                if (StringUtils.isEmpty(relative)) {
                     continue;
                 }
                 if (!dirPath.isEmpty()) {
@@ -2534,7 +2536,7 @@ public class ApiSkillController {
      * @return 仓库内相对路径，根条目返回 {@code null}
      */
     private static String stripArchiveRoot(String entryName) {
-        if (entryName == null || entryName.isEmpty()) {
+        if (StringUtils.isEmpty(entryName)) {
             return null;
         }
         int slash = entryName.indexOf('/');

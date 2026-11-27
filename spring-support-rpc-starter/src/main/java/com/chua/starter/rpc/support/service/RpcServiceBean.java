@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * rpc服务Bean
@@ -160,7 +161,7 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
      */
     public String getInterfaceName() {
         String interfaceName = super.getInterfaceName();
-        if (interfaceName != null && !interfaceName.isEmpty()) {
+        if (StringUtils.isNotEmpty(interfaceName)) {
             return interfaceName;
         }
         Class<?> interfaceClass = super.getInterfaceClass();

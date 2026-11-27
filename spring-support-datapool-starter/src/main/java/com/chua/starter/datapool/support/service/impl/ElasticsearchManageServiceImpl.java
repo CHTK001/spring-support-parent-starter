@@ -30,6 +30,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * Elasticsearch 管理实现
@@ -387,7 +388,7 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
         if (!settings.isEmpty()) {
             body.put("settings", settings);
         }
-        if (properties != null && !properties.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(properties)) {
             body.put("mappings", Map.of("properties", properties));
         }
         return body;
@@ -789,7 +790,7 @@ public class ElasticsearchManageServiceImpl implements ElasticsearchManageServic
      * @return 返回值
     */
     private boolean isEmpty(Map<String, Object> map) {
-        return map == null || map.isEmpty();
+        return CollectionUtils.isEmpty(map);
     }
 
     /**

@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 打开api 响应 JSON 到设备领域模型的解析工具
@@ -157,7 +158,7 @@ public final class JsonMappers {
      * @return 解析日期的结果
      */
     private static LocalDateTime parseDate(String s) {
-        if (s == null || s.isEmpty()) {
+        if (StringUtils.isEmpty(s)) {
             return null;
         }
         try {

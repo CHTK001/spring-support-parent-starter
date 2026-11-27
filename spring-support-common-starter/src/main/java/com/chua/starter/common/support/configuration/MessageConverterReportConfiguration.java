@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 消息转换器报告配置
@@ -47,7 +48,7 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
         List<HttpMessageConverter<?>> converters = requestMappingHandlerAdapter.getMessageConverters();
-        if (converters == null || converters.isEmpty()) {
+        if (CollectionUtils.isEmpty(converters)) {
             log.warn("[消息转换器][报告]当前没有注册任何 HttpMessageConverter");
             return;
         }

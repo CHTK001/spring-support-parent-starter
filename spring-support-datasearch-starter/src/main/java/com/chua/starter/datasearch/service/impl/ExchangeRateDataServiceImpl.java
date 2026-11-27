@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 顶栏汇率数据服务实现。
@@ -332,7 +333,7 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
         for (ExchangeRateProvider provider : SpiProviders.list(ExchangeRateProvider.class)) {
             try {
                 Map<String, Double> rates = provider.getRates("USD");
-                if (rates != null && !rates.isEmpty()) {
+                if (CollectionUtils.isNotEmpty(rates)) {
                     usdRates = rates;
                     break;
                 }
@@ -369,7 +370,7 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
     private Map<String, Double> loadLatestFromErApi(List<Symbol> pairs) {
         Map<String, Double> result = new LinkedHashMap<>();
         Map<String, Double> usdRates = loadUsdTable();
-        if (usdRates == null || usdRates.isEmpty()) {
+        if (CollectionUtils.isEmpty(usdRates)) {
             return result;
         }
         for (Symbol pair : pairs) {
@@ -395,7 +396,7 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
         }
         Map<String, Object> body = readExternal(ER_API_URL);
         Map<String, Double> rates = ratesOf(body);
-        if (rates == null || rates.isEmpty()) {
+        if (CollectionUtils.isEmpty(rates)) {
             return usdTable;
         }
         usdTable = rates;
@@ -639,7 +640,7 @@ public class ExchangeRateDataServiceImpl implements ExchangeRateDataService {
      */
     private List<Symbol> parseSymbols(List<String> symbols) {
         Set<String> distinct = new LinkedHashSet<>();
-        for (String raw : symbols == null || symbols.isEmpty() ? DEFAULT_SYMBOLS : symbols) {
+        for (String raw : CollectionUtils.isEmpty(symbols) ? DEFAULT_SYMBOLS : symbols) {
             Symbol symbol = parseSymbol(raw);
             if (symbol == null) {
                 log.warn("[exchange-rate] 无法解析币种对，已跳过: {}", raw);

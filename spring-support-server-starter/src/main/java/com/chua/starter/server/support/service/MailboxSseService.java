@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
  * 邮箱账号(MAILBOX) SSE 实时推送服务
@@ -178,7 +179,7 @@ public class MailboxSseService {
         } else {
             emails = fetchImapEmails(identity, email);
         }
-        if (emails == null || emails.isEmpty()) {
+        if (CollectionUtils.isEmpty(emails)) {
             return List.of();
         }
         Set<String> seen = seenEmailIds.computeIfAbsent(identity.getId(), k -> ConcurrentHashMap.newKeySet());

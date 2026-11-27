@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 字符串 -> 列表 integer
@@ -91,7 +92,7 @@ public class IntegerListTypeHandler extends BaseTypeHandler<List<Integer>> {
      */
     private List<Integer> parseList(String string) {
         List<Integer> result = new ArrayList<>();
-        if (string == null || string.isEmpty()) {
+        if (StringUtils.isEmpty(string)) {
             return result;
         }
         List<String> parts = Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);

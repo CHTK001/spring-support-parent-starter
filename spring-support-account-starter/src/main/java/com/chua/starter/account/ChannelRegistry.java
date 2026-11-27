@@ -9,6 +9,7 @@ import com.chua.starter.account.spi.VideoChannelProvider;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.chua.common.support.utils.StringUtils;
 
 /**
  * 渠道注册表门面 —— 收敛「多 SPI root」的枚举逻辑。
@@ -67,8 +68,7 @@ public final class ChannelRegistry {
             return matched;
         }
         for (ChatChannelProvider provider : channels.values()) {
-            if (provider != null && provider.channel() != null
-                    && provider.channel().equalsIgnoreCase(channel)) {
+            if (provider != null && StringUtils.equalsIgnoreCase(provider.channel(), channel)) {
                 return provider;
             }
         }
@@ -100,8 +100,7 @@ public final class ChannelRegistry {
             return matched;
         }
         for (ImageChannelProvider provider : channels.values()) {
-            if (provider != null && provider.channel() != null
-                    && provider.channel().equalsIgnoreCase(channel)) {
+            if (provider != null && StringUtils.equalsIgnoreCase(provider.channel(), channel)) {
                 return provider;
             }
         }
@@ -133,8 +132,7 @@ public final class ChannelRegistry {
             return matched;
         }
         for (VideoChannelProvider provider : channels.values()) {
-            if (provider != null && provider.channel() != null
-                    && provider.channel().equalsIgnoreCase(channel)) {
+            if (provider != null && StringUtils.equalsIgnoreCase(provider.channel(), channel)) {
                 return provider;
             }
         }
@@ -166,8 +164,7 @@ public final class ChannelRegistry {
             return matched;
         }
         for (Model3DChannelProvider provider : channels.values()) {
-            if (provider != null && provider.channel() != null
-                    && provider.channel().equalsIgnoreCase(channel)) {
+            if (provider != null && StringUtils.equalsIgnoreCase(provider.channel(), channel)) {
                 return provider;
             }
         }

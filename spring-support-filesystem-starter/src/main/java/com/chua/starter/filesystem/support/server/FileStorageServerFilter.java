@@ -75,6 +75,8 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.utils.CollectionUtils;
 
 /**
    * 文件存储服务器过滤器。
@@ -677,7 +679,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
           // 参数走 query：POST /{bucket}?action=mkdir、GET /{bucket}?action=zip&sources=...
         Map<String, String> params = request.getParams();
         String action = params == null ? null : params.get("action");
-        if (action != null && !action.isEmpty()) {
+        if (StringUtils.isNotEmpty(action)) {
             return handleAction(storage, request, response, action, params);
         }
 
@@ -687,7 +689,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                   // 三方 URL 预览：?url=<base64 编码的 http(s) 地址>，受第三方 URL 预览能力（SPI 实现）控制。
                   // 放在 key 判定之前——调用方无需真实对象键，形如 GET /{bucket}/?url=...&preview=true
                 String thirdUrl = params == null ? null : params.get("url");
-                if (method == HttpMethod.GET && thirdUrl != null && !thirdUrl.isEmpty()) {
+                if (method == HttpMethod.GET && StringUtils.isNotEmpty(thirdUrl)) {
                     return handleThirdUrlPreview(request, response, bucket, thirdUrl);
                 }
                 if (key.isEmpty()) {
@@ -739,7 +741,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private CompletionStage<Void> handleConfig(ServerRequest request, ServerResponse response) {
         Map<String, String> params = request.getParams();
         String tokenParam = params == null ? null : params.get("token");
-        if (tokenParam == null || tokenParam.isEmpty()) {
+        if (StringUtils.isEmpty(tokenParam)) {
             return renderConfigLogin(response);
         }
         if (!token.equals(tokenParam)) {
@@ -907,7 +909,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 Map<String, String> params = request.getParams();
                 String bucket = params == null ? null : params.get("bucket");
                 String key = params == null ? null : params.get("key");
-                if (bucket == null || bucket.isEmpty() || key == null || key.isEmpty()) {
+                if (StringUtils.isEmpty(bucket) || StringUtils.isEmpty(key)) {
                     return error(response, 400, "Missing bucket or key");
                 }
                 FileStorage storage = storageMap.get(bucket);
@@ -1094,7 +1096,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
        * @return 过期毫秒数
        */
     private long parseOneTimeExpiry(String expires) {
-        if (expires == null || expires.isEmpty()) {
+        if (StringUtils.isEmpty(expires)) {
             return oneTimeTtlMillis();
         }
         String v = expires.trim().toLowerCase();
@@ -1619,7 +1621,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
        * @return 逗号分隔摘要；空列表返回 null
        */
     private static String chainSummary(List<String> applied) {
-        return applied == null || applied.isEmpty() ? null : String.join(",", applied);
+        return CollectionUtils.isEmpty(applied) ? null : String.join(",", applied);
     }
 
       /**
@@ -2180,7 +2182,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 sb.append(",");
             }
             first = false;
-            String childPath = parentPath == null || parentPath.isEmpty()
+            String childPath = StringUtils.isEmpty(parentPath)
                     ? m.getName() : parentPath + "/" + m.getName();
             sb.append("{\"name\":\"").append(escapeJson(m.getName())).append("\"")
                     .append(",\"path\":\"").append(escapeJson(childPath)).append("\"")
@@ -2245,7 +2247,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
        */
     private String privateBucketsJson() {
         java.util.Set<String> buckets = setting.getPrivateBuckets();
-        if (buckets == null || buckets.isEmpty()) {
+        if (CollectionUtils.isEmpty(buckets)) {
             return "[]";
         }
         StringBuilder sb = new StringBuilder("[");
@@ -2858,7 +2860,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .append(",\"total\":")
                   // 分页后 count 只是本页条数；total 是目录全部条目数（旧实现为空时回退本页条数）
                 .append(result.getTotal() > 0 ? result.getTotal() : (items == null ? 0 : items.size()));
-        if (items != null && !items.isEmpty()) {
+        if (CollectionUtils.isNotEmpty(items)) {
             json.append(",\"items\":[");
             for (int i = 0; i < items.size(); i++) {
                 Metadata metadata = items.get(i);
@@ -3007,7 +3009,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
           // 压缩包下钻：?format=cad&inner=包内路径 时解析的是「条目」而不是压缩包本体。
           // 不支持 inner 的话包内 DXF 只能落回 ?preview=true 的 SPI 通道并被三维提供者抢走，
           // 同一张图在顶层和包内会呈现成两套完全不同的界面。
-        if (innerPath != null && !innerPath.isEmpty()) {
+        if (StringUtils.isNotEmpty(innerPath)) {
             byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
             if (entryBytes == null) {
                 String err = "{\"name\":\"" + escapeJson(innerPath)
@@ -3441,7 +3443,7 @@ html,body{height:100%}
     private String buildFinderPathbar(String bucket, String dir) {
         StringBuilder sb = new StringBuilder();
         sb.append("<a href=\"/").append(encodePathSeg(bucket)).append("\">").append(escapeAttr(bucket)).append("</a>");
-        if (dir != null && !dir.isEmpty()) {
+        if (StringUtils.isNotEmpty(dir)) {
             String[] segments = dir.split("/");
             StringBuilder acc = new StringBuilder();
             for (String seg : segments) {
@@ -3479,7 +3481,7 @@ html,body{height:100%}
        */
     private String buildFinderRows(String bucket, String dir, List<Metadata> items) {
         StringBuilder sb = new StringBuilder();
-        if (dir != null && !dir.isEmpty()) {
+        if (StringUtils.isNotEmpty(dir)) {
             int lastSlash = dir.lastIndexOf('/');
             String parentHref = lastSlash < 0
                     ? "/" + encodePathSeg(bucket) + "/"
@@ -3489,9 +3491,9 @@ html,body{height:100%}
             sb.append("<span class=\"l-name\">.. \u8FD4\u56DE\u4E0A\u7EA7</span>");
             sb.append("<span class=\"l-size\"></span><span class=\"l-time\"></span></a>");
         }
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             sb.append("<div class=\"empty\">");
-            sb.append(dir == null || dir.isEmpty() ? "\u8BE5\u5B58\u50A8\u4E3A\u7A7A" : "\u8BE5\u76EE\u5F55\u4E3A\u7A7A");
+            sb.append(StringUtils.isEmpty(dir) ? "\u8BE5\u5B58\u50A8\u4E3A\u7A7A" : "\u8BE5\u76EE\u5F55\u4E3A\u7A7A");
             sb.append("</div>");
         } else {
             List<Metadata> sorted = items.stream()
@@ -3503,7 +3505,7 @@ html,body{height:100%}
                     }).toList();
             for (Metadata m : sorted) {
                 String href = buildHref(bucket, dir, m);
-                String objKey = (dir == null || dir.isEmpty()) ? m.getName() : dir + "/" + m.getName();
+                String objKey = (StringUtils.isEmpty(dir)) ? m.getName() : dir + "/" + m.getName();
                 sb.append("<a class=\"lrow").append(m.isDirectory() ? " dir" : "").append("\" href=\"");
                 sb.append(href).append("\"");
                 sb.append(" data-name=\"").append(escapeAttr(m.getName())).append("\"");
@@ -3695,7 +3697,7 @@ var search=document.getElementById('search');
         sb.append("<span class=\"logo\">\uD83D\uDCC1 文件存储</span>");
         sb.append("<div class=\"crumb\"><a href=\"/").append(encodePathSeg(bucket)).append("\">");
         sb.append(escapeAttr(bucket)).append("</a>");
-        if (dir != null && !dir.isEmpty()) {
+        if (StringUtils.isNotEmpty(dir)) {
             String[] segments = dir.split("/");
             StringBuilder acc = new StringBuilder();
             for (String seg : segments) {
@@ -3736,7 +3738,7 @@ var search=document.getElementById('search');
        */
     private void renderEntriesSimple(StringBuilder sb, String bucket, String dir, List<Metadata> items) {
         sb.append("<div class=\"panel\">");
-        if (dir != null && !dir.isEmpty()) {
+        if (StringUtils.isNotEmpty(dir)) {
             int lastSlash = dir.lastIndexOf('/');
             String parentHref = lastSlash < 0
                     ? "/" + encodePathSeg(bucket) + "/"
@@ -3744,7 +3746,7 @@ var search=document.getElementById('search');
             sb.append("<a class=\"entry up\" href=\"").append(parentHref).append("\">");
             sb.append("<span class=\"icon\">\u21E7</span><span class=\"name\">..</span><span class=\"meta\"></span></a>");
         }
-        if (items == null || items.isEmpty()) {
+        if (CollectionUtils.isEmpty(items)) {
             sb.append("<div class=\"empty\">\u7A7A\u76EE\u5F55</div>");
         } else {
             List<Metadata> sorted = items.stream()
@@ -3784,7 +3786,7 @@ var search=document.getElementById('search');
     private String buildHref(String bucket, String dir, Metadata m) {
         StringBuilder sb = new StringBuilder("/");
         sb.append(encodePathSeg(bucket));
-        if (dir != null && !dir.isEmpty()) {
+        if (StringUtils.isNotEmpty(dir)) {
             sb.append("/").append(encodePathFull(dir));
         }
         sb.append("/").append(encodePathSeg(m.getName()));
@@ -4265,7 +4267,7 @@ var search=document.getElementById('search');
               // raw 会话直吐条目原始字节（入口壳内嵌态渲染条目用）；其余统一交
               // 入口壳接管（壳内经 bytesUrl 携带 inner 再次取条目字节做客户端渲染）。
             String innerPath = request.getParams().get("inner");
-            if (innerPath != null && !innerPath.isEmpty()) {
+            if (StringUtils.isNotEmpty(innerPath)) {
                 byte[] entryBytes = extractArchiveEntry(data, fileName, innerPath);
                 if (entryBytes == null) {
                     String html = buildInnerMessagePage("压缩包内条目不存在或不支持预览：" + innerPath);
@@ -4771,7 +4773,7 @@ var search=document.getElementById('search');
                     for (String name : "ftp".equals(rawChannel)
                             ? new String[]{"user", "password"} : new String[]{"user", "password", "key"}) {
                         String value = params.get(name);
-                        if (value != null && !value.isEmpty()) {
+                        if (StringUtils.isNotEmpty(value)) {
                             replay.append('&').append(name).append('=').append(urlEncodeUtf8(value));
                         }
                     }
@@ -4912,7 +4914,7 @@ var search=document.getElementById('search');
        * @return classpath 资源路径；不在白名单内返回 {@code null}
        */
     private static String resolveStaticAssetPath(String path) {
-        if (path == null || path.isEmpty()) {
+        if (StringUtils.isEmpty(path)) {
             return null;
         }
         if ("/preview".equals(path) || "/preview/".equals(path)) {
@@ -5055,7 +5057,7 @@ var search=document.getElementById('search');
        * @return 改写后的 HTML
        */
     private static String applyMountPrefix(String html, String prefix) {
-        if (html == null || html.isEmpty() || prefix == null || prefix.isEmpty()) {
+        if (StringUtils.isEmpty(html) || StringUtils.isEmpty(prefix)) {
             return html;
         }
         return html.replace("=\"/assets/", "=\"" + prefix + "/assets/")
@@ -5151,7 +5153,7 @@ var search=document.getElementById('search');
        * @return 建议软件文本
        */
     private String openWithHint(String ext) {
-        if (ext == null || ext.isEmpty()) {
+        if (StringUtils.isEmpty(ext)) {
             return "能打开该格式的本地软件";
         }
         switch (ext) {
@@ -5266,7 +5268,7 @@ var search=document.getElementById('search');
        */
     private CompletionStage<Void> writeUnsupportedPreview(String fileName, String contentType, ServerResponse response) {
         String ext = simpleExtOf(fileName);
-        String extLabel = ext == null || ext.isEmpty() ? "（无扩展名）" : "." + ext.toUpperCase(Locale.ROOT);
+        String extLabel = StringUtils.isEmpty(ext) ? "（无扩展名）" : "." + ext.toUpperCase(Locale.ROOT);
         StringBuilder html = new StringBuilder(2048);
         html.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
                 .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
@@ -5937,7 +5939,7 @@ var search=document.getElementById('search');
        */
     @Override
     public void updateConfig(Map<String, Object> config) {
-        if (config == null || config.isEmpty()) {
+        if (CollectionUtils.isEmpty(config)) {
             return;
         }
         for (Map.Entry<String, Object> entry : config.entrySet()) {
@@ -6161,7 +6163,7 @@ var search=document.getElementById('search');
         if (params != null) {
             for (String key : PATH_GUARD_PARAM_KEYS) {
                 String value = params.get(key);
-                if (value == null || value.isEmpty()) {
+                if (StringUtils.isEmpty(value)) {
                     continue;
                 }
                 String paramHit = findTraversal(value);
@@ -6182,7 +6184,7 @@ var search=document.getElementById('search');
        * @return 命中的片段（{@code ..} / 反斜杠 / NUL）；未命中返回 null
        */
     static String findTraversal(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isEmpty(text)) {
             return null;
         }
         if (text.indexOf('\0') >= 0) {
@@ -6627,7 +6629,7 @@ var search=document.getElementById('search');
        * @return 存在返回 true
        */
     private boolean objectExists(FileStorage storage, String key) {
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return false;
         }
         ExistObjectResult result = storage.existObject(ExistObjectRequest.builder()
@@ -6648,7 +6650,7 @@ var search=document.getElementById('search');
        * @return 元数据；不存在返回 null
        */
     private Metadata stat(FileStorage storage, String key) {
-        if (key == null || key.isEmpty()) {
+        if (StringUtils.isEmpty(key)) {
             return null;
         }
         String parent = parentOf(key);
@@ -6942,7 +6944,7 @@ var search=document.getElementById('search');
        * @return 完整对象键
        */
     private String joinKey(String parent, String name) {
-        if (parent == null || parent.isEmpty()) {
+        if (StringUtils.isEmpty(parent)) {
             return name;
         }
         return parent + "/" + name;
@@ -7039,7 +7041,7 @@ var search=document.getElementById('search');
        * @return 规范化后的 键，非法时返回 空
        */
     private String sanitizeKey(String rawKey) {
-        if (rawKey == null || rawKey.isEmpty()) {
+        if (StringUtils.isEmpty(rawKey)) {
             return "";
         }
         try {
@@ -7075,7 +7077,7 @@ var search=document.getElementById('search');
             return false;
         }
         String value = params.get(name);
-        if (value == null || value.isEmpty() || "true".equalsIgnoreCase(value) || "1".equals(value)) {
+        if (StringUtils.isEmpty(value) || "true".equalsIgnoreCase(value) || "1".equals(value)) {
             return true;
         }
         return false;
@@ -7098,7 +7100,7 @@ var search=document.getElementById('search');
             return defaultValue;
         }
         String value = params.get(name);
-        if (value == null || value.isEmpty()) {
+        if (StringUtils.isEmpty(value)) {
             return defaultValue;
         }
         try {
@@ -7143,8 +7145,7 @@ var search=document.getElementById('search');
        * @return 条目字节；路径非法或条目不存在时返回 null
        */
     private byte[] extractArchiveEntry(byte[] archiveData, String fileName, String innerPath) {
-        if (innerPath == null
-                || innerPath.isEmpty()
+        if (StringUtils.isEmpty(innerPath)
                 || innerPath.contains("..")
                 || innerPath.contains("\\")
                 || innerPath.startsWith("/")
