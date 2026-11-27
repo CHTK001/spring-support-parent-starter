@@ -1,5 +1,6 @@
 package com.chua.starter.docker.service;
 
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.log.MdcWrap;
 import com.chua.starter.docker.spi.DockerRegistryProvider;
 import com.chua.starter.docker.spi.RegistryConfig;
@@ -476,7 +477,7 @@ public class RegistryService {
         out.put("namespace", config.getNamespace());
         out.put("enabled", config.enabledOrDefault());
         out.put("builtin", Boolean.TRUE.equals(config.getBuiltin()));
-        out.put("hasPassword", config.getPassword() != null && !config.getPassword().isEmpty());
+        out.put("hasPassword", StringUtils.isNotEmpty(config.getPassword()));
         return out;
     }
 

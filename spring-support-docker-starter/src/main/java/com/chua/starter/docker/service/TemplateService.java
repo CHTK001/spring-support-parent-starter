@@ -1,5 +1,6 @@
 package com.chua.starter.docker.service;
 
+import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.docker.DockerCreateRequest;
 import com.chua.starter.docker.model.DockerTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -175,13 +176,13 @@ public class TemplateService {
         if (isBlank(request.getCommand())) {
             request.setCommand(template.getCommand());
         }
-        if (isEmpty(request.getPorts())) {
+        if (CollectionUtils.isEmpty(request.getPorts())) {
             request.setPorts(copy(template.getPorts()));
         }
-        if (isEmpty(request.getEnv())) {
+        if (CollectionUtils.isEmpty(request.getEnv())) {
             request.setEnv(copy(template.getEnv()));
         }
-        if (isEmpty(request.getVolumes())) {
+        if (CollectionUtils.isEmpty(request.getVolumes())) {
             request.setVolumes(copy(template.getVolumes()));
         }
         if (isBlank(request.getNetwork())) {
@@ -194,16 +195,6 @@ public class TemplateService {
             request.setPull(template.getPull());
         }
         log.debug("[docker] 已应用模板 {} 回填创建请求", template.getId());
-    }
-
-    /**
-     * 列表判空
-     *
-     * @param value 列表
-     * @return 是否为空
-     */
-    private boolean isEmpty(List<String> value) {
-        return value == null || value.isEmpty();
     }
 
     /**

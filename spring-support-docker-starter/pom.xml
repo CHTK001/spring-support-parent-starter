@@ -28,6 +28,15 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 通用工具（StringUtils / CollectionUtils 判空等）。
+             已由 server-starter 传递引入，此处显式声明以表明直接使用关系，
+             不含任何 AutoConfiguration，不产生额外装配副作用。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Web（RestController / SseEmitter） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
