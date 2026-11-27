@@ -8,7 +8,6 @@ import com.chua.common.support.ai.agent.AgentApprovalGate;
 import com.chua.common.support.ai.agent.AgentBudget;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
-import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.DecisionsClient;
@@ -1954,49 +1953,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         names = names == null ? List.of() : names.stream().filter(java.util.Objects::nonNull)
                 .map(String::trim).filter(name -> !name.isEmpty()).distinct().toList();
-        if (agent instanceof OpencodeServerAgent nativeAgent) {
-            List<String> selected = new ArrayList<>();
-            if (names != null && !names.isEmpty()) {
-                Set<String> wantedNames = new LinkedHashSet<>(names);
-                for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
-                    if (skill.enabled() && wantedNames.contains(skill.name()) && !selected.contains(skill.name())) {
-                        nativeAgent.skillPath(skill.location());
-                        selected.add(skill.name());
-                    }
-                }
-            }
-            nativeAgent.skillSelection(selected);
-            return;
-        }
-        if (names == null || names.isEmpty()) {
-            return;
-        }
-        java.util.Set<String> wanted = new java.util.LinkedHashSet<>();
-        for (String n : names) {
-            if (n != null && !n.isBlank()) {
-                wanted.add(n.trim());
-            }
-        }
-        if (wanted.isEmpty()) {
-            return;
-        }
-        java.util.Map<String, SkillDefinition> defs = new java.util.LinkedHashMap<>();
-        for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
-            if (!skill.enabled() || !wanted.contains(skill.name()) || defs.containsKey(skill.name())) {
-                continue;
-            }
-            defs.put(skill.name(), SkillDefinition.text(skill.name(), skill.description(), skill.content()));
-        }
-        for (SkillDefinition def : defs.values()) {
-            agent.skill(def.getName(), def.getDescription(), def.getHandler());
-        }
-        if (!defs.isEmpty()) {
-            log.info("[AiChat] 会话已注册角色技能 {} 个（选择 {} 个）: {}",
-                    defs.size(), wanted.size(), defs.keySet());
-        } else {
-            log.warn("[AiChat] 角色选择了 {} 个技能，但本机未找到可用技能正文（可能未安装或已被全局禁用）: {}",
-                    wanted.size(), wanted);
-        }
+        chatSkillSupport.configureAgent(agent, names);
     }
 
     /**

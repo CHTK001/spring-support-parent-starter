@@ -13,8 +13,8 @@ import java.util.Map;
  *
  * <p>配置中心为每条 managed 记录分别保存 MCP 工具、子代理委派、
  * 默认技能、记忆体、规划、工具循环轮数与 Token 预算。每个字段都由
- * {@code AiChatFacadeServiceImpl#maybeWrapAgent} 在构建会话 Agent 时真实读取，
- * 不是只写不读的设置占位。</p>
+ * {@code SysAiAgentServiceImpl#rebuildAgent} 在构建托管实例时读取。
+ * Spring 消费方经 {@code AgentManager.get(id)} 使用该实例；旧会话全局基线仍走 resolve。</p>
  *
  * <h2>三态能力开关的优先级</h2>
  * <p>{@code agent_mcp_mode} / {@code agent_sub_agent_mode} 取
@@ -68,8 +68,9 @@ public record AgentRuntimeProfile(
         subAgent = subAgent == null ? CapabilitySwitch.INHERIT : subAgent;
         mcpServers = mcpServers == null ? null : List.copyOf(mcpServers);
         defaultSkills = defaultSkills == null ? null : List.copyOf(defaultSkills);
-        maxToolIterations = Math.max(maxToolIterations, 0);
-        maxTotalTokens = Math.max(maxTotalTokens, 0L);
+        if (maxToolIterations < 0 || maxTotalTokens < 0L) {
+            throw new IllegalArgumentException("执行边界必须为非负整数");
+        }
     }
 
     /**
@@ -182,12 +183,24 @@ public record AgentRuntimeProfile(
         Map<String, Object> strategy = agent.getStrategy() == null ? Map.of() : agent.getStrategy();
         Object mcpMode = strategy.containsKey("mcp_mode") ? strategy.get("mcp_mode") : strategy.get("mcp");
         return new AgentRuntimeProfile(agent.getName(),
-                CapabilitySwitch.parse(mcpMode == null ? null : mcpMode.toString()), agent.getMcpIds(),
-                CapabilitySwitch.parse(value(strategy, "sub_agent_mode", "inherit")), agent.getSkillIds(),
-                Boolean.parseBoolean(value(strategy, "memory", "true")),
-                Boolean.parseBoolean(value(strategy, "planning", "false")),
-                Math.toIntExact(number(strategy, "max_tool_iterations", 0L)),
-                number(strategy, "max_total_tokens", number(strategy, "max_tokens", 0L)));
+                managedSwitch(mcpMode, "mcp_mode"), agent.getMcpIds(),
+                managedSwitch(strategy.get("sub_agent_mode"), "sub_agent_mode"), agent.getSkillIds(),
+                managedBoolean(strategy.get("memory"), "memory", true),
+                managedBoolean(strategy.get("planning"), "planning", false),
+                iterations(strategy),
+                strategy.get("max_total_tokens") != null ? number(strategy, "max_total_tokens", 0L)
+                        : number(strategy, "max_tokens", 0L));
+    }
+
+    /**
+     * 工具轮数必须可由运行时 int 契约无损表示。
+     * @param strategy 策略
+     * @return 工具轮数
+     */
+    private static int iterations(Map<String, Object> strategy) {
+        long value = number(strategy, "max_tool_iterations", 0L);
+        if (value > Integer.MAX_VALUE) throw new IllegalArgumentException("max_tool_iterations 超出 int 范围");
+        return (int) value;
     }
 
     /**
@@ -197,9 +210,33 @@ public record AgentRuntimeProfile(
      * @param fallback 缺省值
      * @return 字段文本
      */
-    private static String value(Map<String, Object> strategy, String key, String fallback) {
-        Object raw = strategy.get(key);
-        return raw == null ? fallback : raw.toString();
+    private static CapabilitySwitch managedSwitch(Object raw, String key) {
+        if (raw == null) return CapabilitySwitch.INHERIT;
+        if (!(raw instanceof String) && !(raw instanceof Boolean)) {
+            throw new IllegalArgumentException(key + " 必须为 on / off / inherit");
+        }
+        String text = raw.toString().trim().toLowerCase(Locale.ROOT);
+        if ("inherit".equals(text)) return CapabilitySwitch.INHERIT;
+        if ("on".equals(text) || "true".equals(text)) return CapabilitySwitch.ON;
+        if ("off".equals(text) || "false".equals(text)) return CapabilitySwitch.OFF;
+        throw new IllegalArgumentException(key + " 必须为 on / off / inherit");
+    }
+
+    /**
+     * 严格解析托管实例布尔策略，错误输入不得静默变为 false。
+     * @param raw 原值
+     * @param key 字段名
+     * @param fallback 缺省值
+     * @return 布尔值
+     */
+    private static boolean managedBoolean(Object raw, String key, boolean fallback) {
+        if (raw == null) return fallback;
+        if (raw instanceof Boolean value) return value;
+        if (raw instanceof String text) {
+            if ("true".equalsIgnoreCase(text.trim())) return true;
+            if ("false".equalsIgnoreCase(text.trim())) return false;
+        }
+        throw new IllegalArgumentException(key + " 必须为布尔值");
     }
 
     /**
@@ -212,9 +249,14 @@ public record AgentRuntimeProfile(
     private static long number(Map<String, Object> strategy, String key, long fallback) {
         Object raw = strategy.get(key);
         if (raw == null) return fallback;
-        long result = new java.math.BigDecimal(raw.toString()).longValueExact();
-        if (result < 0) throw new IllegalArgumentException(key + " 必须为非负整数");
-        return result;
+        try {
+            if (!(raw instanceof Number) && !(raw instanceof String)) throw new NumberFormatException();
+            long result = new java.math.BigDecimal(raw.toString()).longValueExact();
+            if (result < 0) throw new NumberFormatException();
+            return result;
+        } catch (ArithmeticException | NumberFormatException e) {
+            throw new IllegalArgumentException(key + " 必须为 Long 范围内的非负整数", e);
+        }
     }
 
     /**

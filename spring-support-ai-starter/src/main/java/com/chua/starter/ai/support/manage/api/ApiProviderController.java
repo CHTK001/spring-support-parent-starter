@@ -2700,37 +2700,44 @@ public class ApiProviderController {
     }
 
     /**
-     * 供应商可用余额查询类型选项（表单「查询类型」下拉的数据源）。
+     * 供应商的余额查询口径（由后端按实际支持情况固定，表单只读展示）。
      *
-     * @param value 实现标识（选中后写入 extra.credit_kind）
-     * @param label 展示名
-     * @param login 是否支持「账号密码登录」截获令牌（true 时表单显示登录入口与自动续期）
+     * @param kind        主查询实现标识（运行时候选链首项）；无可用实现时为 null
+     * @param label       主查询实现展示名；{@code kind} 为 null 时同 null
+     * @param chain       运行时候选链（主实现 + 按尝试顺序的回落实现），与余额面板「已尝试」一致
+     * @param chainLabels 候选链展示名，与 {@code chain} 一一对应
+     * @param locked      是否为绑定厂商官方口径的 AK/SK 签名族（类型不可改，也不写 extra.credit_kind）
+     * @param canLogin    是否可用「账号密码登录」截获令牌（候选链里有可登录实现，或已配 credit_login_url）
+     * @param level       余额口径分级：official / openai / relay / manual / uncovered / none
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record CreditKindOption(String value, String label, Boolean login) {
+    record CreditKindSpec(String kind, String label, List<String> chain, List<String> chainLabels,
+            Boolean locked, Boolean canLogin, String level) {
     }
 
     /**
-     * 供应商可用的余额查询类型清单：后端实现了哪些，表单就显示哪些。
+     * 供应商的余额查询口径：返回后端实际会跑的候选链，供表单只读展示。
      *
-     * <p>「自定义」（显式余额地址 + 字段映射 + 余额密钥）恒可选且排第一，作为默认口径；
-     * 其余按 {@link #autoCandidateKinds} 的自动候选链展示——登记表收录的厂商、可指纹
-     * 识别的中转网关、OpenAI 兼容计费探测等，只有后端真的实现了才出现在下拉里；
-     * 「账号密码登录」是令牌来源而非查询实现，仅当候选链里存在给出登录页的 SPI
-     * （或已显式配置 credit_login_url）时才可选。本接口只做静态判断，
-     * 不发起任何真实余额查询。</p>
+     * <p>查询类型不是用户可选项：{@link #candidateKinds} 才是运行期唯一口径（显式配置优先，
+     * 否则按厂商 / 地址 / 网关指纹自动排列）。表单据此显示「主类型 + 失败回落链」，
+     * 用户不再自由选择，避免出现「显示自定义、实际跑自动链」的不一致。</p>
+     *
+     * <p>「账号密码登录」（{@link ProviderCreditLoginService#KIND}）是令牌来源而非查询实现，
+     * 通过 {@code canLogin} 单独下发；只有候选链本身含 {@code custom}（即显式登录口径下
+     * 配了 credit_url / credit_mapping）时它才会出现在链里。</p>
      *
      * <p>已保存的行按库里的平台 / 地址 / extra 计算；未保存的新行按用户正在填写的
-     * 平台与上游地址计算（内存临时实体，不落库）。</p>
+     * 平台与上游地址计算（内存临时实体，不落库）。链为空时 {@code kind} 为 null，
+     * 前端按「保存后确定」降级展示。</p>
      *
      * @param providerId 供应商标识（已保存的行）
      * @param baseUrl    上游地址（未保存的新行用）
      * @param platform   平台标识（未保存的新行用）
-     * @return 可选类型清单（自定义恒在首位）
+     * @return 固定的查询口径（主类型 + 回落链 + 登录可用性）
      */
     @Permission("admin")
     @GetMapping("/providers/credit-kinds")
-    public ApiResult<List<CreditKindOption>> providerCreditKinds(
+    public ApiResult<CreditKindSpec> providerCreditKinds(
             @RequestParam(value = "provider_id", required = false) String providerId,
             @RequestParam(value = "base_url", required = false) String baseUrl,
             @RequestParam(value = "platform", required = false) String platform) {
@@ -2745,31 +2752,16 @@ public class ApiProviderController {
             entity.setBaseUrl(baseUrl == null ? null : baseUrl.trim());
             extra = new HashMap<>(4);
         }
-        // AK/SK 签名族（阿里云百炼 / 火山 / 百度千帆 / 七牛）的官方余额口径唯一为
-        // 「厂商官方」；百度千帆另有控制台 Cookie 口径（推理 Key / AK/SK 都查不了余额），
-        // 表单给出「千帆控制台余额 → 厂商官方」两个选项，其余三族仍只回唯一官方选项。
-        if (isCreditKindLockedProvider(entity)) {
-            List<CreditKindOption> locked = new ArrayList<>(2);
-            if (isQianfanProvider(entity)) {
-                locked.add(new CreditKindOption("qianfan", creditKindLabel("qianfan"), null));
-            }
-            locked.add(new CreditKindOption("host", creditKindLabel("host"), null));
-            return ApiResult.ok(locked);
+        List<String> chain = new ArrayList<>(candidateKinds(entity, extra));
+        List<String> chainLabels = new ArrayList<>(chain.size());
+        for (String kind : chain) {
+            chainLabels.add(creditKindLabel(kind));
         }
-        List<String> auto = autoCandidateKinds(entity, extra);
-        List<CreditKindOption> options = new ArrayList<>(auto.size() + 2);
-        options.add(new CreditKindOption("custom", "自定义", null));
-        for (String kind : auto) {
-            // custom 已恒在首位；expression 是旧版整条表达式口径，表单里并入自定义
-            if ("custom".equals(kind) || CreditQueries.KIND_EXPRESSION.equals(kind)) {
-                continue;
-            }
-            options.add(new CreditKindOption(kind, creditKindLabel(kind), null));
-        }
-        // 账密登录仅当候选链里存在可登录 SPI（或已显式配置登录页）时可选
+        String primary = chain.isEmpty() ? null : chain.get(0);
+        // 账密登录仅当候选链里存在可登录 SPI（或已显式配置登录页）时可用
         boolean canLogin = str(extra, "credit_login_url") != null;
         if (!canLogin) {
-            for (String kind : auto) {
+            for (String kind : chain) {
                 CreditQueryProvider provider = CreditQueries.find(kind);
                 if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
                     canLogin = true;
@@ -2777,10 +2769,10 @@ public class ApiProviderController {
                 }
             }
         }
-        if (canLogin) {
-            options.add(new CreditKindOption(ProviderCreditLoginService.KIND, "账号密码登录", true));
-        }
-        return ApiResult.ok(options);
+        return ApiResult.ok(new CreditKindSpec(primary,
+                primary == null ? null : creditKindLabel(primary),
+                List.copyOf(chain), List.copyOf(chainLabels),
+                isCreditKindLockedProvider(entity), canLogin, creditLevel(entity, extra)));
     }
 
     /**
@@ -2792,6 +2784,9 @@ public class ApiProviderController {
     private String creditKindLabel(String kind) {
         return switch (kind) {
             case "host" -> "厂商官方";
+            case "registry" -> "厂商官方";
+            case "custom" -> "自定义";
+            case CreditQueries.KIND_EXPRESSION -> "自定义口径";
             case "openai" -> "OpenAI 官方";
             case "billing" -> "OpenAI 兼容计费";
             case "deepseek" -> "DeepSeek 门户余额";
@@ -5436,12 +5431,11 @@ public class ApiProviderController {
      * 是否是「余额查询类型绑死厂商官方」的 AK/SK 签名族供应商。
      *
      * <p>阿里云百炼 / 火山（豆包）/ 百度千帆 / 七牛四族的官方余额都走登记表里的
-     * AK/SK 签名预设（品牌 host 口径）。除百度千帆外没有第二种查询实现可选：表单不出
-     * 「查询类型」下拉，落库时也不写 {@code extra.credit_kind}——火山运行时
-     * 候选链是 volc-plan 失败回落 host，写死 host 会顶掉自动回落，所以统一剥键，
-     * 让 {@code providerCredit} 自动按候选链取官方口径。百度千帆保留
-     * 「千帆控制台余额 → 厂商官方」两选项（见 {@code providerCreditKinds}），
-     * 候选链同理按 qianfan → host 自动回落。</p>
+     * AK/SK 签名预设（品牌 host 口径）。表单不出「查询类型」选择，落库时也不写
+     * {@code extra.credit_kind}——例如火山运行时候选链是 volc-plan 失败回落 host，
+     * 写死 host 会顶掉自动回落，所以统一剥键，让 {@code providerCredit} 自动按候选链
+     * 取官方口径；百度千帆同理按 qianfan → host 自动回落。本判定只用于给表单下发
+     * {@code locked} 标记（展示「厂商官方口径、类型固定」）。</p>
      *
      * @param entity 供应商
      * @return 绑定厂商官方口径为 true

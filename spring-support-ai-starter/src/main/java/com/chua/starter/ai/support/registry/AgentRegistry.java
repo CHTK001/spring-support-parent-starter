@@ -89,6 +89,9 @@ public class AgentRegistry {
      */
     private final List<Agent> allAgents = new CopyOnWriteArrayList<>();
 
+    /** 独立装配实例不参与后续全局管理器刷新，生命周期交给 AgentManager。 */
+    private final Set<Agent> isolatedAgents = ConcurrentHashMap.newKeySet();
+
     /**
      * Agent 引擎工厂
      */
@@ -189,19 +192,33 @@ public class AgentRegistry {
      * @return 注册后的 Agent 实例
      */
     public Agent registerInstance(String name, Agent agent, String[] groups, String[] capabilities) {
+        return registerInstance(name, agent, groups, capabilities, true);
+    }
+
+    /**
+     * 登记已完成独立装配的实例时，可禁止全局管理器覆盖私有能力。
+     * @param name 名称
+     * @param agent 实例
+     * @param groups 分组
+     * @param capabilities 能力标签
+     * @param inheritManagers 是否注入全局管理器
+     * @return 实例
+     */
+    public synchronized Agent registerInstance(String name, Agent agent, String[] groups, String[] capabilities,
+                                  boolean inheritManagers) {
         if (name == null || agent == null) {
             log.warn("[AgentRegistry] 注册参数不完整: name={}, agent={}", name, agent);
             return null;
         }
  // 注入全局 skill管理器 / mcp管理器
-        if (skillManager != null) {
+        if (inheritManagers && skillManager != null) {
             try {
                 agent.skillManager(skillManager);
             } catch (Exception e) {
                 log.warn("[AgentRegistry] 注入 SkillManager 失败: {}", e.getMessage());
             }
         }
-        if (mcpManager != null) {
+        if (inheritManagers && mcpManager != null) {
             try {
                 agent.mcpManager(mcpManager);
             } catch (Exception e) {
@@ -209,6 +226,8 @@ public class AgentRegistry {
             }
         }
 
+        unregister(name, false);
+        if (!inheritManagers) isolatedAgents.add(agent);
         agentIndex.put(name, agent);
         allAgents.add(agent);
 
@@ -256,11 +275,11 @@ public class AgentRegistry {
      *
      * @param skillManager 技能管理器
      */
-    public void setSkillManager(SkillManager skillManager) {
+    public synchronized void setSkillManager(SkillManager skillManager) {
         this.skillManager = skillManager;
  // 为所有已注册 Agent 注入 skill管理器
         for (Agent agent : allAgents) {
-            agent.skillManager(skillManager);
+            if (!isolatedAgents.contains(agent)) agent.skillManager(skillManager);
         }
         log.info("[AgentRegistry] 设置全局 SkillManager");
     }
@@ -270,10 +289,10 @@ public class AgentRegistry {
      *
      * @param mcpManager MCP 管理器
      */
-    public void setMcpManager(McpManager mcpManager) {
+    public synchronized void setMcpManager(McpManager mcpManager) {
         this.mcpManager = mcpManager;
         for (Agent agent : allAgents) {
-            agent.mcpManager(mcpManager);
+            if (!isolatedAgents.contains(agent)) agent.mcpManager(mcpManager);
         }
         log.info("[AgentRegistry] 设置全局 McpManager");
     }
@@ -363,18 +382,29 @@ public class AgentRegistry {
      * @return 是否注销成功（原已注册）
      */
     public boolean unregister(String name) {
+        return unregister(name, true);
+    }
+
+    /**
+     * 移除名称索引；按 id 托管的实例由 AgentManager 统一关闭。
+     * @param name 名称
+     * @param close 是否关闭实例
+     * @return 是否移除了索引
+     */
+    public synchronized boolean unregister(String name, boolean close) {
         Agent agent = agentIndex.remove(name);
         if (agent == null) {
             return false;
         }
         allAgents.remove(agent);
+        isolatedAgents.remove(agent);
         if (masterAgent == agent) {
             masterAgent = null;
         }
         groupIndex.values().forEach(list -> list.remove(agent));
         capabilityIndex.values().forEach(list -> list.remove(agent));
         try {
-            agent.close();
+            if (close) agent.close();
         } catch (Exception e) {
             log.warn("[AgentRegistry] 关闭 Agent 失败: name={}", name, e);
         }
@@ -417,12 +447,12 @@ public class AgentRegistry {
     public void closeAll() {
         for (Agent agent : allAgents) {
             try {
-                agent.close();
+                if (!isolatedAgents.contains(agent)) agent.close();
             } catch (Exception e) {
                 log.warn("[AgentRegistry] 关闭 Agent 失败: {}", e.getMessage());
             }
         }
-        if (masterAgent != null) {
+        if (masterAgent != null && !allAgents.contains(masterAgent) && !isolatedAgents.contains(masterAgent)) {
             try {
                 masterAgent.close();
             } catch (Exception e) {
@@ -433,6 +463,7 @@ public class AgentRegistry {
         groupIndex.clear();
         capabilityIndex.clear();
         allAgents.clear();
+        isolatedAgents.clear();
         pendingDefinitions.clear();
         masterAgent = null;
         log.info("[AgentRegistry] 所有 Agent 已关闭");

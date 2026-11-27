@@ -5,6 +5,7 @@ import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentLoopGuard;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -104,14 +105,27 @@ public class AgentManager {
      * @return 同一个实例，便于链式调用
      */
     public Agent register(String id, Agent agent) {
+        return register(id, agent, null);
+    }
+
+    /**
+     * 托管实例及其私有连接；替换和销毁时一并释放。
+     * @param id Agent 标识
+     * @param agent 已装配实例
+     * @param resources 私有资源，可空
+     * @return 已托管实例
+     */
+    public Agent register(String id, Agent agent, AutoCloseable resources) {
         String agentId = requireId(id);
         if (agent == null) {
             throw new IllegalArgumentException("Agent 实例不能为空: id=" + agentId);
         }
-        ManagedAgent existed = agents.put(agentId, new ManagedAgent(agentId, agent));
+        ManagedAgent existed = agents.put(agentId, new ManagedAgent(agentId, agent, resources));
         if (existed != null && existed.agent != agent) {
             // 同 id 换实现：旧实例已经被新实例取代，别让它继续留在后台跑。
+            interruptQuietly(existed.agent);
             closeQuietly(existed.agent);
+            closeResources(existed.resources);
         }
         return agent;
     }
@@ -251,6 +265,7 @@ public class AgentManager {
         }
         interruptQuietly(managed.agent);
         closeQuietly(managed.agent);
+        closeResources(managed.resources);
         return true;
     }
 
@@ -266,6 +281,7 @@ public class AgentManager {
     /**
      * 清空托管并关闭全部实例（容器销毁或热重建时用）。
      */
+    @PreDestroy
     public void closeAll() {
         for (String id : new ArrayList<>(agents.keySet())) {
             destroy(id);
@@ -370,6 +386,19 @@ public class AgentManager {
     }
 
     /**
+     * 释放托管实例的附属资源，不阻断其它实例清理。
+     * @param resources 私有资源，可空
+     */
+    private static void closeResources(AutoCloseable resources) {
+        if (resources == null) return;
+        try {
+            resources.close();
+        } catch (Exception ignored) {
+            // 单个连接关闭失败不影响其余托管实例。
+        }
+    }
+
+    /**
      * 校验必填 id。
      *
      * @param id 原始 id
@@ -412,6 +441,9 @@ public class AgentManager {
          */
         private final Agent agent;
 
+        /** 随实例替换和销毁的私有连接。 */
+        private final AutoCloseable resources;
+
         /**
          * 纳入托管的时间
          */
@@ -440,8 +472,19 @@ public class AgentManager {
          * @param agent 运行时实例
          */
         ManagedAgent(String id, Agent agent) {
+            this(id, agent, null);
+        }
+
+        /**
+         * 构造含私有资源的托管记录。
+         * @param id Agent 标识
+         * @param agent 实例
+         * @param resources 私有资源
+         */
+        ManagedAgent(String id, Agent agent, AutoCloseable resources) {
             this.id = id;
             this.agent = agent;
+            this.resources = resources;
         }
 
         /**

@@ -104,7 +104,7 @@ public class ChatClientRegistry {
      * @param client     对话客户端 实例
      * @param capabilities 能力标签（如 "对话", "vision", "编码"）
      */
-    public void register(String provider, String modelName, ChatClient client, String... capabilities) {
+    public synchronized void register(String provider, String modelName, ChatClient client, String... capabilities) {
         if (provider == null || client == null) {
             log.warn("[ChatClientRegistry] 注册参数不完整: provider={}, client={}", provider, client);
             return;
@@ -160,11 +160,10 @@ public class ChatClientRegistry {
         if (!isAgentModelRegistered(modelName) && modelIndex.containsKey(modelName.toLowerCase(java.util.Locale.ROOT))) {
             throw new IllegalArgumentException("模型名称已被普通模型使用: " + modelName);
         }
-        // 先幂等移除旧注册
-        unregisterAgentModel(modelName);
         // 每个 Agent 模型使用独立索引；共享 provider=agent 会移除前一个模型。
         register("agent:" + modelName, modelName, client, capabilities);
  // 追踪 Agent 模型名称
+        registeredAgentModelNames.removeIf(name -> name.equalsIgnoreCase(modelName));
         registeredAgentModelNames.add(modelName);
         log.info("[ChatClientRegistry] 注册 Agent 模型: {}", modelName);
     }

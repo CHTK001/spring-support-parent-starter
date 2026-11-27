@@ -1,6 +1,9 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.ai.support.chat;
 
+import com.chua.common.support.ai.agent.Agent;
+import com.chua.common.support.ai.skill.SkillDefinition;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -130,6 +133,31 @@ public class ChatSkillSupport {
             }
         }
         return buildBlock(picked);
+    }
+
+    /**
+     * 为独立 Agent 装配已安装技能，会话与托管实例共用此入口。
+     *
+     * @param agent 新建的独立实例
+     * @param names null 继承已启用目录，空集合明确禁用；支持名称或来源限定 ID
+     */
+    public void configureAgent(Agent agent, Collection<String> names) {
+        Set<String> selected = new LinkedHashSet<>();
+        for (InstalledSkill skill : skills()) {
+            if (!skill.enabled() || (names != null && !names.contains(skill.name())
+                    && !names.contains(skillId(skill.source(), skill.name()))) || !selected.add(skill.name())) {
+                continue;
+            }
+            if (agent instanceof OpencodeServerAgent nativeAgent) {
+                nativeAgent.skillPath(skill.location());
+            } else {
+                SkillDefinition definition = SkillDefinition.text(skill.name(), skill.description(), skill.content());
+                agent.skill(definition.getName(), definition.getDescription(), definition.getHandler());
+            }
+        }
+        if (agent instanceof OpencodeServerAgent nativeAgent) {
+            nativeAgent.skillSelection(List.copyOf(selected));
+        }
     }
 
     /**

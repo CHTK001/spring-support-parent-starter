@@ -11,8 +11,13 @@ import com.chua.common.support.ai.agent.run.AgentRunRecord;
 import com.chua.common.support.ai.agent.run.AgentStepStatus;
 import com.chua.common.support.ai.agent.run.AgentStepType;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.proxy.ProxyProvider;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.ai.support.service.AgentOrchestrationGraph;
 import com.chua.starter.ai.support.chat.AgentChatClient;
+import com.chua.starter.ai.support.chat.ChatSkillSupport;
+import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
@@ -28,8 +33,14 @@ import com.chua.starter.ai.support.service.SysAiAgentService;
 import com.chua.starter.ai.support.chat.ModelClientResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,6 +76,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final AgentRunService agentRunService; // Agent 运行记录（Run/Step 落库 + 会话 SSE）
     private final AgentApprovalGate agentApprovalGate; // Agent 工具风险裁决门（切片四审批闭环）
     private final AgentEvalRecorderProvider agentEvalRecorderProvider; // Agent 评测记录器（懒加载单例）
+    private final AgentMcpRuntimeService agentMcpRuntimeService;
+    private final ChatSkillSupport chatSkillSupport;
 
     /** Agent 标识到公开模型名称，生命周期按业务 id 跟踪，支持自定义名称。 */
     private final Map<String, String> registeredModels = new java.util.concurrent.ConcurrentHashMap<>();
@@ -148,7 +161,6 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     public Map<String, Object> updateAgent(String agentId, Map<String, Object> body) {
         SysAiAgent entity = requireAgent(agentId);
-        String previousName = entity.getName();
         /**
          * apply主体。
          * @param entity 实体
@@ -164,9 +176,6 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         }
         entity.setUpdatedAt(System.currentTimeMillis());
         agentMapper.updateById(entity);
-        if (!java.util.Objects.equals(previousName, entity.getName())) {
-            agentRegistry.unregister(previousName);
-        }
         /**
          * rebuildAgent。
          * @param entity 实体
@@ -183,10 +192,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     public void deleteAgent(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
-        removeRegisteredModel(agent);
-        agentRegistry.unregister(agent.getName());
-        // 运行时托管也要一起撤掉并关闭：库里删了但实例还在跑，是最难查的那类泄漏。
-        agentManager.destroy(agentId);
+        afterCommit(() -> removeRuntime(agent), () -> { });
         agentMapper.delete(new LambdaQueryWrapper<SysAiAgent>()
                 .eq(SysAiAgent::getParentId, agentId));
         agentMapper.deleteById(agentId);
@@ -266,6 +272,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
          * @param false false
          */
         applyBody(entity, body, false);
+        if (body.containsKey("enabled")) entity.setEnabled(bool(body, "enabled", true));
         if (body.containsKey("sort_order")) {
             entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
@@ -644,7 +651,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
  // ==================== Agent-as-模型 ====================
 
     @Override
-    public Map<String, Object> registerAsModel(String agentId, String modelName) {
+    public synchronized Map<String, Object> registerAsModel(String agentId, String modelName) {
         SysAiAgent agent = requireAgent(agentId);
         if (agent.getParentId() != null) {
             /**
@@ -667,15 +674,17 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
          * rebuildAgent。
          * @param agent Agent
          */
-        rebuildAgent(agent);
+        if (agentManager.get(agentId) == null) rebuildAgent(agent);
 
  // Agent-as-模型：包装为 对话客户端 注册到对话注册中心
         Agent runtime = agentRegistry.getByName(agent.getName());
         if (runtime != null) {
-            removeRegisteredModel(agent);
             chatClientRegistry.registerAgentModel(resolvedModel, new AgentChatClient(runtime),
                     "chat", "tools", "skills", "routing");
-            registeredModels.put(agentId, resolvedModel);
+            String oldModel = registeredModels.put(agentId, resolvedModel);
+            if (oldModel != null && !oldModel.equalsIgnoreCase(resolvedModel)) {
+                chatClientRegistry.unregisterAgentModel(oldModel);
+            }
             log.info("[Agent] Agent {} 已注册为模型 {}", agent.getName(), resolvedModel);
         } else {
             // 运行时没建起来（构建异常已在 rebuildAgent 记 ERROR），必须如实失败：
@@ -693,7 +702,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     @Override
-    public void unregisterModel(String agentId) {
+    public synchronized void unregisterModel(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
         removeRegisteredModel(agent);
         log.info("[Agent] Agent {} 已从模型注册中心注销", agent.getName());
@@ -702,8 +711,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     @Override
     public Map<String, Object> getRegisteredModelInfo(String agentId) {
         SysAiAgent agent = requireAgent(agentId);
-        String resolvedModel = registeredModels.getOrDefault(agentId, "agent-" + agent.getName());
-        boolean registered = chatClientRegistry.isAgentModelRegistered(resolvedModel);
+        String resolvedModel = registeredModels.get(agentId);
+        boolean registered = resolvedModel != null && chatClientRegistry.isAgentModelRegistered(resolvedModel);
         Map<String, Object> info = new LinkedHashMap<>(4);
         info.put("agentId", agentId);
         info.put("agentName", agent.getName());
@@ -719,54 +728,85 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
 
     // ==================== 运行时构建 ====================
 
+    /**
+     * 应用就绪后恢复已启用的主 Agent，供业务 Bean 通过管理器按 id 取用。
+     *
+     * <p>复用保存时的完整装配路径；已托管的记录不重复构建。目录读取失败会明确记录，
+     * 单条配置失败只影响该记录，管理员可修正配置后重新保存或重建。</p>
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Order(Ordered.LOWEST_PRECEDENCE)
+    public void restoreManagedAgents() {
+        List<SysAiAgent> records;
+        try {
+            records = agentMapper.selectList(new LambdaQueryWrapper<SysAiAgent>()
+                    .isNull(SysAiAgent::getParentId)
+                    .eq(SysAiAgent::getEnabled, true)
+                    .orderByAsc(SysAiAgent::getSortOrder)
+                    .orderByAsc(SysAiAgent::getCreatedAt));
+        } catch (Exception failure) {
+            log.error("[Agent] 读取已启用托管配置失败，启动恢复未执行", failure);
+            return;
+        }
+        for (SysAiAgent record : records) {
+            if (agentManager.contains(record.getAgentId())) {
+                continue;
+            }
+            try {
+                rebuildAgent(record);
+            } catch (Exception failure) {
+                log.error("[Agent] 启动恢复失败 agentId={} name={}", record.getAgentId(), record.getName(), failure);
+            }
+        }
+    }
+
     @Override
     public void rebuildAgent(SysAiAgent agent) {
         if (agent == null || agent.getParentId() != null) {
             return;
         }
+        if (!Boolean.TRUE.equals(agent.getEnabled())) {
+            afterCommit(() -> removeRuntime(agent), () -> { });
+            return;
+        }
+        AgentRuntimeProfile profile = AgentRuntimeProfile.fromManaged(agent);
+        boolean mcpEnabled = AgentRuntimeProfile.resolve(profile.mcp(), false, false);
+        boolean delegation = AgentRuntimeProfile.resolve(profile.subAgent(), false, false);
+        Agent instance = null;
+        List<AutoCloseable> resources = new ArrayList<>();
+        java.util.concurrent.atomic.AtomicBoolean released = new java.util.concurrent.atomic.AtomicBoolean();
         try {
-            String agentName = agent.getName();
-            if (!Boolean.TRUE.equals(agent.getEnabled())) {
-                removeRegisteredModel(agent);
-                agentRegistry.unregister(agentName);
-                agentManager.destroy(agent.getAgentId());
-                return;
-            }
-            String registeredModel = registeredModels.get(agent.getAgentId());
-            if (registeredModel != null) chatClientRegistry.unregisterAgentModel(registeredModel);
-            agentRegistry.unregister(agentName);
-
-            // opencode 运行时禁止 leader 定义（OpencodeServerAgent#validateDefinition 对 isLeader()
-            // 直接抛 UnsupportedOperationException），编排委派交给下方 mode(ROUTER/AUTO)；
-            // 其它运行时维持 leader(true) 原语义。
             boolean opencodeRuntime = AgentProviderFactory.OPENCODE_SERVER_PROVIDER
                     .equals(agentProviderFactory.resolveProvider());
 
             ChatClient masterClient = buildChatClient(agent);
+            if (masterClient == null) throw new IllegalArgumentException("启用 Agent 前请选择渠道和模型");
+            resources.add(masterClient);
             AgentDefinition.Builder masterBuilder = AgentDefinition.builder()
                     .id(agent.getAgentId())
                     .name(agent.getName())
                     .description(agent.getDescription())
                     .role(agent.getRole())
                     .instruction(agent.getInstruction())
-                    .leader(!opencodeRuntime)
-                    .mcp(strategyBool(agent, "mcp", true))
-                    .planning(strategyBool(agent, STRATEGY_KEY_PLANNING, false))
-                    .memory(strategyBool(agent, STRATEGY_KEY_MEMORY, true));
+                    .leader(delegation && !opencodeRuntime)
+                    .mcp(mcpEnabled)
+                    .planning(profile.planning())
+                    .memory(profile.memory());
             if (agent.getSystemPrompt() != null && !agent.getSystemPrompt().isBlank()) {
                 masterBuilder.systemPrompt(agent.getSystemPrompt());
             }
-            int maxToolIterations = strategyInt(agent, STRATEGY_KEY_MAX_TOOL_ITERATIONS, 5);
+            int maxToolIterations = profile.maxToolIterations();
             if (maxToolIterations > 0) {
                 masterBuilder.maxToolIterations(maxToolIterations);
             }
 
  // 子 Agent
-            List<SysAiAgent> subs = subAgentsOf(agent.getAgentId());
+            List<SysAiAgent> subs = delegation ? subAgentsOf(agent.getAgentId()) : List.of();
             for (SysAiAgent sub : subs) {
                 if (!Boolean.TRUE.equals(sub.getEnabled())) {
                     continue;
                 }
+                AgentRuntimeProfile subProfile = AgentRuntimeProfile.fromManaged(sub);
                 AgentDefinition.Builder subBuilder = AgentDefinition.builder()
                         .id(sub.getAgentId())
                         .name(sub.getName())
@@ -774,8 +814,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                         .role(sub.getRole())
                         .instruction(sub.getInstruction())
                         .leader(false)
-                        .mcp(strategyBool(sub, "mcp", true))
-                        .memory(strategyBool(sub, STRATEGY_KEY_MEMORY, true));
+                        .mcp(AgentRuntimeProfile.resolve(subProfile.mcp(), false, false))
+                        .planning(subProfile.planning())
+                        .memory(subProfile.memory());
+                if (subProfile.maxToolIterations() > 0) subBuilder.maxToolIterations(subProfile.maxToolIterations());
                 if (sub.getSystemPrompt() != null && !sub.getSystemPrompt().isBlank()) {
                     subBuilder.systemPrompt(sub.getSystemPrompt());
                 }
@@ -785,27 +827,25 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             AgentDefinition definition = masterBuilder.build();
             Agent agentInstance = agentProviderFactory.createAgent();
             if (agentInstance == null) {
-                log.warn("[Agent] {} 运行时不可用（缺少对应 SPI 实现），跳过运行时注册 name={}",
-                        agentProviderFactory.resolveProvider(), agentName);
-                return;
+                throw new IllegalStateException("Agent 运行时不可用: " + agentProviderFactory.resolveProvider());
             }
+            instance = agentInstance;
             agentInstance.definition(definition);
             // 切片四：挂上无状态风险裁决门——低风险放行、高危转人工确认、
             // 非管理员 shell 类工具拒绝；裁决异常 fail-close 转确认。
             agentInstance.riskAdjudicator(agentApprovalGate);
-            // B1/B2：管理页 Agent 预算（strategy.max_tokens = Token 总量上限，0/未配不限）
-            // 与评测落库。default no-op 能力：agentscope 全量生效，其它运行时自动忽略。
-            long budgetTokens = strategyInt(agent, STRATEGY_KEY_MAX_TOKENS, 0);
+            // 当前记录的 Token 总量上限；各引擎分别消费 AgentBudget，0/未配不限。
+            long budgetTokens = profile.maxTotalTokens();
             if (budgetTokens > 0) {
                 agentInstance.budget(new AgentBudget(budgetTokens, 0L, 0L, 0L, 0L, 0L));
             }
             try {
                 agentInstance.evalHook(agentEvalRecorderProvider.recorder());
             } catch (Exception e) {
-                log.warn("[Agent] 评测记录器不可用，本实例不落评测 name={}", agentName, e);
+                log.warn("[Agent] 评测记录器不可用，本实例不落评测 name={}", agent.getName(), e);
             }
             if (masterClient != null) {
-                agentInstance.chatClient(masterClient);
+                agentInstance.chatClient(borrowedClient(masterClient));
             }
 
  // 子 Agent 独立模型
@@ -815,36 +855,42 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 }
                 ChatClient subClient = buildChatClient(sub);
                 if (subClient != null) {
-                    agentInstance.chatClient(sub.getAgentId(), subClient);
+                    resources.add(subClient);
+                    agentInstance.chatClient(sub.getAgentId(), borrowedClient(subClient));
                 }
             }
 
-            String mode = strategyStr(agent, STRATEGY_KEY_MODE, "ROUTER").toUpperCase();
-            try {
-                agentInstance.mode(AgentMode.valueOf(mode));
-            } catch (IllegalArgumentException e) {
-                log.warn("[Agent] 未知模式 {}，使用 AUTO", mode);
-                agentInstance.mode(AgentMode.AUTO);
+            AgentMode mode = delegation ? AgentMode.valueOf(strategyStr(agent, STRATEGY_KEY_MODE, "AUTO").toUpperCase(java.util.Locale.ROOT))
+                    : AgentMode.SINGLE;
+            agentInstance.mode(mode);
+            agentInstance.plan(profile.planning());
+            if (agentInstance instanceof OpencodeServerAgent nativeAgent) {
+                nativeAgent.delegation(delegation);
             }
-
-            agentRegistry.registerInstance(agentName, agentInstance, new String[]{"custom"}, new String[]{"chat", "tools", "skills", "routing"});
-            // 同时按业务 id 纳入运行时托管：接口与管理页按 agentId 就能拿到这个实例，
-            // 并对它做中断（interrupt）与状态查看——只按 name 索引是查不到的。
-            agentManager.register(agent.getAgentId(), agentInstance);
-            if (registeredModel != null) {
-                chatClientRegistry.registerAgentModel(registeredModel, new AgentChatClient(agentInstance),
-                        "chat", "tools", "skills", "routing");
-            }
-            log.info("[Agent] 已构建并注册 Agent: name={}, mode={}, subAgents={}",
-                    agentName, mode, subs.size());
+            chatSkillSupport.configureAgent(agentInstance, profile.defaultSkills());
+            var mcp = agentMcpRuntimeService.configure(agentInstance, mcpEnabled, profile.mcpServers(), null);
+            if (mcp != null) resources.add(mcp::close);
+            Runnable discard = () -> {
+                if (released.compareAndSet(false, true)) closeStaged(agentInstance, resources);
+            };
+            afterCommit(() -> {
+                try {
+                    publishRuntime(agent, agentInstance, () -> closeResources(resources));
+                } catch (RuntimeException failure) {
+                    discard.run();
+                    throw failure;
+                }
+            }, discard);
         } catch (Exception e) {
+            if (released.compareAndSet(false, true)) closeStaged(instance, resources);
             log.error("[Agent] 构建 Agent 失败: agentId={} name={}", agent.getAgentId(), agent.getName(), e);
+            throw new IllegalStateException("Agent 构建失败: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void rebuildAgentById(String agentId) {
-        SysAiAgent agent = agentMapper.selectById(agentId);
+        SysAiAgent agent = requireAgent(agentId);
         /**
          * rebuildAgent。
          * @param agent Agent
@@ -855,12 +901,127 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     // ==================== 辅助方法 ====================
 
     /**
+     * 提交成功后才切换实例索引，回滚时释放本次构建的私有资源。
+     * @param committed 提交动作
+     * @param rolledBack 回滚动作
+     */
+    private static void afterCommit(Runnable committed, Runnable rolledBack) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            committed.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() { committed.run(); }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) rolledBack.run();
+            }
+        });
+    }
+
+    /**
+     * 发布已装配实例，名称索引不再注入共享能力，旧实例统一由管理器释放。
+     * @param record 当前定义
+     * @param instance 新实例
+     * @param resources 私有资源
+     */
+    private synchronized void publishRuntime(SysAiAgent record, Agent instance, AutoCloseable resources) {
+        synchronized (agentRegistry) {
+            synchronized (chatClientRegistry) {
+                Agent previous = agentManager.get(record.getAgentId());
+                Agent occupant = agentRegistry.getByName(record.getName());
+                if (occupant != null && occupant != previous && occupant != instance) {
+                    throw new IllegalArgumentException("Agent 名称已被运行时占用: " + record.getName());
+                }
+                String oldName = previous != null && previous.getDefinition() != null
+                        ? previous.getDefinition().getName() : null;
+                String model = registeredModels.get(record.getAgentId());
+                ChatClient oldModel = model == null ? null : chatClientRegistry.getByModel(model);
+                try {
+                    // 名称与模型注册均成功后才切换管理器，旧实例在此之前保持可用。
+                    agentRegistry.registerInstance(record.getName(), instance, new String[]{"custom"},
+                            new String[]{"chat", "tools", "skills", "routing"}, false);
+                    if (model != null) chatClientRegistry.registerAgentModel(model, new AgentChatClient(instance), "chat", "tools", "skills", "routing");
+                    if (oldName != null && !oldName.equals(record.getName())) agentRegistry.unregister(oldName, false);
+                    agentManager.register(record.getAgentId(), instance, resources);
+                } catch (RuntimeException failure) {
+                    agentRegistry.unregister(record.getName(), false);
+                    if (previous != null && oldName != null) {
+                        agentRegistry.registerInstance(oldName, previous, new String[]{"custom"},
+                                new String[]{"chat", "tools", "skills", "routing"}, false);
+                    }
+                    if (model != null && oldModel != null) {
+                        chatClientRegistry.registerAgentModel(model, oldModel, "chat", "tools", "skills", "routing");
+                    } else if (model != null) {
+                        chatClientRegistry.unregisterAgentModel(model);
+                    }
+                    throw failure;
+                }
+            }
+        }
+        log.info("[Agent] 已替换托管实例 agentId={} name={}", record.getAgentId(), record.getName());
+    }
+
+    /**
+     * 停用或删除的共同出口，避免名称注册表重复关闭同一实例。
+     * @param record 当前定义
+     */
+    private synchronized void removeRuntime(SysAiAgent record) {
+        removeRegisteredModel(record);
+        Agent previous = agentManager.get(record.getAgentId());
+        if (previous != null && previous.getDefinition() != null) {
+            agentRegistry.unregister(previous.getDefinition().getName(), false);
+        }
+        agentRegistry.unregister(record.getName(), false);
+        agentManager.destroy(record.getAgentId());
+    }
+
+    /**
+     * 释放装配失败或事务回滚的新实例。
+     * @param instance 暂存实例
+     * @param resources 暂存资源
+     */
+    private static void closeStaged(Agent instance, List<AutoCloseable> resources) {
+        if (instance != null) {
+            try { instance.close(); } catch (Exception e) { log.warn("[Agent] 暂存实例关闭失败", e); }
+        }
+        closeResources(resources);
+    }
+
+    /**
+     * 逐项释放私有资源，不因单项失败中断回收。
+     * @param resources 私有资源
+     */
+    private static void closeResources(List<AutoCloseable> resources) {
+        for (AutoCloseable resource : resources.reversed()) {
+            try { resource.close(); } catch (Exception e) { log.warn("[Agent] 私有资源关闭失败", e); }
+        }
+    }
+
+    /**
      * 清理 Agent 对外模型注册，删除、停用和重新注册共用同一生命周期入口。
      * @param agent Agent 定义
      */
     private void removeRegisteredModel(SysAiAgent agent) {
         String registered = registeredModels.remove(agent.getAgentId());
-        chatClientRegistry.unregisterAgentModel(registered != null ? registered : "agent-" + agent.getName());
+        if (registered != null) chatClientRegistry.unregisterAgentModel(registered);
+    }
+
+    /**
+     * 引擎借用客户端，关闭责任只归托管资源集合；链式返回自身时继续保留借用视图。
+     * @param client 私有客户端
+     * @return 不关闭底层连接的视图
+     */
+    private static ChatClient borrowedClient(ChatClient client) {
+        return ProxyProvider.of(ChatClient.class).target(client).tryAsm(false).tryJavassist(false)
+                .enableAnnotationScan(false).enableArround(false)
+                .methodIntercept((target, method, args, proxy) -> {
+                    if ("close".equals(method.getName()) && method.getParameterCount() == 0) return null;
+                    Object result = ReflectUtils.invokeProxy(client, method, args);
+                    return result == client ? proxy : result;
+                }).build();
     }
 
     /**
@@ -916,9 +1077,15 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> sm = (Map<String, Object>) m;
                 entity.setStrategy(sm);
-            } else {
+            } else if (strategy == null) {
                 entity.setStrategy(null);
+            } else {
+                throw new IllegalArgumentException("strategy 必须为对象或 null");
             }
+        }
+        AgentRuntimeProfile.fromManaged(entity);
+        if (entity.getStrategy() != null && entity.getStrategy().containsKey(STRATEGY_KEY_MODE)) {
+            AgentMode.valueOf(strategyStr(entity, STRATEGY_KEY_MODE, "AUTO").toUpperCase(java.util.Locale.ROOT));
         }
         if (create) {
             entity.setName(str(body, "name"));
@@ -928,6 +1095,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                     com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM, "Agent 名称不能为空");
         }
         entity.setName(entity.getName().trim());
+        Agent occupied = agentRegistry.getByName(entity.getName());
+        if (entity.getParentId() == null && occupied != null && occupied != agentManager.get(entity.getAgentId())) {
+            throw new IllegalArgumentException("Agent 名称已被运行时占用: " + entity.getName());
+        }
         long sameName = agentMapper.selectCount(new LambdaQueryWrapper<SysAiAgent>()
                 .eq(SysAiAgent::getName, entity.getName()).ne(SysAiAgent::getAgentId, entity.getAgentId()));
         if (sameName > 0) {
@@ -964,14 +1135,20 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         map.put("model", agent.getModel());
         map.put("mcp_ids", agent.getMcpIds());
         map.put("skill_ids", agent.getSkillIds());
-        map.put("strategy", agent.getStrategy() != null ? agent.getStrategy() : Map.of());
+        Map<String, Object> strategy = new LinkedHashMap<>(agent.getStrategy() != null ? agent.getStrategy() : Map.of());
+        // JSON 数字经过 JavaScript 会失真，两个预算字段都以十进制文本输出。
+        for (String key : List.of("max_total_tokens", "max_tokens")) {
+            if (strategy.get(key) != null) strategy.put(key, strategy.get(key).toString());
+        }
+        map.put("strategy", strategy);
         map.put("enabled", agent.getEnabled());
         map.put("sort_order", agent.getSortOrder());
         map.put("created_at", agent.getCreatedAt());
         map.put("updated_at", agent.getUpdatedAt());
         if (agent.getParentId() == null) {
-            String resolvedModel = registeredModels.getOrDefault(agent.getAgentId(), "agent-" + agent.getName());
-            map.put("registered_model_name", chatClientRegistry.isAgentModelRegistered(resolvedModel) ? resolvedModel : null);
+            String resolvedModel = registeredModels.get(agent.getAgentId());
+            map.put("registered_model_name", resolvedModel != null && chatClientRegistry.isAgentModelRegistered(resolvedModel)
+                    ? resolvedModel : null);
         }
         if (includeSubs) {
             map.put("sub_agents", subAgentsOf(agent.getAgentId()).stream()
@@ -1020,38 +1197,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     private static String strategyStr(SysAiAgent agent, String key, String def) {
         Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
-        return v != null && !v.toString().isBlank() ? v.toString() : def;
-    }
-
-    /**
-     * strategybool。
-     * @param agent Agent
-     * @param key Key
-     * @param def def
-     * @return strategyBool的结果
-     */
-    private static boolean strategyBool(SysAiAgent agent, String key, boolean def) {
-        Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
-        return v != null ? Boolean.parseBoolean(v.toString()) : def;
-    }
-
-    /**
-     * strategyint。
-     * @param agent Agent
-     * @param key Key
-     * @param def def
-     * @return strategyInt的结果
-     */
-    private static int strategyInt(SysAiAgent agent, String key, int def) {
-        Object v = agent.getStrategy() != null ? agent.getStrategy().get(key) : null;
-        if (v == null) {
-            return def;
-        }
-        try {
-            return (int) Double.parseDouble(v.toString());
-        } catch (NumberFormatException e) {
-            return def;
-        }
+        if (v == null) return def;
+        if (!(v instanceof String text) || text.isBlank()) throw new IllegalArgumentException(key + " 必须为非空文本");
+        return text.trim();
     }
 
     /**
@@ -1074,7 +1222,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     private static boolean bool(Map<String, Object> map, String key, boolean def) {
         Object v = map.get(key);
-        return v != null ? Boolean.parseBoolean(v.toString()) : def;
+        if (v == null) return def;
+        if (v instanceof Boolean value) return value;
+        if (v instanceof String text && ("true".equalsIgnoreCase(text) || "false".equalsIgnoreCase(text))) {
+            return Boolean.parseBoolean(text);
+        }
+        throw new IllegalArgumentException(key + " 必须为布尔值");
     }
 
     /**
@@ -1089,11 +1242,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         if (v == null) {
             return def;
         }
-        try {
-            return (int) Double.parseDouble(v.toString());
-        } catch (NumberFormatException e) {
-            return def;
-        }
+        try { return new java.math.BigDecimal(v.toString()).intValueExact(); }
+        catch (ArithmeticException | NumberFormatException e) { throw new IllegalArgumentException(key + " 必须为 int 范围整数", e); }
     }
 
     /**
@@ -1104,14 +1254,12 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     private static List<String> stringList(Map<String, Object> map, String key) {
         Object v = map.get(key);
-        if (!(v instanceof List<?> list)) {
-            return null;
-        }
+        if (v == null) return null;
+        if (!(v instanceof List<?> list)) throw new IllegalArgumentException(key + " 必须为字符串数组或 null");
         List<String> out = new ArrayList<>(4); // 元素数量不可预估
         for (Object o : list) {
-            if (o != null) {
-                out.add(o.toString());
-            }
+            if (!(o instanceof String text) || text.isBlank()) throw new IllegalArgumentException(key + " 不得包含空项或非字符串");
+            if (!out.contains(text.trim())) out.add(text.trim());
         }
         return out;
     }

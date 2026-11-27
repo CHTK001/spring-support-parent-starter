@@ -91,19 +91,16 @@ public class ApiAgentRuntimeController {
     }
 
     /**
-     * 按配置中心「Agent 配置」分组的唯一名称解析运行时 Agent。
+     * 按配置中心当前选择的主 Agent 名称解析托管实例。
      *
-     * <p>缺省读取全局设置 {@code agent.agent_name}，经 {@link AgentRegistry#getByName}
-     * 解析已注册的 Agent；传入 {@code name} 参数时改为解析该名称 —— 供配置中心在
-     * <b>保存前</b>做「测试解析」（不读库，直接验证名称能否命中注册表）。
-     * 命中的 Agent 若同时被 {@link AgentManager} 托管，附带其运行态快照。
-     * 未配置名称、名称未注册分别返回明确的业务错误。
-     * 管理员专属：agent 分组字段 adminOnly，写路径也仅管理员可改。</p>
+     * <p>先按名称读取 managed 主记录，再以其业务 id 从 {@link AgentManager} 取实例。
+     * 未选择、记录不存在、记录已停用或实例未托管均返回明确的业务错误。
+     * 管理接口仅管理员可访问，不回落到全局设置或其它 Agent。</p>
      *
-     * <p>响应里同时带 {@code profile}（当前生效的运行时基线快照）与 {@code preview}：
-     * 传 {@code name} 时 preview 是「把名称换成它」后的基线，便于保存前核对。</p>
+     * <p>响应里的 {@code profile} 与 {@code preview} 均来自该记录的已保存配置，
+     * 不代表前端尚未保存的草稿，也不能代替真实能力执行验收。</p>
      *
-     * @param name 待解析的 Agent 名称（可选；缺省解析当前已保存配置）
+     * @param name 当前选择的已保存 Agent 名称，不能为空
      * @return 配置名称、解析到的 Agent 概要（含运行态）、运行时基线与预览
      */
     @Permission("admin")
@@ -132,13 +129,13 @@ public class ApiAgentRuntimeController {
     }
 
     /**
-     * 读取当前生效的 Agent 运行时基线（配置中心「Agent 配置」的只读快照）。
+     * 读取当前选择的 managed Agent 已保存配置摘要。
      *
-     * <p>与 {@code AiChatFacadeServiceImpl#maybeWrapAgent} 走同一个解析入口
-     * （{@link AgentRuntimeProfile#resolve}），因此页面上看到的基线与真正装配到
-     * 会话 Agent 上的值同源，不存在「显示一套、跑另一套」。</p>
+     * <p>与托管实例构建共用 {@link AgentRuntimeProfile#fromManaged}，不读取会话的
+     * 全局基线；配置摘要可用于停用记录，不能据此判断实例已经发布或能力执行成功。</p>
      *
-     * @return 运行时基线快照
+     * @param name 当前选择的已保存 Agent 名称
+     * @return 已保存配置快照
      */
     @Permission("admin")
     @GetMapping("/baseline")
@@ -176,7 +173,7 @@ public class ApiAgentRuntimeController {
         view.put("memory", profile.memory());
         view.put("planning", profile.planning());
         view.put("maxToolIterations", profile.maxToolIterations());
-        view.put("maxTotalTokens", profile.maxTotalTokens());
+        view.put("maxTotalTokens", Long.toString(profile.maxTotalTokens()));
         view.put("requiresAgent", profile.requiresAgent());
         return view;
     }
@@ -184,8 +181,8 @@ public class ApiAgentRuntimeController {
     /**
      * 列出全部已注册 Agent 的名称。
      *
-     * <p>配置中心「Agent 唯一名称」下拉的可选集：名称必须与这里的一项一致，
-     * {@link #configured} 才能解析成功。字典序升序，方便在下拉里定位。</p>
+     * <p>返回名称注册表的字典序视图，包含非 managed 实例。
+     * {@link #configured} 另按 managed 主记录及业务 id 校验，二者集合不必相同。</p>
      *
      * @return 已注册 Agent 名称列表（字典序升序）
      */
