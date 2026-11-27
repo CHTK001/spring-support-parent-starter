@@ -25,6 +25,13 @@
             <artifactId>guava</artifactId>
         </dependency>
 
+        <!-- 事务同步：TransactionalMessageTemplate 使用 org.springframework.transaction.support
+             （Spring Boot 4 迁移后 common-starter 不再传递该依赖，本地消息表的事务钩子须显式声明）。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+
         <!-- Lombok - 简化Java代码编写 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

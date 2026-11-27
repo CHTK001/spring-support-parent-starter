@@ -20,7 +20,7 @@ import java.util.List;
  *   datapool:
  *     enabled: true                        # 服务信息面板展示旗标（非模块开关），默认 true
  *     connection-ttl-minutes: 10           # JDBC 连接空闲存活分钟数；≤0 按 1 处理
- *     connection-sweep-interval-ms: 60000  # 声明项：清扫节拍当前固定 60s，改值暂不生效
+ *     connection-sweep-interval-ms: 60000  # 空闲连接清扫周期，正数毫秒
  *     probe-timeout-ms: 5000               # 连通性探测超时（毫秒）
  *     connect-timeout-seconds: 30          # JDBC 建连超时（秒）；≤0 按 1 处理
  *     query-timeout-seconds: 60            # SQL 执行超时（秒）；0 = 不设上限
@@ -61,7 +61,7 @@ public class DatapoolProperties {
      *
      * <p>默认值：{@code 10}；配置 ≤0 时按 {@code 1} 处理（取用侧 {@code Math.max(1L, ...)}）。
      * 过期为惰性触发 + 后台清扫（见 {@code connectionSweepIntervalMs}），
-     * TTL 内复用同一物理连接。</p>
+     * TTL 内按独占借还复用物理连接；借出的连接不会被超时清扫关闭。</p>
      *
      * <p>YAML 示例：</p>
      * <pre>
@@ -76,18 +76,13 @@ public class DatapoolProperties {
     /**
      * 空闲连接后台清扫周期（毫秒），默认 60 秒。
      *
-     * <p>{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时才会触发
-     * 过期回调去关闭物理连接；数据源一旦闲置（页面关了、当天不再查询），那条连接
-     * 会一直挂到进程重启或数据源被删除。这里给后台一个定期主动核对的节拍：
-     * 到期的连接由清扫任务触发同一套过期回调关闭，既不泄漏 socket，
-     * 也不影响 TTL 内的复用（正在使用的连接刚刷新过、不会处于过期态）。</p>
+     * <p>后台任务调用底层连接池的空闲淘汰入口；即使没有后续请求，也会关闭超过
+     * TTL 的空闲物理连接。正在借用的连接不参与淘汰。</p>
      *
-     * <p>默认值：{@code 60000}（60 秒）。<b>当前为声明项</b>：运行期尚未读取该值，
-     * 清扫节拍固定写在 {@code JdbcDatasourceSupport#sweepExpiredJdbcConnections} 的
-     * {@code @Scheduled(fixedDelay = 60_000L)}；「0 = 关闭清扫」是设计意图、尚未接线，
-     * 调整清扫频率目前需改代码。</p>
+     * <p>默认值：{@code 60000}（60 秒），通过调度注解读取配置，须为正数。
+     * 修改配置后在下次应用启动时生效。</p>
      *
-     * <p>YAML 示例（保留默认即可，改值暂不生效）：</p>
+     * <p>YAML 示例：</p>
      * <pre>
      * plugin:
      *   datapool:

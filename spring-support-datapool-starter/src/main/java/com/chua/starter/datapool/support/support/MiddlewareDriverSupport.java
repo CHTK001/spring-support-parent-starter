@@ -96,7 +96,7 @@ public final class MiddlewareDriverSupport {
      * @return 实现实例
      * @throws Exception jar 不存在、类不在 jar 里、类无法实例化、依赖缺失
      */
-    public static MiddlewareClientProvider providerOf(File jarFile, String providerClassName) throws Exception {
+    public static synchronized MiddlewareClientProvider providerOf(File jarFile, String providerClassName) throws Exception {
         if (jarFile == null || !jarFile.isFile()) {
             throw new IllegalArgumentException("驱动 jar 不存在: " + jarFile);
         }
@@ -119,6 +119,7 @@ public final class MiddlewareDriverSupport {
         URLClassLoader loader = new URLClassLoader(
                 "middleware-driver:" + jarFile.getName(), new URL[]{url},
                 MiddlewareDriverSupport.class.getClassLoader());
+        MiddlewareClientProvider created = null;
         try {
             Class<?> clazz = Class.forName(className, true, loader);
             Object instance = clazz.getDeclaredConstructor().newInstance();
@@ -126,6 +127,7 @@ public final class MiddlewareDriverSupport {
                 throw new IllegalStateException(className
                         + " 不是 MiddlewareClientProvider 的实现（实际类型 " + instance.getClass().getName() + "）");
             }
+            created = provider;
             String type = provider.name();
             if (type == null || type.isBlank()) {
                 throw new IllegalStateException(className + " 的 name() 返回空，无法确定它对应哪种中间件");
@@ -137,6 +139,7 @@ public final class MiddlewareDriverSupport {
                     className, jarFile.getName(), type);
             return provider;
         } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
+            closeProvider(created);
             closeQuietly(loader);
             throw new IllegalStateException(
                     "从 jar 加载中间件客户端失败: " + className + "（jar=" + jarFile.getName() + "）: " + e, e);
@@ -159,7 +162,7 @@ public final class MiddlewareDriverSupport {
      *
      * @param jar jar 文件
      */
-    public static void evict(File jar) {
+    public static synchronized void evict(File jar) {
         if (jar == null) {
             return;
         }
@@ -173,7 +176,8 @@ public final class MiddlewareDriverSupport {
         CACHE.keySet().stream().filter(key -> key.startsWith(prefix)).toList().forEach(key -> {
             ProviderEntry entry = CACHE.remove(key);
             if (entry != null) {
-                BY_NAME.remove(entry.provider().name().toLowerCase());
+                BY_NAME.remove(entry.provider().name().toLowerCase(), entry.provider());
+                closeProvider(entry.provider());
                 closeQuietly(entry.loader());
             }
         });
@@ -182,10 +186,13 @@ public final class MiddlewareDriverSupport {
     /**
      * 清空全部缓存（测试与热更新用）。
      */
-    public static void clearCache() {
-        CACHE.values().forEach(entry -> closeQuietly(entry.loader()));
-        CACHE.clear();
+    public static synchronized void clearCache() {
         BY_NAME.clear();
+        CACHE.values().forEach(entry -> {
+            closeProvider(entry.provider());
+            closeQuietly(entry.loader());
+        });
+        CACHE.clear();
     }
 
     /**
@@ -195,6 +202,17 @@ public final class MiddlewareDriverSupport {
      */
     public static int cacheSize() {
         return CACHE.size();
+    }
+
+    /** 只关闭由本加载器缓存构造的客户端，先于类加载器释放。 */
+    private static void closeProvider(MiddlewareClientProvider provider) {
+        if (provider instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                log.warn("[datapool] 关闭上传的中间件客户端失败: {}", e.getMessage());
+            }
+        }
     }
 
     /**

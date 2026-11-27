@@ -68,6 +68,14 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 嵌入式数据源：HotsportApplication 直接引用 org.springframework.boot.jdbc.autoconfigure，
+             Spring Boot 4 起 JDBC 自动配置不再随 starter-web 带入，须显式声明。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- MySQL 驱动：仅 apm.storage.type=mysql 时需要。
              设为 optional 是刻意的——默认存储是内嵌 SQLite，宿主不该为了观测组件
              平白多背 2.5MB 驱动；要接 MySQL 时由使用方显式引入。 -->

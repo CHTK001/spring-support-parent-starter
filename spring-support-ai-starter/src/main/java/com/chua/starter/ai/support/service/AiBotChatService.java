@@ -1781,13 +1781,13 @@ public class AiBotChatService {
         Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
                 provider, ModelClientResolver.ownerScopeOf(provider));
         // 3. 构建 对话客户端（带请求超时）并回复
-        ChatClient ownedChatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs, channelRoutes))
-                .model(plainModel);
-        ChatClient chatClient = ownedChatClient;
+        ChatClient ownedChatClient = null;
         Agent temporaryAgent = null;
         AgentChatClient agentChatClient = null;
         AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
         try {
+        ownedChatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs, channelRoutes));
+        ChatClient chatClient = ownedChatClient.model(plainModel);
         log.info("[BotChat] Bot {} 实际调用 providerId={} platform={} baseUrl={} model={}",
                 bot.getBotId(), provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl(), plainModel);
         // 系统提示词：优先 Bot 自定义，未配置则回退全局默认（bot.system_prompt）
@@ -1821,12 +1821,12 @@ public class AiBotChatService {
                     ? effectiveSystemPrompt : "You are a helpful assistant.";
             AgentDefinition definition = AgentDefinition.builder()
                     .id(agentId).name("Assistant").instruction(instruction).build();
-            Agent agent = agentProviderFactory.createAgent()
-                    .chatClient(AgentChatClient.borrowedClient(chatClient))
+            temporaryAgent = agentProviderFactory.createAgent();
+            Agent agent = temporaryAgent;
+            agent.chatClient(AgentChatClient.borrowedClient(chatClient))
                     .definition(definition)
                     .mode(AgentMode.SINGLE)
                     .mcp(true);
-            temporaryAgent = agent;
             try {
                 mcpRuntime = agentMcpRuntimeService.configure(agent, true, bindingMcpIds, null);
                 agentChatClient = new AgentChatClient(agent).withAgentClose();
@@ -1908,10 +1908,12 @@ public class AiBotChatService {
                     }
                 }
             }
-            try {
-                ownedChatClient.close();
-            } catch (Exception e) {
-                log.warn("[BotChat] 对话客户端关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+            if (ownedChatClient != null) {
+                try {
+                    ownedChatClient.close();
+                } catch (Exception e) {
+                    log.warn("[BotChat] 对话客户端关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+                }
             }
         }
     }

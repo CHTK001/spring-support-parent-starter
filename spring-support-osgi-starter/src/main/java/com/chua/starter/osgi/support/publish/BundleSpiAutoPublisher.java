@@ -76,6 +76,9 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      */
     private final ConcurrentMap<String, List<Object>> publishedByBundle = new ConcurrentHashMap<>();
 
+    /** 宿主销毁后拒绝异步到达的 bundle 事件。 */
+    private boolean closed;
+
     /**
      * 宿主 ServiceProvider 入口桥：把 bundle 发布的 SPI 实现同步登记给宿主侧
      * 消费入口（NativeServices / ServiceProvider.of(type).getExtension），并在
@@ -124,7 +127,8 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
     /**
      * 注销框架级监听器。
      */
-    public void destroy() {
+    public synchronized void destroy() {
+        closed = true;
         launcher.removeListener(this);
         for (String symbolicName : List.copyOf(publishedByBundle.keySet())) {
             unpublishBundle(symbolicName);
@@ -169,8 +173,8 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      *
      * @param symbolicName bundle 符号名
      */
-    private void publishBundle(String symbolicName) {
-        if (!options.isEnabled() || publisher == null || !publisher.isActive()) {
+    private synchronized void publishBundle(String symbolicName) {
+        if (closed || !options.isEnabled() || publisher == null || !publisher.isActive()) {
             return;
         }
         if (symbolicName == null || symbolicName.isBlank() || symbolicName.startsWith("#")) {
@@ -179,8 +183,8 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
         }
         // 幂等：重复 STARTED 先清理旧注册
         List<Object> previous = publishedByBundle.remove(symbolicName);
-        unpublishAll(previous);
         hostBridge.unregister(symbolicName);
+        unpublishAll(previous);
         Bundle bundle = nativeBundle(symbolicName);
         if (bundle == null) {
             return;
@@ -213,6 +217,8 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
             }
             if (registered) {
                 instances.add(instance);
+            } else {
+                closeOwnedInstance(instance);
             }
         }
         if (!instances.isEmpty()) {
@@ -226,13 +232,13 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      *
      * @param symbolicName bundle 符号名
      */
-    private void unpublishBundle(String symbolicName) {
+    private synchronized void unpublishBundle(String symbolicName) {
         if (symbolicName == null || symbolicName.isBlank()) {
             return;
         }
         List<Object> instances = publishedByBundle.remove(symbolicName);
-        unpublishAll(instances);
         hostBridge.unregister(symbolicName);
+        unpublishAll(instances);
     }
 
     /**
@@ -253,16 +259,21 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
             } catch (Exception ex) {
                 log.warn("[OSGi] SPI 服务反注册失败: {}", ex.getMessage());
             }
-            if (instance instanceof AutoCloseable closeable) {
-                try {
-                    closeable.close();
-                } catch (Exception ex) {
-                    log.warn("[OSGi] SPI 资源释放失败: {}", ex.getMessage());
-                }
-            }
+            closeOwnedInstance(instance);
         }
         if (removed > 0) {
             log.info("[OSGi] 已反注册 {} 个 SPI 服务", removed);
+        }
+    }
+
+    /** 只释放本发布器亲自构造的实例，不接管 Spring 或外部注册对象。 */
+    private void closeOwnedInstance(Object instance) {
+        if (instance instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception ex) {
+                log.warn("[OSGi] SPI 资源释放失败: {}", ex.getMessage());
+            }
         }
     }
 

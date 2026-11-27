@@ -73,6 +73,9 @@ public class JdbcDatasourceSupport {
      */
     private final Map<Long, JdbcPoolEntry> jdbcConnectionPools = new ConcurrentHashMap<>();
 
+    /** 关闭与池映射更新共用监视器；借出等待不占用该监视器。 */
+    private boolean closed;
+
     /**
      * 后台清扫：把闲置超过 TTL 的 JDBC 连接真正关闭掉。
      *
@@ -85,7 +88,11 @@ public class JdbcDatasourceSupport {
 
     /** 关闭应用时回收所有空闲连接；已借出的连接在归还时由池销毁。 */
     @PreDestroy
-    public void closeJdbcConnectionPools() {
+    public synchronized void closeJdbcConnectionPools() {
+        if (closed) {
+            return;
+        }
+        closed = true;
         jdbcConnectionPools.values().forEach(entry -> entry.pool().close());
         jdbcConnectionPools.clear();
     }
@@ -105,7 +112,7 @@ public class JdbcDatasourceSupport {
     }
 
     /**
-     * 新建一条独立连接（进缓存前的那一份，用后即关）。
+     * 新建一条独立连接，不进入连接池，用后即关。
      *
      * @param row 台账记录
      * @return 新建连接
@@ -312,7 +319,7 @@ public class JdbcDatasourceSupport {
      *
      * @param datasourceId 数据源 ID
      */
-    public void evict(Long datasourceId) {
+    public synchronized void evict(Long datasourceId) {
         if (datasourceId == null) {
             return;
         }
@@ -337,7 +344,7 @@ public class JdbcDatasourceSupport {
      * <p>连接池按参数指纹复用独占物理连接，归还时由底层统一恢复会话状态；
      * 服务端断开的物理连接会在借出验证时销毁并重建。</p>
      *
-     * @param datasourceId 数据源 ID
+     * @param row          数据源台账
      * @param url          JDBC URL
      * @param props        连接属性
      * @param driverJar    驱动 jar，允许 null
@@ -348,24 +355,23 @@ public class JdbcDatasourceSupport {
                                             java.io.File driverJar) throws Exception {
         Long datasourceId = row.getId();
         String signature = connectionSignature(row, url, props, driverJar);
-        JdbcPoolEntry entry = jdbcConnectionPools.compute(datasourceId, (id, current) -> {
-            if (current != null && current.signature().equals(signature)) {
-                return current;
+        JdbcPoolEntry entry;
+        synchronized (this) {
+            if (closed) {
+                throw new IllegalStateException("JDBC 连接池管理器已关闭");
             }
-            if (current != null) {
-                current.pool().close();
+            entry = jdbcConnectionPools.get(datasourceId);
+            if (entry == null || !entry.signature().equals(signature)) {
+                ConnectionPool replacement = createJdbcPool(row, url, props, driverJar);
+                if (entry != null) {
+                    entry.pool().close();
+                }
+                entry = new JdbcPoolEntry(signature, replacement);
+                jdbcConnectionPools.put(datasourceId, entry);
             }
-            return new JdbcPoolEntry(signature, createJdbcPool(row, url, props, driverJar));
-        });
-        try {
-            return entry.pool().borrowConnection();
-        } catch (IllegalStateException e) {
-            // 并发配置更新/evict 关闭了刚取得的池：若映射已替换，重取新池；否则保留原错误。
-            if (jdbcConnectionPools.get(datasourceId) != entry) {
-                return borrowJdbcConnection(row, url, props, driverJar);
-            }
-            throw e;
         }
+        // 配置已失效时保留关闭异常，避免用旧台账递归重建并覆盖新配置。
+        return entry.pool().borrowConnection();
     }
 
     /**
