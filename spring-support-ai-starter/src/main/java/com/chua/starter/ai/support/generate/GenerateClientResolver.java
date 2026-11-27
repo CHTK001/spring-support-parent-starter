@@ -52,11 +52,11 @@ public class GenerateClientResolver {
      */
     private final Map<String, Long> clientCache = new ConcurrentHashMap<>();
 
+    /** 图像连接配置缓存；每次解析均基于配置创建独立客户端，避免共享可变请求参数。 */
+    private final Map<String, CachedImageConnection> imageConfigCache = new ConcurrentHashMap<>();
+
     /**
-     * 已构建客户端缓存：key 同上，value 为客户端本体。
-     *
-     * <p>生成客户端持有 HTTP 连接，缓存让其可复用；变更配置后由
-     * {@link #invalidate(String)} 清理。</p>
+     * 已构建视频客户端缓存：视频生成仍复用既有生命周期。
      */
     private final Map<String, Object> clientHolder = new ConcurrentHashMap<>();
 
@@ -64,6 +64,22 @@ public class GenerateClientResolver {
      * 客户端缓存有效期（毫秒）：5 分钟
      */
     private static final long CLIENT_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
+
+    private record ImageConnectionConfig(String spi, String model, String appKey, String secretKey,
+                                         String baseUrl) {
+        private ImageClientSetting toSetting() {
+            return ImageClientSetting.builder()
+                    .provider(spi)
+                    .model(model)
+                    .appKey(appKey)
+                    .secretKey(secretKey)
+                    .baseUrl(baseUrl)
+                    .build();
+        }
+    }
+
+    private record CachedImageConnection(ImageConnectionConfig config, long builtAt) {
+    }
 
     /**
      * 解析结果：客户端 + 命中的模型配置
@@ -126,25 +142,13 @@ public class GenerateClientResolver {
             log.warn("[Generate] 供应商无图像生成实现 platform={} spi={}", provider.getPlatform(), spi);
             return new Resolved<>(null, provider, modelCfg);
         }
-        String cacheKey = "image::" + provider.getProviderId() + "::" + spi + "::k" + keyIndex;
-        ImageClient cached = (ImageClient) clientHolder.get(cacheKey);
-        if (cached != null && !expired(cacheKey)) {
-            return new Resolved<>(applyImageModel(cached, model), provider, modelCfg);
-        }
         try {
-            ImageClientSetting setting = ImageClientSetting.builder()
-                    .provider(spi)
-                    .appKey(keyAt(provider, keyIndex))
-                    .secretKey(ProviderCredentials.secretKey(provider.getCredentials()))
-                    .baseUrl(imageBaseUrl(provider, spi, model))
-                    .build();
-            ImageClient client = ImageClient.create(setting);
+            ImageConnectionConfig config = imageConnectionConfig(provider, spi, model, keyIndex);
+            ImageClient client = ImageClient.create(config.toSetting());
             if (client == null) {
                 return new Resolved<>(null, provider, modelCfg);
             }
-            clientHolder.put(cacheKey, client);
-            clientCache.put(cacheKey, System.currentTimeMillis());
-            return new Resolved<>(applyImageModel(client, model), provider, modelCfg);
+            return new Resolved<>(client, provider, modelCfg);
         } catch (Exception e) {
             log.warn("[Generate] 构建图像客户端失败 spi={}: {}", spi, e.getMessage());
             return new Resolved<>(null, provider, modelCfg);
@@ -257,17 +261,34 @@ public class GenerateClientResolver {
         String fragment = "::" + providerId + "::";
         clientHolder.keySet().removeIf(k -> k.contains(fragment));
         clientCache.keySet().removeIf(k -> k.contains(fragment));
+        imageConfigCache.keySet().removeIf(k -> k.contains(fragment));
     }
 
     /**
-     * 把模型名写入客户端的链式配置。
+     * 按供应商、模型、API 家族、最终地址及密钥序号复用连接配置，而不是复用可变客户端。
      *
-     * @param client 图像客户端
-     * @param model  模型名
-     * @return 同一客户端（链式接口返回 this）
+     * @param provider 供应商
+     * @param spi 图像 SPI 名称
+     * @param model 模型名
+     * @param keyIndex API Key 序号
+     * @return 缓存的连接配置
      */
-    private static ImageClient applyImageModel(ImageClient client, String model) {
-        return model == null || model.isBlank() ? client : client.model(model);
+    private ImageConnectionConfig imageConnectionConfig(SysAccountChannel provider, String spi,
+                                                        String model, int keyIndex) {
+        String baseUrl = imageBaseUrl(provider, spi, model);
+        String family = GenerateSpiRouter.imageApiFamily(provider.getPlatform(), model, spi);
+        List<String> keys = ProviderCredentials.apiKeys(provider.getCredentials());
+        int effectiveKeyIndex = keyIndex >= 0 && keyIndex < keys.size() ? keyIndex : 0;
+        String cacheKey = "image::" + provider.getProviderId() + "::" + spi + "::" + family + "::"
+                + model + "::k" + effectiveKeyIndex + "::" + baseUrl;
+        long now = System.currentTimeMillis();
+        CachedImageConnection cached = imageConfigCache.compute(cacheKey, (key, current) ->
+                current == null || now - current.builtAt() >= CLIENT_CACHE_TTL_MILLIS
+                        ? new CachedImageConnection(new ImageConnectionConfig(spi, model,
+                                keyAt(provider, effectiveKeyIndex),
+                                ProviderCredentials.secretKey(provider.getCredentials()), baseUrl), now)
+                        : current);
+        return cached.config();
     }
 
     /**

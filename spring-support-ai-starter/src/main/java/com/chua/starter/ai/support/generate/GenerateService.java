@@ -371,9 +371,11 @@ public class GenerateService {
             if (probe == null || !probe.ok()) {
                 throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
             }
-            if (!probe.client().supportsReferenceImage()) {
-                throw new IllegalStateException("模型 " + model
-                        + " 不支持参考图（图生图）：请去掉参考图，或改选支持参考图的模型");
+            try (ImageClient client = probe.client()) {
+                if (!client.supportsReferenceImage()) {
+                    throw new IllegalStateException("模型 " + model
+                            + " 不支持参考图（图生图）：请去掉参考图，或改选支持参考图的模型");
+                }
             }
         }
 
@@ -414,8 +416,9 @@ public class GenerateService {
           // 永远占着「一次只能有一个未完成任务」的名额——前端既等不到它变，
           // 也发不出新任务（failStaleBeforeSubmit 只能按超时兜底，兜底晚于此刻）。
           // 收敛口径与 runImageAsync 的 catch 一致：FAILED + progress=100 + 原因。
+        SyncImage pending = null;
         try {
-            SyncImage pending = prepareImage(task, request);
+            pending = prepareImage(task, request);
             if (pending != null) {
                   // 排队态要落库。prepareImage 只把 PROGRESS_QUEUED 写进了内存对象，
                   // 而这一行早已 insert 完毕，于是前端第一眼看到的就是「模型生成中 30%」——
@@ -423,6 +426,7 @@ public class GenerateService {
                 markProgress(task, PROGRESS_QUEUED);
                   // 同步实现：交线程池执行，HTTP 线程立即返回
                 runImageAsync(task, pending.client(), effectivePrompt(task));
+                pending = null; // 执行器已接收，客户端改由 worker 释放。
             }
             return task;
         } catch (RuntimeException e) {
@@ -438,6 +442,10 @@ public class GenerateService {
             log.warn("[Generate] 图像任务提交失败，已收敛占位行为 FAILED taskId={}: {}",
                     task.getTaskId(), e.getMessage());
             throw e;
+        } finally {
+            if (pending != null) {
+                pending.close();
+            }
         }
     }
 
@@ -800,11 +808,13 @@ public class GenerateService {
         if (!resolved.ok()) {
             throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
         }
+        ImageClient client = resolved.client();
+        boolean handedOff = false;
+        try {
         SysAccountChannelModel modelCfg = resolved.modelCfg();
         GenerateConfigSupport.View view = GenerateConfigSupport.read(modelCfg, GenerateConfigSupport.TYPE_IMAGE);
         int count = clamp(request.count(), 1, view.maxCount());
-        ImageClient client = resolved.client()
-                .size(splitWidth(request.size()), splitHeight(request.size()))
+        client.size(splitWidth(request.size()), splitHeight(request.size()))
                 .negativePrompt(blankToNull(request.negativePrompt()))
                   // style 不再作为上游参数下发（见 OpenAiImageClient 注释），
                   // 风格语义由后端拼接进 finalPrompt（风格描述 + 用户原文）并以此出图；这里保留透传以兼容仍支持该参数的实现。
@@ -830,7 +840,13 @@ public class GenerateService {
             task.setCount(1);
             task.setStatus(SysAiGenerateTask.STATUS_RUNNING);
             task.setProgress(PROGRESS_QUEUED);
+            handedOff = true;
             return new SyncImage(client);
+        }
+        } finally {
+            if (!handedOff) {
+                closeImageClient(client);
+            }
         }
     }
 
@@ -848,11 +864,26 @@ public class GenerateService {
        *               并已依次设置尺寸（按请求 size 拆分宽高）、负向提示词、风格、质量、随机种子、
        *               步数（缺省取模型配置默认值）与参考图，因此这里无需再做参数处理；
        *               后续由 {@link #runImageAsync} 调用其 {@code generate(prompt)} 同步出图。
-       *               该 record 不做校验，实例生命周期由 {@link GenerateClientResolver} 管理，
-       *               调用方不得提前 {@code close}；实际不会为 {@code null}（仅在
+        *               调用方在执行器接收前负责释放，接收后改由 worker 释放；实际不会为 {@code null}（仅在
        *               {@code prepareImage} 校验失败时抛异常而非返回包装）
        */
-    private record SyncImage(ImageClient client) {
+    private record SyncImage(ImageClient client) implements AutoCloseable {
+        @Override
+        public void close() {
+            closeImageClient(client);
+        }
+    }
+
+    /**
+     * 释放本次解析独占的图像客户端，关闭失败不覆盖业务结果。
+     * @param client 独立客户端
+     */
+    private static void closeImageClient(ImageClient client) {
+        try {
+            client.close();
+        } catch (Exception e) {
+            log.warn("[Generate] 关闭图像客户端失败: {}", e.getMessage());
+        }
     }
 
       /**
@@ -896,6 +927,7 @@ public class GenerateService {
        */
     private void runImageAsync(SysAiGenerateTask task, ImageClient client, String prompt) {
         imageExecutor.execute(() -> {
+            try {
             long startedAt = System.currentTimeMillis();
               // 生成期间被取消：不再回写成功，直接收敛
             if (canceledTaskIds.contains(task.getTaskId())) {
@@ -904,8 +936,9 @@ public class GenerateService {
             }
             AtomicBoolean finished = new AtomicBoolean(false);
               // 心跳：provider 计算期间无法报进度，但要让前端看得出任务还活着
-            Future<?> heartbeat = startHeartbeat(task, finished);
+            Future<?> heartbeat = null;
             try {
+                heartbeat = startHeartbeat(task, finished);
                 markProgress(task, generatingProgress(task, startedAt));
                 BufferedImage image = client.generate(prompt);
                 markProgress(task, PROGRESS_ENCODING);
@@ -943,6 +976,9 @@ public class GenerateService {
             }
             task.setUpdatedAt(System.currentTimeMillis());
             taskMapper.updateById(task);
+            } finally {
+                closeImageClient(client);
+            }
         });
     }
 
@@ -1360,14 +1396,15 @@ public class GenerateService {
        *
        * @param task 任务行
        */
-    private void refreshImage(SysAiGenerateTask task) {        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver
-        .resolveImage(task.getModel());
+    private void refreshImage(SysAiGenerateTask task) {
+        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver.resolveImage(task.getModel());
         if (!resolved.ok()) {
             task.setStatus(SysAiGenerateTask.STATUS_FAILED);
             task.setErrorMessage("生成实现不可用");
             return;
         }
-        ImageResponse resp = resolved.client().queryTask(providerTaskIdOf(task));
+        try (ImageClient client = resolved.client()) {
+        ImageResponse resp = client.queryTask(providerTaskIdOf(task));
         if (resp == null) {
             return;
         }
@@ -1375,6 +1412,7 @@ public class GenerateService {
                 resp.getProgress(), resp.getErrorMessage());
         if (resp.getImageUrl() != null && !resp.getImageUrl().isBlank()) {
             putResult(task, List.of(resp.getImageUrl()), "image");
+        }
         }
     }
 

@@ -1,7 +1,10 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datapool.support.support;
 
-import com.chua.common.support.value.ExpireValue;
+import com.chua.common.support.concurrent.pool.GenericObjectPool;
+import com.chua.common.support.concurrent.pool.ObjectFactory;
+import com.chua.common.support.concurrent.pool.ObjectPoolConfig;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datapool.support.config.DatapoolProperties;
 import com.chua.starter.datapool.support.constants.DatapoolConstants;
 import com.chua.starter.datapool.support.entity.MsDatasource;
@@ -11,17 +14,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import jakarta.annotation.PreDestroy;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.time.Duration;
+import java.sql.SQLFeatureNotSupportedException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.chua.common.support.utils.StringUtils;
 
 /**
@@ -62,13 +71,12 @@ public class JdbcDatasourceSupport {
     private final JdbcDriverJarService driverJarService;
 
     /**
-     * JDBC 连接缓存：datasourceId -&gt; 带空闲过期的连接。
+     * JDBC 连接池：datasourceId -&gt; 当前连接参数对应的独占借还池。
      *
-     * <p>每次操作都经这里的 {@code connection} 取连接，直连会反复建连/断连；
-     * 这里用 {@link ExpireValue} 做空闲 TTL 复用：TTL 内复用同一物理连接，
-     * 过期回调自动关闭，连接被服务端断开时自动重建。</p>
+     * <p>每个调用方借用独立物理连接，关闭代理即归还；参数变化时旧池停止接收借用，
+     * 在途连接待归还后销毁，不会被配置刷新强行关闭。</p>
      */
-    private final Map<Long, ExpireValue<Connection>> jdbcConnectionCache = new ConcurrentHashMap<>();
+    private final Map<Long, JdbcPoolEntry> jdbcConnectionPools = new ConcurrentHashMap<>();
 
     /**
      * 后台清扫：把闲置超过 TTL 的 JDBC 连接真正关闭掉。
@@ -79,39 +87,30 @@ public class JdbcDatasourceSupport {
      * 这里按 60s 的固定节拍主动核对，到期的持锁走一次 {@code getValue()} 触发同一套
      * 过期回调（{@code onExpireNotify → closeQuietly}）关闭连接。</p>
      */
-    @Scheduled(fixedDelay = 60_000L)
+    @Scheduled(fixedDelayString = "${plugin.datapool.connection-sweep-interval-ms:60000}")
     public void sweepExpiredJdbcConnections() {
-        if (jdbcConnectionCache.isEmpty()) {
-            return;
-        }
-        for (Map.Entry<Long, ExpireValue<Connection>> entry : jdbcConnectionCache.entrySet()) {
-            ExpireValue<Connection> holder = entry.getValue();
-            // 空壳（值已清除）没有连接可关；未过期的复用连接不碰
-            if (holder.isNull() || !holder.isExpire()) {
-                continue;
-            }
-            synchronized (holder) {
-                if (holder.isNull() || !holder.isExpire()) {
-                    continue;
-                }
-                holder.getValue();
-            }
-            log.debug("[datapool] 清扫空闲过期连接: datasourceId={}", entry.getKey());
-        }
+        jdbcConnectionPools.forEach((id, entry) -> entry.pool().evictIdleObjects());
+    }
+
+    /** 关闭应用时回收所有空闲连接；已借出的连接在归还时由池销毁。 */
+    @PreDestroy
+    public void closeJdbcConnectionPools() {
+        jdbcConnectionPools.values().forEach(entry -> entry.pool().close());
+        jdbcConnectionPools.clear();
     }
 
     /**
      * 取可复用的 JDBC 连接。
      *
      * @param row 台账记录
-     * @return 屏蔽了 close 的连接代理
+     * @return 独占借出的连接代理，close 时归还连接池
      * @throws Exception 建连失败
      */
     public Connection connection(MsDatasource row) throws Exception {
         String url = resolveJdbcUrl(row);
         url = applyTunnel(row, url);
         Properties props = buildJdbcProps(row, url);
-        return cachedJdbcConnection(row, url, props, driverJarOf(row));
+        return borrowJdbcConnection(row, url, props, driverJarOf(row));
     }
 
     /**
@@ -326,22 +325,19 @@ public class JdbcDatasourceSupport {
         if (datasourceId == null) {
             return;
         }
-        ExpireValue<Connection> holder = jdbcConnectionCache.remove(datasourceId);
-        if (holder != null) {
-            closeQuietly(holder.getValue());
+        JdbcPoolEntry entry = jdbcConnectionPools.remove(datasourceId);
+        if (entry != null) {
+            entry.pool().close();
         }
     }
 
     /**
-     * 创建带空闲过期的连接持有者：过期即关闭真实连接并清除。
+     * 连接池项：指纹变化即替换；池关闭后，仍在途的连接归还时会被销毁。
      *
-     * @param connection 初始连接，允许空
-     * @return ExpireValue 持有者
+     * @param signature 连接参数指纹
+     * @param pool JDBC 对象池
      */
-    private ExpireValue<Connection> newConnectionHolder(Connection connection) {
-        long minutes = Math.max(1L, properties.getConnectionTtlMinutes());
-        return ExpireValue.of(connection, Duration.ofMinutes(minutes))
-                .onExpireNotify(JdbcDatasourceSupport::closeQuietly);
+    private record JdbcPoolEntry(String signature, GenericObjectPool<Connection> pool) {
     }
 
     /**
@@ -358,26 +354,105 @@ public class JdbcDatasourceSupport {
      * @return 可用连接
      * @throws Exception 建连失败
      */
-    private Connection cachedJdbcConnection(MsDatasource row, String url, Properties props,
+    private Connection borrowJdbcConnection(MsDatasource row, String url, Properties props,
                                             java.io.File driverJar) throws Exception {
         Long datasourceId = row.getId();
-        ExpireValue<Connection> holder = jdbcConnectionCache.computeIfAbsent(
-                datasourceId, id -> newConnectionHolder(null));
-        synchronized (holder) {
-            Connection reusable = holder.getValue();
-            if (reusable != null && isUsable(reusable)) {
-                holder.refresh();
-                return closeProtected(reusable);
+        String signature = connectionSignature(row, url, props, driverJar);
+        JdbcPoolEntry entry = jdbcConnectionPools.compute(datasourceId, (id, current) -> {
+            if (current != null && current.signature().equals(signature)) {
+                return current;
             }
-            closeQuietly(reusable);
-            // 有上传的驱动 jar 就走它自己的类加载器；否则用 DriverManager
-            Connection fresh = driverJar == null
-                    ? DriverManager.getConnection(url, props)
-                    : JdbcDriverSupport.connect(driverJar, requireDriverClassName(row), url, props);
-            jdbcConnectionCache.put(datasourceId, newConnectionHolder(fresh));
-            log.debug("[datapool] 建立 JDBC 连接: id={} url={} driverJar={}",
-                    datasourceId, url, driverJar == null ? "内置" : driverJar.getName());
-            return closeProtected(fresh);
+            if (current != null) {
+                current.pool().close();
+            }
+            return new JdbcPoolEntry(signature, createJdbcPool(row, url, props, driverJar));
+        });
+        try {
+            Connection physical = entry.pool().borrow();
+            return closeProtected(physical, entry.pool());
+        } catch (IllegalStateException e) {
+            // 并发配置更新/evict 关闭了刚取得的池：若映射已替换，重取新池；否则保留原错误。
+            if (jdbcConnectionPools.get(datasourceId) != entry) {
+                return borrowJdbcConnection(row, url, props, driverJar);
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 按连接参数建立共用对象池，不在构建池时连接远端数据库。
+     */
+    private GenericObjectPool<Connection> createJdbcPool(MsDatasource row, String url,
+                                                          Properties props, java.io.File driverJar) {
+        long idleMillis = Math.max(1L, properties.getConnectionTtlMinutes()) * 60_000L;
+        long sweepMillis = properties.getConnectionSweepIntervalMs();
+        ObjectPoolConfig config = ObjectPoolConfig.builder()
+                .maxTotal(10)
+                .maxIdle(10)
+                .borrowTimeoutMillis(Math.max(1_000L, properties.getConnectTimeoutSeconds() * 1_000L))
+                .idleTimeoutMillis(idleMillis)
+                .idleEvictionEnabled(false)
+                .idleEvictionIntervalMillis(Math.max(1L, sweepMillis))
+                .testOnBorrow(true)
+                .testOnReturn(false)
+                .build();
+        Map<Connection, JdbcConnectionState> states = java.util.Collections.synchronizedMap(new IdentityHashMap<>());
+        return new GenericObjectPool<>(config, new ObjectFactory<>() {
+            @Override
+            public Connection create() throws Exception {
+                Connection connection = driverJar == null
+                        ? DriverManager.getConnection(url, props)
+                        : JdbcDriverSupport.connect(driverJar, requireDriverClassName(row), url, props);
+                try {
+                    states.put(connection, capture(connection));
+                    log.debug("[datapool] 建立 JDBC 物理连接: id={} driverJar={}",
+                            row.getId(), driverJar == null ? "内置" : driverJar.getName());
+                    return connection;
+                } catch (Exception e) {
+                    closeQuietly(connection);
+                    throw e;
+                }
+            }
+
+            @Override
+            public void destroy(Connection connection) {
+                states.remove(connection);
+                closeQuietly(connection);
+            }
+
+            @Override
+            public boolean validate(Connection connection) {
+                return isUsable(connection);
+            }
+
+            @Override
+            public void passivateObject(Connection connection) throws Exception {
+                JdbcConnectionState state = states.get(connection);
+                if (state == null) {
+                    throw new SQLException("JDBC 连接缺少会话基线，已丢弃");
+                }
+                state.restore(connection);
+            }
+        });
+    }
+
+    /**
+     * 连接属性只进入哈希指纹，不保存在 map key 或日志中。
+     */
+    private String connectionSignature(MsDatasource row, String url, Properties props, java.io.File driverJar) {
+        StringBuilder value = new StringBuilder(url).append('\n')
+                .append(row.getDatasourceUsername()).append('\n')
+                .append(DatasourceSecrets.decode(row.getDatasourcePassword())).append('\n');
+        new TreeMap<>(props).forEach((key, item) -> value.append(key).append('=').append(item).append('\n'));
+        if (driverJar != null) {
+            value.append(driverJar.getAbsolutePath()).append(':').append(driverJar.length())
+                    .append(':').append(driverJar.lastModified());
+        }
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 不可用", e);
         }
     }
 
@@ -417,20 +492,82 @@ public class JdbcDatasourceSupport {
      * @param connection 真实连接
      * @return 屏蔽 close 的连接代理
      */
-    private static Connection closeProtected(Connection connection) {
+    private static Connection closeProtected(Connection connection, GenericObjectPool<Connection> pool) {
+        AtomicBoolean returned = new AtomicBoolean();
         return (Connection) Proxy.newProxyInstance(
                 JdbcDatasourceSupport.class.getClassLoader(),
                 new Class<?>[]{Connection.class},
                 (proxy, method, args) -> {
+                    if (method.getDeclaringClass() == Object.class) {
+                        return switch (method.getName()) {
+                            case "equals" -> proxy == args[0];
+                            case "hashCode" -> System.identityHashCode(proxy);
+                            case "toString" -> "PooledJdbcConnection[returned=" + returned.get() + "]";
+                            default -> ReflectUtils.invokeProxy(connection, method, args);
+                        };
+                    }
                     if ("close".equals(method.getName())) {
+                        if (returned.compareAndSet(false, true)) {
+                            pool.returnObject(connection);
+                        }
                         return null;
                     }
-                    try {
-                        return method.invoke(connection, args);
-                    } catch (InvocationTargetException e) {
-                        throw e.getTargetException();
+                    if ("isClosed".equals(method.getName()) && returned.get()) {
+                        return true;
                     }
+                    if (returned.get()) {
+                        throw new SQLException("连接已归还连接池");
+                    }
+                    return ReflectUtils.invokeProxy(connection, method, args);
                 });
+    }
+
+    /** 连接建立时保存驱动初始会话设置，归还时恢复。 */
+    private static JdbcConnectionState capture(Connection connection) throws SQLException {
+        boolean autoCommit = connection.getAutoCommit();
+        boolean readOnly = connection.isReadOnly();
+        int isolation = connection.getTransactionIsolation();
+        String catalog = connection.getCatalog();
+        String schema = null;
+        boolean schemaSupported = true;
+        try {
+            schema = connection.getSchema();
+        } catch (SQLFeatureNotSupportedException e) {
+            schemaSupported = false;
+        }
+        int holdability = connection.getHoldability();
+        return new JdbcConnectionState(autoCommit, readOnly, isolation, catalog, schema,
+                schemaSupported, holdability);
+    }
+
+    /** 先回滚未提交工作，再恢复可变会话选项；任一步失败均销毁连接。 */
+    private record JdbcConnectionState(boolean autoCommit, boolean readOnly, int isolation,
+                                       String catalog, String schema, boolean schemaSupported,
+                                       int holdability) {
+        private void restore(Connection connection) throws SQLException {
+            if (!connection.getAutoCommit()) {
+                connection.rollback();
+            }
+            if (connection.getAutoCommit() != autoCommit) {
+                connection.setAutoCommit(autoCommit);
+            }
+            if (connection.isReadOnly() != readOnly) {
+                connection.setReadOnly(readOnly);
+            }
+            if (connection.getTransactionIsolation() != isolation) {
+                connection.setTransactionIsolation(isolation);
+            }
+            if (!java.util.Objects.equals(connection.getCatalog(), catalog)) {
+                connection.setCatalog(catalog);
+            }
+            if (schemaSupported && !java.util.Objects.equals(connection.getSchema(), schema)) {
+                connection.setSchema(schema);
+            }
+            if (connection.getHoldability() != holdability) {
+                connection.setHoldability(holdability);
+            }
+            connection.clearWarnings();
+        }
     }
 
     /**
