@@ -70,6 +70,12 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - 字符串 FQN（`Class.forName`、`ServiceProvider.of(String)`、`SettingDefinition` 默认值、`spring.factories`、`*.imports`）在改包名时全部失联且编译无感。**`plugin.api.spi.mapping.<别名>` 的值必须是 SPI 接口 FQN（不是实现类）**——它被 `SpiOptionController` / `OptionalProvider` 直接交给 `ServiceProvider.of(String)`，写成不存在或旧包名的类时 `options()` 静默返回空列表，前端表现为 SPI 选项下拉为空。
 - 审计出的 `Class.forName` 悬空项要先分层：`ClassUtils.isPresent` / `ReflectUtils.forName` + null 兜底的是**可选依赖钩子**（缺类即不注册，属设计），`instantiate` 后回落内存/文件实现的是**死兜底**，只有被当作真实类型直接使用、且无兜底路径的才是缺陷。
 
+配置资源 FQN 对账口径（2026-11-27 四轮，`temp/namespace-audit/fqn-string-audit.js` + `exclude-probe.js`）：
+
+- **`spring.autoconfigure.exclude` 写旧包名不会报错**：Spring Boot 的 `AutoConfigurationImportSelector#checkExcludedClasses` 先用 `ClassUtils.isPresent` 过滤，类不存在即静默丢弃——排除意图整体失效（实例：oauth 宿主 5 条 exclude 全是旧包名，AI 的 core/protocol/cache 自动配置一直在装配）。
+- 反向更危险：**类存在但没登记进 `AutoConfiguration.imports`** 时写进 exclude，启动直接抛 `IllegalStateException: ... could not be excluded because they are not auto-configuration classes`。所以「把旧包名照字面改成新包名」可能把静默失效变成启动失败——先确认该类是否在 imports 里；被 `@ComponentScan` 扫到的 `@AutoConfiguration`（如 ai 的 `RagAutoConfiguration`、`AiCacheKeyGeneratorAliasConfiguration`）无法用 exclude 排除，也不需要排除。
+- `META-INF/native-image/**` 的 `reflect-config.json` / `proxy-config.json` 同样是 FQN 字符串：只影响 native 构建（JVM 运行不读该文件），迁包后条目静默不命中、类被删除后成为过期条目；判定要求「简单名在某模块源码里有定义」，改包名前先 grep 类定义，别按相似度猜。
+
 ## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
