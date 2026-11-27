@@ -67,6 +67,7 @@ flowchart TD
 | 纯 JDBC 层 SQL 监控与端点 | `SqlMonitorAutoConfiguration`、`DataSourceSqlMonitor`、`SqlMonitorEndpoint` | `plugin.datasource.monitor.enabled` 未设置时 dev/test/uat/local 自动启用；`GET/POST /actuator/sqlmonitor` |
 | 数据库设计文档预览 | `DocumentAutoConfiguration`、`DataSourceDocumentController`、`DatabaseGraphService` | Web 环境 + `plugin.datasource.document.enable=true`（默认 `true`） |
 | H2 / SQLite 嵌入式引擎 | `H2EngineAutoConfiguration`、`SqliteEngineAutoConfiguration`、`SqliteEngineEndpointAutoConfiguration`、`H2Engine`、`SqliteEngine` | `plugin.h2.enable=true` / `plugin.sqlite.enable=true`（默认均 `false`）；`GET /actuator/sqlite` |
+| Engine 读缓存自动装配 | `EngineCacheAutoConfiguration`、`EngineCacheProperties`、`CachingEngine` | `plugin.datasource.engine.cache.enabled=true`（默认 `false`）；容器里的 `JdbcEngine` 被装饰成 `@Primary` 的 `cachingEngine`，底层 Bean 保持原样（见 §5.1 第 12 组） |
 | Calcite 跨库联邦查询 | `CalciteAutoConfiguration`、`CalciteDataSourceConversion` | `plugin.datasource.calcite.enabled=true`（默认 `false`）；运行期联邦 `ds_calcite_federation` + `/ms/ds-runtime/calcite`（见 §6.3） |
 | ShardingSphere 分库分表 | `ShardingAutoConfiguration`、`ShardingV5Conversion` | `plugin.datasource.sharding.enabled=true`（默认 `false`）；运行期规则 `ds_sharding_rule` + `/ms/ds-runtime/sharding`（见 §6.1） |
 | SQL 物化路由 | `MaterializedRouteAutoConfiguration`、`MaterializedRouteAdvisor`、`CalciteMaterializedSqlRouter` | `plugin.datasource.materialized.enabled=true`（默认 `false`）；`@MaterializedRoute` / `@MaterializedRefresh` |
@@ -95,6 +96,7 @@ flowchart TD
 | `dataSourceDocumentService` 等 5 Bean | 文档服务/图谱/控制器/注册器 | Web 环境 + `RequestMappingHandlerMapping`/`DocumentParser` 在类路径 + `document.enable=true`（缺省 `true`） | ⚠️ 无 `@ConditionalOnMissingBean` | `GET /plugin/datasource/document` |
 | `h2Engine` / `h2Flyway` / `h2CleanupPlugin` / `h2DataSource` | H2 引擎与数据源 | `@ConditionalOnClass(H2Engine)` + `plugin.h2.enable=true` + `@ConditionalOnMissingBean`；`h2DataSource` 另要求容器无 `DataSource` | ✅ 宿主已有数据源时让位 | Lambda 链式查询/迁移/注入 `DataSource` |
 | `sqliteEngine` / `sqliteDataSource` / `sqliteEngineEndpoint` | SQLite 引擎/数据源/端点 | `@ConditionalOnClass(SqliteEngine)` + `plugin.sqlite.enable=true` + `@ConditionalOnMissingBean` | ✅ | 注入 `SqliteEngine`/`DataSource`；`GET /actuator/sqlite` |
+| `cachingEngine` | `CachingEngine`（`@Primary`） | `plugin.datasource.engine.cache.enabled=true`（默认 `false`）+ `@ConditionalOnMissingBean(CachingEngine)`；delegate 取 `delegate-bean-name`，留空要求容器只有一个 `JdbcEngine`，多个时启动失败 | ✅ 自建缓存 Bean 即让位 | 按 `Engine` 类型注入拿到缓存版；按 `H2Engine`/`SqliteEngine` 注入仍是原实例 |
 | `calciteDataSourceConversion` / `calciteDataSource` | `DataSourceConversion` / 聚合数据源 | `@ConditionalOnClass(CalciteDataSourceConversion)` + `calcite.enabled=true` + `@ConditionalOnMissingBean(name=...)`；`register-mode=replace`（默认）时无已注册数据源或创建失败直接抛异常；`derive` 时返回 null | ✅ 同名覆盖 | 跨库联邦查询 |
 | `shardingV5Conversion` / `shardingDataSource` 等列表自定义名 | `DataSourceConversion` / 分片数据源 | `@ConditionalOnClass(ShardingV5Conversion)`；`plugin.datasource.sharding` 列表经 `ShardingDataSourceRegistrar`（BFPP）逐项注册，`name` 指定 Bean 名（缺省 `shardingDataSource`），同名冲突告警跳过、`enabled=false` 跳过；无已注册数据源时返回 null | ✅ 同名覆盖 | 分库分表 |
 | `materializedRouteProperties` / `defaultAdvisorAutoProxyCreator` / `materializedRouteAdvisor` / `materializedRefreshAdvisor` / `materializedSqlRouter` | 物化路由组件 | 自定义 `Condition`：`materialized.enabled=true`（默认 `false`，兼容 `spring.datasource.materialized`）+ `@ConditionalOnMissingBean` | ✅ | `@MaterializedRoute` / `@MaterializedRefresh` |
@@ -156,6 +158,9 @@ flowchart TD
 | `plugin.h2.script-path / cleanup-after-shutdown / cleanup-after-test` | `String`/`Boolean` | `""` / `false` / `false` | 迁移脚本路径（配置后自动迁移）/ 停机清理 / 测试后清理 |
 | `plugin.sqlite.enable / path` | `Boolean`/`String` | `false` / `./data/app.sqlite` | SQLite 引擎开关 / 数据库文件路径（目录自动创建） |
 | `plugin.sqlite.init-sql / max-pool-size` | `String`/`Integer` | `""` / `5` | 初始化脚本 / 连接池上限 |
+| `plugin.datasource.engine.cache.enabled / delegate-bean-name / tables` | `Boolean`/`String`/`List` | `false` / 空 / `["*"]` | Engine 读缓存开关（关闭不注册 Bean）/ 被缓存的引擎 Bean 名（多引擎必填）/ 缓存表白名单 |
+| `plugin.datasource.engine.cache.max-rows / max-total-rows / ttl-seconds` | `int`/`int`/`long` | `50000` / `200000` / `0` | 单表行数上限（超限旁路读库）/ 总行数上限（超限 LRU 逐出）/ 副本存活秒数（`0` 不过期） |
+| `plugin.datasource.engine.cache.refresh-interval-seconds / refresh-wheel-slots / refresh-wheel-tick-millis` | `Long`/`Integer`/`Long` | `60`（仅自动装配层）/ `512` / `1000` | 后台刷新间隔（`0` 关闭；不配即 60s）/ 刷新时间轮槽位 / tick 毫秒 |
 | `plugin.datasource.enc.enabled / secret-key` | `Boolean`/`String` | `false` / `""` | ENC 解密开关（EPP 需宿主注册）/ AES 密钥（缺省内置密钥仅限本地验证） |
 | `plugin.datasource.health.enabled / graceful-shutdown.enabled` | `Boolean` | `true` / `true` | 健康指示器 / 优雅关闭（均需 `@Import(DatasourceP2AutoConfiguration.class)`） |
 | `plugin.ops-config.database.enabled` | `Boolean` | `true` | 建 `sys_setting`/`sys_setting_group` 并注入内置配置 |
@@ -479,6 +484,32 @@ plugin:
       enabled: true
 ```
 
+#### 12) Engine 读缓存自动装配（`plugin.datasource.engine.cache`）
+
+> 只配置底层引擎 + 打开开关即可用，不必手工 `CachingEngine.wrap(engine)`；默认关闭，关闭时不注册任何 Bean，行为与未引入该能力一致。
+
+| 配置键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `enabled` | `false` | 开关；关闭时不注册缓存 Bean |
+| `delegate-bean-name` | 空 | 容器里只有一个 `JdbcEngine` 时可留空；同时启用 H2/SQLite 时必须显式指定，否则启动失败并提示该属性 |
+| `tables` | `["*"]` | 缓存表白名单（大小写不敏感）；缓存会改变读一致性语义，建议改为高频只读表 |
+| `max-rows` / `max-total-rows` | `50000` / `200000` | 单表 / 总量行数上限；单表超限即旁路读库，总量超限按 LRU 逐出 |
+| `ttl-seconds` | `0` | 副本存活秒数，`0` 表示不过期（仅靠写入失效与主动 reload） |
+| `refresh-interval-seconds` | `60`（仅自动装配层） | 后台刷新间隔；显式 `0` 关闭、改走 `refreshNow()`；`CachingEngine` 自身默认仍是 `0` |
+| `refresh-wheel-slots` / `refresh-wheel-tick-millis` | `512` / `1000` | 刷新时间轮槽位与 tick；调度跨度 = 槽位 × tick（默认 512s） |
+
+```yaml
+plugin:
+  h2:
+    enable: true
+  datasource:
+    engine:
+      cache:
+        enabled: true
+        tables: [sys_user, sys_dict]     # 不配即 ["*"]
+        refresh-interval-seconds: 30     # 不配走内部 60s；0 关闭
+```
+
 ### 5.2 完整 YAML 示例（生产参考）
 
 将上述能力集中到一份可粘贴的配置（口令均为占位符）：
@@ -531,6 +562,10 @@ plugin:
       auto-create-enabled: false
     materialized:
       enabled: false
+    engine:
+      cache:
+        enabled: false                   # 打开后读走缓存；外部改库靠 refresh-interval-seconds 刷新
+        refresh-interval-seconds: 60
     enc:
       enabled: true
       secret-key: change-me-32-chars
@@ -554,6 +589,7 @@ plugin:
 - **`@DSTransactional` 不是两阶段提交**：异常时逐连接回滚，提交阶段部分失败仍可能不一致；强一致场景配合 Seata `@GlobalTransactional`，并设 `seata.enable-auto-data-source-proxy=false` 避免重复代理。
 - **需显式 `@Import` 的能力**：`@DSTransactional`（`DSTransactionalConfiguration`）、ENC 解密/健康检查/优雅关闭（`DatasourceP2AutoConfiguration`）、Seata 代理（`SeataAutoConfiguration`）；`ENCEnvironmentPostProcessor` 还需注册进宿主 `spring.factories`。
 - **单位速查**：Hikari 各超时=毫秒；`transaction.timeout`=秒；`monitor.slow-sql-threshold-ms`=毫秒；`script.timeout`=秒；`partition.check-interval-minutes`=分钟；`materialized.refresh-interval-seconds`=秒。
+- **Engine 读缓存默认关闭**：`engine.cache.enabled=true` 后读一致性语义改变（本模块的写经缓存失效，外部进程直接改库只能靠 `refresh-interval-seconds` 刷新或手动 `refreshNow()`），只对高频只读表开启并给 `tables` 白名单。
 
 ## 6. 使用方式
 
