@@ -15,8 +15,8 @@ import java.util.List;
  *
  * <pre>{@code
  * plugin.h2.enable=true
- * plugin.engine.cache.enabled=true
- * plugin.engine.cache.tables=sys_user,sys_dict
+ * plugin.datasource.engine.cache.enabled=true
+ * plugin.datasource.engine.cache.tables=sys_user,sys_dict
  * # 不写 refresh-interval-seconds 时使用内部默认 60s
  * }</pre>
  *
@@ -30,7 +30,7 @@ public class EngineCacheProperties {
     /**
      * 配置前缀常量。
      */
-    public static final String PRE = "plugin.engine.cache";
+    public static final String PRE = "plugin.datasource.engine.cache";
 
     /**
      * 开启自动装配且未显式配置刷新间隔时采用的内部默认值（秒）。
@@ -43,7 +43,7 @@ public class EngineCacheProperties {
 
     /**
      * 是否启用 Engine 读缓存自动配置，默认 false（关闭时不注册任何 Bean）。
-     * <p>示例：{@code plugin.engine.cache.enabled=true}</p>
+     * <p>示例：{@code plugin.datasource.engine.cache.enabled=true}</p>
      */
     private boolean enabled = false;
 

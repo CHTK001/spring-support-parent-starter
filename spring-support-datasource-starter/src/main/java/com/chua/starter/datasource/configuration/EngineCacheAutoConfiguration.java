@@ -22,21 +22,21 @@ import java.util.Map;
 /**
  * Engine 读缓存自动配置。
  *
- * <p>开启 {@code plugin.engine.cache.enabled=true} 后，容器中唯一的 {@link JdbcEngine} Bean
+ * <p>开启 {@code plugin.datasource.engine.cache.enabled=true} 后，容器中唯一的 {@link JdbcEngine} Bean
  * 会被自动装饰成 {@link CachingEngine}，无需调用方手工 {@code new CachingEngine(delegate)}。
  * 底层引擎 Bean 保持原样（迁移、DDL、连接管理等写入场景仍直接使用它），
  * 装饰器以 {@code @Primary} 暴露，按 {@code Engine} 类型注入即可拿到缓存版本。</p>
  *
- * <p>后台刷新由 {@code plugin.engine.cache.refresh-interval-seconds} 控制：
+ * <p>后台刷新由 {@code plugin.datasource.engine.cache.refresh-interval-seconds} 控制：
  * 默认 {@code 0} 不启动线程；大于 {@code 0} 时按固定间隔重装载已跟踪的表，
  * 用于自动吸收「外部进程直接改库」带来的不一致，被超限旁路的表也会每轮重探。</p>
  *
  * <p>示例：</p>
  * <pre>
  * plugin.h2.enable=true
- * plugin.engine.cache.enabled=true
- * plugin.engine.cache.tables=sys_user,sys_dict
- * plugin.engine.cache.refresh-interval-seconds=30
+ * plugin.datasource.engine.cache.enabled=true
+ * plugin.datasource.engine.cache.tables=sys_user,sys_dict
+ * plugin.datasource.engine.cache.refresh-interval-seconds=30
  * </pre>
  *
  * <p>本自动配置默认关闭；关闭时不注册任何 Bean，不创建任何线程，
