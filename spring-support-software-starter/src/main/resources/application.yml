@@ -6,7 +6,7 @@ spring:
     name: soft-starter
   autoconfigure:
     exclude:
-      - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
+      - com.chua.starter.datasource.configuration.ShardingAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
   datasource:
