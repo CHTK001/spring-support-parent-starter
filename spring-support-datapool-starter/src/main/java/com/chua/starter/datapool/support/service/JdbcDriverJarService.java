@@ -13,6 +13,7 @@ import com.chua.starter.datapool.support.model.JdbcDriverJarVO;
 import com.chua.starter.datapool.support.support.JdbcDriverSupport;
 import com.chua.starter.datapool.support.support.MiddlewareDriverSupport;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -233,6 +234,13 @@ public class JdbcDriverJarService {
                         row.getJarName(), e.getMessage());
             }
         }
+    }
+
+    /** 回收本服务加载的上传客户端与驱动加载器；共享 SPI 实例由其所属框架管理。 */
+    @PreDestroy
+    public void closeUploadedDrivers() {
+        MiddlewareDriverSupport.clearCache();
+        JdbcDriverSupport.clearCache();
     }
 
     /**
