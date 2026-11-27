@@ -6,6 +6,7 @@ import com.chua.common.support.ai.agent.AgentLoopGuard;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 4.0.0.48
  * @author CH
  */
+@Slf4j
 @Component
 public class AgentManager {
 
@@ -123,9 +125,7 @@ public class AgentManager {
         ManagedAgent existed = agents.put(agentId, new ManagedAgent(agentId, agent, resources));
         if (existed != null && existed.agent != agent) {
             // 同 id 换实现：旧实例已经被新实例取代，别让它继续留在后台跑。
-            interruptQuietly(existed.agent);
-            closeQuietly(existed.agent);
-            closeResources(existed.resources);
+            interruptAndClose(existed);
         }
         return agent;
     }
@@ -263,9 +263,7 @@ public class AgentManager {
         if (managed == null) {
             return false;
         }
-        interruptQuietly(managed.agent);
-        closeQuietly(managed.agent);
-        closeResources(managed.resources);
+        interruptAndClose(managed);
         return true;
     }
 
@@ -367,8 +365,8 @@ public class AgentManager {
     private static void interruptQuietly(Agent agent) {
         try {
             agent.interrupt();
-        } catch (RuntimeException ig) {
-            // 销毁流程里中断失败不该挡住关闭：下面还会 close()。
+        } catch (RuntimeException | Error failure) {
+            log.warn("[AgentManager] 中断失败，继续关闭实例及私有资源", failure);
         }
     }
 
@@ -380,8 +378,8 @@ public class AgentManager {
     private static void closeQuietly(Agent agent) {
         try {
             agent.close();
-        } catch (RuntimeException ig) {
-            // 关闭失败只影响资源回收，不向上抛：调用方正在做的是替换或销毁。
+        } catch (RuntimeException | Error failure) {
+            log.warn("[AgentManager] 实例关闭失败，继续释放私有资源", failure);
         }
     }
 
@@ -393,9 +391,35 @@ public class AgentManager {
         if (resources == null) return;
         try {
             resources.close();
-        } catch (Exception ignored) {
-            // 单个连接关闭失败不影响其余托管实例。
+        } catch (Exception | Error failure) {
+            log.warn("[AgentManager] 私有资源关闭失败，继续清理其余托管实例", failure);
         }
+    }
+
+    /**
+     * 尝试中断并关闭 Agent；Error 不会跳过后续私有资源释放，清理完仍传播首个 Error。
+     * @param managed 托管实例
+     */
+    private static void interruptAndClose(ManagedAgent managed) {
+        Error failure = null;
+        try {
+            managed.agent.interrupt();
+        } catch (RuntimeException interruptFailure) {
+            log.warn("[AgentManager] 中断失败，继续关闭实例及私有资源", interruptFailure);
+        } catch (Error interruptFailure) {
+            failure = interruptFailure;
+        }
+        try {
+            managed.agent.close();
+        } catch (RuntimeException closeFailure) {
+            log.warn("[AgentManager] 实例关闭失败，继续释放私有资源", closeFailure);
+        } catch (Error closeFailure) {
+            if (failure == null) failure = closeFailure;
+            else if (failure != closeFailure) failure.addSuppressed(closeFailure);
+        } finally {
+            closeResources(managed.resources);
+        }
+        if (failure != null) throw failure;
     }
 
     /**

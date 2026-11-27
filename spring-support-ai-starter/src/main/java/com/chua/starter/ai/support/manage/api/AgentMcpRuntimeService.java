@@ -128,25 +128,49 @@ public class AgentMcpRuntimeService {
                 if (client != null) {
                     try {
                         client.close();
-                    } catch (Exception ignored) {
-                        // 初始化失败也应释放进程/连接，继续处理其余服务。
+                    } catch (Exception | Error closeFailure) {
+                        if (closeFailure != e) e.addSuppressed(closeFailure);
+                        log.warn("[AgentMcp] 初始化失败后的连接清理失败 name={}", name, closeFailure);
                     }
                 }
                 log.warn("[AgentMcp] 连接 MCP 服务器失败，跳过: name={}, err={}", name, e.getMessage());
+            } catch (Error failure) {
+                closeClients(liveClients, failure);
+                if (client != null && !liveClients.contains(client)) {
+                    closeClient(client, failure);
+                }
+                throw failure;
             }
         }
 
         log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
                 liveClients.size(), manager.listAllTools().size());
-        return new McpRuntime(manager, () -> {
-            for (McpSyncClient c : liveClients) {
-                try {
-                    c.close();
-                } catch (Exception ignored) {
-                    // 关闭单个连接失败不影响其余连接
-                }
-            }
-        });
+        return new McpRuntime(manager, () -> closeClients(liveClients, null));
+    }
+
+    /**
+     * 释放本轮已经建立的 MCP 客户端；有主异常时把清理失败挂为 suppressed。
+     * @param clients 已连接的客户端
+     * @param primary 构建失败的原始异常，可空
+     */
+    private static void closeClients(List<McpSyncClient> clients, Throwable primary) {
+        for (McpSyncClient client : clients) {
+            closeClient(client, primary);
+        }
+    }
+
+    /**
+     * 关闭单个 MCP 客户端并保留原始失败。
+     * @param client MCP 客户端
+     * @param primary 构建失败的原始异常，可空
+     */
+    private static void closeClient(McpSyncClient client, Throwable primary) {
+        try {
+            client.close();
+        } catch (Exception | Error closeFailure) {
+            if (primary != null && primary != closeFailure) primary.addSuppressed(closeFailure);
+            log.warn("[AgentMcp] 连接关闭失败，继续清理其余连接", closeFailure);
+        }
     }
 
     /**
@@ -184,8 +208,12 @@ public class AgentMcpRuntimeService {
         try {
             agent.mcpManager(runtime.getManager());
             return runtime;
-        } catch (RuntimeException e) {
-            runtime.close();
+        } catch (RuntimeException | Error e) {
+            try {
+                runtime.close();
+            } catch (Exception | Error closeFailure) {
+                if (closeFailure != e) e.addSuppressed(closeFailure);
+            }
             throw e;
         }
     }

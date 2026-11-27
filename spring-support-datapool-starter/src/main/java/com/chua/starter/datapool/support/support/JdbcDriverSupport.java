@@ -92,7 +92,7 @@ public final class JdbcDriverSupport {
      * @return 驱动实例
      * @throws Exception jar 不存在、类不在 jar 里、类无法实例化
      */
-    public static Driver driverOf(File jarFile, String driverClassName) throws Exception {
+    public static synchronized Driver driverOf(File jarFile, String driverClassName) throws Exception {
         if (jarFile == null || !jarFile.isFile()) {
             throw new IllegalArgumentException("驱动 jar 不存在: " + jarFile);
         }
@@ -125,7 +125,7 @@ public final class JdbcDriverSupport {
             log.info("[datapool] 已从上传的 jar 加载驱动: {} <- {}",
                     driverClassName.trim(), jarFile.getName());
             return driver;
-        } catch (ReflectiveOperationException | RuntimeException e) {
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException e) {
             closeQuietly(loader);
             throw new IllegalStateException(
                     "从 jar 加载驱动类失败: " + driverClassName + "（jar=" + jarFile.getName() + "）: " + e, e);
@@ -162,7 +162,7 @@ public final class JdbcDriverSupport {
      *
      * @param jar jar 文件
      */
-    public static void evict(File jar) {
+    public static synchronized void evict(File jar) {
         if (jar == null) {
             return;
         }
@@ -212,7 +212,7 @@ public final class JdbcDriverSupport {
     /**
      * 清空全部缓存（测试与热更新用）。
      */
-    public static void clearCache() {
+    public static synchronized void clearCache() {
         CACHE.values().forEach(entry -> closeQuietly(entry.loader()));
         CACHE.clear();
     }

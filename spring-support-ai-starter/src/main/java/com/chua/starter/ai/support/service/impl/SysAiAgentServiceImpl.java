@@ -874,7 +874,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             afterCommit(() -> {
                 try {
                     publishRuntime(agent, agentInstance, () -> closeResources(resources));
-                } catch (RuntimeException failure) {
+                } catch (RuntimeException | Error failure) {
                     discard.run();
                     throw failure;
                 }
@@ -883,6 +883,9 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             if (released.compareAndSet(false, true)) closeStaged(instance, resources);
             log.error("[Agent] 构建 Agent 失败: agentId={} name={}", agent.getAgentId(), agent.getName(), e);
             throw new IllegalStateException("Agent 构建失败: " + e.getMessage(), e);
+        } catch (Error failure) {
+            if (released.compareAndSet(false, true)) closeStaged(instance, resources);
+            throw failure;
         }
     }
 
@@ -944,16 +947,20 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                     if (model != null) chatClientRegistry.registerAgentModel(model, new AgentChatClient(instance), "chat", "tools", "skills", "routing");
                     if (oldName != null && !oldName.equals(record.getName())) agentRegistry.unregister(oldName, false);
                     agentManager.register(record.getAgentId(), instance, resources);
-                } catch (RuntimeException failure) {
-                    agentRegistry.unregister(record.getName(), false);
+                } catch (RuntimeException | Error failure) {
+                    rollbackRuntimeStep(failure,
+                            () -> agentRegistry.unregister(record.getName(), false), "移除新名称注册");
                     if (previous != null && oldName != null) {
-                        agentRegistry.registerInstance(oldName, previous, new String[]{"custom"},
-                                new String[]{"chat", "tools", "skills", "routing"}, false);
+                        rollbackRuntimeStep(failure, () -> agentRegistry.registerInstance(oldName, previous,
+                                new String[]{"custom"}, new String[]{"chat", "tools", "skills", "routing"}, false),
+                                "恢复旧名称注册");
                     }
                     if (model != null && oldModel != null) {
-                        chatClientRegistry.registerAgentModel(model, oldModel, "chat", "tools", "skills", "routing");
+                        rollbackRuntimeStep(failure, () -> chatClientRegistry.registerAgentModel(model, oldModel,
+                                "chat", "tools", "skills", "routing"), "恢复旧模型注册");
                     } else if (model != null) {
-                        chatClientRegistry.unregisterAgentModel(model);
+                        rollbackRuntimeStep(failure, () -> chatClientRegistry.unregisterAgentModel(model),
+                                "移除新模型注册");
                     }
                     throw failure;
                 }
@@ -977,13 +984,35 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     }
 
     /**
+     * 尽力执行发布回滚；回滚异常不覆盖触发回滚的原始错误。
+     * @param primary 发布失败
+     * @param rollback 回滚动作
+     * @param action 操作说明
+     */
+    private static void rollbackRuntimeStep(Throwable primary, Runnable rollback, String action) {
+        try {
+            rollback.run();
+        } catch (RuntimeException | Error rollbackFailure) {
+            if (primary != rollbackFailure) primary.addSuppressed(rollbackFailure);
+            log.warn("[Agent] 运行时发布回滚失败 action={}", action, rollbackFailure);
+        }
+    }
+
+    /**
      * 释放装配失败或事务回滚的新实例。
      * @param instance 暂存实例
      * @param resources 暂存资源
      */
     private static void closeStaged(Agent instance, List<AutoCloseable> resources) {
         if (instance != null) {
-            try { instance.close(); } catch (Exception e) { log.warn("[Agent] 暂存实例关闭失败", e); }
+            try {
+                instance.close();
+            } catch (Exception | Error e) {
+                log.warn("[Agent] 暂存实例关闭失败", e);
+            } finally {
+                closeResources(resources);
+            }
+            return;
         }
         closeResources(resources);
     }
@@ -994,7 +1023,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
      */
     private static void closeResources(List<AutoCloseable> resources) {
         for (AutoCloseable resource : resources.reversed()) {
-            try { resource.close(); } catch (Exception e) { log.warn("[Agent] 私有资源关闭失败", e); }
+            try { resource.close(); } catch (Exception | Error e) { log.warn("[Agent] 私有资源关闭失败", e); }
         }
     }
 
