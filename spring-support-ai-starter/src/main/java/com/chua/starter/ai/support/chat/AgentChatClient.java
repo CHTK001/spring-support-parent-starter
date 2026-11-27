@@ -51,6 +51,9 @@ public class AgentChatClient implements ChatClient {
      */
     private Runnable closeHook;
 
+    /** 仅短生命周期包装器拥有 Agent；注册表持有的实例由注册表关闭。 */
+    private boolean closeAgent;
+
     /** 防止流结束与调用方收尾路径重复释放同一组私有资源。 */
     private final AtomicBoolean closed = new AtomicBoolean();
 
@@ -108,18 +111,12 @@ public class AgentChatClient implements ChatClient {
     }
 
     /**
-     * 把 Agent 本体加入关闭钩子；用于短生命周期实例，调用方需先保护其借用的 ChatClient。
+     * 取得短生命周期 Agent 的关闭权，始终先关闭 Agent，再执行私有资源钩子。
+     * 调用方需先保护其借用的 ChatClient；重复调用不重复登记关闭动作。
      * @return 当前客户端
      */
     public AgentChatClient withAgentClose() {
-        Runnable previous = closeHook;
-        closeHook = () -> {
-            try {
-                if (previous != null) previous.run();
-            } finally {
-                agent.close();
-            }
-        };
+        closeAgent = true;
         return this;
     }
 
@@ -496,17 +493,24 @@ public class AgentChatClient implements ChatClient {
 
     @Override
     public void close() {
-        // 仅释放 Agent 运行时私有的资源（MCP 连接等）；
-        // 不调用 agent.close()：其内部会关闭主 ChatClient，而主客户端是缓存/共享实例，
-        // 关闭会影响后续请求复用。模型注册为确定性 id，重复注册会被框架忽略，无需在此清理。
+        // 注册表实例默认仅释放钩子；临时实例显式取得关闭权后，先关闭 Agent，
+        // 再释放 MCP 等私有资源。借用客户端代理负责保护底层共享模型客户端。
         if (!closed.compareAndSet(false, true)) {
             return;
         }
-        if (closeHook != null) {
-            try {
-                closeHook.run();
-            } catch (Exception e) {
-                log.warn("[AgentChatClient] 执行关闭钩子失败: {}", e.getMessage());
+        try {
+            if (closeAgent) {
+                agent.close();
+            }
+        } catch (Exception | Error e) {
+            log.warn("[AgentChatClient] 关闭 Agent 失败", e);
+        } finally {
+            if (closeHook != null) {
+                try {
+                    closeHook.run();
+                } catch (Exception | Error e) {
+                    log.warn("[AgentChatClient] 执行关闭钩子失败", e);
+                }
             }
         }
     }

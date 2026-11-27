@@ -1827,21 +1827,13 @@ public class AiBotChatService {
                     .definition(definition)
                     .mode(AgentMode.SINGLE)
                     .mcp(true);
-            try {
-                mcpRuntime = agentMcpRuntimeService.configure(agent, true, bindingMcpIds, null);
-                agentChatClient = new AgentChatClient(agent).withAgentClose();
-                if (mcpRuntime != null) {
-                    AgentMcpRuntimeService.McpRuntime runtime = mcpRuntime;
-                    agentChatClient.withCloseHook(runtime::close);
-                }
-                chatClient = agentChatClient;
-            } catch (RuntimeException e) {
-                if (mcpRuntime != null) {
-                    mcpRuntime.close();
-                    mcpRuntime = null;
-                }
-                throw e;
+            mcpRuntime = agentMcpRuntimeService.configure(agent, true, bindingMcpIds, null);
+            agentChatClient = new AgentChatClient(agent).withAgentClose();
+            if (mcpRuntime != null) {
+                AgentMcpRuntimeService.McpRuntime runtime = mcpRuntime;
+                agentChatClient.withCloseHook(runtime::close);
             }
+            chatClient = agentChatClient;
         }
         // 4. 调用模型并记录用量（令牌/费用入库，供 usage 页统计）。
         // 受 机器人 绑定上的「记录用量」专属开关控制：关闭时不记录。
@@ -1894,25 +1886,33 @@ public class AiBotChatService {
         }
         return response != null && response.getText() != null ? response.getText() : "";
         } finally {
-            if (agentChatClient != null) {
-                agentChatClient.close();
-            } else if (mcpRuntime != null) {
-                mcpRuntime.close();
-            }
-            if (temporaryAgent != null) {
-                if (agentChatClient == null) {
+            try {
+                if (agentChatClient != null) {
+                    agentChatClient.close();
+                } else {
                     try {
-                        temporaryAgent.close();
-                    } catch (Exception e) {
+                        if (temporaryAgent != null) {
+                            temporaryAgent.close();
+                        }
+                    } catch (Exception | Error e) {
                         log.warn("[BotChat] 临时 Agent 关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+                    } finally {
+                        if (mcpRuntime != null) {
+                            try {
+                                mcpRuntime.close();
+                            } catch (Exception | Error e) {
+                                log.warn("[BotChat] MCP 关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+                            }
+                        }
                     }
                 }
-            }
-            if (ownedChatClient != null) {
-                try {
-                    ownedChatClient.close();
-                } catch (Exception e) {
-                    log.warn("[BotChat] 对话客户端关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+            } finally {
+                if (ownedChatClient != null) {
+                    try {
+                        ownedChatClient.close();
+                    } catch (Exception | Error e) {
+                        log.warn("[BotChat] 对话客户端关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+                    }
                 }
             }
         }

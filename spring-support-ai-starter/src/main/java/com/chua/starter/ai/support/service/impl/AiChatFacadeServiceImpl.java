@@ -1619,13 +1619,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 mcpOn, subAgentOn, routedSubAgents, planOn);
         return wrapper;
         } catch (RuntimeException | Error failure) {
-            if (runtime != null) {
-                runtime.close();
-            }
             try {
                 agent.close();
-            } catch (Exception closeError) {
+            } catch (RuntimeException | Error closeError) {
+                if (failure != closeError) {
+                    failure.addSuppressed(closeError);
+                }
                 log.warn("[AiChat] Agent 装配失败后的实例清理失败 agentId={}", agentId, closeError);
+            } finally {
+                if (runtime != null) {
+                    try {
+                        runtime.close();
+                    } catch (RuntimeException | Error closeError) {
+                        if (failure != closeError) {
+                            failure.addSuppressed(closeError);
+                        }
+                        log.warn("[AiChat] Agent 装配失败后的 MCP 清理失败 agentId={}", agentId, closeError);
+                    }
+                }
             }
             throw failure;
         }
