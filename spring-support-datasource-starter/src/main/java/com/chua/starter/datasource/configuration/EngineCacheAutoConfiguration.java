@@ -28,8 +28,9 @@ import java.util.Map;
  * 装饰器以 {@code @Primary} 暴露，按 {@code Engine} 类型注入即可拿到缓存版本。</p>
  *
  * <p>后台刷新由 {@code plugin.datasource.engine.cache.refresh-interval-seconds} 控制：
- * 默认 {@code 0} 不启动线程；大于 {@code 0} 时按固定间隔重装载已跟踪的表，
- * 用于自动吸收「外部进程直接改库」带来的不一致，被超限旁路的表也会每轮重探。</p>
+ * 未配置时取内部默认值 {@link EngineCacheProperties#DEFAULT_REFRESH_INTERVAL_SECONDS}（60 秒），
+ * 让「只配置底层引擎」也能自动吸收「外部进程直接改库」带来的不一致；显式配置 {@code 0}
+ * 表示关闭定时刷新，改走 {@code refreshNow()}。被超限旁路的表也会每轮重探。</p>
  *
  * <p>示例：</p>
  * <pre>
