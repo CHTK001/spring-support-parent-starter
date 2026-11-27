@@ -197,7 +197,7 @@ public class GenerateController {
             }
             boolean supported = video
                     ? GenerateSpiRouter.supportsVideo(provider.getPlatform())
-                    : GenerateSpiRouter.supportsImage(provider.getPlatform());
+                    : GenerateSpiRouter.supportsImage(provider.getPlatform(), row.getModel());
             if (!supported) {
                 continue;
             }

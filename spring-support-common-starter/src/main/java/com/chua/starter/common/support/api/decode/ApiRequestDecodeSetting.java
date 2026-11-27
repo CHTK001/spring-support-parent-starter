@@ -36,7 +36,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     private boolean codecSniffOpen = false;
 
     /**
-     * 数据库配置别名：请求/响应 codec 算法类型（aes/sm4/keylog 等）
+     * 数据库配置别名：请求/响应 codec 算法类型（keylog/aes）
      */
     private String codecType;
 
@@ -275,10 +275,22 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * @return 生效类型（小写）
      */
     public String effectiveCodecType(String fallback) {
-        if (null != codecType && !codecType.isBlank()) {
-            return codecType.trim().toLowerCase(Locale.ROOT);
+        return requireSupportedCodecType(null != codecType && !codecType.isBlank() ? codecType : fallback);
+    }
+
+    /**
+     * 规整并校验传输算法；空值沿用 AES 默认值，拒绝历史算法与纯编码类型。
+     *
+     * @param type 配置类型
+     * @return keylog 或 aes
+     * @throws IllegalArgumentException 类型不受支持时抛出
+     */
+    public static String requireSupportedCodecType(String type) {
+        String normalized = null == type || type.isBlank() ? "aes" : type.trim().toLowerCase(Locale.ROOT);
+        if (!"aes".equals(normalized) && !"keylog".equals(normalized)) {
+            throw new IllegalArgumentException("传输加解密类型只支持 keylog 和 aes");
         }
-        return null == fallback ? null : fallback.trim().toLowerCase(Locale.ROOT);
+        return normalized;
     }
 
 }

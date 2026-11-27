@@ -8,6 +8,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.skill.SkillManager;
 import com.chua.common.support.ai.mcp.McpManager;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -144,12 +145,7 @@ public class AgentRegistry {
                         .description(description != null ? description : "")
                         .build());
 
-        if (skillManager != null) {
-            agent.skillManager(skillManager);
-        }
-        if (mcpManager != null) {
-            agent.mcpManager(mcpManager);
-        }
+        injectGlobalManagers(agent);
 
         agentIndex.put(name, agent);
         allAgents.add(agent);
@@ -211,19 +207,8 @@ public class AgentRegistry {
             return null;
         }
  // 注入全局 skill管理器 / mcp管理器
-        if (inheritManagers && skillManager != null) {
-            try {
-                agent.skillManager(skillManager);
-            } catch (Exception e) {
-                log.warn("[AgentRegistry] 注入 SkillManager 失败: {}", e.getMessage());
-            }
-        }
-        if (inheritManagers && mcpManager != null) {
-            try {
-                agent.mcpManager(mcpManager);
-            } catch (Exception e) {
-                log.warn("[AgentRegistry] 注入 McpManager 失败: {}", e.getMessage());
-            }
+        if (inheritManagers) {
+            injectGlobalManagers(agent);
         }
 
         unregister(name, false);
@@ -279,7 +264,7 @@ public class AgentRegistry {
         this.skillManager = skillManager;
  // 为所有已注册 Agent 注入 skill管理器
         for (Agent agent : allAgents) {
-            if (!isolatedAgents.contains(agent)) agent.skillManager(skillManager);
+            if (!isolatedAgents.contains(agent)) injectSkillManager(agent);
         }
         log.info("[AgentRegistry] 设置全局 SkillManager");
     }
@@ -292,7 +277,7 @@ public class AgentRegistry {
     public synchronized void setMcpManager(McpManager mcpManager) {
         this.mcpManager = mcpManager;
         for (Agent agent : allAgents) {
-            if (!isolatedAgents.contains(agent)) agent.mcpManager(mcpManager);
+            if (!isolatedAgents.contains(agent)) injectMcpManager(agent);
         }
         log.info("[AgentRegistry] 设置全局 McpManager");
     }
@@ -437,6 +422,52 @@ public class AgentRegistry {
      */
     public McpManager getMcpManager() {
         return mcpManager;
+    }
+
+    /**
+     * 向支持 Java 管理器的 Agent 注入全局能力。原生 opencode Agent 的 MCP/Skill
+     * 必须通过其声明式配置入口装配，不能把 JVM 内管理器塞进 HTTP 进程。
+     *
+     * @param agent Agent 实例
+     */
+    private void injectGlobalManagers(Agent agent) {
+        if (agent instanceof OpencodeServerAgent) {
+            return;
+        }
+        injectSkillManager(agent);
+        injectMcpManager(agent);
+    }
+
+    /**
+     * 注入 SkillManager，并隔离不支持该能力的 Agent。
+     *
+     * @param agent Agent 实例
+     */
+    private void injectSkillManager(Agent agent) {
+        if (skillManager == null || agent instanceof OpencodeServerAgent) {
+            return;
+        }
+        try {
+            agent.skillManager(skillManager);
+        } catch (RuntimeException e) {
+            log.warn("[AgentRegistry] 注入 SkillManager 失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 注入 McpManager，并隔离不支持该能力的 Agent。
+     *
+     * @param agent Agent 实例
+     */
+    private void injectMcpManager(Agent agent) {
+        if (mcpManager == null || agent instanceof OpencodeServerAgent) {
+            return;
+        }
+        try {
+            agent.mcpManager(mcpManager);
+        } catch (RuntimeException e) {
+            log.warn("[AgentRegistry] 注入 McpManager 失败: {}", e.getMessage());
+        }
     }
 
     // ==================== 生命周期 ====================

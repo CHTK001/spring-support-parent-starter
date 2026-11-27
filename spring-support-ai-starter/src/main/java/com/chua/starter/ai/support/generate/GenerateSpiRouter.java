@@ -191,6 +191,47 @@ public final class GenerateSpiRouter {
     }
 
     /**
+     * 按供应商与模型解析图像 SPI。OpenCode 的 Nano Banana 使用 Gemini 原生协议，
+     * 不能沿用同一渠道下 GPT Image 的 OpenAI 图像协议。
+     *
+     * @param platform 业务供应商标识
+     * @param model    模型名
+     * @return SPI 名
+     */
+    public static String imageSpi(String platform, String model) {
+        String key = normalize(platform);
+        String normalizedModel = normalize(model);
+        if (("opencode".equals(key) || "google".equals(key) || "gemini".equals(key))
+                && normalizedModel.startsWith("gemini-nano-banana")) {
+            return "google";
+        }
+        return imageSpi(platform);
+    }
+
+    /**
+     * 解析 OpenCode 图像请求所需的 API 家族。SPI 实现仍可复用 OpenAI 图像客户端，
+     * 但 OpenCode 的 GPT Image、Grok Imagine 与 Gemini 分别位于不同的原生路径。
+     *
+     * @param platform 业务供应商标识
+     * @param model    模型名
+     * @param spi      已解析的图像 SPI
+     * @return API 家族标识
+     */
+    public static String imageApiFamily(String platform, String model, String spi) {
+        if (!"opencode".equals(normalize(platform))) {
+            return spi;
+        }
+        String normalizedModel = normalize(model);
+        if (normalizedModel.startsWith("gemini-nano-banana")) {
+            return "google";
+        }
+        if (normalizedModel.startsWith("grok-imagine")) {
+            return "xai";
+        }
+        return spi;
+    }
+
+    /**
      * 解析视频生成 SPI 名。
      *
      * @param platform 业务供应商标识，可为空
@@ -212,6 +253,17 @@ public final class GenerateSpiRouter {
      */
     public static boolean supportsImage(String platform) {
         return KNOWN_IMAGE_SPI.contains(imageSpi(platform));
+    }
+
+    /**
+     * 判断供应商与具体模型是否已有图像生成实现。
+     *
+     * @param platform 业务供应商标识
+     * @param model    模型名
+     * @return true 表示 SPI 侧存在对应实现
+     */
+    public static boolean supportsImage(String platform, String model) {
+        return KNOWN_IMAGE_SPI.contains(imageSpi(platform, model));
     }
 
     /**

@@ -313,9 +313,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      * @return 返回值
     */
     public void upgrade(ApiRequestDecodeSetting setting) {
+        String effectiveType = resolveEffectiveCodecType(setting);
         this.decodeSetting = setting;
         boolean enable = null != setting && setting.isEnable();
-        String effectiveType = resolveEffectiveCodecType(setting);
         boolean nextKeylog = "keylog".equalsIgnoreCase(effectiveType);
         // keylog 的密钥是服务端长期密钥对（pair:pub:priv），与共享密钥 CodecRequestKey 无关
         String nextRequestCodecKey = nextKeylog
@@ -353,7 +353,9 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      */
     private String resolveEffectiveCodecType(ApiRequestDecodeSetting setting) {
         String fallback = decodeConfig.getCodecType();
-        return null == setting ? fallback : setting.effectiveCodecType(fallback);
+        return null == setting
+                ? ApiRequestDecodeSetting.requireSupportedCodecType(fallback)
+                : setting.effectiveCodecType(fallback);
     }
 
     /**

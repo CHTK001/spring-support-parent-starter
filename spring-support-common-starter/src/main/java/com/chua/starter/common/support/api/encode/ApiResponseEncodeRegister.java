@@ -16,7 +16,8 @@ import java.util.List;
 /**
  * 响应编码注册器。
  *
- * <p>提供响应数据加密功能。加密类型由 {@code plugin.api.encode.codec-type} 指定，
+ * <p>提供响应数据加密功能。仅支持 keylog/aes，设置行 CodecType 优先于
+ * {@code plugin.api.encode.codec-type}，
  * 真实实现由 {@link Codec} 的 SPI 解析；<b>加密失败不会再退回明文</b>。</p>
  *
  * <p>历史版本对 {@code sm2} 分支现场生成一次性密钥对，并把私钥塞进响应结果，
@@ -61,7 +62,7 @@ public class ApiResponseEncodeRegister
      * @param whiteList white列表
      */
     private ApiResponseEncodeRegister(String codecType, List<String> whiteList) {
-        this.codecType = codecType;
+        this.codecType = ApiRequestDecodeSetting.requireSupportedCodecType(codecType);
         this.whiteList = whiteList;
         this.keyLogServerKeyProvider = new KeyLogServerKeyProvider(null);
     }
@@ -86,7 +87,7 @@ public class ApiResponseEncodeRegister
         this.keyLogServerKeyProvider = null != keyLogServerKeyProvider
                 ? keyLogServerKeyProvider
                 : new KeyLogServerKeyProvider(null);
-        this.codecType = responseEncodePropertiesConfig.getCodecType();
+        this.codecType = ApiRequestDecodeSetting.requireSupportedCodecType(responseEncodePropertiesConfig.getCodecType());
         this.whiteList = responseEncodePropertiesConfig.getWhiteList() == null
                 ? Collections.emptyList()
                 : responseEncodePropertiesConfig.getWhiteList();
@@ -125,10 +126,14 @@ public class ApiResponseEncodeRegister
      */
     public CodecResult encode(String data) {
         try {
+            String effectiveType = resolveCodecType();
+            if ("keylog".equals(effectiveType)) {
+                throw new IllegalStateException("keylog 响应加密需要请求侧临时公钥");
+            }
             String codecKey = resolveCodecKey();
-            // 有密钥时按配置类型走真实加密（前端 encodeRequestBody 同一口径）；
-            // 没有密钥时使用显式的 hex 兼容路径，避免把明文误当密文。
-            String effectiveType = (codecKey == null || codecKey.isBlank()) ? "hex" : codecType;
+            if (codecKey == null || codecKey.isBlank()) {
+                throw new IllegalStateException("AES codec 缺少密钥");
+            }
             String encryptedData = Codec.build(effectiveType, codecKey).encodeHex(data);
             return new CodecResult(String.valueOf(effectiveType.length()), encryptedData,
                     String.valueOf(effectiveType.length()));
@@ -154,7 +159,7 @@ public class ApiResponseEncodeRegister
      * @return 编码结果；keylog 请求缺少密钥材料时返回 null
      */
     public CodecResult encode(String data, String keylogMaterial) {
-        if (!isRequestCodecKeylog()) {
+        if (!"keylog".equals(resolveCodecType())) {
             return encode(data);
         }
         String clientPublicKey = null;
@@ -180,14 +185,14 @@ public class ApiResponseEncodeRegister
     }
 
     /**
-     * 请求侧 codec 是否 keylog（读 sys_setting CodecType，空视为非 keylog）。
+     * 解析响应算法，设置行优先于 YAML，并拒绝不支持的传输类型。
      *
-     * @return 是否 keylog
+     * @return keylog 或 aes
      */
-    private boolean isRequestCodecKeylog() {
+    private String resolveCodecType() {
         ApiRequestDecodeSetting setting = GlobalSettingFactory.getInstance()
                 .get("config", ApiRequestDecodeSetting.class);
-        return null != setting && "keylog".equalsIgnoreCase(setting.effectiveCodecType(null));
+        return null == setting ? codecType : setting.effectiveCodecType(codecType);
     }
 
     /**

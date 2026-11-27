@@ -151,8 +151,21 @@ public class LoggerController {
      */
     @GetMapping("/stats")
     public ReturnResult<Map<String, Object>> stats(@RequestParam(required = false) String app,
-                                                   @RequestParam(required = false) String instance) {
+                                                    @RequestParam(required = false) String instance) {
         return ReturnResult.ok(store.stats(app, instance));
+    }
+
+    /**
+     * 统计完整快照流，与 /stats 使用同一真实存储口径，默认订阅整个日志中心。
+     *
+     * @param app 应用过滤
+     * @param instance 实例过滤
+     * @return stats / stats-error / heartbeat 事件流
+     */
+    @GetMapping(value = "/stats/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter statsStream(@RequestParam(required = false) String app,
+                                  @RequestParam(required = false) String instance) {
+        return broker.subscribeStats(app, instance);
     }
 
     /**
@@ -169,7 +182,9 @@ public class LoggerController {
                                         @RequestParam(required = false) String instance,
                                         @RequestParam(required = false) String level,
                                         @RequestParam(required = false) Long before) {
-        return ReturnResult.ok(store.delete(app, instance, level, before));
+        int deleted = store.delete(app, instance, level, before);
+        broker.invalidateStats(app, instance);
+        return ReturnResult.ok(deleted);
     }
 
     /**

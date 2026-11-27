@@ -110,8 +110,8 @@ public class GenerateClientResolver {
             return new Resolved<>(null, null, null);
         }
         SysAccountChannelModel modelCfg = resolveModelRow(model);
-        String spi = GenerateSpiRouter.imageSpi(provider.getPlatform());
-        if ((spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform()))
+        String spi = GenerateSpiRouter.imageSpi(provider.getPlatform(), model);
+        if ((spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform(), model))
                 && KeylessGenerateCatalog.ownsImageModel(model)) {
             // 防御回退：免登录出图模型的行可能被渠道页保存路径挂在其它渠道名下
             //（该渠道并没有出图 SPI 实现），只要免费渠道聚合行可用就仍路由回去，
@@ -119,10 +119,10 @@ public class GenerateClientResolver {
             SysAccountChannel free = resolveKeylessImageProvider(model);
             if (free != null) {
                 provider = free;
-                spi = GenerateSpiRouter.imageSpi(provider.getPlatform());
+                spi = GenerateSpiRouter.imageSpi(provider.getPlatform(), model);
             }
         }
-        if (spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform())) {
+        if (spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform(), model)) {
             log.warn("[Generate] 供应商无图像生成实现 platform={} spi={}", provider.getPlatform(), spi);
             return new Resolved<>(null, provider, modelCfg);
         }
@@ -136,7 +136,7 @@ public class GenerateClientResolver {
                     .provider(spi)
                     .appKey(keyAt(provider, keyIndex))
                     .secretKey(ProviderCredentials.secretKey(provider.getCredentials()))
-                    .baseUrl(provider.getBaseUrl())
+                    .baseUrl(imageBaseUrl(provider, spi, model))
                     .build();
             ImageClient client = ImageClient.create(setting);
             if (client == null) {
@@ -268,6 +268,43 @@ public class GenerateClientResolver {
      */
     private static ImageClient applyImageModel(ImageClient client, String model) {
         return model == null || model.isBlank() ? client : client.model(model);
+    }
+
+    /**
+     * 规范化 OpenCode 的图像 API 基地址。
+     *
+     * <p>旧渠道记录可能保存为 {@code /zen/v1}，但 OpenCode 当前按 API 家族分路由：
+     * {@code /inference/openai/v1}、{@code /inference/google/v1beta} 和
+     * {@code /inference/xai/v1}。只对 OpenCode 官方域名做转换，其他供应商仍完全使用
+     * 管理员保存的 baseUrl。</p>
+     *
+     * @param provider 供应商
+     * @param spi      图像 SPI
+     * @param model    模型名
+     * @return 请求基地址
+     */
+    private static String imageBaseUrl(SysAccountChannel provider, String spi, String model) {
+        String baseUrl = provider.getBaseUrl();
+        if (baseUrl == null || !"opencode".equalsIgnoreCase(provider.getPlatform())) {
+            return baseUrl;
+        }
+        String trimmed = baseUrl.trim();
+        String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+        int schemeEnd = lower.indexOf("://");
+        if (schemeEnd < 0) {
+            return baseUrl;
+        }
+        int authorityEnd = lower.indexOf('/', schemeEnd + 3);
+        String authority = authorityEnd < 0 ? trimmed : trimmed.substring(0, authorityEnd);
+        if (!"https://opencode.ai".equalsIgnoreCase(authority)
+                && !"http://opencode.ai".equalsIgnoreCase(authority)) {
+            return baseUrl;
+        }
+        String plan = lower.contains("/inference/go") ? "/inference/go" : "/inference";
+        String family = GenerateSpiRouter.imageApiFamily(provider.getPlatform(), model, spi);
+        String familyPath = "google".equals(family) ? "/google/v1beta"
+                : "xai".equals(family) ? "/xai/v1" : "/openai/v1";
+        return authority + plan + familyPath;
     }
 
     /**

@@ -1809,9 +1809,7 @@ public class AiBotChatService {
                 }
             }
         }
-        AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
         if (!bindingMcpIds.isEmpty()) {
-            mcpRuntime = agentMcpRuntimeService.build(bindingMcpIds);
             String agentId = "bot-" + Integer.toHexString(System.identityHashCode(chatClient));
             String instruction = effectiveSystemPrompt != null && !effectiveSystemPrompt.isBlank()
                     ? effectiveSystemPrompt : "You are a helpful assistant.";
@@ -1822,8 +1820,21 @@ public class AiBotChatService {
                     .definition(definition)
                     .mode(AgentMode.SINGLE)
                     .mcp(true);
-            agent.mcpManager(mcpRuntime.getManager());
-            chatClient = new AgentChatClient(agent).withCloseHook(mcpRuntime::close);
+            AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
+            try {
+                mcpRuntime = agentMcpRuntimeService.configure(agent, true, bindingMcpIds, null);
+                AgentChatClient agentChatClient = new AgentChatClient(agent);
+                if (mcpRuntime != null) {
+                    AgentMcpRuntimeService.McpRuntime runtime = mcpRuntime;
+                    agentChatClient.withCloseHook(runtime::close);
+                }
+                chatClient = agentChatClient;
+            } catch (RuntimeException e) {
+                if (mcpRuntime != null) {
+                    mcpRuntime.close();
+                }
+                throw e;
+            }
         }
         // 4. 调用模型并记录用量（令牌/费用入库，供 usage 页统计）。
         // 受 机器人 绑定上的「记录用量」专属开关控制：关闭时不记录。

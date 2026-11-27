@@ -52,11 +52,11 @@ import java.util.Map;
  *       profiles: dev,test         # Mock 生效环境（默认 dev,test）
  *     encode:
  *       enable: false              # 响应加密（默认 false）
- *       codec-type: aes            # 算法：sm2/sm4/aes/rsa/des/keylog（默认 aes）
+ *       codec-type: aes            # 算法：keylog/aes（默认 aes）
  *       white-list: []             # 不加密路径白名单（默认空）
  *     decode:
  *       enable: false              # 请求解密（默认 false）
- *       codec-type: aes            # 算法：sm4/aes/des/keylog（默认 aes）
+ *       codec-type: aes            # 算法：keylog/aes（默认 aes）
  *       codec-request-key: ""      # 请求解密密钥
  *       keylog-key-file: ""        # keylog 长期密钥文件（同机多服务可共用）
  *       reject-on-decode-failure: false  # 解密失败是否拒绝请求（默认 false）
@@ -490,12 +490,12 @@ import java.util.Map;
         private boolean extInject = false;
 
         /**
-         * 编解码器类型（sm2/aes/rsa等）。
+         * 传输编解码器类型（keylog/aes）。
          * <p>YAML：{@code plugin.api.encode.codec-type}，默认 {@code aes}；
-         * 可选值 sm2/sm4/aes/rsa/des/keylog。</p>
+         * 可选值 keylog/aes。</p>
          */
         @NotNull(message = "编解码器类型不能为空")
-        @Pattern(regexp = "^(sm2|sm4|aes|rsa|des|keylog)$", message = "编解码器类型必须为sm2/sm4/aes/rsa/des/keylog之一")
+        @Pattern(regexp = "^(keylog|aes)$", message = "传输编解码器类型只支持keylog/aes")
         private String codecType = "aes";
 
         /**
@@ -626,10 +626,10 @@ import java.util.Map;
         /**
          * 解码器类型（sm4/aes等）。
          * <p>YAML：{@code plugin.api.decode.codec-type}，默认 {@code aes}；
-         * 可选值 sm4/aes/des/keylog。</p>
+         * 可选值 keylog/aes。</p>
          */
         @NotNull(message = "解码器类型不能为空")
-        @Pattern(regexp = "^(sm4|aes|des|keylog)$", message = "解码器类型必须为sm4/aes/des/keylog之一")
+        @Pattern(regexp = "^(keylog|aes)$", message = "传输解码器类型只支持keylog/aes")
         private String codecType = "aes";
 
         /**

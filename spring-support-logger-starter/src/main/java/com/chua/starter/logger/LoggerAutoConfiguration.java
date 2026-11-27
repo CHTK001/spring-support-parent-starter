@@ -168,8 +168,8 @@ public class LoggerAutoConfiguration {
          * SSE 推送：订阅总线，每条事件实时转发给订阅者
          */
         @Bean
-        public LoggerSseBroker loggerSseBroker(LoggerEventBus loggerEventBus) {
-            LoggerSseBroker broker = new LoggerSseBroker(15L);
+        public LoggerSseBroker loggerSseBroker(LoggerEventBus loggerEventBus, LoggerEventStore loggerEventStore) {
+            LoggerSseBroker broker = new LoggerSseBroker(15L, loggerEventStore);
             loggerEventBus.subscribe(broker::broadcast);
             return broker;
         }
