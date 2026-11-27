@@ -33,7 +33,6 @@ import org.springframework.context.annotation.Import;
         "com.chua.starter.eduai.dimension.controller",
         "com.chua.starter.eduai.service.impl",
         "com.chua.starter.eduai.dimension.service",
-        "com.chua.starter.eduai.collect",
         "com.chua.starter.eduai.queue",
         // 同步至统一模板库（paper → template_info）
         "com.chua.starter.eduai.template"
