@@ -102,6 +102,8 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - **真实产品缺陷（待修复）**：`AliyunAlipayProperties.keepAliveDuration` 默认 300000ms，超出支付宝 SDK `AbstractAlipayClient.setKeepAliveDuration` 的 60s 上限（`AlipayApiException: 连接超时时间不能超过60s`）——`plugin.aliyun.alipay.enabled=true` 且不显式调低该值时 `alipayClient` Bean 必然创建失败。修法：默认值 ≤60000 或 factory 内钳制。
 - PS 5.1 驱动探针：`Start-Process` 后 `$proc.ExitCode` 常为空（只判 EXITED/TIMEOUT）；`*>`/`2>&1` 重定向 native 进程输出写成 UTF-16LE（读日志先验 BOM，或用 `-RedirectStandardOutput` 参数）；javac 编译探针必须带依赖 classpath（`classes;<模块>.jar`）。
 
+- **本地仓上游制品陈旧会伪装成编译错误（2026-11-27 实证）**：`mvn -pl <模块>` 不带 `-am` 时上游依赖取 `D:\maven-repo` 里的 jar；该 jar 比上游源码旧，下游就报「找不到符号」——实例：`eduai` 报 `PaperAiService.QuestionDraft`（嵌套类）/ `generateQuestionDrafts(...)` / `MarkingOutcome.isUnavailable()` 缺失，真因是 `spring-support-ai-starter` 制品停在 11-21，而这三个符号是之后才入源码的。判定：① 报错符号所在文件 `git status` 干净且在 HEAD；② 比对制品 mtime 与上游提交时间；③ 用类字节核对符号（嵌套类条目名是 `PaperAiService$QuestionDraft.class`；`isUnavailable` 由 `@lombok.Data` 生成，在 `PaperAiService$MarkingOutcome.class` 里，主类里搜不到）。修法：先 `mvn -o install -DskipTests -pl <上游模块>` 再装下游；**不要改下游源码去迁就旧 jar**。
+
 ## 提交
 
 只提交自己的文件，避开其它会话的在途改动；`_tmp_cleanup/` 不参与构建。
