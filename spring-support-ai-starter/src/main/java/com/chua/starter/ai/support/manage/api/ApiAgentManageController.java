@@ -36,7 +36,7 @@ import java.util.Set;
  * 动态构建并注册到 {@code AgentRegistry}。</p>
  *
  * <p>{@code sys_ai_agent} 没有用户维度列，Agent 与其编排图对全部用户共享生效，
- * 因此本控制器的读取对所有登录用户开放，新增/修改/删除/注册为模型/重建等写出口仅管理员可执行。</p>
+ * 因此管理配置的读取和写入均仅管理员可执行。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -44,6 +44,7 @@ import java.util.Set;
 @ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/agents/managed")
+@Permission("admin")
 @RequiredArgsConstructor
 @Slf4j
 public class ApiAgentManageController {

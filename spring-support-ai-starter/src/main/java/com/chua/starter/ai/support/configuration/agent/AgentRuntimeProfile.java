@@ -1,16 +1,17 @@
 package com.chua.starter.ai.support.configuration.agent;
 
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.manage.store.SysAiAgent;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
- * Agent 运行时基线档案（{@code agent} 分组配置的解析结果，不可变快照）。
+ * 单个 managed Agent 的运行时配置不可变快照。
  *
- * <p>配置中心「Agent 配置」不是一个「选个名称」的占位页：会话底层就是 Agent，
- * 因此这一组描述的是<b>所有会话 Agent 的运行时基线</b>——MCP 工具、子代理委派、
+ * <p>配置中心为每条 managed 记录分别保存 MCP 工具、子代理委派、
  * 默认技能、记忆体、规划、工具循环轮数与 Token 预算。每个字段都由
  * {@code AiChatFacadeServiceImpl#maybeWrapAgent} 在构建会话 Agent 时真实读取，
  * 不是只写不读的设置占位。</p>
@@ -29,9 +30,9 @@ import java.util.Locale;
  *
  * @param agentName         运行时 Agent 唯一名称（可为空，表示未配置）
  * @param mcp               MCP 工具基线开关
- * @param mcpServers        基线 MCP 服务器 ID 清单；空表示「全部启用服务器」
+ * @param mcpServers        MCP 服务器 ID 清单；null 表示继承，空列表表示禁用
  * @param subAgent          子代理委派基线开关
- * @param defaultSkills     基线默认技能名清单（角色未选技能时注入）
+ * @param defaultSkills     默认技能名清单；null 表示继承，空列表表示不注入
  * @param memory            是否启用记忆体（仅 agentscope / langchain4j 运行时生效，
  *                          opencode 自管会话记忆）
  * @param planning          是否允许规划能力
@@ -55,7 +56,7 @@ public record AgentRuntimeProfile(
      * 未配置任何基线时的档案：与引入本档案之前的会话行为完全一致。
      */
     public static final AgentRuntimeProfile DEFAULT = new AgentRuntimeProfile(
-            null, CapabilitySwitch.INHERIT, List.of(), CapabilitySwitch.INHERIT, List.of(),
+            null, CapabilitySwitch.INHERIT, null, CapabilitySwitch.INHERIT, null,
             true, false, 0, 0L);
 
     /**
@@ -65,8 +66,8 @@ public record AgentRuntimeProfile(
         agentName = agentName == null || agentName.isBlank() ? null : agentName.trim();
         mcp = mcp == null ? CapabilitySwitch.INHERIT : mcp;
         subAgent = subAgent == null ? CapabilitySwitch.INHERIT : subAgent;
-        mcpServers = mcpServers == null ? List.of() : List.copyOf(mcpServers);
-        defaultSkills = defaultSkills == null ? List.of() : List.copyOf(defaultSkills);
+        mcpServers = mcpServers == null ? null : List.copyOf(mcpServers);
+        defaultSkills = defaultSkills == null ? null : List.copyOf(defaultSkills);
         maxToolIterations = Math.max(maxToolIterations, 0);
         maxTotalTokens = Math.max(maxTotalTokens, 0L);
     }
@@ -164,8 +165,56 @@ public record AgentRuntimeProfile(
                 && (mcp == CapabilitySwitch.ON
                 || subAgent == CapabilitySwitch.ON
                 || planning
-                || !defaultSkills.isEmpty());
+                 || (defaultSkills != null && !defaultSkills.isEmpty()));
         return agentName != null || !memory || capability || maxToolIterations > 0 || maxTotalTokens > 0L;
+    }
+
+    /**
+     * 从当前 managed 记录解析能力和预算，不读取其它 Agent 或全局九字段。
+     *
+     * @param agent 当前记录；null 表示没有选择 Agent
+     * @return 该记录的配置快照
+     */
+    public static AgentRuntimeProfile fromManaged(SysAiAgent agent) {
+        if (agent == null) {
+            return DEFAULT;
+        }
+        Map<String, Object> strategy = agent.getStrategy() == null ? Map.of() : agent.getStrategy();
+        Object mcpMode = strategy.containsKey("mcp_mode") ? strategy.get("mcp_mode") : strategy.get("mcp");
+        return new AgentRuntimeProfile(agent.getName(),
+                CapabilitySwitch.parse(mcpMode == null ? null : mcpMode.toString()), agent.getMcpIds(),
+                CapabilitySwitch.parse(value(strategy, "sub_agent_mode", "inherit")), agent.getSkillIds(),
+                Boolean.parseBoolean(value(strategy, "memory", "true")),
+                Boolean.parseBoolean(value(strategy, "planning", "false")),
+                Math.toIntExact(number(strategy, "max_tool_iterations", 0L)),
+                number(strategy, "max_total_tokens", number(strategy, "max_tokens", 0L)));
+    }
+
+    /**
+     * 读取策略文本。
+     * @param strategy 策略
+     * @param key 字段
+     * @param fallback 缺省值
+     * @return 字段文本
+     */
+    private static String value(Map<String, Object> strategy, String key, String fallback) {
+        Object raw = strategy.get(key);
+        return raw == null ? fallback : raw.toString();
+    }
+
+    /**
+     * 精确读取非负整数，避免浮点数截断或 int 溢出静默取消预算。
+     * @param strategy 策略
+     * @param key 字段
+     * @param fallback 缺省值
+     * @return 非负长整数
+     */
+    private static long number(Map<String, Object> strategy, String key, long fallback) {
+        Object raw = strategy.get(key);
+        if (raw == null) return fallback;
+        long result = new java.math.BigDecimal(raw.toString()).longValueExact();
+        if (result < 0) throw new IllegalArgumentException(key + " 必须为非负整数");
+        return result;
     }
 
     /**

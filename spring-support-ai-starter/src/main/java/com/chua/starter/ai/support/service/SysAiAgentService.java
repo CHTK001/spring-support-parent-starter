@@ -19,6 +19,13 @@ import java.util.Set;
 public interface SysAiAgentService {
 
     /**
+     * 按唯一名称读取主 Agent 配置。
+     * @param name 名称
+     * @return 当前记录，不存在时返回 null
+     */
+    SysAiAgent findAgentByName(String name);
+
+    /**
      * 查询全部主 Agent（含子 Agent）。
      *
      * @return 主 Agent 列表

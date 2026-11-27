@@ -16,6 +16,7 @@ import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.lang.json.Json;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
+import com.chua.starter.ai.support.configuration.agent.AgentRuntimeProfile;
 import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
 import com.chua.starter.ai.support.registry.AgentManager;
@@ -76,6 +77,13 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private static final String STRATEGY_KEY_MAX_TOKENS = "max_tokens"; // strategyKey最大令牌
 
     // ==================== 查询 ====================
+
+    @Override
+    public SysAiAgent findAgentByName(String name) {
+        if (name == null || name.isBlank()) return null;
+        return agentMapper.selectOne(new LambdaQueryWrapper<SysAiAgent>()
+                .eq(SysAiAgent::getName, name.trim()).isNull(SysAiAgent::getParentId));
+    }
 
     @Override
     public List<Map<String, Object>> listAgents() {
@@ -954,8 +962,8 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         map.put("system_prompt", agent.getSystemPrompt());
         map.put("provider_id", agent.getProviderId());
         map.put("model", agent.getModel());
-        map.put("mcp_ids", agent.getMcpIds() != null ? agent.getMcpIds() : List.of());
-        map.put("skill_ids", agent.getSkillIds() != null ? agent.getSkillIds() : List.of());
+        map.put("mcp_ids", agent.getMcpIds());
+        map.put("skill_ids", agent.getSkillIds());
         map.put("strategy", agent.getStrategy() != null ? agent.getStrategy() : Map.of());
         map.put("enabled", agent.getEnabled());
         map.put("sort_order", agent.getSortOrder());

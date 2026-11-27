@@ -6,7 +6,8 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.configuration.agent.AgentRuntimeProfile;
 import com.chua.starter.ai.support.registry.AgentManager;
 import com.chua.starter.ai.support.registry.AgentRegistry;
-import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.ai.support.service.SysAiAgentService;
+import com.chua.starter.ai.support.manage.store.SysAiAgent;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.ai.agent.Agent;
@@ -44,6 +45,7 @@ import java.util.Map;
 @ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/agents/runtime")
+@Permission("admin")
 @RequiredArgsConstructor
 @Slf4j
 public class ApiAgentRuntimeController {
@@ -54,9 +56,9 @@ public class ApiAgentRuntimeController {
     private final AgentManager agentManager;
 
     /**
-     * 全局设置服务：解析 agent 分组的运行时基线（与对话装配侧同源，带缓存）
+     * 当前 managed Agent 的配置来源。
      */
-    private final SysAiGlobalSettingService globalSettingService;
+    private final SysAiAgentService agentService;
 
     /**
      * Agent 注册表：按名称解析已注册的运行时 Agent
@@ -108,13 +110,10 @@ public class ApiAgentRuntimeController {
     @GetMapping("/configured")
     public ApiResult<Map<String, Object>> configured(
             @RequestParam(value = "name", required = false) String name) {
-        AgentRuntimeProfile profile = AgentRuntimeProfile.resolve(globalSettingService);
-        String source = (name != null && !name.isBlank()) ? name : profile.agentName();
-        if (source == null || source.isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "尚未配置 Agent 名称（设置中心 → Agent 配置）");
-        }
-        String resolvedName = source.trim();
-        Agent agent = agentRegistry.getByName(resolvedName);
+        SysAiAgent record = requireManaged(name);
+        AgentRuntimeProfile profile = AgentRuntimeProfile.fromManaged(record);
+        String resolvedName = record.getName();
+        Agent agent = Boolean.TRUE.equals(record.getEnabled()) ? agentManager.get(record.getAgentId()) : null;
         if (agent == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Agent 不存在: " + resolvedName);
         }
@@ -143,8 +142,22 @@ public class ApiAgentRuntimeController {
      */
     @Permission("admin")
     @GetMapping("/baseline")
-    public ApiResult<Map<String, Object>> baseline() {
-        return ApiResult.ok(profileOf(AgentRuntimeProfile.resolve(globalSettingService)));
+    public ApiResult<Map<String, Object>> baseline(@RequestParam(value = "name", required = false) String name) {
+        return ApiResult.ok(profileOf(AgentRuntimeProfile.fromManaged(requireManaged(name))));
+    }
+
+    /**
+     * 按页面当前选择读取主记录，禁止缺省回落到其它 Agent。
+     * @param name 当前名称
+     * @return managed 记录
+     */
+    private SysAiAgent requireManaged(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "请选择 Agent");
+        }
+        SysAiAgent record = agentService.findAgentByName(name);
+        if (record == null) throw new ApiException(ApiErrorCode.NOT_FOUND, "Agent 不存在: " + name);
+        return record;
     }
 
     /**
