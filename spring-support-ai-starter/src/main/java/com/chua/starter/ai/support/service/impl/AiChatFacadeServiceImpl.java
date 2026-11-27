@@ -1497,6 +1497,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 直接抛 UnsupportedOperationException），编排委派交给下面的 mode(AUTO)；
         // 其它运行时维持 leader(subAgentOn) 原语义。与 SysAiAgentServiceImpl#rebuildAgent 同口径。
         Agent agent = agentProviderFactory.createAgent();
+        AgentMcpRuntimeService.McpRuntime runtime = null;
+        try {
         boolean opencodeRuntime = agent instanceof OpencodeServerAgent;
         AgentDefinition.Builder definitionBuilder = AgentDefinition.builder()
                 .id(agentId)
@@ -1513,7 +1515,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 开关关闭时不消费残留白名单（与前端「总开关关闭不写残留」口径对齐）。
         int routedSubAgents = subAgentOn ? attachRoleSubAgents(definitionBuilder, roleSettings) : 0;
         AgentDefinition definition = definitionBuilder.build();
-        agent.chatClient(configured)
+        agent.chatClient(AgentChatClient.borrowedClient(configured))
                 .definition(definition)
                 // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）
                 .mode(subAgentOn ? AgentMode.AUTO : AgentMode.SINGLE)
@@ -1585,10 +1587,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // evalHook 把每次运行结果落 agent_eval_record。
         // 各运行时按自身的预算跟踪契约执行；不将配置接收等同于真实熔断验收。
         applySessionBudgetAndEval(agent, request.getSessionId(), profile.maxTotalTokens());
-        AgentMcpRuntimeService.McpRuntime runtime =
-                agentMcpRuntimeService.configure(agent, mcpOn, catalogIds, excludeIds);
+        runtime = agentMcpRuntimeService.configure(agent, mcpOn, catalogIds, excludeIds);
         AgentChatClient wrapper = new AgentChatClient(agent)
-                .withCloseHook(runtime != null ? runtime::close : null);
+                .withCloseHook(runtime != null ? runtime::close : null)
+                .withAgentClose();
         // 会话待办镜像（G2）：Agent 运行时（opencode）调用 todowrite 时，工具入参
         // 经 TOOL_START 事件透出；这里按会话旁路拦截，把全量待办列表整表替换进
         // sys_ai_session_todo 并广播 todo_updated。回调异常已在 AgentChatClient 兜底，
@@ -1616,6 +1618,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 AiUserContext.currentUserId(), admin, agentId, subAgentOn ? "AUTO" : "SINGLE",
                 mcpOn, subAgentOn, routedSubAgents, planOn);
         return wrapper;
+        } catch (RuntimeException | Error failure) {
+            if (runtime != null) {
+                runtime.close();
+            }
+            try {
+                agent.close();
+            } catch (Exception closeError) {
+                log.warn("[AiChat] Agent 装配失败后的实例清理失败 agentId={}", agentId, closeError);
+            }
+            throw failure;
+        }
     }
 
     /**

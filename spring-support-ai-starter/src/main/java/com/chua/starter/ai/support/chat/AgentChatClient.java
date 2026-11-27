@@ -8,11 +8,14 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.proxy.ProxyProvider;
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.chua.common.support.utils.StringUtils;
 
 /**
@@ -48,6 +51,9 @@ public class AgentChatClient implements ChatClient {
      */
     private Runnable closeHook;
 
+    /** 防止流结束与调用方收尾路径重复释放同一组私有资源。 */
+    private final AtomicBoolean closed = new AtomicBoolean();
+
     /**
      * 工具观察者：TOOL_START 时旁路回调 {@code (toolName, toolInput)}，可空。
      * 由构建方注入（如会话待办镜像），只旁路消费、不影响对话主链路。
@@ -75,7 +81,45 @@ public class AgentChatClient implements ChatClient {
      * @return 当前客户端
      */
     public AgentChatClient withCloseHook(Runnable hook) {
-        this.closeHook = hook;
+        Runnable previous = this.closeHook;
+        this.closeHook = previous == null ? hook : () -> {
+            try {
+                previous.run();
+            } finally {
+                if (hook != null) hook.run();
+            }
+        };
+        return this;
+    }
+
+    /**
+     * 将 Agent 的模型客户端设为借用视图，Agent 关闭时不关闭被共享的底层客户端。
+     * @param client 被借用的模型客户端
+     * @return 不拥有底层客户端的代理
+     */
+    public static ChatClient borrowedClient(ChatClient client) {
+        return ProxyProvider.of(ChatClient.class).target(client).tryAsm(false).tryJavassist(false)
+                .enableAnnotationScan(false).enableArround(false)
+                .methodIntercept((target, method, args, proxy) -> {
+                    if ("close".equals(method.getName()) && method.getParameterCount() == 0) return null;
+                    Object result = ReflectUtils.invokeProxy(client, method, args);
+                    return result == client ? proxy : result;
+                }).build();
+    }
+
+    /**
+     * 把 Agent 本体加入关闭钩子；用于短生命周期实例，调用方需先保护其借用的 ChatClient。
+     * @return 当前客户端
+     */
+    public AgentChatClient withAgentClose() {
+        Runnable previous = closeHook;
+        closeHook = () -> {
+            try {
+                if (previous != null) previous.run();
+            } finally {
+                agent.close();
+            }
+        };
         return this;
     }
 
@@ -455,6 +499,9 @@ public class AgentChatClient implements ChatClient {
         // 仅释放 Agent 运行时私有的资源（MCP 连接等）；
         // 不调用 agent.close()：其内部会关闭主 ChatClient，而主客户端是缓存/共享实例，
         // 关闭会影响后续请求复用。模型注册为确定性 id，重复注册会被框架忽略，无需在此清理。
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
         if (closeHook != null) {
             try {
                 closeHook.run();

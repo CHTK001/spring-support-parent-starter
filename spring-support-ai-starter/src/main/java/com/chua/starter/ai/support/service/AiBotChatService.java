@@ -1781,8 +1781,13 @@ public class AiBotChatService {
         Map<String, RouteTarget> channelRoutes = modelClientResolver.mergedRoutes(
                 provider, ModelClientResolver.ownerScopeOf(provider));
         // 3. 构建 对话客户端（带请求超时）并回复
-        ChatClient chatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs, channelRoutes))
+        ChatClient ownedChatClient = ChatClient.create(buildSetting(provider, apiKey, extraHeaders, timeoutMs, channelRoutes))
                 .model(plainModel);
+        ChatClient chatClient = ownedChatClient;
+        Agent temporaryAgent = null;
+        AgentChatClient agentChatClient = null;
+        AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
+        try {
         log.info("[BotChat] Bot {} 实际调用 providerId={} platform={} baseUrl={} model={}",
                 bot.getBotId(), provider.getProviderId(), provider.getPlatform(), provider.getBaseUrl(), plainModel);
         // 系统提示词：优先 Bot 自定义，未配置则回退全局默认（bot.system_prompt）
@@ -1817,14 +1822,14 @@ public class AiBotChatService {
             AgentDefinition definition = AgentDefinition.builder()
                     .id(agentId).name("Assistant").instruction(instruction).build();
             Agent agent = agentProviderFactory.createAgent()
-                    .chatClient(chatClient)
+                    .chatClient(AgentChatClient.borrowedClient(chatClient))
                     .definition(definition)
                     .mode(AgentMode.SINGLE)
                     .mcp(true);
-            AgentMcpRuntimeService.McpRuntime mcpRuntime = null;
+            temporaryAgent = agent;
             try {
                 mcpRuntime = agentMcpRuntimeService.configure(agent, true, bindingMcpIds, null);
-                AgentChatClient agentChatClient = new AgentChatClient(agent);
+                agentChatClient = new AgentChatClient(agent).withAgentClose();
                 if (mcpRuntime != null) {
                     AgentMcpRuntimeService.McpRuntime runtime = mcpRuntime;
                     agentChatClient.withCloseHook(runtime::close);
@@ -1833,6 +1838,7 @@ public class AiBotChatService {
             } catch (RuntimeException e) {
                 if (mcpRuntime != null) {
                     mcpRuntime.close();
+                    mcpRuntime = null;
                 }
                 throw e;
             }
@@ -1887,6 +1893,27 @@ public class AiBotChatService {
             }
         }
         return response != null && response.getText() != null ? response.getText() : "";
+        } finally {
+            if (agentChatClient != null) {
+                agentChatClient.close();
+            } else if (mcpRuntime != null) {
+                mcpRuntime.close();
+            }
+            if (temporaryAgent != null) {
+                if (agentChatClient == null) {
+                    try {
+                        temporaryAgent.close();
+                    } catch (Exception e) {
+                        log.warn("[BotChat] 临时 Agent 关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+                    }
+                }
+            }
+            try {
+                ownedChatClient.close();
+            } catch (Exception e) {
+                log.warn("[BotChat] 对话客户端关闭失败 bot={}: {}", bot.getBotId(), e.getMessage());
+            }
+        }
     }
 
     /**

@@ -11,6 +11,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.chat.AiChatProperties;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import com.chua.starter.ai.support.manage.updater.ChatClientHotUpdater;
+import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
+import com.chua.starter.ai.support.chat.ChatSkillSupport;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
@@ -269,6 +271,9 @@ public class AiConfiguration {
         ChatClientRegistry chatClientRegistry = context.getBean(ChatClientRegistry.class);
         AgentRegistry agentRegistry = context.getBean(AgentRegistry.class);
         AgentProviderFactory agentProviderFactory = context.getBean(AgentProviderFactory.class);
+        agentRegistry.setNativeCapabilityServices(
+                context.getBeanProvider(AgentMcpRuntimeService.class).getIfAvailable(),
+                context.getBeanProvider(ChatSkillSupport.class).getIfAvailable());
 
         // 开了 plugin.ai.chat.enabled 却没配密钥时，bean 会被下面的条件挡掉（不创建调用必失败的客户端），
         // 这里补一条可操作的告警 —— 否则现象只是「AI 不可用」，看不出是漏配了密钥。

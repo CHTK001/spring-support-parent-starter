@@ -11,8 +11,6 @@ import com.chua.common.support.ai.agent.run.AgentRunRecord;
 import com.chua.common.support.ai.agent.run.AgentStepStatus;
 import com.chua.common.support.ai.agent.run.AgentStepType;
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.proxy.ProxyProvider;
-import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.ai.support.service.AgentOrchestrationGraph;
 import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.starter.ai.support.chat.ChatSkillSupport;
@@ -845,7 +843,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 log.warn("[Agent] 评测记录器不可用，本实例不落评测 name={}", agent.getName(), e);
             }
             if (masterClient != null) {
-                agentInstance.chatClient(borrowedClient(masterClient));
+                agentInstance.chatClient(AgentChatClient.borrowedClient(masterClient));
             }
 
  // 子 Agent 独立模型
@@ -856,7 +854,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 ChatClient subClient = buildChatClient(sub);
                 if (subClient != null) {
                     resources.add(subClient);
-                    agentInstance.chatClient(sub.getAgentId(), borrowedClient(subClient));
+                    agentInstance.chatClient(sub.getAgentId(), AgentChatClient.borrowedClient(subClient));
                 }
             }
 
@@ -1007,21 +1005,6 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private void removeRegisteredModel(SysAiAgent agent) {
         String registered = registeredModels.remove(agent.getAgentId());
         if (registered != null) chatClientRegistry.unregisterAgentModel(registered);
-    }
-
-    /**
-     * 引擎借用客户端，关闭责任只归托管资源集合；链式返回自身时继续保留借用视图。
-     * @param client 私有客户端
-     * @return 不关闭底层连接的视图
-     */
-    private static ChatClient borrowedClient(ChatClient client) {
-        return ProxyProvider.of(ChatClient.class).target(client).tryAsm(false).tryJavassist(false)
-                .enableAnnotationScan(false).enableArround(false)
-                .methodIntercept((target, method, args, proxy) -> {
-                    if ("close".equals(method.getName()) && method.getParameterCount() == 0) return null;
-                    Object result = ReflectUtils.invokeProxy(client, method, args);
-                    return result == client ? proxy : result;
-                }).build();
     }
 
     /**

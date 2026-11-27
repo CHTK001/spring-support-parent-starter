@@ -126,6 +126,9 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      */
     public void destroy() {
         launcher.removeListener(this);
+        for (String symbolicName : List.copyOf(publishedByBundle.keySet())) {
+            unpublishBundle(symbolicName);
+        }
         hostBridge.unregisterAll();
     }
 
@@ -238,17 +241,24 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
      * @param instances 已发布实例
      */
     private void unpublishAll(List<Object> instances) {
-        if (CollectionUtils.isEmpty(instances) || publisher == null) {
+        if (CollectionUtils.isEmpty(instances)) {
             return;
         }
         int removed = 0;
         for (Object instance : instances) {
             try {
-                if (publisher.unpublish(instance)) {
+                if (publisher != null && publisher.unpublish(instance)) {
                     removed++;
                 }
             } catch (Exception ex) {
                 log.warn("[OSGi] SPI 服务反注册失败: {}", ex.getMessage());
+            }
+            if (instance instanceof AutoCloseable closeable) {
+                try {
+                    closeable.close();
+                } catch (Exception ex) {
+                    log.warn("[OSGi] SPI 资源释放失败: {}", ex.getMessage());
+                }
             }
         }
         if (removed > 0) {

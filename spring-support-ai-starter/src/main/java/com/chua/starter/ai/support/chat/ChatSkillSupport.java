@@ -93,6 +93,9 @@ public class ChatSkillSupport {
      */
     private volatile long cachedAt;
 
+    /** 技能目录变更后刷新全局原生 Agent 配置。 */
+    private volatile Runnable invalidationListener;
+
     /**
      * 构造已安装技能支撑。
      *
@@ -300,7 +303,7 @@ public class ChatSkillSupport {
         }
         sysAiGlobalSettingService.upsertValue(SKILL_SETTING_GROUP, DISABLED_FIELD,
                 String.join(",", disabled), "已停用的技能名单");
-        cachedAt = 0L;
+        invalidate();
     }
 
     /**
@@ -358,6 +361,18 @@ public class ChatSkillSupport {
      */
     public void invalidate() {
         cachedAt = 0L;
+        Runnable listener = invalidationListener;
+        if (listener != null) {
+            listener.run();
+        }
+    }
+
+    /**
+     * 设置全局 Agent 刷新回调。
+     * @param listener 技能目录失效后的回调
+     */
+    public void setInvalidationListener(Runnable listener) {
+        this.invalidationListener = listener;
     }
 
     /**

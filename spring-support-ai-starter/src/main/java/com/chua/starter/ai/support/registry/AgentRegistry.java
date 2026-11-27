@@ -9,6 +9,8 @@ import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.ai.skill.SkillManager;
 import com.chua.common.support.ai.mcp.McpManager;
 import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
+import com.chua.starter.ai.support.chat.ChatSkillSupport;
+import com.chua.starter.ai.support.manage.api.AgentMcpRuntimeService;
 import com.chua.starter.ai.support.configuration.runtime.AgentProviderFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -117,6 +119,12 @@ public class AgentRegistry {
      */
     private volatile McpManager mcpManager;
 
+    /** 原生 OpenCode Agent 的声明式 MCP 装配器。 */
+    private volatile AgentMcpRuntimeService agentMcpRuntimeService;
+
+    /** 原生 OpenCode Agent 的声明式 Skill 装配器。 */
+    private volatile ChatSkillSupport chatSkillSupport;
+
     /**
      * 注册 Agent。
      *
@@ -129,7 +137,7 @@ public class AgentRegistry {
      * @param capabilities  能力标签
      * @return 注册后的 Agent 实例
      */
-    public Agent register(String name, String displayName, String description,
+    public synchronized Agent register(String name, String displayName, String description,
                           ChatClient chatClient, AgentDefinition definition,
                           String[] groups, String[] capabilities) {
         if (name == null) {
@@ -144,26 +152,16 @@ public class AgentRegistry {
                         .name(displayName != null ? displayName : name)
                         .description(description != null ? description : "")
                         .build());
-
-        injectGlobalManagers(agent);
-
-        agentIndex.put(name, agent);
-        allAgents.add(agent);
-
-        if (groups != null) {
-            for (String group : groups) {
-                groupIndex.computeIfAbsent(group, k -> new CopyOnWriteArrayList<>()).add(agent);
+        try {
+            return registerInstance(name, agent, groups, capabilities, true);
+        } catch (RuntimeException e) {
+            try {
+                agent.close();
+            } catch (Exception closeError) {
+                log.warn("[AgentRegistry] 注册失败后的 Agent 清理失败: name={}", name, closeError);
             }
+            throw e;
         }
-
-        if (capabilities != null) {
-            for (String capability : capabilities) {
-                capabilityIndex.computeIfAbsent(capability, k -> new CopyOnWriteArrayList<>()).add(agent);
-            }
-        }
-
-        log.info("[AgentRegistry] 注册 Agent: name={}, displayName={}", name, displayName);
-        return agent;
     }
 
     /**
@@ -206,12 +204,21 @@ public class AgentRegistry {
             log.warn("[AgentRegistry] 注册参数不完整: name={}, agent={}", name, agent);
             return null;
         }
- // 注入全局 skill管理器 / mcp管理器
+        if (agentIndex.get(name) == agent) {
+            if (inheritManagers) {
+                injectGlobalManagers(agent);
+                configureNativeCapabilities(agent);
+            }
+            return agent;
+        }
+        // 注入全局能力；原生 OpenCode Agent 由独立配置入口声明式装配。
         if (inheritManagers) {
             injectGlobalManagers(agent);
+            configureNativeCapabilities(agent);
         }
 
-        unregister(name, false);
+        // 替换仅关闭注册中心自有实例；独立托管实例仍由 AgentManager 释放。
+        unregister(name, true);
         if (!inheritManagers) isolatedAgents.add(agent);
         agentIndex.put(name, agent);
         allAgents.add(agent);
@@ -252,6 +259,7 @@ public class AgentRegistry {
      */
     public void setMaster(Agent agent) {
         this.masterAgent = agent;
+        configureNativeCapabilities(agent);
         log.info("[AgentRegistry] 设置主 Agent: {}", agent.getClass().getSimpleName());
     }
 
@@ -266,6 +274,7 @@ public class AgentRegistry {
         for (Agent agent : allAgents) {
             if (!isolatedAgents.contains(agent)) injectSkillManager(agent);
         }
+        refreshNativeCapabilities();
         log.info("[AgentRegistry] 设置全局 SkillManager");
     }
 
@@ -279,7 +288,53 @@ public class AgentRegistry {
         for (Agent agent : allAgents) {
             if (!isolatedAgents.contains(agent)) injectMcpManager(agent);
         }
+        refreshNativeCapabilities();
         log.info("[AgentRegistry] 设置全局 McpManager");
+    }
+
+    /**
+     * 接入原生 Agent 的全局 MCP/Skill 配置入口，并刷新已注册的全局实例。
+     * 独立托管实例不参与刷新，其配置及资源仍由 AgentManager 所有。
+     * @param mcpRuntimeService 声明式 MCP 配置入口
+     * @param skillSupport 声明式 Skill 配置入口
+     */
+    public synchronized void setNativeCapabilityServices(AgentMcpRuntimeService mcpRuntimeService,
+                                                          ChatSkillSupport skillSupport) {
+        this.agentMcpRuntimeService = mcpRuntimeService;
+        this.chatSkillSupport = skillSupport;
+        if (skillSupport != null) {
+            skillSupport.setInvalidationListener(this::refreshGlobalCapabilities);
+        }
+        refreshNativeCapabilities();
+    }
+
+    /** 刷新全局原生 Agent 的声明式能力，不触碰独立实例。 */
+    public synchronized void refreshGlobalCapabilities() {
+        for (Agent agent : allAgents) {
+            if (!isolatedAgents.contains(agent)) configureNativeCapabilities(agent);
+        }
+        Agent master = masterAgent;
+        if (master != null && !allAgents.contains(master) && !isolatedAgents.contains(master)) {
+            configureNativeCapabilities(master);
+        }
+    }
+
+    private void refreshNativeCapabilities() {
+        refreshGlobalCapabilities();
+    }
+
+    private void configureNativeCapabilities(Agent agent) {
+        if (!(agent instanceof OpencodeServerAgent) || isolatedAgents.contains(agent)) {
+            return;
+        }
+        ChatSkillSupport skills = chatSkillSupport;
+        if (skills != null) {
+            skills.configureAgent(agent, null);
+        }
+        AgentMcpRuntimeService mcp = agentMcpRuntimeService;
+        if (mcp != null) {
+            mcp.configure(agent, true, null, null);
+        }
     }
 
     // ==================== 查询方法 ====================
@@ -382,14 +437,14 @@ public class AgentRegistry {
             return false;
         }
         allAgents.remove(agent);
-        isolatedAgents.remove(agent);
+        boolean isolated = isolatedAgents.remove(agent);
         if (masterAgent == agent) {
             masterAgent = null;
         }
         groupIndex.values().forEach(list -> list.remove(agent));
         capabilityIndex.values().forEach(list -> list.remove(agent));
         try {
-            if (close) agent.close();
+            if (close && !isolated) agent.close();
         } catch (Exception e) {
             log.warn("[AgentRegistry] 关闭 Agent 失败: name={}", name, e);
         }

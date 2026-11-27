@@ -1,10 +1,9 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
 package com.chua.starter.datapool.support.support;
 
-import com.chua.common.support.concurrent.pool.GenericObjectPool;
+import com.chua.common.support.concurrent.pool.ConnectionPool;
 import com.chua.common.support.concurrent.pool.ObjectFactory;
 import com.chua.common.support.concurrent.pool.ObjectPoolConfig;
-import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datapool.support.config.DatapoolProperties;
 import com.chua.starter.datapool.support.constants.DatapoolConstants;
 import com.chua.starter.datapool.support.entity.MsDatasource;
@@ -16,21 +15,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import jakarta.annotation.PreDestroy;
 
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import com.chua.common.support.utils.StringUtils;
 
 /**
@@ -81,11 +76,7 @@ public class JdbcDatasourceSupport {
     /**
      * 后台清扫：把闲置超过 TTL 的 JDBC 连接真正关闭掉。
      *
-     * <p>为什么需要：{@link ExpireValue} 的过期是<b>惰性</b>的 —— 只有下一次取连接时
-     * 才会触发过期回调；数据源一旦闲置（页面关了、当天不再查询），期间没有任何取连接
-     * 动作，物理连接就会一直挂到进程重启或数据源被删除，表现为后端 socket 泄漏。
-     * 这里按 60s 的固定节拍主动核对，到期的持锁走一次 {@code getValue()} 触发同一套
-     * 过期回调（{@code onExpireNotify → closeQuietly}）关闭连接。</p>
+     * <p>连接池只淘汰空闲物理连接；借出的连接不会被清扫线程打断。</p>
      */
     @Scheduled(fixedDelayString = "${plugin.datapool.connection-sweep-interval-ms:60000}")
     public void sweepExpiredJdbcConnections() {
@@ -337,15 +328,14 @@ public class JdbcDatasourceSupport {
      * @param signature 连接参数指纹
      * @param pool JDBC 对象池
      */
-    private record JdbcPoolEntry(String signature, GenericObjectPool<Connection> pool) {
+    private record JdbcPoolEntry(String signature, ConnectionPool pool) {
     }
 
     /**
      * 获取（或重建）可复用的 JDBC 连接。
      *
-     * <p>空闲 TTL（{@code plugin.datapool.connection-ttl-minutes}）内复用同一物理连接；
-     * 过期由 {@link ExpireValue} 过期回调关闭；连接被服务端断开时探测失效并自动重建。
-     * 返回的连接屏蔽了 close，调用方沿用 try-with-resources 不会误关缓存连接。</p>
+     * <p>连接池按参数指纹复用独占物理连接，归还时由底层统一恢复会话状态；
+     * 服务端断开的物理连接会在借出验证时销毁并重建。</p>
      *
      * @param datasourceId 数据源 ID
      * @param url          JDBC URL
@@ -368,8 +358,7 @@ public class JdbcDatasourceSupport {
             return new JdbcPoolEntry(signature, createJdbcPool(row, url, props, driverJar));
         });
         try {
-            Connection physical = entry.pool().borrow();
-            return closeProtected(physical, entry.pool());
+            return entry.pool().borrowConnection();
         } catch (IllegalStateException e) {
             // 并发配置更新/evict 关闭了刚取得的池：若映射已替换，重取新池；否则保留原错误。
             if (jdbcConnectionPools.get(datasourceId) != entry) {
@@ -382,8 +371,8 @@ public class JdbcDatasourceSupport {
     /**
      * 按连接参数建立共用对象池，不在构建池时连接远端数据库。
      */
-    private GenericObjectPool<Connection> createJdbcPool(MsDatasource row, String url,
-                                                          Properties props, java.io.File driverJar) {
+    private ConnectionPool createJdbcPool(MsDatasource row, String url,
+                                          Properties props, java.io.File driverJar) {
         long idleMillis = Math.max(1L, properties.getConnectionTtlMinutes()) * 60_000L;
         long sweepMillis = properties.getConnectionSweepIntervalMs();
         ObjectPoolConfig config = ObjectPoolConfig.builder()
@@ -396,15 +385,13 @@ public class JdbcDatasourceSupport {
                 .testOnBorrow(true)
                 .testOnReturn(false)
                 .build();
-        Map<Connection, JdbcConnectionState> states = java.util.Collections.synchronizedMap(new IdentityHashMap<>());
-        return new GenericObjectPool<>(config, new ObjectFactory<>() {
+        return new ConnectionPool(config, new ObjectFactory<Connection>() {
             @Override
             public Connection create() throws Exception {
                 Connection connection = driverJar == null
                         ? DriverManager.getConnection(url, props)
                         : JdbcDriverSupport.connect(driverJar, requireDriverClassName(row), url, props);
                 try {
-                    states.put(connection, capture(connection));
                     log.debug("[datapool] 建立 JDBC 物理连接: id={} driverJar={}",
                             row.getId(), driverJar == null ? "内置" : driverJar.getName());
                     return connection;
@@ -416,7 +403,6 @@ public class JdbcDatasourceSupport {
 
             @Override
             public void destroy(Connection connection) {
-                states.remove(connection);
                 closeQuietly(connection);
             }
 
@@ -425,14 +411,6 @@ public class JdbcDatasourceSupport {
                 return isUsable(connection);
             }
 
-            @Override
-            public void passivateObject(Connection connection) throws Exception {
-                JdbcConnectionState state = states.get(connection);
-                if (state == null) {
-                    throw new SQLException("JDBC 连接缺少会话基线，已丢弃");
-                }
-                state.restore(connection);
-            }
         });
     }
 
@@ -483,90 +461,6 @@ public class JdbcDatasourceSupport {
             connection.close();
         } catch (SQLException e) {
             log.debug("[datapool] 关闭连接失败: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * 包装连接：屏蔽 close（真实关闭交给缓存 TTL 过期），其余方法原样委托。
-     *
-     * @param connection 真实连接
-     * @return 屏蔽 close 的连接代理
-     */
-    private static Connection closeProtected(Connection connection, GenericObjectPool<Connection> pool) {
-        AtomicBoolean returned = new AtomicBoolean();
-        return (Connection) Proxy.newProxyInstance(
-                JdbcDatasourceSupport.class.getClassLoader(),
-                new Class<?>[]{Connection.class},
-                (proxy, method, args) -> {
-                    if (method.getDeclaringClass() == Object.class) {
-                        return switch (method.getName()) {
-                            case "equals" -> proxy == args[0];
-                            case "hashCode" -> System.identityHashCode(proxy);
-                            case "toString" -> "PooledJdbcConnection[returned=" + returned.get() + "]";
-                            default -> ReflectUtils.invokeProxy(connection, method, args);
-                        };
-                    }
-                    if ("close".equals(method.getName())) {
-                        if (returned.compareAndSet(false, true)) {
-                            pool.returnObject(connection);
-                        }
-                        return null;
-                    }
-                    if ("isClosed".equals(method.getName()) && returned.get()) {
-                        return true;
-                    }
-                    if (returned.get()) {
-                        throw new SQLException("连接已归还连接池");
-                    }
-                    return ReflectUtils.invokeProxy(connection, method, args);
-                });
-    }
-
-    /** 连接建立时保存驱动初始会话设置，归还时恢复。 */
-    private static JdbcConnectionState capture(Connection connection) throws SQLException {
-        boolean autoCommit = connection.getAutoCommit();
-        boolean readOnly = connection.isReadOnly();
-        int isolation = connection.getTransactionIsolation();
-        String catalog = connection.getCatalog();
-        String schema = null;
-        boolean schemaSupported = true;
-        try {
-            schema = connection.getSchema();
-        } catch (SQLFeatureNotSupportedException e) {
-            schemaSupported = false;
-        }
-        int holdability = connection.getHoldability();
-        return new JdbcConnectionState(autoCommit, readOnly, isolation, catalog, schema,
-                schemaSupported, holdability);
-    }
-
-    /** 先回滚未提交工作，再恢复可变会话选项；任一步失败均销毁连接。 */
-    private record JdbcConnectionState(boolean autoCommit, boolean readOnly, int isolation,
-                                       String catalog, String schema, boolean schemaSupported,
-                                       int holdability) {
-        private void restore(Connection connection) throws SQLException {
-            if (!connection.getAutoCommit()) {
-                connection.rollback();
-            }
-            if (connection.getAutoCommit() != autoCommit) {
-                connection.setAutoCommit(autoCommit);
-            }
-            if (connection.isReadOnly() != readOnly) {
-                connection.setReadOnly(readOnly);
-            }
-            if (connection.getTransactionIsolation() != isolation) {
-                connection.setTransactionIsolation(isolation);
-            }
-            if (!java.util.Objects.equals(connection.getCatalog(), catalog)) {
-                connection.setCatalog(catalog);
-            }
-            if (schemaSupported && !java.util.Objects.equals(connection.getSchema(), schema)) {
-                connection.setSchema(schema);
-            }
-            if (connection.getHoldability() != holdability) {
-                connection.setHoldability(holdability);
-            }
-            connection.clearWarnings();
         }
     }
 

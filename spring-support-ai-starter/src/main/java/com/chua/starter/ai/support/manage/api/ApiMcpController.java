@@ -7,6 +7,7 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.McpServerStore;
+import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -77,6 +78,9 @@ public class ApiMcpController {
      */
     private final McpServerStore mcpServerStore;
 
+    /** MCP 目录变更后刷新全局声明式 Agent 配置。 */
+    private final AgentRegistry agentRegistry;
+
     /**
      * 全局设置服务，用于读取和写入 MCP 市场开关。
      */
@@ -111,7 +115,9 @@ public class ApiMcpController {
         long now = System.currentTimeMillis();
         server.put("created_at", now);
         server.put("updated_at", now);
-        return ApiResult.ok(mcpServerStore.insert(server));
+        Map<String, Object> created = mcpServerStore.insert(server);
+        agentRegistry.refreshGlobalCapabilities();
+        return ApiResult.ok(created);
     }
 
     @Permission("admin")
@@ -153,7 +159,9 @@ public class ApiMcpController {
             }
         });
         server.put("updated_at", System.currentTimeMillis());
-        return ApiResult.ok(mcpServerStore.update(server));
+        Map<String, Object> updated = mcpServerStore.update(server);
+        agentRegistry.refreshGlobalCapabilities();
+        return ApiResult.ok(updated);
     }
 
     @Permission("admin")
@@ -170,6 +178,7 @@ public class ApiMcpController {
          */
         requireServer(serverId);
         mcpServerStore.delete(serverId);
+        agentRegistry.refreshGlobalCapabilities();
         return ApiResult.ok();
     }
 
@@ -186,7 +195,9 @@ public class ApiMcpController {
         boolean next = !(enabled instanceof Boolean && (Boolean) enabled);
         server.put("enabled", next);
         server.put("updated_at", System.currentTimeMillis());
-        return ApiResult.ok(mcpServerStore.update(server));
+        Map<String, Object> updated = mcpServerStore.update(server);
+        agentRegistry.refreshGlobalCapabilities();
+        return ApiResult.ok(updated);
     }
 
     @GetMapping("/agent-configs")
