@@ -18,7 +18,8 @@ public interface CollectSinkFactory {
     /**
      * 创建一次任务执行使用的落库通道。
      *
-     * <p>一次任务一个实例；实现方应保证通道把失败消化为日志，不把采集流程带崩。</p>
+     * <p>一次任务一个实例；日志类失败可降级，结果写入失败须按 {@link CollectSink#record}
+     * 契约报告，由引擎沿节点异常边处理。</p>
      *
      * @param flowId  流程ID，草稿运行为 null
      * @param taskId  任务ID

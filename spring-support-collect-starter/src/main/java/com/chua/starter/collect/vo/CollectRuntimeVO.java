@@ -35,6 +35,18 @@ public class CollectRuntimeVO {
     @Schema(description = "运行中任务数")
     private Integer runningTasks;
 
+    /** 本实例已接收且尚未收尾的任务数，包含准备与收尾阶段。 */
+    @Schema(description = "本实例在途任务数")
+    private Integer admittedTasks;
+
+    /** 本实例准入上限。 */
+    @Schema(description = "本实例并发任务上限")
+    private Integer maxConcurrentTasks;
+
+    /** 本进程启动以来因容量不足拒绝的次数。 */
+    @Schema(description = "本实例容量拒绝累计次数")
+    private Long rejectedTasks;
+
     /**
      * 流程总数。
      */

@@ -293,15 +293,18 @@ public class CollectRecordSearchIndex {
         }
         int current = Math.max(page, 1);
         int pageSize = Math.max(size, 1);
-        int limit = current * pageSize;
-        if (limit > MAX_SCAN) {
+        long requested = (long) current * pageSize;
+        if (requested > MAX_SCAN) {
             throw new IllegalArgumentException("检索翻页过深，单次最多扫描 " + MAX_SCAN + " 条");
         }
+        int limit = (int) requested;
         searcherManager.maybeRefreshBlocking();
         IndexSearcher searcher = searcherManager.acquire();
         try {
+            // ID 只存储为 StringField，没有排序列。用文档序号打破时间相同的平局，
+            // 兼容现有索引，避免每次查询因缺少 ID DocValues 退回数据库全表 LIKE。
             Sort sort = new Sort(new SortField(FIELD_TIME, SortField.Type.LONG, true),
-                    new SortField(FIELD_ID, SortField.Type.STRING, true));
+                    new SortField(null, SortField.Type.DOC, true));
             TopFieldDocs docs = searcher.search(builder.build(), limit, sort);
             List<Long> ids = new ArrayList<>();
             int from = (current - 1) * pageSize;

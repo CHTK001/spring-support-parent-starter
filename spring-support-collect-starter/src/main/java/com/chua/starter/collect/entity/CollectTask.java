@@ -73,6 +73,11 @@ public class CollectTask extends SysBase {
     @Schema(description = "开始时间")
     private LocalDateTime collectTaskBeginTime;
 
+    /** 本次生效超时加收尾宽限后的回收到期时间；历史任务为空时不自动回收。 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @Schema(description = "本次执行的回收到期时间快照")
+    private LocalDateTime collectTaskDeadline;
+
     /**
      * 结束时间。
      */

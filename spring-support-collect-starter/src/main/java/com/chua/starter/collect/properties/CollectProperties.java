@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   collect:
  *     enable: true                  # 平台总开关
  *     default-thread-count: 4       # 流程默认并行线程数
+ *     max-concurrent-tasks: 16      # 本实例在途任务上限
  *     request-timeout-ms: 30000     # 单次抓取默认超时毫秒
  *     request-retry-times: 1        # 默认重试次数
  *     user-agent: "Mozilla/5.0 ..." # 默认 User-Agent
@@ -87,6 +88,14 @@ public class CollectProperties {
      * YAML：{@code plugin.collect.default-thread-count: 4}。</p>
      */
     private int defaultThreadCount = 4;
+
+    /**
+     * 本实例同时接收的任务上限，包含手动、定时、草稿及收尾阶段。
+     *
+     * <p>容量用尽立即拒绝，不建立无界等待队列。运行期调低不取消已接收任务。
+     * YAML：{@code plugin.collect.max-concurrent-tasks: 16}。</p>
+     */
+    private volatile int maxConcurrentTasks = 16;
 
     /**
      * 单次抓取默认超时毫秒，节点未显式配置时使用。

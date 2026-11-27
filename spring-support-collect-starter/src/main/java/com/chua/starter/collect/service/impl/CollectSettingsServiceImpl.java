@@ -335,6 +335,12 @@ public class CollectSettingsServiceImpl extends ServiceImpl<CollectSettingMapper
                 "1", "64", "个", null, false,
                 p -> text(p.getDefaultThreadCount()),
                 (p, v) -> p.setDefaultThreadCount(Integer.parseInt(v))));
+        list.add(new Def("max-concurrent-tasks", "实例并发任务上限", "执行", "number",
+                "本实例手动、定时和草稿任务共用的准入上限，包含任务收尾；达到上限立即拒绝，"
+                        + "不无限排队。调低不会中断已经接收的任务，各流程的并发限制仍独立生效。",
+                "1", "1024", "个", null, false,
+                p -> text(p.getMaxConcurrentTasks()),
+                (p, v) -> p.setMaxConcurrentTasks(Integer.parseInt(v))));
         list.add(new Def("task-timeout-ms", "单任务最长执行时间", "执行", "number",
                 "超时后任务置为失败并中断流程线程池，只防线程永久挂死。",
                 "60000", "86400000", "毫秒", null, false,

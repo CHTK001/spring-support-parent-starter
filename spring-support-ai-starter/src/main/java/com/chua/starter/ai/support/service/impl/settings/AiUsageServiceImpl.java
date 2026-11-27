@@ -259,15 +259,16 @@ public class AiUsageServiceImpl implements AiUsageService {
     @Override
     public List<SysAiUsageDaily> queryDaily(LocalDate startDate, LocalDate endDate, String model) {
         QueryWrapper<SysAiUsageDaily> wrapper = new QueryWrapper<>();
-        // 列别名必须与实体 @TableField 一致，MyBatis-Plus 才能映射回实体字段
-        wrapper.select("sys_ai_usage_daily_stat_date", "sys_ai_usage_daily_group_name",
-                        "sys_ai_usage_daily_provider", "sys_ai_usage_daily_model",
-                        "SUM(sys_ai_usage_daily_total_calls) AS sys_ai_usage_daily_total_calls",
-                        "SUM(sys_ai_usage_daily_total_prompt_tokens) AS sys_ai_usage_daily_total_prompt_tokens",
-                        "SUM(sys_ai_usage_daily_total_completion_tokens) AS sys_ai_usage_daily_total_completion_tokens",
-                        "SUM(sys_ai_usage_daily_total_cached_tokens) AS sys_ai_usage_daily_total_cached_tokens",
-                        "SUM(sys_ai_usage_daily_total_tokens) AS sys_ai_usage_daily_total_tokens",
-                        "SUM(sys_ai_usage_daily_total_cost) AS sys_ai_usage_daily_total_cost");
+        // 自定义 select 覆盖 MP 默认投影；结果类型按 Java 属性映射，必须显式保留属性别名。
+        // 使用数据库前缀列名会使整行没有可映射字段，selectList 返回 null 元素而非统计实体。
+        wrapper.select("sys_ai_usage_daily_stat_date AS statDate", "sys_ai_usage_daily_group_name AS groupName",
+                        "sys_ai_usage_daily_provider AS provider", "sys_ai_usage_daily_model AS model",
+                        "SUM(sys_ai_usage_daily_total_calls) AS totalCalls",
+                        "SUM(sys_ai_usage_daily_total_prompt_tokens) AS totalPromptTokens",
+                        "SUM(sys_ai_usage_daily_total_completion_tokens) AS totalCompletionTokens",
+                        "SUM(sys_ai_usage_daily_total_cached_tokens) AS totalCachedTokens",
+                        "SUM(sys_ai_usage_daily_total_tokens) AS totalTokens",
+                        "SUM(sys_ai_usage_daily_total_cost) AS totalCost");
         if (startDate != null) {
             wrapper.ge("sys_ai_usage_daily_stat_date", startDate);
         }

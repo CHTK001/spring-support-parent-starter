@@ -29,6 +29,7 @@ public interface CollectSink {
      * 产出一条采集记录。
      *
      * @param entry 结果条目
+     * @throws RuntimeException 结果未写入；引擎按节点异常边与容错策略处理，不能静默丢弃
      */
     void record(CollectRecordEntry entry);
 

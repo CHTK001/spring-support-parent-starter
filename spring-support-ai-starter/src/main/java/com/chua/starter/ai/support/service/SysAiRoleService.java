@@ -22,6 +22,20 @@ public interface SysAiRoleService {
     List<SysAiRole> list();
 
     /**
+     * 查询当前用户在指定分组中的助手。
+     * @param groupId 分组主键，null 表示全部
+     * @return 当前用户的助手列表
+     */
+    List<SysAiRole> list(Integer groupId);
+
+    /**
+     * 删除全局助手分组，并将组内助手移回未分组。
+     * @param groupId 分组主键
+     * @return 是否删除成功
+     */
+    boolean deleteGroup(Integer groupId);
+
+    /**
      * 查询所有启用状态的角色列表。
      *
      * @return 启用角色列表

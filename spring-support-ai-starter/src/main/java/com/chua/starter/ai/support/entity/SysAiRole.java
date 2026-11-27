@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -86,6 +87,20 @@ public class SysAiRole {
     @TableField("sys_ai_role_model")
     private String model; // 模型
 
+    /** 区分省略模型与显式清空默认模型。 */
+    @JsonIgnore
+    @TableField(exist = false)
+    private boolean modelSpecified;
+
+    /**
+     * 设置绑定模型；显式 null 表示恢复全局默认模型。
+     * @param model 目录模型标识，可空
+     */
+    public void setModel(String model) {
+        this.model = model;
+        this.modelSpecified = true;
+    }
+
     /**
      * 头像访问路径（如 /v2/characters/{id}/avatar），为空时使用默认首字头像。
      */
@@ -106,6 +121,38 @@ public class SysAiRole {
      */
     @TableField("sys_ai_role_settings")
     private String settings;
+
+    /** 请求中是否显式提供配置，用于区分省略字段与重置为默认配置。 */
+    @JsonIgnore
+    @TableField(exist = false)
+    private boolean settingsSpecified;
+
+    /**
+     * 设置角色配置；显式 null 表示恢复继承默认值。
+     * @param settings 配置 JSON，可空
+     */
+    public void setSettings(String settings) {
+        this.settings = settings;
+        this.settingsSpecified = true;
+    }
+
+    /** 所属助手分组；null 表示未分组。 */
+    @TableField("sys_ai_role_group_id")
+    private Integer groupId;
+
+    /** 区分省略分组与显式清空分组。 */
+    @JsonIgnore
+    @TableField(exist = false)
+    private boolean groupIdSpecified;
+
+    /**
+     * 设置分组，显式 null 表示移回未分组。
+     * @param groupId 分组主键，可空
+     */
+    public void setGroupId(Integer groupId) {
+        this.groupId = groupId;
+        this.groupIdSpecified = true;
+    }
 
     /**
      * 排序值

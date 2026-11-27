@@ -75,8 +75,9 @@ public class CollectRecordServiceImpl extends ServiceImpl<CollectRecordMapper, C
     public boolean deleteRecord(Long recordId) {
         requireRecord(recordId);
         boolean removed = removeById(recordId);
-        if (removed) {
-            searchIndex().delete(recordId);
+        CollectRecordSearchIndex index = searchIndex();
+        if (removed && index != null) {
+            index.delete(recordId);
         }
         return removed;
     }
@@ -88,11 +89,14 @@ public class CollectRecordServiceImpl extends ServiceImpl<CollectRecordMapper, C
             throw new IllegalArgumentException("至少要指定一条记录");
         }
         int deleted = 0;
+        CollectRecordSearchIndex index = searchIndex();
         for (int from = 0; from < recordIds.size(); from += BATCH_SIZE) {
             List<Long> batch = recordIds.subList(from, Math.min(from + BATCH_SIZE, recordIds.size()));
             if (removeByIds(batch)) {
                 deleted += batch.size();
-                batch.forEach(id -> searchIndex().delete(id));
+                if (index != null) {
+                    batch.forEach(index::delete);
+                }
             }
         }
         return deleted;
@@ -107,8 +111,9 @@ public class CollectRecordServiceImpl extends ServiceImpl<CollectRecordMapper, C
         int deleted = baseMapper.delete(Wrappers.<CollectRecord>lambdaQuery()
                 .eq(flowId != null, CollectRecord::getCollectRecordFlowId, flowId)
                 .eq(taskId != null, CollectRecord::getCollectRecordTaskId, taskId));
-        if (deleted > 0) {
-            searchIndex().deleteByFlowTask(flowId, taskId);
+        CollectRecordSearchIndex index = searchIndex();
+        if (deleted > 0 && index != null) {
+            index.deleteByFlowTask(flowId, taskId);
         }
         return Math.max(deleted, 0);
     }

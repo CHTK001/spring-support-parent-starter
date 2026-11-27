@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -113,12 +114,13 @@ public class AiRoleController {
     /**
      * 查询所有角色。
      *
+     * @param groupId 可选分组主键
      * @return 角色列表
      */
     @Operation(summary = "查询所有角色")
     @GetMapping
-    public List<SysAiRole> list() {
-        return roleService.list();
+    public List<SysAiRole> list(@RequestParam(required = false) Integer groupId) {
+        return roleService.list(groupId);
     }
 
     /**

@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.controller.settings;
 
 import com.chua.starter.ai.support.entity.SysAiRoleGroup;
 import com.chua.starter.ai.support.mapper.SysAiRoleGroupMapper;
+import com.chua.starter.ai.support.service.SysAiRoleService;
 import com.chua.starter.common.support.annotations.Permission;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +28,7 @@ import java.util.List;
 public class AiRoleGroupController {
 
     private final SysAiRoleGroupMapper roleGroupMapper;
+    private final SysAiRoleService roleService;
 
     /**
      * 列出。
@@ -83,6 +85,6 @@ public class AiRoleGroupController {
     @Permission("admin")
     @DeleteMapping("/{id}")
     public boolean delete(@PathVariable Integer id) {
-        return roleGroupMapper.deleteById(id) > 0;
+        return roleService.deleteGroup(id);
     }
 }

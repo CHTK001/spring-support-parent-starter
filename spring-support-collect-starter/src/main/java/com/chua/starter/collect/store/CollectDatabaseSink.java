@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>一次任务一个实例，由执行服务创建并注入 {@link CollectContext}。节点日志即时写入，
  * 计量按阈值批量回写任务行，字段定义在任务收尾时统一登记，避免每条记录都查一次元数据表。
- * 任何写库失败只记警告，不能把采集流程带崩。</p>
+ * 日志与计量写入失败记警告；结果写入失败必须向引擎报告，避免任务成功却丢失数据。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -188,7 +188,11 @@ public class CollectDatabaseSink implements CollectSink {
             return;
         }
         String nodeId = entry.getNodeId() == null ? "" : entry.getNodeId();
-        Set<String> names = fieldNames.computeIfAbsent(nodeId, key -> ConcurrentHashMap.newKeySet());
+        String key = entry.getKey() == null || entry.getKey().isBlank() ? null : entry.getKey().trim();
+        if (key != null && key.length() > KEY_LIMIT) {
+            throw new IllegalArgumentException("业务主键长度 " + key.length() + " 超出结果表列宽 " + KEY_LIMIT);
+        }
+        Set<String> names = fieldNames.computeIfAbsent(nodeId, ignored -> ConcurrentHashMap.newKeySet());
         Map<String, Object> payload = new LinkedHashMap<>();
         for (CollectParamDTO cell : entry.getCells()) {
             if (cell.name() == null || cell.name().isBlank()) {
@@ -206,9 +210,6 @@ public class CollectDatabaseSink implements CollectSink {
             entity.setCollectRecordFlowId(flowId);
             entity.setCollectRecordTaskId(taskId);
             entity.setCollectRecordNodeId(cut(nodeId, 64));
-            // 主键与查重必须用同一个值：写入截断而查重不截断，同键覆盖会永远匹配不上
-            String key = entry.getKey() == null || entry.getKey().isBlank()
-                    ? null : cut(entry.getKey().trim(), KEY_LIMIT);
             entity.setCollectRecordKey(key);
             entity.setCollectRecordUrl(cut(entry.getUrl(), 1000));
             entity.setCollectRecordPayload(CollectJson.toJson(payload));
@@ -224,6 +225,7 @@ public class CollectDatabaseSink implements CollectSink {
             }
         } catch (Exception ex) {
             log.warn("[collect] 结果写入失败 task={} node={} err={}", taskId, nodeId, ex.getMessage());
+            throw new IllegalStateException("采集结果写入失败，节点 " + nodeId + ": " + ex.getMessage(), ex);
         }
     }
 
@@ -260,7 +262,7 @@ public class CollectDatabaseSink implements CollectSink {
      *
      * @param force 是否忽略间隔立即回写
      */
-    private void flushProgress(boolean force) {
+    private synchronized void flushProgress(boolean force) {
         CollectContext current = context;
         if (current == null || taskId == null) {
             return;
@@ -269,19 +271,24 @@ public class CollectDatabaseSink implements CollectSink {
         if (!force && now - lastFlushAt < FLUSH_INTERVAL_MS) {
             return;
         }
-        lastFlushAt = now;
         int nodes = current.getNodeCount().get();
         int requests = current.getRequestCount().get();
         int records = current.getRecordCount().get();
-        int dn = nodes - flushedNodes.getAndSet(nodes);
-        int dr = requests - flushedRequests.getAndSet(requests);
-        int dc = records - flushedRecords.getAndSet(records);
-        if (dn <= 0 && dr <= 0 && dc <= 0) {
+        int dn = nodes - flushedNodes.get();
+        int dr = requests - flushedRequests.get();
+        int dc = records - flushedRecords.get();
+        if (dn == 0 && dr == 0 && dc == 0) {
+            lastFlushAt = now;
             return;
         }
         try {
             taskMapper.accumulate(taskId, dn, dr, dc);
+            flushedNodes.set(nodes);
+            flushedRequests.set(requests);
+            flushedRecords.set(records);
+            lastFlushAt = now;
         } catch (Exception ex) {
+            lastFlushAt = now;
             log.warn("[collect] 计量回写失败 task={} err={}", taskId, ex.getMessage());
         }
     }

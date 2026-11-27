@@ -181,6 +181,39 @@ public class ChatStreamOrchestrator {
     }
 
     /**
+     * 从已校验归属的会话读取重答原文，不新增用户消息。
+     *
+     * @param dialogId 当前会话标识
+     * @param userMessage 前端传入的父消息引用
+     * @return 已保存的用户提问
+     */
+    private String resolveRegeneratedPrompt(Long dialogId, Map<?, ?> userMessage) {
+        Long requestedId = userMessage == null ? null : parseNumericId(str(userMessage.get("id")));
+        List<ChatMessage> history = aiDialogRecordService.getDialogMessages(dialogId);
+        if (history != null) {
+            for (int i = history.size() - 1; i >= 0; i--) {
+                ChatMessage candidate = history.get(i);
+                if (!"user".equals(candidate.getRole())) {
+                    continue;
+                }
+                Long candidateId = candidate.getId() == null
+                        ? null : parseNumericId(String.valueOf(candidate.getId()));
+                if (requestedId != null && !requestedId.equals(candidateId)) {
+                    continue;
+                }
+                String prompt = candidate.getContent();
+                if (prompt != null && !prompt.isBlank()) {
+                    return prompt;
+                }
+                break;
+            }
+        }
+        throw new com.chua.starter.ai.support.manage.common.ApiException(
+                com.chua.starter.ai.support.manage.common.ApiErrorCode.INVALID_PARAM,
+                "未找到可重新回答的用户消息");
+    }
+
+    /**
      * 同步准备：解析模型/角色、校验会话归属、落库用户消息（内容为空则不落库）、组装请求。
      *
      * @param body 请求体
@@ -281,6 +314,12 @@ public class ChatStreamOrchestrator {
         if (userChatMsg != null) {
             aiDialogRecordService.addMessage(dialogId, userChatMsg);
             log.info("[ChatStream] 用户消息已保存 id={}", userChatMsg.getId());
+        }
+        String regenerationMode = str(body.get("regenerationMode"));
+        if (("regenerate".equals(regenerationMode) || "multi_version".equals(regenerationMode))
+                && (content == null || content.isBlank())) {
+            // 原文在落库判断之后补齐，避免重答插入重复用户消息。
+            content = resolveRegeneratedPrompt(dialogId, userMessage);
         }
         final String memoryUser = AiUserContext.currentUserId();
 
@@ -1955,9 +1994,9 @@ public class ChatStreamOrchestrator {
             ChatMessage assistantMsg = new ChatMessage("assistant", content);
             assistantMsg.setParentId(userMessageId);
             assistantMsg.setModelName(modelToUse);
-            // 失败轮没有 usage，沿用成功分支的估算口径，避免前端显示 null/NaN
+            // 失败轮只估算模型实际流出的片段；上游错误文案不属于模型输出。
             int promptTokens = 0;
-            int completionTokens = (int) (content.length() * 1.5);
+            int completionTokens = estimateTokens(partial);
             assistantMsg.setPromptTokens(promptTokens);
             assistantMsg.setCompletionTokens(completionTokens);
             assistantMsg.setTotalTokens(promptTokens + completionTokens);

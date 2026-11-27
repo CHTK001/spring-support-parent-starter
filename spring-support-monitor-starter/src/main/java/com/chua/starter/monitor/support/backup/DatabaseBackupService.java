@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.backup;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.task.backup.BackupEvent;
 import com.chua.common.support.task.backup.BackupListener;
 import com.chua.common.support.task.backup.BackupManager;
@@ -13,6 +14,9 @@ import com.chua.common.support.task.backup.DatabaseRestoreResult;
 import com.chua.common.support.task.backup.RestoreEvent;
 import com.chua.common.support.task.backup.RestoreListener;
 import com.chua.common.support.task.backup.RestorePreflight;
+import com.chua.starter.datapool.support.model.DataSourceVO;
+import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
+import com.chua.starter.datapool.support.service.DatasourceService;
 import com.chua.starter.monitor.support.entity.MsBackupHistory;
 import com.chua.starter.monitor.support.mapper.MsBackupHistoryMapper;
 import com.zaxxer.hikari.HikariDataSource;
@@ -31,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,6 +85,7 @@ public class DatabaseBackupService {
     private final BackupEventStreamRegistry eventStreamRegistry;
     private final ObjectProvider<DataSourceProperties> dataSourcePropertiesProvider;
     private final ObjectProvider<DataSource> dataSourceProvider;
+    private final ObjectProvider<DatasourceService> datasourceServiceProvider;
     private final Environment environment;
 
     /**
@@ -138,14 +144,97 @@ public class DatabaseBackupService {
     }
 
     /**
+     * 可备份目标列表：宿主默认主数据源 + 数据源中心已启用的 JDBC 数据源。
+     *
+     * @return 目标列表（首项恒为宿主默认库）
+     */
+    public List<BackupTarget> targets() {
+        List<BackupTarget> result = new ArrayList<>();
+        String defaultUrl = null;
+        try {
+            defaultUrl = resolveDefaultConnection()[0];
+        } catch (Exception ignored) {
+            // 宿主默认库未配置时仍返回占位项，available=false
+        }
+        result.add(new BackupTarget(
+                "default",
+                null,
+                "默认主数据源",
+                "default",
+                extractDbName(defaultUrl),
+                maskJdbcUrl(defaultUrl),
+                true,
+                defaultUrl != null && !defaultUrl.isBlank(),
+                "宿主应用当前主库"));
+        DatasourceService dsService = datasourceServiceProvider.getIfAvailable();
+        if (dsService == null) {
+            return result;
+        }
+        try {
+            ReturnResult<List<DataSourceVO>> listResult = dsService.list();
+            List<DataSourceVO> items = listResult == null ? null : listResult.getData();
+            if (items == null) {
+                return result;
+            }
+            for (DataSourceVO vo : items) {
+                if (vo == null || vo.id() == null || !"jdbc".equalsIgnoreCase(vo.type())) {
+                    continue;
+                }
+                if (vo.status() != null && vo.status() == 0) {
+                    continue;
+                }
+                String url = null;
+                String dbName = vo.database();
+                boolean available = false;
+                try {
+                    DatasourceJdbcInfo info = dsService.jdbcInfo(vo.id());
+                    if (info != null && info.url() != null && !info.url().isBlank()) {
+                        url = info.url();
+                        String parsedDb = extractDbName(url);
+                        if (parsedDb != null && !parsedDb.isBlank()) {
+                            dbName = parsedDb;
+                        }
+                        available = true;
+                    }
+                } catch (Exception e) {
+                    log.debug("[database-backup] 解析数据源 {} JDBC 信息失败: {}", vo.id(), e.getMessage());
+                }
+                result.add(new BackupTarget(
+                        String.valueOf(vo.id()),
+                        vo.id(),
+                        vo.name() != null && !vo.name().isBlank() ? vo.name() : ("数据源 #" + vo.id()),
+                        vo.type(),
+                        dbName,
+                        maskJdbcUrl(url),
+                        false,
+                        available,
+                        vo.remark()));
+            }
+        } catch (Exception e) {
+            log.warn("[database-backup] 获取数据源中心列表失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /**
      * 备份配置视图（连接密码不外泄，jdbcUrl 中的密码段脱敏）。
      *
      * @return 配置字段表
      */
     public Map<String, Object> config() {
+        return config(null);
+    }
+
+    /**
+     * 指定目标数据源的备份配置视图（datasourceId 为空时回落宿主默认库）。
+     *
+     * @param datasourceId 数据源中心 ID（可选）
+     * @return 配置字段表
+     */
+    public Map<String, Object> config(Long datasourceId) {
         String jdbcUrl;
         try {
-            jdbcUrl = resolveConnection()[0];
+            jdbcUrl = resolveConnection(datasourceId)[0];
         } catch (Exception e) {
             jdbcUrl = null;
         }
@@ -156,6 +245,8 @@ public class DatabaseBackupService {
         view.put("maxBackupCount", properties.getMaxBackupCount());
         view.put("consistentSnapshot", properties.isConsistentSnapshot());
         view.put("writeManifest", properties.isWriteManifest());
+        view.put("datasourceId", isExternalDatasource(datasourceId) ? datasourceId : null);
+        view.put("targetName", resolveTargetName(datasourceId));
         view.put("jdbcUrl", maskJdbcUrl(jdbcUrl));
         view.put("dbName", extractDbName(jdbcUrl));
         view.put("running", running.get());
@@ -169,8 +260,32 @@ public class DatabaseBackupService {
      * @return 历史记录列表
      */
     public List<MsBackupHistory> history(int limit) {
+        return history(limit, null, null);
+    }
+
+    /**
+     * 查询备份历史（按落库时间倒序，支持按数据源 ID 或库名过滤）。
+     *
+     * @param limit        最多返回条数（1~500）
+     * @param datasourceId 数据源中心 ID（可选，非空时按该数据源库名过滤）
+     * @param dbName       数据库名（可选，优先于 datasourceId）
+     * @return 历史记录列表
+     */
+    public List<MsBackupHistory> history(int limit, Long datasourceId, String dbName) {
         int capped = Math.min(Math.max(limit, 1), 500);
-        return backupHistoryMapper.selectList(Wrappers.<MsBackupHistory>lambdaQuery()
+        String filterDb = (dbName != null && !dbName.isBlank()) ? dbName.trim() : null;
+        if (filterDb == null && isExternalDatasource(datasourceId)) {
+            try {
+                filterDb = extractDbName(resolveConnection(datasourceId)[0]);
+            } catch (Exception e) {
+                log.debug("[database-backup] 按数据源 {} 过滤历史时解析库名失败: {}", datasourceId, e.getMessage());
+            }
+        }
+        var query = Wrappers.<MsBackupHistory>lambdaQuery();
+        if (filterDb != null && !filterDb.isBlank()) {
+            query.eq(MsBackupHistory::getDbName, filterDb);
+        }
+        return backupHistoryMapper.selectList(query
                 .orderByDesc(MsBackupHistory::getCreateTime)
                 .orderByDesc(MsBackupHistory::getId)
                 .last("LIMIT " + capped));
@@ -184,13 +299,24 @@ public class DatabaseBackupService {
      * <p>同一时间只允许一个备份/恢复任务；重复触发抛 {@link IllegalStateException}。</p>
      */
     public void triggerBackup() {
+        triggerBackup(null);
+    }
+
+    /**
+     * 触发一次指定目标数据源的数据库备份（异步执行，进度经 SSE 推送）。
+     *
+     * <p>同一时间只允许一个备份/恢复任务；重复触发抛 {@link IllegalStateException}。</p>
+     *
+     * @param datasourceId 数据源中心 ID（为空或 &le;0 时备份宿主默认库）
+     */
+    public void triggerBackup(Long datasourceId) {
         checkEnabled();
         if (!running.compareAndSet(false, true)) {
             throw new IllegalStateException("已有备份/恢复任务在执行中，请等待完成后再试");
         }
         try {
-            publishSubmitted(TYPE_BACKUP);
-            executor.submit(this::doBackup);
+            publishSubmitted(TYPE_BACKUP, datasourceId);
+            executor.submit(() -> doBackup(datasourceId));
         } catch (Exception e) {
             running.set(false);
             throw e;
@@ -199,10 +325,12 @@ public class DatabaseBackupService {
 
     /**
      * 备份任务体：构建配置 → 交给 utils 门面执行；进度与终态由监听器广播。
+     *
+     * @param datasourceId 数据源中心 ID（可选）
      */
-    private void doBackup() {
+    private void doBackup(Long datasourceId) {
         try {
-            BackupResult result = backupManager.backupDatabase(buildBackupConfig());
+            BackupResult result = backupManager.backupDatabase(buildBackupConfig(datasourceId));
             if (result != null && !result.isSuccess()
                     && !BackupEvent.PHASE_FAILURE.equals(currentStatus.get("phase"))) {
                 // 防御：策略返回失败但未触发 onFailure 回调时补发失败事件
@@ -219,10 +347,11 @@ public class DatabaseBackupService {
     /**
      * 构建数据库备份配置：连接信息 + 备份目录/保留策略 + 历史落库 + SSE 监听器。
      *
+     * @param datasourceId 数据源中心 ID（可选）
      * @return 备份配置
      */
-    private DatabaseBackupConfig buildBackupConfig() {
-        String[] conn = resolveConnection();
+    private DatabaseBackupConfig buildBackupConfig(Long datasourceId) {
+        String[] conn = resolveConnection(datasourceId);
         return DatabaseBackupConfig.builder()
                 .jdbcUrl(conn[0])
                 .username(conn[1])
@@ -315,7 +444,7 @@ public class DatabaseBackupService {
             throw new IllegalStateException("已有备份/恢复任务在执行中，请等待完成后再试");
         }
         try {
-            publishSubmitted(TYPE_RESTORE);
+            publishSubmitted(TYPE_RESTORE, params.datasourceId());
             executor.submit(() -> doRestore(params));
         } catch (Exception e) {
             running.set(false);
@@ -330,7 +459,7 @@ public class DatabaseBackupService {
      */
     private void doRestore(RestoreParams params) {
         try {
-            String[] conn = resolveConnection();
+            String[] conn = resolveConnection(params.datasourceId());
             DatabaseRestoreConfig config = DatabaseRestoreConfig.builder()
                     .jdbcUrl(conn[0])
                     .username(conn[1])
@@ -427,7 +556,7 @@ public class DatabaseBackupService {
      * @return 预检结果
      */
     public RestorePreflight.PreflightResult preflight(PreflightParams params) {
-        String[] conn = resolveConnection();
+        String[] conn = resolveConnection(params.datasourceId());
         DatabaseRestoreConfig config = DatabaseRestoreConfig.builder()
                 .jdbcUrl(conn[0])
                 .username(conn[1])
@@ -603,13 +732,17 @@ public class DatabaseBackupService {
     /**
      * 发布任务已受理事件（前端立即点亮「进行中」）。
      *
-     * @param type 任务类型
+     * @param type         任务类型
+     * @param datasourceId 目标数据源 ID（可选）
      */
-    private void publishSubmitted(String type) {
+    private void publishSubmitted(String type, Long datasourceId) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", type);
         payload.put("phase", "SUBMITTED");
         payload.put("time", LocalDateTime.now().toString());
+        if (isExternalDatasource(datasourceId)) {
+            payload.put("datasourceId", datasourceId);
+        }
         publish(payload);
     }
 
@@ -669,7 +802,66 @@ public class DatabaseBackupService {
     }
 
     /**
-     * 解析「当前库」JDBC 连接信息。
+     * 解析目标数据源 JDBC 连接信息。
+     *
+     * <p>{@code datasourceId} 为空或 &le;0 时回落宿主默认库；否则经数据源中心
+     * {@link DatasourceService#jdbcInfo(Long)} 解析连接三元组。</p>
+     *
+     * @param datasourceId 数据源中心 ID（可选）
+     * @return [jdbcUrl, username, password]
+     */
+    private String[] resolveConnection(Long datasourceId) {
+        if (!isExternalDatasource(datasourceId)) {
+            return resolveDefaultConnection();
+        }
+        DatasourceService dsService = datasourceServiceProvider.getIfAvailable();
+        if (dsService == null) {
+            throw new IllegalStateException("数据源中心服务不可用，无法解析数据源 #" + datasourceId);
+        }
+        DatasourceJdbcInfo info = dsService.jdbcInfo(datasourceId);
+        if (info == null || info.url() == null || info.url().isBlank()) {
+            throw new IllegalStateException("数据源 #" + datasourceId + " 未解析出有效的 JDBC 连接串");
+        }
+        return new String[]{info.url(), info.username(), info.password()};
+    }
+
+    /**
+     * 判断是否为外部数据源中心 ID。
+     *
+     * @param datasourceId 数据源 ID
+     * @return true 表示指向数据源中心记录
+     */
+    private static boolean isExternalDatasource(Long datasourceId) {
+        return datasourceId != null && datasourceId > 0;
+    }
+
+    /**
+     * 解析目标数据源展示名称。
+     *
+     * @param datasourceId 数据源 ID（可选）
+     * @return 展示名称
+     */
+    private String resolveTargetName(Long datasourceId) {
+        if (!isExternalDatasource(datasourceId)) {
+            return "默认主数据源";
+        }
+        DatasourceService dsService = datasourceServiceProvider.getIfAvailable();
+        if (dsService != null) {
+            try {
+                ReturnResult<DataSourceVO> res = dsService.get(datasourceId);
+                if (res != null && res.getData() != null && res.getData().name() != null
+                        && !res.getData().name().isBlank()) {
+                    return res.getData().name();
+                }
+            } catch (Exception ignored) {
+                // 回落编号展示
+            }
+        }
+        return "数据源 #" + datasourceId;
+    }
+
+    /**
+     * 解析宿主默认主库 JDBC 连接信息。
      *
      * <p>优先级：Spring Boot {@link DataSourceProperties}（声明式配置，最准）
      * → HikariDataSource（实例字段）→ Environment 的 spring.datasource.*。
@@ -677,7 +869,7 @@ public class DatabaseBackupService {
      *
      * @return [jdbcUrl, username, password]
      */
-    private String[] resolveConnection() {
+    private String[] resolveDefaultConnection() {
         DataSourceProperties props = dataSourcePropertiesProvider.getIfAvailable();
         if (props != null) {
             try {
@@ -766,6 +958,30 @@ public class DatabaseBackupService {
     }
 
     /**
+     * 可备份目标数据源视图。
+     *
+     * @param id            目标标识（默认库为 {@code default}，外部源为数据源 ID 文本）
+     * @param datasourceId  数据源中心 ID（默认库为 null）
+     * @param name          展示名称
+     * @param type          类型（default / jdbc）
+     * @param dbName        目标库名
+     * @param jdbcUrl       脱敏后的 JDBC 连接串
+     * @param defaultTarget 是否为宿主默认主数据源
+     * @param available     连接信息是否可解析
+     * @param remark        备注
+     */
+    public record BackupTarget(String id,
+                               Long datasourceId,
+                               String name,
+                               String type,
+                               String dbName,
+                               String jdbcUrl,
+                               boolean defaultTarget,
+                               boolean available,
+                               String remark) {
+    }
+
+    /**
      * 恢复参数。
      *
      * @param scriptFile       待恢复的备份脚本/归档路径
@@ -774,13 +990,23 @@ public class DatabaseBackupService {
      * @param skipEmptyCheck   跳过「目标库非空拒绝恢复」检查
      * @param verifyChecksum   恢复前校验 manifest.json 的 SHA-256
      * @param confirm          显式确认（必须 true）
+     * @param datasourceId     目标数据源 ID（可选，为空回落宿主默认库）
      */
     public record RestoreParams(String scriptFile,
                                 boolean dropBeforeCreate,
                                 boolean continueOnError,
                                 boolean skipEmptyCheck,
                                 boolean verifyChecksum,
-                                boolean confirm) {
+                                boolean confirm,
+                                Long datasourceId) {
+        public RestoreParams(String scriptFile,
+                             boolean dropBeforeCreate,
+                             boolean continueOnError,
+                             boolean skipEmptyCheck,
+                             boolean verifyChecksum,
+                             boolean confirm) {
+            this(scriptFile, dropBeforeCreate, continueOnError, skipEmptyCheck, verifyChecksum, confirm, null);
+        }
     }
 
     /**
@@ -789,9 +1015,16 @@ public class DatabaseBackupService {
      * @param scriptFile     待预检的备份脚本/归档路径
      * @param dryRun         true=试运行（事务内执行后回滚）；false=只读预检
      * @param verifyChecksum 预检时是否校验 SHA-256 清单
+     * @param datasourceId   目标数据源 ID（可选，为空回落宿主默认库）
      */
     public record PreflightParams(String scriptFile,
                                   boolean dryRun,
-                                  boolean verifyChecksum) {
+                                  boolean verifyChecksum,
+                                  Long datasourceId) {
+        public PreflightParams(String scriptFile,
+                               boolean dryRun,
+                               boolean verifyChecksum) {
+            this(scriptFile, dryRun, verifyChecksum, null);
+        }
     }
 }

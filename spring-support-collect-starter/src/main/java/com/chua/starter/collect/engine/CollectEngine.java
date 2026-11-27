@@ -223,11 +223,11 @@ public class CollectEngine {
      * @param dsl 流程 DSL
      * @return 本次任务超时毫秒（恒大于 0）
      */
-    private long effectiveTimeoutMs(CollectDslDTO dsl) {
+    public long effectiveTimeoutMs(CollectDslDTO dsl) {
         if (dsl != null && dsl.timeoutMs() != null && dsl.timeoutMs() > 0L) {
             return dsl.timeoutMs();
         }
-        return properties.getTaskTimeoutMs();
+        return Math.max(1L, properties.getTaskTimeoutMs());
     }
 
     /**

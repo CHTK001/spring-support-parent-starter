@@ -151,7 +151,7 @@ public class AiRolePromptController {
     public Map<String, Object> listPrompts(@Parameter(description = "角色主键") @PathVariable Integer id) {
         SysAiRole role = sysAiRoleMapper.selectById(id);
         Map<String, Object> result = new LinkedHashMap<>();
-        if (role == null) {
+        if (!ownsRole(role)) {
             result.put("error", "角色不存在");
             return result;
         }
@@ -161,6 +161,7 @@ public class AiRolePromptController {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("fromTable", own != null);
             item.put("content", sysAiRolePromptResolver.resolve(role, form.getFormKey()));
+            item.put("configuredContent", own == null ? null : own.getContent());
             item.put("enabled", own == null || (own.getStatus() != null && own.getStatus() == 1));
             modes.put(form.getFormKey(), item);
         }
@@ -177,7 +178,7 @@ public class AiRolePromptController {
      *
      * @param id      角色主键
      * @param formKey 形态标识
-     * @param body    字段 {@code content}（可空表示清空本表配置）、{@code enabled}
+     * @param body    字段 {@code content}（省略时保留正文，显式空值或空白回退继承）、{@code enabled}
      * @return 是否成功
      */
     @Operation(summary = "保存角色某形态的提示词")
@@ -191,12 +192,15 @@ public class AiRolePromptController {
             return false;
         }
         SysAiRole role = sysAiRoleMapper.selectById(id);
-        if (role == null) {
+        if (!ownsRole(role)) {
             return false;
         }
 
         String content = str(body.get("content"));
         boolean enabled = !Boolean.FALSE.equals(body.get("enabled"));
+        if (body.containsKey("content") && (content == null || content.isBlank())) {
+            return deletePrompt(id, formKey);
+        }
 
         SysAiRolePrompt existing = findOwn(id, formKey);
         if (existing == null) {
@@ -237,6 +241,9 @@ public class AiRolePromptController {
     @DeleteMapping("/roles/{id}/prompts/{formKey}")
     public boolean deletePrompt(@Parameter(description = "角色主键") @PathVariable Integer id,
                                 @Parameter(description = "形态标识") @PathVariable String formKey) {
+        if (!ownsRole(sysAiRoleMapper.selectById(id))) {
+            return false;
+        }
         SysAiRolePrompt existing = findOwn(id, formKey);
         if (existing == null) {
             return true;
@@ -264,6 +271,7 @@ public class AiRolePromptController {
         }
         LambdaQueryWrapper<SysAiRolePrompt> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiRolePrompt::getRoleId, roleId)
+                .eq(SysAiRolePrompt::getUserId, currentUserId())
                 .eq(SysAiRolePrompt::getPromptMode, formKey)
                 .last("LIMIT 1");
         try {
@@ -272,6 +280,16 @@ public class AiRolePromptController {
             log.warn("[RolePrompt] 读取失败 roleId={} formKey={}：{}", roleId, formKey, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 角色配置只允许当前归属用户读取与修改。
+     * @param role 角色实体，可空
+     * @return 当前用户拥有角色时返回 true
+     */
+    private boolean ownsRole(SysAiRole role) {
+        String userId = currentUserId();
+        return role != null && userId != null && userId.equals(role.getUserId());
     }
 
     /**

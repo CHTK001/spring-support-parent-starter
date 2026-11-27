@@ -15,6 +15,7 @@ import com.chua.crawler.support.model.SpiderResponse;
 import com.chua.starter.collect.engine.CollectBuiltinInvoker;
 import com.chua.starter.collect.dto.CollectDslDTO;
 import com.chua.starter.collect.engine.CollectExecutorRegistry;
+import com.chua.starter.collect.engine.CollectExecutionAdmission;
 import com.chua.starter.collect.engine.spi.CollectParamMeta;
 import com.chua.starter.collect.engine.spi.CollectShapeMeta;
 import com.chua.starter.collect.entity.CollectFlow;
@@ -103,6 +104,9 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
      */
     private final CollectExecutionService executionService;
 
+    /** 本实例的执行容量与准入计量。 */
+    private final CollectExecutionAdmission admission;
+
     /**
      * 流程服务，取调度台账的登记情况。
      */
@@ -119,6 +123,9 @@ public class CollectDesignerServiceImpl implements CollectDesignerService {
         vo.setEnable(properties.isEnable());
         vo.setExecutorId(executionService.executorId());
         vo.setRunningTasks(executionService.runningCount());
+        vo.setAdmittedTasks(admission.activeCount());
+        vo.setMaxConcurrentTasks(Math.max(1, properties.getMaxConcurrentTasks()));
+        vo.setRejectedTasks(admission.rejectedCount());
         vo.setFlowCount(flowMapper.selectCount(Wrappers.<CollectFlow>lambdaQuery()
                 .eq(CollectFlow::getCollectFlowIsDeleted, ALIVE)));
         vo.setEnabledFlowCount(flowMapper.selectCount(Wrappers.<CollectFlow>lambdaQuery()

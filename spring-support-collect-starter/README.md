@@ -110,6 +110,7 @@ flowchart TB
 | --- | --- | --- | --- |
 | `plugin.collect.enable` | `boolean` | `true` | 平台总开关，关闭后不装配控制器、服务、执行引擎与调度任务 |
 | `plugin.collect.default-thread-count` | `int` | `4` | 流程默认并行线程数，可被流程定义覆盖 |
+| `plugin.collect.max-concurrent-tasks` | `int` | `16` | 单实例在途任务上限，手动、定时、草稿共享，包含准备与收尾；满额立即拒绝，不在内存中无限排队。设置接口范围 1–1024，调低不取消已接收任务 |
 | `plugin.collect.request-timeout-ms` | `int` | `30000` | 单次抓取默认超时毫秒，节点未显式配置时使用 |
 | `plugin.collect.request-retry-times` | `int` | `1` | 默认重试次数，节点未显式配置时使用 |
 | `plugin.collect.user-agent` | `String` | Chrome/120 的 Mozilla UA（`DEFAULT_USER_AGENT`） | 默认 User-Agent，节点未显式配置时使用 |
@@ -382,6 +383,9 @@ spring:
 - **生产建议 MySQL**：pom 自带 h2（runtime）便于免外部库启动，仅适合开发与演示；建表由 `plugin.datasource.script` 扫描 `classpath*:db/init/*.sql` 完成（`CREATE TABLE IF NOT EXISTS`，ONCE 语义）。
 - **需要定时排期时显式引入 `spring-support-job-starter`**：不引入（或 `plugin.job.enable=false`）时排期落到 `LocalOnlyFlowSchedulePort` 兜底，流程可手动执行但无定时触发。
 - **优先用运行参数接口调参**：`GET /v2/collect/settings/list` → `PUT /v2/collect/settings` 写 `collect_setting` 立即生效；直接改 yml 需重启生效。
+- **两级执行容量**：`CollectExecutionAdmission` 在任务建行前占用实例名额，覆盖手动、定时与草稿入口；流程跨节点并发仍由 `CollectFlowMapper.tryAcquireRunning` 原子控制。准备失败、流程名额不足、正常完成、节点失败与收尾异常都释放实例名额。运行态接口新增 `admittedTasks`、`maxConcurrentTasks`、`rejectedTasks`，计量为单实例，拒绝次数自本进程启动累计。
+- **结果写入必须可验证**：`CollectSink.record` 写入失败向引擎抛错，遵循节点异常边与容错策略；未处理的失败使任务失败。失败记录不进入预览、不计产出，超长主键拒绝而非截断。日志与全文索引仍可降级；关闭全文索引后，结果删除和清空继续正常工作。Sink 收尾失败仍尝试写任务终态并释放名额；节点进度串行结算，写库成功后才推进已结算水位。
+- **全文检索使用实际索引**：按已有的更新时间排序列与文档序号排序，避免向缺少 DocValues 的 ID 字段排序而使每次查询退回数据库 LIKE；兼容已存在索引，无需为此重建。深分页的扫描量先按 long 计算再检查上限，避免整数乘法溢出绕过限制。
 
 ## 7. 使用场景
 

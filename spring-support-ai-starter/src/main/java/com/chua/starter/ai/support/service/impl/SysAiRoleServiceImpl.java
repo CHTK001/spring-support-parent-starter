@@ -4,8 +4,10 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiRole;
+import com.chua.starter.ai.support.entity.SysAiRoleGroup;
 import com.chua.starter.ai.support.entity.SysAiRolePrompt;
 import com.chua.starter.ai.support.mapper.SysAiRoleMapper;
+import com.chua.starter.ai.support.mapper.SysAiRoleGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiRolePromptMapper;
 import com.chua.starter.ai.support.service.SysAiRoleService;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -60,6 +62,9 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      */
     private final SysAiRolePromptMapper sysAiRolePromptMapper;
 
+    /** 全局助手分组映射器，仅在本模块业务服务内使用。 */
+    private final SysAiRoleGroupMapper sysAiRoleGroupMapper;
+
     /**
      * 查询当前用户所有未删除的角色列表，按排序值升序。
      *
@@ -71,6 +76,16 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      */
     @Override
     public List<SysAiRole> list() {
+        return list(null);
+    }
+
+    /**
+     * 按当前账号和可选分组查询，不将分组过滤交给前端。
+     * @param groupId 可选分组主键
+     * @return 助手列表
+     */
+    @Override
+    public List<SysAiRole> list(Integer groupId) {
         String userId = AiUserContext.currentUserId();
         if (StringUtils.isBlank(userId)) {
             return Collections.emptyList();
@@ -79,6 +94,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
                 Wrappers.lambdaQuery(SysAiRole.class)
                         .eq(SysAiRole::getUserId, userId)
                         .eq(SysAiRole::getDeleted, DELETE_NOT_DELETED)
+                        .eq(groupId != null, SysAiRole::getGroupId, groupId)
                         .ne(SysAiRole::getSource, SysAiRole.SOURCE_WORLD_SIM)
                         .orderByAsc(SysAiRole::getSort));
     }
@@ -148,6 +164,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      * @return 保存后的角色
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public SysAiRole save(SysAiRole role) {
         // 2026-11-20 修复 DEF-02：角色名称必填（此前空名直接落库，前端表单也无校验）。
         // 批量导入走同一条 save()，逐条 try/catch，空名会成为该条目的导入失败原因，不会中断整批。
@@ -155,6 +172,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
             throw new IllegalArgumentException("角色名称不能为空");
         }
         String userId = AiUserContext.requireUserId();
+        validateGroup(role.getGroupId());
         role.setUserId(userId);
         if (role.getStatus() == null) {
             role.setStatus(STATUS_ENABLED);
@@ -202,6 +220,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      * @return 是否成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(SysAiRole role) {
         if (role == null || role.getId() == null) {
             return false;
@@ -216,7 +235,59 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         }
         // 归属不可变更，强制锁定为当前用户
         role.setUserId(existing.getUserId());
+        if (role.isGroupIdSpecified()) {
+            validateGroup(role.getGroupId());
+        }
+        boolean clearSettings = role.isSettingsSpecified() && role.getSettings() == null;
+        boolean clearGroup = role.isGroupIdSpecified() && role.getGroupId() == null;
+        boolean clearModel = role.isModelSpecified() && role.getModel() == null;
+        if (clearSettings || clearGroup || clearModel) {
+            return sysAiRoleMapper.update(role, Wrappers.lambdaUpdate(SysAiRole.class)
+                    .eq(SysAiRole::getId, role.getId())
+                    .eq(SysAiRole::getUserId, existing.getUserId())
+                    .set(clearSettings, SysAiRole::getSettings, null)
+                    .set(clearGroup, SysAiRole::getGroupId, null)
+                    .set(clearModel, SysAiRole::getModel, null)) > 0;
+        }
         return sysAiRoleMapper.updateById(role) > 0;
+    }
+
+    /**
+     * 在同一事务内移除全局分组及其关联，保持界面承诺的未分组语义。
+     * @param groupId 分组主键
+     * @return 是否删除成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteGroup(Integer groupId) {
+        if (groupId == null) {
+            return false;
+        }
+        SysAiRoleGroup group = sysAiRoleGroupMapper.selectOne(
+                Wrappers.lambdaQuery(SysAiRoleGroup.class)
+                        .eq(SysAiRoleGroup::getId, groupId).last("FOR UPDATE"));
+        if (group == null) {
+            return false;
+        }
+        sysAiRoleMapper.update(null, Wrappers.lambdaUpdate(SysAiRole.class)
+                .eq(SysAiRole::getGroupId, groupId).set(SysAiRole::getGroupId, null));
+        return sysAiRoleGroupMapper.deleteById(groupId) > 0;
+    }
+
+    /**
+     * 校验分组存在；与删除共用行锁，避免并发保存挂到已删除分组。
+     * @param groupId 可空分组主键
+     */
+    private void validateGroup(Integer groupId) {
+        if (groupId == null) {
+            return;
+        }
+        SysAiRoleGroup group = sysAiRoleGroupMapper.selectOne(
+                Wrappers.lambdaQuery(SysAiRoleGroup.class)
+                        .eq(SysAiRoleGroup::getId, groupId).last("FOR UPDATE"));
+        if (group == null) {
+            throw new IllegalArgumentException("助手分组不存在或已删除");
+        }
     }
 
     /**

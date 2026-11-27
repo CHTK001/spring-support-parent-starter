@@ -438,7 +438,12 @@ public class CollectContext {
             recordCount.decrementAndGet();
             return false;
         }
-        sink.record(entry);
+        try {
+            sink.record(entry);
+        } catch (RuntimeException | Error ex) {
+            recordCount.decrementAndGet();
+            throw ex;
+        }
         records.add(entry);
         return true;
     }

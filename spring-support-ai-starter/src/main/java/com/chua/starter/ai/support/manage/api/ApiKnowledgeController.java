@@ -64,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -3055,7 +3056,7 @@ public class ApiKnowledgeController {
      * 按前缀清理全局 RAG 客户端中属于该前缀的向量与文档（最佳努力，失败静默忽略）。
      *
      * <p>前缀语义为「知识库ID」或「知识库ID/相对路径」，由 {@link #indexKnowledgeFile}
-     * 传给 pipeline 的文档名决定：删除知识库时用 {@code knowledge_base_id}，
+     * 传给 pipeline 的文档 ID 决定：删除知识库时用 {@code knowledge_base_id}，
      * 删除单文件 / 目录时用 {@code knowledge_base_id + "/" + 相对路径}。</p>
      *
      * <p><strong>注意</strong>：向量标识本身是 {@code <随机UUID>_<切片序号>}，
@@ -3092,9 +3093,8 @@ public class ApiKnowledgeController {
         } catch (Exception e) {
             log.debug("[ApiKnowledgeController] 前缀清理失败(忽略), 前缀={}: {}", idPrefix, e.getMessage());
         }
-        // 2) 再按文档名反查删除：向量标识为 <随机UUID>_<切片序号>，不含逻辑路径，
-        //    故前缀直删对现网无效；文档记录里的 fileName 才是「知识库ID/相对路径」，
-        //    借 deleteDocument 由 pipeline 连带回收其向量。
+        // 2) 按文档 ID 反查删除，并兼容早期把逻辑路径写在 fileName 的记录。
+        //    前缀直删不会清理 pipeline 文档列表及分片缓存，必须调用 deleteDocument。
         purgeDocumentsByNamePrefix(idPrefix);
     }
 
@@ -3126,12 +3126,13 @@ public class ApiKnowledgeController {
     }
 
     /**
-     * 按文档名（{@code knowledge_base_id} 或 {@code knowledge_base_id/相对路径} 前缀）
+     * 按文档 ID（{@code knowledge_base_id} 或 {@code knowledge_base_id/相对路径} 前缀）
      * 反查并删除 RAG 文档，由 pipeline 连带回收对应向量。
      *
      * <p>向量标识形如 {@code <随机UUID>_<切片序号>}，<strong>不携带</strong>知识库信息，
      * 因此无法用向量库的前缀删除定位；知识库与向量的唯一关联是文档记录里的
-     * {@code fileName}。删除知识库 / 单文件 / 目录 / 改名时都必须走这条路径。</p>
+     * {@code id}；早期记录的 {@code fileName} 仍按同样边界兼容。删除知识库 / 单文件 /
+     * 目录 / 改名时都必须走这条路径。先完整快照匹配 ID 再删除，避免删除使分页前移而漏项。</p>
      *
      * @param namePrefix 文档名前缀
      */
@@ -3142,26 +3143,37 @@ public class ApiKnowledgeController {
                 return;
             }
             int deleted = 0;
-            // 分页遍历，避免单页截断导致漏删
+            Set<String> matchedIds = new LinkedHashSet<>();
             final int pageSize = 100;
-            for (int page = 1; page <= 50; page++) {
+            String normalizedPrefix = namePrefix.endsWith("/")
+                    ? namePrefix.substring(0, namePrefix.length() - 1) : namePrefix;
+            for (int page = 1; ; page++) {
                 List<RagDocument> batch = client.listDocuments(page, pageSize);
                 if (CollectionUtils.isEmpty(batch)) {
                     break;
                 }
-                List<RagDocument> matched = batch.stream()
-                        .filter(doc -> doc != null && doc.fileName() != null
-                                && doc.fileName().startsWith(namePrefix))
-                        .toList();
-                for (RagDocument doc : matched) {
-                    if (client.deleteDocument(doc.id())) {
-                        deleted++;
-                    } else {
-                        log.warn("[ApiKnowledgeController] 删除文档失败(忽略), id={}", doc.id());
+                for (RagDocument doc : batch) {
+                    if (doc == null || doc.id() == null) {
+                        continue;
+                    }
+                    String documentId = doc.id();
+                    String fileName = doc.fileName();
+                    if (documentId.equals(normalizedPrefix)
+                            || documentId.startsWith(normalizedPrefix + "/")
+                            || (fileName != null && (fileName.equals(normalizedPrefix)
+                            || fileName.startsWith(normalizedPrefix + "/")))) {
+                        matchedIds.add(documentId);
                     }
                 }
                 if (batch.size() < pageSize) {
                     break;
+                }
+            }
+            for (String documentId : matchedIds) {
+                if (client.deleteDocument(documentId)) {
+                    deleted++;
+                } else {
+                    log.warn("[ApiKnowledgeController] 删除文档失败(忽略), id={}", documentId);
                 }
             }
             if (deleted > 0) {

@@ -6,6 +6,7 @@ import com.chua.starter.collect.dto.CollectParamDTO;
 import com.chua.starter.collect.dto.CollectRunDTO;
 import com.chua.starter.collect.engine.CollectContext;
 import com.chua.starter.collect.engine.CollectEngine;
+import com.chua.starter.collect.engine.CollectExecutionAdmission;
 import com.chua.starter.collect.engine.CollectRunResult;
 import com.chua.starter.collect.engine.CollectSink;
 import com.chua.starter.collect.entity.CollectFlow;
@@ -34,6 +35,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -119,6 +121,9 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * 落库通道工厂：按配置创建每次任务的通道，宿主可注册自定义实现整体替换。
      */
     private final CollectSinkFactory sinkFactory;
+
+    /** 本实例全部入口共用的任务准入控制。 */
+    private final CollectExecutionAdmission admission;
 
     /**
      * 每次执行占一个虚拟线程，引擎内部再按流程线程数建池。
@@ -210,6 +215,7 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      */
     @PreDestroy
     public void shutdown() {
+        admission.stopAccepting();
         launcher.shutdown();
         try {
             if (!launcher.awaitTermination(5L, TimeUnit.SECONDS)) {
@@ -244,12 +250,10 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
     @Override
     public int reconcileRunning() {
         LocalDateTime now = LocalDateTime.now();
-        // 水位取一个任务超时上限再加一分钟宽限：引擎自身到点会收尾，
-        // 留这一分钟余量是为了不把「刚好还在收尾中」的任务误判成失联
-        long windowMs = Math.max(properties.getTaskTimeoutMs(), 60_000L) + 60_000L;
-        LocalDateTime cutoff = now.minusNanos(TimeUnit.MILLISECONDS.toNanos(windowMs));
-        int reaped = taskMapper.reapStaleRunning(cutoff, CollectTaskStatus.FAILURE,
-                "启动对账：任务开始后超过 " + (windowMs / 1000L) + "ms 仍未收口，判定执行进程已失联", now);
+        // 使用任务启动时固化的实际期限，不能用当前全局配置推断另一实例的 DSL 超时。
+        // 历史任务没有期限快照，保留运行态供管理员排查，避免误伤长任务。
+        int reaped = taskMapper.reapStaleRunning(now, CollectTaskStatus.FAILURE,
+                "启动对账：任务已超过本次执行期限及一分钟收尾宽限，判定执行进程已失联", now);
         int flows = flowMapper.resetRunningFromTasks();
         if (reaped > 0 || flows > 0) {
             log.info("[collect] 启动对账完成：收口失联任务 {} 个，重算并发计数流程 {} 个", reaped, flows);
@@ -271,13 +275,16 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
                                List<CollectParamDTO> overrides, boolean persist) {
         Integer flowId = flow.getCollectFlowId();
         Integer reservedFlowId = null;
-        if (flowId != null) {
-            reserve(flowId, concurrencyOf(flow));
-            reservedFlowId = flowId;
-        }
+        CollectExecutionAdmission.Permit permit = admission.acquire();
         CollectTask task = null;
+        CollectSink sink = null;
         try {
-            task = createTask(flow, trigger, overrides);
+            if (flowId != null) {
+                reserve(flowId, concurrencyOf(flow));
+                reservedFlowId = flowId;
+            }
+            long timeoutMs = engine.effectiveTimeoutMs(dsl);
+            task = createTask(flow, trigger, overrides, timeoutMs);
             // 执行次数在这里记：手动、定时、外部触发都走同一个入口。
             // 此前只写在 runScheduled 里，手动运行永远不计数（实测成语流程跑了 24 次仍为 0）。
             // 记账失败只记日志 —— 累计次数是展示口径，不能因为它让一次运行起不来。
@@ -288,17 +295,26 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
                     log.warn("[collect] 记录执行次数失败 flow={} err={}", flowId, ex.getMessage());
                 }
             }
-            CollectDslDTO runtime = prepareDsl(flow, dsl, overrides);
+            CollectDslDTO runtime = prepareDsl(flow, dsl, overrides, timeoutMs);
             CollectTask saved = task;
-            CollectSink sink = sinkFactory.create(flowId, saved.getCollectTaskId(), persist);
+            sink = sinkFactory.create(flowId, saved.getCollectTaskId(), persist);
             CollectContext context = new CollectContext(flowId, saved.getCollectTaskId(),
                     saved.getCollectTaskNo(), properties, sink);
             sink.attach(context);
             Integer releaseFlowId = reservedFlowId;
-            launcher.execute(() -> execute(context, runtime, saved, sink, releaseFlowId));
+            CollectSink executionSink = sink;
+            launcher.execute(() -> execute(context, runtime, saved, executionSink, releaseFlowId, permit));
             return toVo(saved, true);
-        } catch (RuntimeException ex) {
+        } catch (RuntimeException | Error ex) {
+            if (sink != null) {
+                try {
+                    sink.close();
+                } catch (RuntimeException | Error closeError) {
+                    ex.addSuppressed(closeError);
+                }
+            }
             release(reservedFlowId);
+            permit.close();
             failTask(task, ex);
             throw ex;
         }
@@ -311,30 +327,55 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * @param dsl      流程图
      * @param task     任务行
      * @param sink     落库通道
-     * @param counter  并发计数，草稿运行为 null
+     * @param reservedFlowId 已占用名额的流程，草稿运行为 null
+     * @param permit 本实例的准入名额
      */
     private void execute(CollectContext context, CollectDslDTO dsl, CollectTask task,
-                         CollectSink sink, Integer reservedFlowId) {
-        CollectRunResult result;
+                         CollectSink sink, Integer reservedFlowId, CollectExecutionAdmission.Permit permit) {
+        CollectRunResult result = new CollectRunResult();
+        result.setStatus(CollectTaskStatus.FAILURE);
+        result.setErrorMessage("任务执行未正常结束");
+        boolean completed = false;
         try {
             result = engine.execute(context, dsl);
+            completed = true;
         } catch (Exception ex) {
             log.error("[collect] 任务执行异常 task={}", task.getCollectTaskNo(), ex);
             result = new CollectRunResult();
             result.setStatus(CollectTaskStatus.FAILURE);
             result.setErrorMessage(ex.getClass().getSimpleName() + ": " + ex.getMessage());
-        }
-        try {
-            // 先结清 Sink 的增量计量，再写终值，否则最后一段增量会叠在绝对值上翻倍。
-            sink.close();
-            finishTask(task, result);
-        } catch (Exception ex) {
-            log.error("[collect] 任务收尾失败 task={}", task.getCollectTaskNo(), ex);
         } finally {
-            release(reservedFlowId);
+            if (!completed) {
+                result.setNodeCount(context.getNodeCount().get());
+                result.setRequestCount(context.getRequestCount().get());
+                result.setRecordCount(context.getRecordCount().get());
+            }
+            try {
+                // 先结清 Sink 的增量计量，再写终值，否则最后一段增量会叠在绝对值上翻倍。
+                try {
+                    sink.close();
+                } catch (Exception ex) {
+                    log.error("[collect] 落库通道收尾失败 task={}", task.getCollectTaskNo(), ex);
+                    result.setStatus(CollectTaskStatus.FAILURE);
+                    String previous = result.getErrorMessage();
+                    result.setErrorMessage((previous == null || previous.isBlank() ? "" : previous + "; ")
+                            + "落库通道收尾失败: " + ex.getMessage());
+                }
+                // close 失败仍要尝试结束任务行，不能留下永久 RUNNING。
+                finishTask(task, result);
+            } catch (Exception ex) {
+                log.error("[collect] 任务收尾失败 task={}", task.getCollectTaskNo(), ex);
+            } finally {
+                release(reservedFlowId);
+                permit.close();
+            }
         }
         // 通知在收尾之后无条件编排：投递本身是异步的，失败只写进通知的最近结果。
-        noticeService.notifyTask(task, result);
+        try {
+            noticeService.notifyTask(task, result);
+        } catch (RuntimeException ex) {
+            log.error("[collect] 任务通知提交失败 task={}", task.getCollectTaskNo(), ex);
+        }
     }
 
     /**
@@ -343,9 +384,10 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * @param flow      流程
      * @param dsl       原始流程图
      * @param overrides 本次覆盖
+     * @param timeoutMs 本次启动固化的有效超时
      * @return 可执行 DSL
      */
-    private CollectDslDTO prepareDsl(CollectFlow flow, CollectDslDTO dsl, List<CollectParamDTO> overrides) {
+    private CollectDslDTO prepareDsl(CollectFlow flow, CollectDslDTO dsl, List<CollectParamDTO> overrides, long timeoutMs) {
         Integer threadCount = flow.getCollectFlowThreadCount() == null || flow.getCollectFlowThreadCount() <= 0
                 ? properties.getDefaultThreadCount() : flow.getCollectFlowThreadCount();
         List<CollectParamDTO> variables = new ArrayList<>();
@@ -356,7 +398,7 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
         if (overrides != null) {
             variables.addAll(overrides);
         }
-        return new CollectDslDTO(dsl.name(), threadCount, dsl.timeoutMs(), dsl.headers(), dsl.cookies(),
+        return new CollectDslDTO(dsl.name(), threadCount, timeoutMs, dsl.headers(), dsl.cookies(),
                 variables, dsl.nodes(), dsl.edges());
     }
 
@@ -366,9 +408,10 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * @param flow      流程
      * @param trigger   触发方式
      * @param overrides 本次覆盖
+     * @param timeoutMs 本次启动固化的有效超时
      * @return 任务行
      */
-    private CollectTask createTask(CollectFlow flow, String trigger, List<CollectParamDTO> overrides) {
+    private CollectTask createTask(CollectFlow flow, String trigger, List<CollectParamDTO> overrides, long timeoutMs) {
         CollectTask task = new CollectTask();
         task.setCollectTaskNo(newTaskNo());
         task.setCollectTaskFlowId(flow.getCollectFlowId());
@@ -377,6 +420,11 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
         task.setCollectTaskTriggerType(trigger);
         task.setCollectTaskParams(cut(CollectJson.toJson(overrides == null ? List.of() : overrides), 2000));
         task.setCollectTaskBeginTime(LocalDateTime.now());
+        LocalDateTime deadline = task.getCollectTaskBeginTime().plus(Duration.ofMillis(timeoutMs)).plusMinutes(1);
+        if (deadline.getYear() > 9999) {
+            throw new IllegalArgumentException("任务超时超出数据库日期范围，请缩短运行超时");
+        }
+        task.setCollectTaskDeadline(deadline);
         task.setCollectTaskCost(0L);
         task.setCollectTaskNodeCount(0);
         task.setCollectTaskRecordCount(0);
@@ -420,7 +468,7 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      * @param task 已插入的任务行，可为 null
      * @param ex   异常
      */
-    private void failTask(CollectTask task, RuntimeException ex) {
+    private void failTask(CollectTask task, Throwable ex) {
         if (task == null || task.getCollectTaskId() == null) {
             return;
         }
@@ -441,7 +489,6 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
      *
      * @param flowId 流程ID
      * @param limit  并发上限
-     * @return 计数器
      */
     private void reserve(Integer flowId, int limit) {
         if (flowMapper.tryAcquireRunning(flowId, Math.max(limit, 1)) != 1) {
@@ -541,4 +588,5 @@ public class CollectExecutionServiceImpl implements CollectExecutionService, App
             host = "local";
         }
         return host + ":" + ProcessHandle.current().pid();
-    }}
+    }
+}

@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS `collect_task` (
     `collect_task_trigger_type` varchar(16) NULL DEFAULT NULL COMMENT '触发方式 - CRON/MANUAL/TEST',
     `collect_task_params` varchar(2000) NULL DEFAULT NULL COMMENT '本次执行的入参覆盖（JSON）',
     `collect_task_begin_time` datetime(6) NULL DEFAULT NULL COMMENT '开始时间',
+    `collect_task_deadline` datetime(6) NULL DEFAULT NULL COMMENT '本次生效超时加收尾宽限的期限快照，历史任务空值不回收',
     `collect_task_end_time` datetime(6) NULL DEFAULT NULL COMMENT '结束时间',
     `collect_task_cost` BIGINT NULL DEFAULT 0 COMMENT '耗时（毫秒）',
     `collect_task_node_count` INT NULL DEFAULT 0 COMMENT '执行节点次数',
