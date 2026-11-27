@@ -76,6 +76,13 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - 反向更危险：**类存在但没登记进 `AutoConfiguration.imports`** 时写进 exclude，启动直接抛 `IllegalStateException: ... could not be excluded because they are not auto-configuration classes`。所以「把旧包名照字面改成新包名」可能把静默失效变成启动失败——先确认该类是否在 imports 里；被 `@ComponentScan` 扫到的 `@AutoConfiguration`（如 ai 的 `RagAutoConfiguration`、`AiCacheKeyGeneratorAliasConfiguration`）无法用 exclude 排除，也不需要排除。
 - `META-INF/native-image/**` 的 `reflect-config.json` / `proxy-config.json` 同样是 FQN 字符串：只影响 native 构建（JVM 运行不读该文件），迁包后条目静默不命中、类被删除后成为过期条目；判定要求「简单名在某模块源码里有定义」，改包名前先 grep 类定义，别按相似度猜。
 
+注解字符串与 imports 文件名对账口径（2026-11-27 五轮，`temp/namespace-audit/annotation-string-audit.js` + `autoconfig-imports-audit.js`）：
+
+- 注解里的包名/类名（`@ComponentScan`、`@SpringBootApplication(scanBasePackages=...)`、`@MapperScan`、`@ConditionalOnClass(name=...)`、`@ImportResource`、AOP 切点里的类型）全是**字符串**，迁包/删模块时编译不报错。包不存在时组件扫描与 MyBatis mapper 扫描都是 **0 候选 + 只打 debug 日志**，能力整体消失而无告警；`@ConditionalOnClass(name="<包名>")` 写包名更是必失败（`ClassUtils.isPresent` 只认类）。
+- **`META-INF/spring/*.imports` 的文件名本身也是易失字符串**：Boot 4.2 `ImportCandidates.LOCATION = "META-INF/spring/%s.imports"`、`AutoConfigurationImportSelector#getCandidateConfigurations` 用 `autoConfigurationAnnotation`（默认 `AutoConfiguration.class`）调用它 → 写成 `org.springframework.boot.autoconfigure.EnableAutoConfiguration.imports` **整份文件无人读取**，模块自动配置从未装载（实例：api 仓 achievement / signin 两模块，自 2026-11 建模块起就是坏的）。文件内容必须是**每行一个类 FQN**（`#` 可注释），写成 `spring.factories` 的 `Key=\` 续行格式时被读取方当成类名 → 只改文件名不改内容是「静默失效 → 启动失败」。
+- **模块自足**：`@ComponentScan(本模块包)` + `@MapperScan(本模块 mapper 包)` 应写在本模块的自动配置类里（`SystemAutoConfiguration` / `SsoAutoConfiguration` / `ServiceConfiguration` 口径），不要让宿主补扫描包——宿主既不该知道模块内部包名，少写一处就等于整块能力消失。同一配置类既被 imports 登记又被 `@ComponentScan` 扫到时，Spring 会按类合并 `ConfigurationClass`，`@Bean` 不会重复注册（`SystemAutoConfiguration` 长期如此运行）。
+- 审计脚本必须**先剥注释再匹配注解**：注释里出现 `@ConditionalOnClass` 会让后续括号匹配错位，实测产生 4 条 `CLS_MISSING` 假阳性（真值 0）。
+
 ## Javadoc 注释三坑（2026-11-25 实证）
 
 - 注释体内**禁止出现字面 `*/`**（如 cron 表达式 `*/30` 会提前截断注释导致编译失败），须写成 HTML 实体 `*&#47;30`。
