@@ -243,7 +243,8 @@ public class WalletOrderServiceImpl implements WalletOrderService {
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WalletOrder> wrapper = new LambdaQueryWrapper<WalletOrder>()
-                .orderByDesc(WalletOrder::getCreateTime);
+                .orderByDesc(WalletOrder::getCreateTime)
+                .orderByDesc(WalletOrder::getId);
         if (request.merchantId() != null) {
             wrapper.eq(WalletOrder::getMerchantId, request.merchantId());
         }

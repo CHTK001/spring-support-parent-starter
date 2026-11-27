@@ -594,7 +594,8 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()
-                .orderByDesc(WalletAccountLog::getCreatedAt);
+                .orderByDesc(WalletAccountLog::getCreatedAt)
+                .orderByDesc(WalletAccountLog::getId);
         if (request.merchantId() != null) {
             wrapper.eq(WalletAccountLog::getMerchantId, request.merchantId());
         }

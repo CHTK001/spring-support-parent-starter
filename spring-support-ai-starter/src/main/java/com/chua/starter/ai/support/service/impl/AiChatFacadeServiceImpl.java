@@ -49,6 +49,8 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.registry.AgentRegistry;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
 import com.chua.starter.ai.support.service.AgentEvalRecorderProvider;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.AiSessionTodoService;
@@ -126,6 +128,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final WorkspacePathResolver workspacePathResolver; // 账号工作目录唯一口径（空配置兜底 ~/ai-workspace）
     private final ModelClientResolver modelClientResolver; // 渠道路由解析器（多账号 429 failover）
     private final AgentProviderFactory agentProviderFactory;
+    private final AgentRegistry agentRegistry; // 仅解析定义；会话不复用注册表中的可变实例
     private final ChatStreamRegistry chatStreamRegistry; // 活跃流注册表：停止会话时中断在执行的那一轮
     private final SysAiAppKeyService sysAiAppKeyService; // appKey 台账：Token 总量配额的唯一累计写入口
     private final SysAiServiceAccessLogMapper accessLogMapper; // 访问日志：路由拓扑页「入站流量」的唯一写入口
@@ -1277,7 +1280,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         // 技能不再在 facade 手动拼 system：解析出正文块后交由客户端内部并入 system
         String skills = "";
-        if (Boolean.TRUE.equals(request.getUseSkill())) {
+        if (Boolean.TRUE.equals(request.getUseSkill())
+                && (AiUserContext.isAdmin() || isUserToolAccessAllowed())) {
             List<String> pickedNames = request.getSkillNames();
             skills = (pickedNames != null && !pickedNames.isEmpty())
                     ? chatSkillSupport.promptBlock(pickedNames)
@@ -1436,8 +1440,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     isEnabledNode(plugins == null ? null : plugins.get("sub_agent")));
         }
 
-        // Plan 只读模式（Build 为默认）；仅管理员经 Agent 生效
-        boolean planOn = "plan".equalsIgnoreCase(request.getMode());
+        // Plan 只读模式（Build 为默认），受当前账号工具权限总闸约束。
+        boolean planOn = toolsAllowed && "plan".equalsIgnoreCase(request.getMode());
 
         // 会话工作间：只要有工作间就必须建 Agent —— HarnessAgent 的文件类工具以
         // workspace 为根，管理员若在"无能力"时早退，就拿不到 agent+workspace，
@@ -1472,9 +1476,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             }
             excludeIds = mcpSelection.exclude();
         }
-        AgentMcpRuntimeService.McpRuntime runtime = mcpOn
-                ? agentMcpRuntimeService.build(catalogIds, excludeIds) : null;
-
         // Agent 标识按会话稳定：初始轮与人工确认恢复轮（可能跨重启）必须落到同一
         // agent 目录 / 状态键，否则恢复时读不到待确认请求。String.hashCode 跨 JVM 稳定。
         String agentId;
@@ -1483,17 +1484,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } else {
             agentId = "role-" + Integer.toHexString(System.identityHashCode(configured));
         }
-        String instruction = request.getSystemPrompt() != null && !request.getSystemPrompt().isBlank()
-                ? request.getSystemPrompt()
-                : "You are a helpful assistant.";
+        AgentDefinition selectedDefinition = configuredAgentDefinition(profile.agentName());
+        String instruction = request.getSystemPrompt();
+        if ((instruction == null || instruction.isBlank()) && selectedDefinition != null) {
+            instruction = selectedDefinition.getInstruction();
+        }
+        if (instruction == null || instruction.isBlank()) {
+            instruction = "You are a helpful assistant.";
+        }
         // opencode 运行时禁止 leader 定义（OpencodeServerAgent#validateDefinition 对 isLeader()
         // 直接抛 UnsupportedOperationException），编排委派交给下面的 mode(AUTO)；
         // 其它运行时维持 leader(subAgentOn) 原语义。与 SysAiAgentServiceImpl#rebuildAgent 同口径。
-        boolean opencodeRuntime = AgentProviderFactory.OPENCODE_SERVER_PROVIDER
-                .equals(agentProviderFactory.resolveProvider());
+        Agent agent = agentProviderFactory.createAgent();
+        boolean opencodeRuntime = agent instanceof OpencodeServerAgent;
         AgentDefinition.Builder definitionBuilder = AgentDefinition.builder()
                 .id(agentId)
-                .name("Assistant")
+                .name(profile.agentName() != null ? profile.agentName() : "Assistant")
+                .description(selectedDefinition != null ? selectedDefinition.getDescription() : null)
+                .role(selectedDefinition != null ? selectedDefinition.getRole() : null)
                 .instruction(instruction)
                 .leader(subAgentOn && !opencodeRuntime)
                 // 平台基线：记忆体与规划（opencode 自管记忆，此处只影响 agentscope/langchain4j）。
@@ -1504,8 +1512,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 开关关闭时不消费残留白名单（与前端「总开关关闭不写残留」口径对齐）。
         int routedSubAgents = subAgentOn ? attachRoleSubAgents(definitionBuilder, roleSettings) : 0;
         AgentDefinition definition = definitionBuilder.build();
-        Agent agent = agentProviderFactory.createAgent()
-                .chatClient(configured)
+        agent.chatClient(configured)
                 .definition(definition)
                 // 子代理编排存在时 AUTO 路由，否则 SINGLE（主 Agent 直接调用工具）
                 .mode(subAgentOn ? AgentMode.AUTO : AgentMode.SINGLE)
@@ -1529,8 +1536,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (!admin) {
             agent.shellTool(false);
         }
-        if (runtime != null) {
-            agent.mcpManager(runtime.getManager());
+        if (agent instanceof OpencodeServerAgent nativeAgent) {
+            // SINGLE 不自动移除委派工具；双向写入，避免上一轮关闭项残留。
+            nativeAgent.delegation(subAgentOn);
         }
         // 会话配置的决策模型：挂到 Agent 上，供决策类工具按选择调用。
         // 未配置 / 供应商停用 / 客户端构建失败时跳过，不影响对话主流程。
@@ -1546,8 +1554,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 角色技能必须注册成 Agent 的技能工具：Agent 运行时以 definition 的 system prompt
         // 为准，不会继承底层 ChatClient 的 skillPrompt，只靠提示词注入等于没生效。
         // 角色/会话未选技能时回落平台基线技能（角色已选则角色优先）。
-        // 工具权限总闸关闭时不注入基线技能——那属于工具能力，不能由平台基线绕过。
-        applySessionSkills(agent, request, toolsAllowed ? profile.defaultSkills() : List.of());
+        // 总闸关闭时跳过角色和基线技能；原生运行时还要关闭自动发现的技能。
+        if (toolsAllowed) {
+            applySessionSkills(agent, request, profile.defaultSkills());
+        } else if (agent instanceof OpencodeServerAgent nativeAgent) {
+            nativeAgent.skillSelection(List.of());
+        }
         // 规划能力：会话形态要求 plan，或平台基线打开了 planning，都注册 Plan 能力。
         // 会话形态进入 plan 时首轮即只读；仅基线打开时保留「可进入规划」但默认按构建执行。
         // 规划会带出 plan_write 等工具，同样受工具权限总闸约束。
@@ -1570,9 +1582,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // B1/B2/B4：会话预算熔断 + 评测落库。预算来源 = 会话目标 settings.goal.tokenBudget；
         // 会话未设预算时回落平台基线 agent_max_total_tokens。两者都没有则不熔断。
         // evalHook 把每次运行结果落 agent_eval_record。
-        // 两者在 Agent 接口上都是 default no-op：opencode/langchain4j 运行时自动忽略，
-        // agentscope 运行时覆写后全量生效。
+        // 各运行时按自身的预算跟踪契约执行；不将配置接收等同于真实熔断验收。
         applySessionBudgetAndEval(agent, request.getSessionId(), profile.maxTotalTokens());
+        AgentMcpRuntimeService.McpRuntime runtime =
+                agentMcpRuntimeService.configure(agent, mcpOn, catalogIds, excludeIds);
         AgentChatClient wrapper = new AgentChatClient(agent)
                 .withCloseHook(runtime != null ? runtime::close : null);
         // 会话待办镜像（G2）：Agent 运行时（opencode）调用 todowrite 时，工具入参
@@ -1605,6 +1618,27 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
+     * 按管理员配置名称读取定义，不修改或复用注册表持有的运行时实例。
+     *
+     * <p>会话只继承名称、描述、角色与缺省指令；模型、工具、预算、回调和会话状态
+     * 仍由本轮配置独立装配，避免注册对象中的管理器或历史跨会话共享。</p>
+     *
+     * @param name 已保存的唯一名称；null 表示沿用默认会话定义
+     * @return 已注册定义；未配置时返回 null
+     */
+    private AgentDefinition configuredAgentDefinition(String name) {
+        if (name == null) {
+            return null;
+        }
+        Agent registered = agentRegistry.getByName(name);
+        AgentDefinition definition = registered != null ? registered.getDefinition() : null;
+        if (definition == null) {
+            throw new IllegalArgumentException("配置的 Agent 名称未注册或缺少定义: " + name);
+        }
+        return definition;
+    }
+
+    /**
      * 解析可镜像待办的业务会话数字标识。
      *
      * <p>聊天请求的 {@code sessionId} 通常是 {@code sys_ai_session} 数字主键的字符串形式
@@ -1628,15 +1662,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 为本次会话 Agent 挂载预算熔断与评测落库（B1/B2/B4 装配点）。
      *
      * <p>预算来源：会话目标 {@code settings.goal.tokenBudget}（目标面板设置的令牌预算），
-     * 仅约束 Token 总量，其余维度不限；目标不存在或未设预算时不熔断。
+     * 仅约束 Token 总量，其余维度不限；会话未设时回落平台预算，均未设时不熔断。
      * 评测：把每次运行结果落 {@code agent_eval_record}（进程内单例记录器）。</p>
      *
-     * <p>两类能力在 {@link Agent} 接口上都是 default no-op：opencode / langchain4j
-     * 运行时调用即忽略；agentscope 运行时覆写后全量生效。任何装配异常只告警，
-     * 不阻断对话主流程。</p>
+     * <p>预算由各运行时实现的跟踪器执行，评测回调由支持该回调的实现消费。
+     * 装配异常只告警，不阻断对话主流程；真实熔断与落库需另行验收。</p>
      *
      * @param agent     待装配的 Agent 实例
      * @param sessionId 会话标识（可空）
+     * @param baselineTokenBudget 平台基线预算，0 表示未配置
      */
     private void applySessionBudgetAndEval(Agent agent, String sessionId, long baselineTokenBudget) {
         try {
@@ -1909,9 +1943,30 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private void applySessionSkills(Agent agent, AiChatRequest request, List<String> baselineSkills) {
         List<String> names = request.getSkillNames();
-        // 角色/会话未选技能时回落平台基线技能；角色已选则以角色为准（不叠加，避免意外扩权）。
-        if (names == null || names.isEmpty()) {
-            names = baselineSkills;
+        // null 才回落基线；显式空数组表示本轮不选技能，不能反向补入默认技能。
+        if (names == null) {
+            Map<String, Object> role = request.getRoleSettings();
+            if (role != null && role.get("defaultSkillNames") instanceof List<?> defaults) {
+                names = defaults.stream().filter(String.class::isInstance).map(String.class::cast).toList();
+            } else {
+                names = baselineSkills;
+            }
+        }
+        names = names == null ? List.of() : names.stream().filter(java.util.Objects::nonNull)
+                .map(String::trim).filter(name -> !name.isEmpty()).distinct().toList();
+        if (agent instanceof OpencodeServerAgent nativeAgent) {
+            List<String> selected = new ArrayList<>();
+            if (names != null && !names.isEmpty()) {
+                Set<String> wantedNames = new LinkedHashSet<>(names);
+                for (ChatSkillSupport.InstalledSkill skill : chatSkillSupport.skills()) {
+                    if (skill.enabled() && wantedNames.contains(skill.name()) && !selected.contains(skill.name())) {
+                        nativeAgent.skillPath(skill.location());
+                        selected.add(skill.name());
+                    }
+                }
+            }
+            nativeAgent.skillSelection(selected);
+            return;
         }
         if (names == null || names.isEmpty()) {
             return;

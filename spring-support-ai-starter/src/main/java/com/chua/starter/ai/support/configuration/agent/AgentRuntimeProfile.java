@@ -25,7 +25,7 @@ import java.util.Locale;
  *   ④ 其余            → 关闭（与引入本档案之前完全一致）
  * </pre>
  * <p>默认值全部为 {@code INHERIT} / 0 / {@code memory=true}，因此<b>不动配置时
- * 行为与改造前逐字节一致</b>，不存在「升级后所有会话突然开始调工具」的风险。</p>
+     * 不主动打开工具能力</b>；具体运行时行为仍需分别验证。</p>
  *
  * @param agentName         运行时 Agent 唯一名称（可为空，表示未配置）
  * @param mcp               MCP 工具基线开关
@@ -153,8 +153,8 @@ public record AgentRuntimeProfile(
      * 是否需要在「无工具能力」时仍然构建 Agent 运行时（按工具权限收敛）。
      *
      * <p>工具权限总闸关闭时（普通账号默认），MCP / 子代理 / 默认技能 / 规划
-     * 都属于「工具能力」，不得由平台基线绕过；只有纯约束项（工具轮数、Token 预算）
-     * 仍然生效——它们只收紧资源，不扩权。</p>
+     * 都属于「工具能力」，不得由平台基线绕过；名称解析、记忆关闭与资源约束
+     * 仍要求构建独立实例，本身不授予工具权限。</p>
      *
      * @param toolsAllowed 工具权限总闸是否放行
      * @return true 表示必须构建 Agent
@@ -165,7 +165,7 @@ public record AgentRuntimeProfile(
                 || subAgent == CapabilitySwitch.ON
                 || planning
                 || !defaultSkills.isEmpty());
-        return capability || maxToolIterations > 0 || maxTotalTokens > 0L;
+        return agentName != null || !memory || capability || maxToolIterations > 0 || maxTotalTokens > 0L;
     }
 
     /**
@@ -191,7 +191,7 @@ public record AgentRuntimeProfile(
                 bool(settings, AgentGlobalSettingProvider.FIELD_MEMORY, true),
                 bool(settings, AgentGlobalSettingProvider.FIELD_PLANNING, false),
                 integer(settings, AgentGlobalSettingProvider.FIELD_MAX_TOOL_ITERATIONS, 0),
-                integer(settings, AgentGlobalSettingProvider.FIELD_MAX_TOTAL_TOKENS, 0));
+                longInteger(settings, AgentGlobalSettingProvider.FIELD_MAX_TOTAL_TOKENS, 0L));
     }
 
     /**
@@ -271,6 +271,26 @@ public record AgentRuntimeProfile(
         }
         try {
             return Integer.parseInt(raw);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读长整数字段，避免超过 int 上限的 Token 预算被当作无预算。
+     *
+     * @param settings     全局设置服务
+     * @param field        字段名
+     * @param defaultValue 默认值
+     * @return 长整数值；解析失败返回默认值
+     */
+    private static long longInteger(SysAiGlobalSettingService settings, String field, long defaultValue) {
+        String raw = text(settings, field);
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(raw);
         } catch (NumberFormatException e) {
             return defaultValue;
         }

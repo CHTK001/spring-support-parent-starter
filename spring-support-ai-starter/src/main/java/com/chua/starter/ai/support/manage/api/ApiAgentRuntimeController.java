@@ -193,7 +193,10 @@ public class ApiAgentRuntimeController {
         try {
             definition = agent.getDefinition();
         } catch (RuntimeException e) {
-            // 个别实现可能不暴露定义：概要降级为仅实现类名，不让解析接口整体失败。
+            throw new ApiException(ApiErrorCode.CONFLICT, "Agent 未暴露可用于会话的定义");
+        }
+        if (definition == null) {
+            throw new ApiException(ApiErrorCode.CONFLICT, "Agent 未提供可用于会话的定义");
         }
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("impl", agent.getClass().getName());

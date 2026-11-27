@@ -12,3 +12,4 @@ com.chua.starter.datasource.configuration.SqliteEngineAutoConfiguration
 com.chua.starter.datasource.monitor.SqliteEngineEndpointAutoConfiguration
 com.chua.starter.datasource.endpoint.ConcurrentEndpoint
 com.chua.starter.datasource.runtime.DsRuntimeAutoConfiguration
+com.chua.starter.datasource.configuration.EngineCacheAutoConfiguration

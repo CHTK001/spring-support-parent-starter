@@ -1,12 +1,14 @@
 package com.chua.starter.ai.support.manage.api;
 
 import com.chua.common.support.ai.mcp.DefaultMcpManager;
+import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.mcp.McpClient;
 import com.chua.common.support.ai.mcp.McpManager;
 import com.chua.common.support.ai.mcp.McpToolCall;
 import com.chua.common.support.ai.mcp.McpToolDescriptor;
 import com.chua.common.support.ai.mcp.McpToolResult;
 import com.chua.starter.ai.support.manage.store.McpServerStore;
+import com.chua.deeplearning.support.agent.opencode.OpencodeServerAgent;
 import com.chua.starter.common.support.log.MdcWrap;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -91,6 +93,112 @@ public class AgentMcpRuntimeService {
         DefaultMcpManager manager = new DefaultMcpManager();
         List<McpSyncClient> liveClients = new ArrayList<>();
 
+        for (Map<String, Object> server : selectedServers(onlyIds, excludeIds)) {
+            String name = str(server.get("name"));
+            if (!(server.get("transport") instanceof Map<?, ?> t)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> transport = (Map<String, Object>) t;
+            // stdio：先把命令解析为可直接启动的绝对路径（Windows 下 npx -> npx.cmd）。
+            if (isStdio(transport)) {
+                transport = prepareStdioTransport(transport);
+                if (transport == null) {
+                    log.warn("[AgentMcp] stdio 命令未找到，快速跳过 name={}", name);
+                    continue;
+                }
+            }
+            McpSyncClient client = null;
+            try {
+                var clientTransport = mcpConnectionService.buildTransport(transport);
+                if (clientTransport == null) {
+                    log.warn("[AgentMcp] 不支持的 MCP 传输，跳过: name={}", name);
+                    continue;
+                }
+                client = io.modelcontextprotocol.client.McpClient.sync(clientTransport)
+                        .requestTimeout(TIMEOUT)
+                        .initializationTimeout(TIMEOUT)
+                        .build();
+                client.initialize();
+                String registerName = name != null && !name.isBlank()
+                        ? name : "mcp-" + liveClients.size();
+                manager.register(registerName, new SdkMcpClient(client, registerName));
+                liveClients.add(client);
+            } catch (Exception e) {
+                if (client != null) {
+                    try {
+                        client.close();
+                    } catch (Exception ignored) {
+                        // 初始化失败也应释放进程/连接，继续处理其余服务。
+                    }
+                }
+                log.warn("[AgentMcp] 连接 MCP 服务器失败，跳过: name={}, err={}", name, e.getMessage());
+            }
+        }
+
+        log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
+                liveClients.size(), manager.listAllTools().size());
+        return new McpRuntime(manager, () -> {
+            for (McpSyncClient c : liveClients) {
+                try {
+                    c.close();
+                } catch (Exception ignored) {
+                    // 关闭单个连接失败不影响其余连接
+                }
+            }
+        });
+    }
+
+    /**
+     * 装配当前 Agent 的 MCP：原生进程使用声明式配置，其余实现使用 Java 管理器。
+     *
+     * @param agent      当前会话独立实例
+     * @param enabled    当前会话是否启用 MCP
+     * @param onlyIds    显式选择；null 表示启用目录
+     * @param excludeIds 启用目录中的排除名单
+     * @return 需要随会话关闭的连接；原生进程/关闭状态无 Java 连接，返回 null
+     */
+    public McpRuntime configure(Agent agent, boolean enabled, java.util.Collection<String> onlyIds,
+                                java.util.Collection<String> excludeIds) {
+        if (agent instanceof OpencodeServerAgent nativeAgent) {
+            List<String> names = new ArrayList<>();
+            for (Map<String, Object> server : enabled ? selectedServers(onlyIds, excludeIds) : List.<Map<String, Object>>of()) {
+                String id = str(server.get("mcp_server_id"));
+                if (id == null || !(server.get("transport") instanceof Map<?, ?> transport)) {
+                    continue;
+                }
+                Map<String, Object> spec = nativeSpec(transport);
+                if (!spec.isEmpty()) {
+                    String key = "catalog-" + id;
+                    nativeAgent.mcpServer(key, spec);
+                    names.add(key);
+                }
+            }
+            nativeAgent.mcpSelection(names);
+            return null;
+        }
+        if (!enabled) {
+            return null;
+        }
+        McpRuntime runtime = build(onlyIds, excludeIds);
+        try {
+            agent.mcpManager(runtime.getManager());
+            return runtime;
+        } catch (RuntimeException e) {
+            runtime.close();
+            throw e;
+        }
+    }
+
+    /**
+     * 读取并筛选 MCP 目录，原生与 Java 管理器共用同一份选择语义。
+     *
+     * @param onlyIds 显式白名单；null 表示启用目录
+     * @param excludeIds 目录排除名单
+     * @return 当前选中的服务器配置
+     */
+    private List<Map<String, Object>> selectedServers(java.util.Collection<String> onlyIds,
+                                                      java.util.Collection<String> excludeIds) {
         List<Map<String, Object>> serverContracts;
         try {
             serverContracts = mcpServerStore.listAll();
@@ -116,6 +224,7 @@ public class AgentMcpRuntimeService {
             }
         }
 
+        List<Map<String, Object>> selected = new ArrayList<>();
         for (Map<String, Object> server : serverContracts) {
             String serverId = str(server.get("mcp_server_id"));
             if (wanted == null) {
@@ -130,56 +239,53 @@ public class AgentMcpRuntimeService {
             } else if (serverId == null || !wanted.contains(serverId)) {
                 continue;
             }
-            String name = str(server.get("name"));
-            if (!(server.get("transport") instanceof Map<?, ?> t)) {
-                continue;
-            }
-            @SuppressWarnings("unchecked")
-            Map<String, Object> transport = (Map<String, Object>) t;
-            // stdio：先把命令解析为可直接启动的绝对路径（Windows 下 npx -> npx.cmd），
-            // 命令在 PATH 中不存在时快速跳过，避免进程 spawn 失败后仍死等初始化超时（约30s）
-            if (isStdio(transport)) {
-                Map<String, Object> ready = prepareStdioTransport(transport);
-                if (ready == null) {
-                    log.warn("[AgentMcp] stdio 命令未找到，快速跳过 name={}, command={}",
-                            name, transport.get("command"));
-                    continue;
-                }
-                transport = ready;
-            }
-            try {
-                var clientTransport = mcpConnectionService.buildTransport(transport);
-                if (clientTransport == null) {
-                    log.warn("[AgentMcp] 不支持的 MCP 传输，跳过: name={}", name);
-                    continue;
-                }
-                McpSyncClient client = io.modelcontextprotocol.client.McpClient.sync(clientTransport)
-                        .requestTimeout(TIMEOUT)
-                        .initializationTimeout(TIMEOUT)
-                        .build();
-                client.initialize();
-                String registerName = name != null && !name.isBlank()
-                        ? name : "mcp-" + liveClients.size();
-                manager.register(registerName, new SdkMcpClient(client, registerName));
-                liveClients.add(client);
-            } catch (Exception e) {
-                log.warn("[AgentMcp] 连接 MCP 服务器失败，跳过: name={}, err={}", name, e.getMessage());
-            }
+            selected.add(server);
         }
-
-        log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
-                liveClients.size(), manager.listAllTools().size());
-        return new McpRuntime(manager, () -> {
-            for (McpSyncClient c : liveClients) {
-                try {
-                    c.close();
-                } catch (Exception ignored) {
-                    // 关闭单个连接失败不影响其余连接
-                }
-            }
-        });
+        return selected;
     }
 
+    /**
+     * 把目录传输配置转换为 opencode 原生条目，不启动进程或建立网络连接。
+     *
+     * @param transport 目录中的传输配置
+     * @return 原生条目；不支持的传输返回空 Map
+     */
+    private static Map<String, Object> nativeSpec(Map<?, ?> transport) {
+        String type = str(transport.get("type"));
+        Map<String, Object> spec = new LinkedHashMap<>();
+        if ("stdio".equalsIgnoreCase(type)) {
+            String command = str(transport.get("command"));
+            if (command == null || command.isBlank()) {
+                return Map.of();
+            }
+            List<String> args = new ArrayList<>();
+            args.add(command);
+            if (transport.get("args") instanceof Iterable<?> values) {
+                for (Object value : values) {
+                    args.add(String.valueOf(value));
+                }
+            }
+            spec.put("type", "local");
+            spec.put("command", args);
+            if (transport.get("env") instanceof Map<?, ?> env) {
+                spec.put("environment", env);
+            }
+        } else if ("http".equalsIgnoreCase(type) || "streamable_http".equalsIgnoreCase(type)
+                || "streamablehttp".equalsIgnoreCase(type) || "sse".equalsIgnoreCase(type)) {
+            String url = str(transport.get("url"));
+            if (url == null || url.isBlank()) {
+                return Map.of();
+            }
+            spec.put("type", "remote");
+            spec.put("url", url);
+            if (transport.get("headers") instanceof Map<?, ?> headers) {
+                spec.put("headers", headers);
+            }
+        } else {
+            return Map.of();
+        }
+        return spec;
+    }
 
     /**
      * null 安全转字符串。
