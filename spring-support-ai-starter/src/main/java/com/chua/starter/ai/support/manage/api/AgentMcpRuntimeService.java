@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Agent MCP 运行时服务。
@@ -93,59 +94,60 @@ public class AgentMcpRuntimeService {
         DefaultMcpManager manager = new DefaultMcpManager();
         List<McpSyncClient> liveClients = new ArrayList<>();
 
-        for (Map<String, Object> server : selectedServers(onlyIds, excludeIds)) {
-            String name = str(server.get("name"));
-            if (!(server.get("transport") instanceof Map<?, ?> t)) {
-                continue;
-            }
-            @SuppressWarnings("unchecked")
-            Map<String, Object> transport = (Map<String, Object>) t;
-            // stdio：先把命令解析为可直接启动的绝对路径（Windows 下 npx -> npx.cmd）。
-            if (isStdio(transport)) {
-                transport = prepareStdioTransport(transport);
-                if (transport == null) {
-                    log.warn("[AgentMcp] stdio 命令未找到，快速跳过 name={}", name);
+        try {
+            for (Map<String, Object> server : selectedServers(onlyIds, excludeIds)) {
+                String name = str(server.get("name"));
+                if (!(server.get("transport") instanceof Map<?, ?> t)) {
                     continue;
                 }
-            }
-            McpSyncClient client = null;
-            try {
-                var clientTransport = mcpConnectionService.buildTransport(transport);
-                if (clientTransport == null) {
-                    log.warn("[AgentMcp] 不支持的 MCP 传输，跳过: name={}", name);
-                    continue;
-                }
-                client = io.modelcontextprotocol.client.McpClient.sync(clientTransport)
-                        .requestTimeout(TIMEOUT)
-                        .initializationTimeout(TIMEOUT)
-                        .build();
-                client.initialize();
-                String registerName = name != null && !name.isBlank()
-                        ? name : "mcp-" + liveClients.size();
-                manager.register(registerName, new SdkMcpClient(client, registerName));
-                liveClients.add(client);
-            } catch (Exception e) {
-                if (client != null) {
-                    try {
-                        client.close();
-                    } catch (Exception | Error closeFailure) {
-                        if (closeFailure != e) e.addSuppressed(closeFailure);
-                        log.warn("[AgentMcp] 初始化失败后的连接清理失败 name={}", name, closeFailure);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> transport = (Map<String, Object>) t;
+                // stdio：先把命令解析为可直接启动的绝对路径（Windows 下 npx -> npx.cmd）。
+                if (isStdio(transport)) {
+                    transport = prepareStdioTransport(transport);
+                    if (transport == null) {
+                        log.warn("[AgentMcp] stdio 命令未找到，快速跳过 name={}", name);
+                        continue;
                     }
                 }
-                log.warn("[AgentMcp] 连接 MCP 服务器失败，跳过: name={}, err={}", name, e.getMessage());
-            } catch (Error failure) {
-                closeClients(liveClients, failure);
-                if (client != null && !liveClients.contains(client)) {
-                    closeClient(client, failure);
+                McpSyncClient client = null;
+                try {
+                    var clientTransport = mcpConnectionService.buildTransport(transport);
+                    if (clientTransport == null) {
+                        log.warn("[AgentMcp] 不支持的 MCP 传输，跳过: name={}", name);
+                        continue;
+                    }
+                    client = io.modelcontextprotocol.client.McpClient.sync(clientTransport)
+                            .requestTimeout(TIMEOUT)
+                            .initializationTimeout(TIMEOUT)
+                            .build();
+                    client.initialize();
+                    String registerName = name != null && !name.isBlank()
+                            ? name : "mcp-" + liveClients.size();
+                    manager.register(registerName, new SdkMcpClient(client, registerName));
+                    liveClients.add(client);
+                } catch (Exception e) {
+                    if (client != null) {
+                        liveClients.remove(client);
+                        closeClient(client, e);
+                    }
+                    log.warn("[AgentMcp] 连接 MCP 服务器失败，跳过: name={}, err={}", name, e.getMessage());
+                } catch (Error failure) {
+                    if (client != null && !liveClients.contains(client)) {
+                        closeClient(client, failure);
+                    }
+                    throw failure;
                 }
-                throw failure;
             }
-        }
 
-        log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
-                liveClients.size(), manager.listAllTools().size());
-        return new McpRuntime(manager, () -> closeClients(liveClients, null));
+            int toolCount = manager.listAllTools().size();
+            log.info("[AgentMcp] 本次 Agent 已连接 MCP 服务器 {} 个，工具 {} 个",
+                    liveClients.size(), toolCount);
+            return new McpRuntime(manager, () -> closeClients(liveClients, null));
+        } catch (RuntimeException | Error failure) {
+            closeClients(liveClients, failure);
+            throw failure;
+        }
     }
 
     /**
@@ -426,6 +428,8 @@ public class AgentMcpRuntimeService {
          * 资源关闭动作
          */
         private final Runnable closeAction;
+        /** 防止不同收尾路径重复关闭同一组连接。 */
+        private final AtomicBoolean closed = new AtomicBoolean();
 
         /**
          * Mcp Runtime
@@ -451,10 +455,13 @@ public class AgentMcpRuntimeService {
          * 关闭运行时持有的全部底层连接。
          */
         public void close() {
+            if (!closed.compareAndSet(false, true)) {
+                return;
+            }
             try {
                 closeAction.run();
-            } catch (Exception ignored) {
-                // 关闭动作自身异常可忽略
+            } catch (RuntimeException | Error failure) {
+                log.warn("[AgentMcp] MCP 运行时清理失败", failure);
             }
         }
     }

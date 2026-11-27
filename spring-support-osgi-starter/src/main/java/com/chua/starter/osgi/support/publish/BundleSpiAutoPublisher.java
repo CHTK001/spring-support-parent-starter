@@ -256,7 +256,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
                 if (publisher != null && publisher.unpublish(instance)) {
                     removed++;
                 }
-            } catch (Exception ex) {
+            } catch (Exception | LinkageError ex) {
                 log.warn("[OSGi] SPI 服务反注册失败: {}", ex.getMessage());
             }
             closeOwnedInstance(instance);
@@ -271,7 +271,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
         if (instance instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
-            } catch (Exception ex) {
+            } catch (Exception | LinkageError ex) {
                 log.warn("[OSGi] SPI 资源释放失败: {}", ex.getMessage());
             }
         }
@@ -423,7 +423,7 @@ public class BundleSpiAutoPublisher implements BundleLifecycleListener {
     private <T> boolean publishSafely(String symbolicName, Class<T> type, Object instance) {
         try {
             return publisher.publish(type, type.cast(instance));
-        } catch (Exception ex) {
+        } catch (Exception | LinkageError ex) {
             log.warn("[OSGi] bundle {} SPI 服务发布失败: {} - {}", symbolicName, type.getName(), ex.getMessage());
             return false;
         }

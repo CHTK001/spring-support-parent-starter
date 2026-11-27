@@ -209,7 +209,7 @@ public final class MiddlewareDriverSupport {
         if (provider instanceof AutoCloseable closeable) {
             try {
                 closeable.close();
-            } catch (Exception e) {
+            } catch (Exception | LinkageError e) {
                 log.warn("[datapool] 关闭上传的中间件客户端失败: {}", e.getMessage());
             }
         }

@@ -358,32 +358,6 @@ public class AgentManager {
     }
 
     /**
-     * 静默中断。
-     *
-     * @param agent Agent 实例
-     */
-    private static void interruptQuietly(Agent agent) {
-        try {
-            agent.interrupt();
-        } catch (RuntimeException | Error failure) {
-            log.warn("[AgentManager] 中断失败，继续关闭实例及私有资源", failure);
-        }
-    }
-
-    /**
-     * 静默关闭。
-     *
-     * @param agent Agent 实例
-     */
-    private static void closeQuietly(Agent agent) {
-        try {
-            agent.close();
-        } catch (RuntimeException | Error failure) {
-            log.warn("[AgentManager] 实例关闭失败，继续释放私有资源", failure);
-        }
-    }
-
-    /**
      * 释放托管实例的附属资源，不阻断其它实例清理。
      * @param resources 私有资源，可空
      */
@@ -397,29 +371,22 @@ public class AgentManager {
     }
 
     /**
-     * 尝试中断并关闭 Agent；Error 不会跳过后续私有资源释放，清理完仍传播首个 Error。
+     * 尝试中断并关闭 Agent；清理异常记录后继续释放该实例的私有资源。
      * @param managed 托管实例
      */
     private static void interruptAndClose(ManagedAgent managed) {
-        Error failure = null;
         try {
             managed.agent.interrupt();
-        } catch (RuntimeException interruptFailure) {
+        } catch (RuntimeException | Error interruptFailure) {
             log.warn("[AgentManager] 中断失败，继续关闭实例及私有资源", interruptFailure);
-        } catch (Error interruptFailure) {
-            failure = interruptFailure;
         }
         try {
             managed.agent.close();
-        } catch (RuntimeException closeFailure) {
+        } catch (RuntimeException | Error closeFailure) {
             log.warn("[AgentManager] 实例关闭失败，继续释放私有资源", closeFailure);
-        } catch (Error closeFailure) {
-            if (failure == null) failure = closeFailure;
-            else if (failure != closeFailure) failure.addSuppressed(closeFailure);
         } finally {
             closeResources(managed.resources);
         }
-        if (failure != null) throw failure;
     }
 
     /**
