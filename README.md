@@ -109,7 +109,6 @@ flowchart TB
 | spring-support-socket-sse-starter | SSE 服务端单向推送：`sse`/`sse-server` 双协议 + 独立事件总线（`SseTemplate`） | [README.md](spring-support-socket-sse-starter/README.md) |
 | spring-support-rpc-starter | RPC 门面：`@RpcService`/`@RpcResource`，协议由 `plugin.rpc.type` 经 SPI 选择 | [README.md](spring-support-rpc-starter/README.md) |
 | spring-support-sync-starter | 客户端/服务端双向同步通道：`SyncServer`/`SyncClient`，协议名经 `ServiceProvider` SPI 选择 | [README.md](spring-support-sync-starter/README.md) |
-| spring-support-datasync-starter | DataSync 集成层：按 `plugin.datasync.*` 装配映射配置，交给 `DataSyncServer` cron 秒级调度 | [README.md](spring-support-datasync-starter/README.md) |
 | spring-support-osgi-starter | Apache Felix OSGi 运行时：Gogo shell 远程管理、目录热部署、源码扩展点热重载、服务桥接 | [README.md](spring-support-osgi-starter/README.md) |
 | spring-support-bundle-starter | OSGi Bundle 生命周期管理：按 Maven 坐标安装、原地升级、卸载与状态查询 | [README.md](spring-support-bundle-starter/README.md) |
 | spring-support-discovery-starter | 服务发现：`ServiceDiscovery` SPI 多协议实现装配 + 统一查询门面 `DiscoveryService` | [README.md](spring-support-discovery-starter/README.md) |

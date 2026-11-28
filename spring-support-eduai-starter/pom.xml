@@ -164,10 +164,11 @@
              刻意不引 mockito：被测对象是纯函数（无外部依赖），
              打桩只会掩盖真实行为。 -->
 
-        <!-- Swagger 注解 -->
+        <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- ONNX 模型资产（paddleocrv6-tiny / ppdoclayoutv3 / doc-orientation）

@@ -71,7 +71,6 @@
         <!-- BOM单独管理，不在此构建 -->
         <!-- <module>spring-support-bom</module> -->
         <module>spring-support-datasource-starter</module>
-        <!-- spring-support-test-app 已从仓库移除（本地保留目录，不参与构建） -->
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
         <module>spring-support-oauth-third-starter</module>              <!-- 第三方登录/绑定/回调编排共享能力 -->
         <module>spring-support-account-starter</module>         <!-- 账号/模板管理（eduai 依赖） -->
@@ -97,23 +96,12 @@
         <module>spring-support-socket-sse-starter</module>             <!-- SSE 实现 -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
          <module>spring-support-sync-starter</module>
-         <module>spring-support-datasync-starter</module>
          <module>spring-support-osgi-starter</module>
          <module>spring-support-bundle-starter</module>
          <!-- 数据中台管理：/v2/datalake/** 管理端点 + 管线配置落库（宿主 datalake.enabled=true 时生效） -->
          <module>spring-support-datalake-starter</module>
         <!-- 搜索和数据处理模块 -->
-        <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
-        <!--
-          spring-support-spider-starter 已下线 (2026-09-26)：爬虫中心能力已由采集平台模块
-          （/v2/collect/**）完整承接并在其之上扩展，旧的 /spider/** 契约（spiderCode 字符串主键、5 张 spider_* 表）
-          与 collect_* 表双轨并行，无任何模块依赖它，属重复实现。
-          模块源码已删除，完整副本留在 backups/spider-retire-20260926/（67 个文件）以便可回滚；
-          需要恢复时把备份拷回本目录并取消下面这行注释即可。
-          注意：utils-support-core-parent/utils-support-spider-starter 不在此列 —— 它是底层抓取工具包
-          （HttpFetcher / SpiderRequest / SpiderProxyConfig），被 collect 的 CollectRequestExecutor 直接依赖。
-        -->
-        <!-- <module>spring-support-spider-starter</module> -->
+        <module>spring-support-datasearch-starter</module>
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <!-- scatter 组网：去中心化服务发现 + self-balance 反向代理（谁用谁依赖） -->
         <module>spring-support-scatter-starter</module>
@@ -145,7 +133,6 @@
         <module>spring-support-eduai-starter</module>
         <!-- 设备管理模块（海康/大华等平台接入） -->
         <module>spring-support-device-starter</module>
-        <!-- 模板管理已并入账号管理模块（spring-support-account-starter），不再单独成模块 -->
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datapool-starter</module>
         <module>spring-support-monitor-starter</module>

@@ -1,7 +1,7 @@
-package com.chua.starter.monitor.support.mapper;
+package com.chua.starter.server.support.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.monitor.support.entity.MsMaintenancePlan;
+import com.chua.starter.server.support.entity.MsMaintenancePlan;
 
 /**
  * 维护计划映射器。

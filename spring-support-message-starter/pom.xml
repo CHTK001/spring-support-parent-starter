@@ -67,10 +67,11 @@
             <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
-        <!-- Swagger 注解 -->
+        <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- 各渠道实现为可选依赖

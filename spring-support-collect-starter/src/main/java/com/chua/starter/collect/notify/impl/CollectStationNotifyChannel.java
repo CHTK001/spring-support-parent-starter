@@ -5,8 +5,8 @@ import com.chua.common.support.task.message.MessageResponse;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.collect.dto.CollectNotifyMessage;
 import com.chua.starter.collect.notify.CollectNotifyChannel;
-import com.chua.starter.entity.service.SysMessage;
-import com.chua.starter.system.service.SysMessageService;
+import com.chua.starter.common.support.message.StationMessage;
+import com.chua.starter.common.support.message.StationMessageSender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -21,22 +21,13 @@ import java.util.List;
 /**
  * 站内消息通知渠道：把执行结果投到登录用户自己的消息中心。
  *
- * <p>复用平台既有的消息中心（{@code common-system-starter} 的
- * {@link SysMessageService#broadcast}）而不是自己再写一套推送：走同一条链路，
+ * <p>复用平台既有的消息中心投递契约，而不是自己再写一套推送：走同一条链路，
  * 落的是 {@code sys_message} 表，登录后在「消息中心」里就能看到，和未读数角标联动
  * （{@code pageForUser} / {@code countUnread} / {@code markRead} 读的都是这张表）。</p>
  *
- * <h3>为什么不是 spring-support-message-starter</h3>
- * <p>消息模块与 {@code common-system-starter} 各自带了一整套 {@code SysMessage*}，
- * 4 个 Mapper 与 4 组 Service/Impl 简名相同，两者在同一个 Spring 上下文里
- * 会在扫描期抛 {@code ConflictingBeanDefinitionException}，应用根本起不来。
- * 本模块依赖链上本来就有 {@code common-system-starter}，用它不引任何新表、
- * 也不引入新依赖。消息模块的去向见
- * {@code com.chua.starter.message.support.controller.SysMessageController} 的类注释。</p>
- *
  * <h3>前置条件</h3>
  * <ul>
- *   <li>容器里要有 {@link SysMessageService}。本类带 {@code @ConditionalOnBean}，
+ *   <li>容器里要有 {@link StationMessageSender}。本类带 {@code @ConditionalOnBean}，
  *       没有消息中心时不注册，前端渠道下拉里也不会出现这一项——优雅失败而不是启动报错。</li>
  *   <li>接收人是<b>用户 ID 数字</b>（{@code sys_message.sys_message_receiver_id}），
  *       不是登录账号。填错类型会在「最近结果」里看到明确的解析失败原因。</li>
@@ -51,7 +42,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnBean(SysMessageService.class)
+@ConditionalOnBean(StationMessageSender.class)
 @ConditionalOnProperty(prefix = "plugin.collect.notify", name = "enable", havingValue = "true", matchIfMissing = true)
 public class CollectStationNotifyChannel implements CollectNotifyChannel {
 
@@ -84,7 +75,7 @@ public class CollectStationNotifyChannel implements CollectNotifyChannel {
      * 消息中心服务。用 ObjectProvider 承接是双保险：{@code @ConditionalOnBean}
      * 已经拦掉了没有该依赖的容器，这里再兜一层，避免条件判定与实际注册时序不一致时取到 null。
      */
-    private final ObjectProvider<SysMessageService> messageServiceProvider;
+    private final ObjectProvider<StationMessageSender> messageServiceProvider;
 
     @Override
     public String channel() {
@@ -104,7 +95,7 @@ public class CollectStationNotifyChannel implements CollectNotifyChannel {
     @Override
     public MessageResponse send(CollectNotifyMessage message) {
         long start = System.currentTimeMillis();
-        SysMessageService service = messageServiceProvider.getIfAvailable();
+        StationMessageSender service = messageServiceProvider.getIfAvailable();
         if (service == null) {
             return MessageResponse.failure("未接入平台消息中心（缺少 common-system-starter 依赖）");
         }
@@ -115,14 +106,9 @@ public class CollectStationNotifyChannel implements CollectNotifyChannel {
                     : "接收人不是合法的用户 ID: " + String.join("、", targets.invalid()));
         }
 
-        SysMessage entity = new SysMessage();
-        entity.setSysMessageTitle(message.subject());
-        entity.setSysMessageContent(message.content());
-        entity.setSysMessageType(MESSAGE_TYPE);
-        entity.setSysMessageLevel(MESSAGE_LEVEL);
-        entity.setSysMessageChannel(MESSAGE_CHANNEL);
-        entity.setSysMessageSenderId(0);
-        entity.setSysMessageSenderName("采集调度");
+        StationMessage entity = new StationMessage(
+                message.subject(), message.content(), MESSAGE_TYPE, MESSAGE_LEVEL,
+                MESSAGE_CHANNEL, 0, "采集调度");
 
         ReturnResult<Integer> result;
         try {

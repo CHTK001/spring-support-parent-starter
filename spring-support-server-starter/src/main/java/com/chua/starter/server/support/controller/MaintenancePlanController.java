@@ -1,9 +1,9 @@
-package com.chua.starter.monitor.support.controller;
+package com.chua.starter.server.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.monitor.support.entity.MsMaintenancePlan;
-import com.chua.starter.monitor.support.model.dto.MaintenancePlanDTO;
-import com.chua.starter.monitor.support.service.impl.MaintenancePlanService;
+import com.chua.starter.server.support.entity.MsMaintenancePlan;
+import com.chua.starter.server.support.model.dto.MaintenancePlanDTO;
+import com.chua.starter.server.support.service.impl.MaintenancePlanService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

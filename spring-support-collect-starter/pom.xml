@@ -19,15 +19,10 @@
       <artifactId>utils-support-datalake-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
+    <!-- 消息投递契约由公共层提供；collect 不依赖 API system 的消息中心实现。 -->
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>spring-api-support-common-system-starter</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>com.chua</groupId>
-          <artifactId>utils-support-armeria-starter</artifactId>
-        </exclusion>
-      </exclusions>
+      <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
@@ -65,13 +60,6 @@
         -->
         <optional>true</optional>
       </dependency>
-    <!-- 站内消息渠道（CollectStationNotifyChannel）走的是本模块已有的
-         spring-api-support-common-system-starter 消息中心（SysMessageService.broadcast
-         → sys_message），没有额外的消息中心依赖要引。
-         曾试过改接 spring-support-message-starter，已回退：它与 common-system-starter
-         各自带了一整套 SysMessage*（4 个 Mapper + 4 组 Service/Impl + 5 个 Controller 同名），
-         两者共存会让 Spring 上下文启动失败。渠道实现带 @ConditionalOnBean，
-         容器里没有消息中心时该渠道自动不出现在前端下拉里。 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-crawler-starter</artifactId>
@@ -104,9 +92,11 @@
       <artifactId>jsoup</artifactId>
       <version>1.24.1</version>
     </dependency>
+    <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
     <dependency>
-      <groupId>io.swagger.core.v3</groupId>
-      <artifactId>swagger-annotations</artifactId>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-swagger-starter</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.mysql</groupId>

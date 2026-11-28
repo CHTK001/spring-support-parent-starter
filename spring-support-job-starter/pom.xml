@@ -61,10 +61,10 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Swagger 注解 - 仅 API 文档标记, 运行期缺失不影响 -->
+        <!-- 接口文档注解 - 仅 API 文档标记, 运行期缺失不影响；统一由 swagger-starter 以 provided 提供 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
             <scope>provided</scope>
         </dependency>
 

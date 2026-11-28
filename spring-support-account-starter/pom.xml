@@ -48,10 +48,11 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-datasearch-starter</artifactId>
     </dependency>
-    <!-- Swagger Annotations（/v2/channels 接口文档） -->
+    <!-- 接口文档注解（/v2/channels 文档用 @Tag / @Operation）：统一由 swagger-starter 以 provided 提供 -->
     <dependency>
-      <groupId>io.swagger.core.v3</groupId>
-      <artifactId>swagger-annotations</artifactId>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-swagger-starter</artifactId>
+      <scope>provided</scope>
     </dependency>
     <!-- Web support（@RestController / SseEmitter） -->
     <dependency>

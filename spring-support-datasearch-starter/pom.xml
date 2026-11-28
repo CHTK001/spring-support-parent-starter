@@ -74,10 +74,11 @@
             <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
-        <!-- OpenAPI 注解（@Tag / @Operation / @Schema），仅文档用途 -->
+        <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- 单元测试：版本由继承的 spring-boot-dependencies 统一管理 -->

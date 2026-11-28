@@ -42,9 +42,11 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 接口文档注解（@Tag / @Operation）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
 

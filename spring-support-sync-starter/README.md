@@ -482,7 +482,7 @@ syncClient.publish("order", Map.<String, Object>of("orderId", 1, "amount", 100))
 **与相邻模块的取舍**：
 - `spring-support-job-starter`：任务模块借用同一套 `SyncClient` / `SyncServer` 下发指令（`provided` 依赖），两者常配对；任务编排属于 job，通道属于本模块。
 - `spring-support-rpc-starter`：方法级 RPC 与本模块的主题消息是两种形态，互不替代。
-- `spring-support-datasync-starter` + `utils-support-datasync-starter`：数据同步的映射加载与 Agent 能力在 datasync 侧，本模块经 `SyncDataSyncConfiguration` / `DataSyncAgentLifecycleConfiguration` 把同步结果沿通道下发并维护 Agent 生命周期。
+- `spring-support-datapool-starter` + `utils-support-datasync-starter`：数据同步业务与映射加载归 datapool，底层 DataSyncServer/Agent 能力由 utils 提供；本模块经 `SyncDataSyncConfiguration` / `DataSyncAgentLifecycleConfiguration` 把同步结果沿通道下发并维护 Agent 生命周期。
 
 ## 8. 扩展点
 

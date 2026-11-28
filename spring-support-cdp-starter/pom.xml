@@ -21,11 +21,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
-        <!-- 接口文档注解（@Tag / @Operation）；common-starter 里该依赖是 optional，
+        <!-- 接口文档注解（@Tag / @Operation）；统一由 swagger-starter 以 provided 提供，
              版本由父 POM dependencyManagement 统一管理 -->
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- REST / SSE（Controller、SseEmitter、Servlet Filter） -->
         <dependency>

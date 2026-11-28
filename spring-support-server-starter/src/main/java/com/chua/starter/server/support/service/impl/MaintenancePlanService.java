@@ -1,12 +1,12 @@
 // [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
-package com.chua.starter.monitor.support.service.impl;
+package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datapool.support.service.DatasourceService;
-import com.chua.starter.monitor.support.entity.MsMaintenancePlan;
-import com.chua.starter.monitor.support.mapper.MsMaintenancePlanMapper;
-import com.chua.starter.monitor.support.model.dto.MaintenancePlanDTO;
+import com.chua.starter.server.support.entity.MsMaintenancePlan;
+import com.chua.starter.server.support.mapper.MsMaintenancePlanMapper;
+import com.chua.starter.server.support.model.dto.MaintenancePlanDTO;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
