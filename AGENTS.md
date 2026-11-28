@@ -44,6 +44,13 @@
 
 新增 `xxx-starter` 依赖前，先确认对方的 `AutoConfiguration` 会往本服务塞什么 Controller / 定时任务 / 表迁移，是否真的需要。
 
+## 依赖声明与鉴权契约（2026-11-28 定版）
+
+- **只声明源码直接使用的依赖**：以 import、注解、SPI 索引、自动配置和构造签名为证据；`dependency:tree` 只能辅助判断传递重复，不能证明编译通过。
+- **删除依赖同步删除注释**：`<dependencies>` 内不得留下孤立说明，交付前 `ORPHAN=0`。
+- **版本单源**：内部 starter 与 utils 制品都在根 POM `dependencyManagement` 托管，子模块不写 inline 版本；带 classifier 的制品同步托管 classifier。
+- **通用模块只依赖 common 的鉴权契约**：`@Permission`、`PermissionRules`、`AuthService`、`CurrentUser`、`TokenForIgnore` 归 `spring-support-common-starter`。只有直接使用 OAuth 客户端实现时才声明 `spring-support-oauth-starter`。
+
 ## 交付闸门
 
 `grep` 跨模块持久层引用 = 0；无反向依赖、无重复实现；`mvn -o -q compile -DskipTests` EXIT=0；编码 `BOM=0 / U+FFFD=0`。任一项不满足不得声称完成。
@@ -138,6 +145,13 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - **`spring-support-datasearch-starter` 保留，不冗余**：它提供 `/v2/weather`、`/v2/holiday`、`/v2/exchange-rate`、`/v2/ip`、`/v2/location`、`/v2/typhoon` 六组公共数据接口，以及 `CreditQueryProvider` SPI 和对应 provider；account 等模块有 116 处对其 credit 契约/模型的真实引用，删除会直接破坏余额试查能力。
 - **它与 `DbConsoleController` 不是重复实现**：数据库 Web 管理器归 `spring-support-datapool-starter`（`/ms/monitor/db`），datasearch 不查业务库、不承载 SQL 控制台；两者只是名称相近。
 - monitor 的 `DatasearchConflictResolve` 仅用于「monitor 同时装入 datasearch 与 common-service/common-system 历史控制器」时消解 `/v2/holiday/get`、`/v2/ip/lookup` 的重复映射；单独的历史控制器宿主仍依赖原实现，不能为消除重复而整体删除。
+
+## monitor 混入业务归口（2026-11-28）
+
+- 主机文件/网卡/画像/系统运维、维护计划、服务节点与操作日志、服务节点发现归 `spring-support-server-starter`；monitor 只保留指标历史、告警、采集调度与 Agent 心跳侧副作用。
+- 文件桶资产与文件网关装配归 `spring-support-filesystem-starter`；Redis 数据源管理归 `spring-support-datapool-starter`；APM 操作日志归 `spring-support-apm-starter`。
+- `SystemRedisKv` 旧端点与 common-system 的 `/v2/cache/**` 重复，已删除；应用自身 Redis 管理不再放进 monitor。
+- monitor 业务模块整体迁入 `spring-api-support-common-parent/spring-api-support-common-monitor-starter`，API 侧 `spring-api-support-monitor-starter` 只做部署装配。
 
 ## 提交
 

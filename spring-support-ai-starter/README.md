@@ -95,7 +95,7 @@ sequenceDiagram
 
 > 自动装配入口：`META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 共登记 8 个类（模块内无 `spring.factories`）——`AiConfiguration`、`AiGatewaySecurityAutoConfiguration`、`AiGenerateAutoConfiguration`、`AiProtocolServerConfiguration`、`UsageAutoConfiguration`、`AiCacheAutoConfiguration`、`AiActuatorAutoConfiguration`、`ProviderLimitAutoConfiguration`。
 
-> 另有组件扫描的支撑配置类：`RagAutoConfiguration`、`CacheResilienceConfiguration`（缓存读写异常降级 WARN）、`AiTransactionConfiguration`（共享 `TransactionTemplate`）、`AiWebMvcConverterConfiguration`、`AiFileDirConfiguration`、`AiAsyncConfiguration`、`AiCacheKeyGeneratorAliasConfiguration`。
+> 另有组件扫描的支撑配置类：`RagAutoConfiguration`、`CacheResilienceConfiguration`（缓存读写异常降级 WARN）、`AiTransactionConfiguration`（共享 `TransactionTemplate`）、`AiWebMvcConverterConfiguration`、`AiAsyncConfiguration`、`AiCacheKeyGeneratorAliasConfiguration`。
 
 ## 5. 完整配置
 

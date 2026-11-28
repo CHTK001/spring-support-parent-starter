@@ -1,13 +1,13 @@
 # spring-support-server-starter
 
-服务器资产与远程运维 starter：主机台账、分组、登录身份与密钥库等资产管理，基于 Guacamole（guacd）的 SSH/RDP/VNC 远程控制 WebSocket 网关与 SSH/VNC/Telnet/RDP 直连桥、SFTP 文件管理、批量命令执行与 cron 计划任务、Git+Maven 发布管理、Docker/Kubernetes 主机工作台、代理池与主机隧道、邮箱、远控令牌、SSE 推送、Arthas/Agent 构件投放及维护计划台账。在 spring-support 体系中属业务 starter 层：向下依赖 common/datasource/mybatis/filesystem/socket 等 starter 与 utils-* 工具包，向上被 spring-support-monitor-starter、spring-support-docker-starter 依赖；以内部库形式由宿主应用引入，经 `ServerAutoConfiguration` 自动装配。
+服务器资产与远程运维 starter：主机台账、分组、登录身份与密钥库等资产管理，基于 Guacamole（guacd）的 SSH/RDP/VNC 远程控制 WebSocket 网关与 SSH/VNC/Telnet/RDP 直连桥、SFTP 文件管理、批量命令执行与 cron 计划任务、Git+Maven 发布管理、Docker/Kubernetes 主机工作台、代理池与主机隧道、邮箱、远控令牌、SSE 推送、Arthas/Agent 构件投放、维护计划台账、服务节点管理，以及主机文件/网络/画像/系统管理运行时。在 spring-support 体系中属业务 starter 层：向下依赖 common/datasource/mybatis/filesystem/socket 等 starter 与 utils-* 工具包，向上被 spring-support-monitor-starter、spring-api-support-common-docker-starter 依赖；以内部库形式由宿主应用引入，经 `ServerAutoConfiguration` 自动装配。
 
 ## 1. 架构图
 
 ```mermaid
 flowchart LR
     MON["spring-support-monitor-starter"] --> SERVER
-    DOC["spring-support-docker-starter"] --> SERVER
+    DOC["spring-api-support-common-docker-starter"] --> SERVER
 
     subgraph SERVER["spring-support-server-starter"]
         direction TB
@@ -266,7 +266,7 @@ server:
 - **guacd 是外部进程**：本模块只做协议对接，不内嵌 guacd；先独立部署 guacd（默认 `127.0.0.1:4822`），再配置 `guacd.host/port`。`guacd.client-host` 必须是浏览器可达地址；前后端同域（反向代理）部署时置空。
 - **会话与并发**：`session-idle-minutes` 按业务巡检节奏设置（0/负数无兜底，会话会被立即判定超时）；`exec-concurrency` 必须为正整数，且不要超过目标机 SSH 并发承受能力。
 - **磁盘与权限**：`guacd.drive-path`、`guacd.recording-path` 指向的目录需真实存在、对 guacd 进程可写；录屏文件可能很大，需配额与定期清理。
-- **数据库初始化**：首次启用需执行 `src/main/resources/db/init/V3.1__init_all_server.sql`（或由宿主启动时的 FlywayLike 初始化），共 15 张 `server_*` 表；维护计划表由 `V3.3__init_maintenance_plan.sql` 创建。
+- **数据库初始化**：首次启用需执行 `src/main/resources/db/init/V3.1__init_all_server.sql`（或由宿主启动时的 FlywayLike 初始化），共 15 张 `server_*` 表；维护计划表由 `V3.3__init_maintenance_plan.sql` 创建，服务节点与操作日志由 `V3.4__init_server_manage.sql` 创建。
 - **运行期键值优先**：5.3 的 `server_config` 运行期键值读取优先于本节静态配置，且保存后热生效（`ServerConfigChangedEvent`）；调整 guacd/RDP/VNC/SSH 体验参数优先走 `/ms/server/config`，无需重启。
 - **开关语义**：`plugin.server.support.enabled` 与 `plugin.server.support.serial.enabled` 都不是模块开关（本模块无 `@ConditionalOnProperty`）；真要停用只能移除依赖。
 - **上传默认值不覆盖显式配置**：5.4 的默认值仅在对应键未配置时追加；一旦显式配置 `spring.servlet.multipart.*` / `server.tomcat.*`，以显式值为准。
@@ -281,7 +281,7 @@ server:
 </dependency>
 ```
 
-最小启用（本模块不可单独运行，`spring-boot-maven-plugin` 已 `skip`，产出原始 jar）：宿主引入依赖并保证有数据源 → 执行建表脚本 `src/main/resources/db/init/V3.1__init_all_server.sql`（建全部 15 张 `server_*` 表）→ 执行 `V3.3__init_maintenance_plan.sql`（维护计划）→ 按需覆盖配置 → 注入服务调用：
+最小启用（本模块不可单独运行，`spring-boot-maven-plugin` 已 `skip`，产出原始 jar）：宿主引入依赖并保证有数据源 → 执行建表脚本 `src/main/resources/db/init/V3.1__init_all_server.sql`（建全部 15 张 `server_*` 表）→ 执行 `V3.3__init_maintenance_plan.sql`（维护计划）与 `V3.4__init_server_manage.sql`（服务节点）→ 按需覆盖配置 → 注入服务调用：
 
 ```yaml
 plugin:
@@ -321,6 +321,8 @@ public class ServerOpsDemo {
 | `spring-support-ai-starter` | 发布 AI 门面（`ReleaseAiCapability`） | `ReleaseAiConfiguration` 因 `@ConditionalOnClass` 不装配，AI 入口自动隐藏 |
 | `spring-support-job-starter` | 定时发布 / Git 定时轮询 | 无 `JobOperator` Bean，`ReleaseScheduleServiceImpl` 因 `@ConditionalOnBean` 不装配，仅影响定时能力 |
 
+主机运行时统一经 `SystemInfoProvider` / `HostOperationsProvider` SPI 路由到本机 OSHI、Agent HTTP、SSH 或 WinRM；`/ms/server/host/file|network|profile` 与 `/ms/system` 路径保持不变。SSH/SFTP 复用 `ConnectionManager`，monitor 只通过 `HostPushStateQuery` 与 `HostAgentHistoryWriter` 适配监控在线态和历史。
+
 其它关键依赖：`spring-boot-starter-web` / `spring-boot-starter-websocket`（REST 与 WS 端点）、`spring-support-datasource-starter` + `spring-support-mybatis-starter`（持久化）、`spring-support-filesystem-starter`（分片上传）、`spring-support-socket-sse-starter` + `spring-support-socket-starter`（SSE）、`org.apache.guacamole:guacamole-common:1.6.0`（对接外部 guacd 进程）、`com.fazecast:jSerialComm:2.11.0`（串口，缺一报 ClassNotFound / 编译失败）、`utils-support-ssh-starter` / `utils-support-winrm-starter`（按系统类型路由）、`utils-support-common-starter`（RDP 原生桥契约：`rdpj.dll` + JNA 由部署期按需加入的 `utils-support-native-rdp` 提供，缺失时 `RdpjNative.exists()` 为 false，直连提示不支持）、`utils-support-email/git/maven/datasearch-starter`。
 
 ## 7. 使用场景
@@ -342,7 +344,7 @@ public class ServerOpsDemo {
 | 相邻模块 | 分工 | 建议 |
 |---|---|---|
 | `spring-support-monitor-starter` | 依赖本模块台账与 SSH 通道做指标 / 日志采集与告警 | 资产底座在本模块，展示与告警在 monitor |
-| `spring-support-docker-starter` | 依赖本模块主机台账做容器编排扩展 | 单机 Docker 用本模块工作台；跨主机编排走 docker-starter |
+| `spring-api-support-common-docker-starter` | 依赖本模块主机台账做容器编排扩展 | 单机 Docker 用本模块工作台；跨主机编排走 docker-starter |
 | `spring-support-ai-starter` | 提供发布 AI 门面实现（`ChatClientRegistry`） | 只做发布辅助；模型路由 / 渠道管理不属于本模块 |
 | `spring-support-job-starter` | 分布式任务调度 | 内建时间轮够用；需分布式调度 / 分片再引入 |
 | `spring-support-swagger-starter` | 接口文档 | 随宿主装配，无需单独配置 |

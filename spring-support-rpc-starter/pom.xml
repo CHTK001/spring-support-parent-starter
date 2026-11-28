@@ -7,14 +7,13 @@
     <version>4.0.0.51</version>
   </parent>
   <artifactId>spring-support-rpc-starter</artifactId>
-  <properties>
-    <dubbo.version>3.3.6</dubbo.version>
-  </properties>
   <dependencies>
+    <!-- Dubbo 协议实现：当前 RPC 门面的默认运行实现 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-rpc-dubbo-starter</artifactId>
     </dependency>
+    <!-- RPC 注解、服务信息与 Spring 兼容工具 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>

@@ -15,16 +15,10 @@
 
 <dependencies>
 
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
+        <!-- Socket 会话契约：SSE 实现的直接编译与运行依赖 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-starter</artifactId>
-            
-            <optional>true</optional>
         </dependency>
 
         <!-- Spring Web MVC -->

@@ -34,6 +34,7 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
     </dependency>
+    <!-- 工具层公共能力：Swagger2 文档聚合所需的通用工具与常量 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-common-starter</artifactId>

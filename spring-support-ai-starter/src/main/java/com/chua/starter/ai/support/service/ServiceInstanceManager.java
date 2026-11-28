@@ -37,6 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.StringUtils;
 
@@ -1500,6 +1503,10 @@ public class ServiceInstanceManager {
                            Map<String, Object> reqBody, Caller caller) {
         long start = System.currentTimeMillis();
         final long chunkCreated = System.currentTimeMillis() / 1000;
+        // 缓冲响应必须等回调落完响应体再返回，否则 NIO 会先交付默认的空 200。
+        boolean buffered = mode.endsWith("_nonstream");
+        CountDownLatch completed = new CountDownLatch(1);
+        AtomicBoolean terminal = new AtomicBoolean();
         UserResume resume = new UserResume();
         resume.setUserId(inst.getUserId());
         resume.setRoles(java.util.Collections.emptySet());
@@ -1530,6 +1537,7 @@ public class ServiceInstanceManager {
                             }
                         },
                         (reply, usage) -> {
+                            if (buffered && !terminal.compareAndSet(false, true)) return;
                             try {
                                 int p = usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0;
                                 int c = usage != null && usage.getOutputTokens() != null ? usage.getOutputTokens() : 0;
@@ -1608,9 +1616,12 @@ public class ServiceInstanceManager {
                                 consumeQuota(caller, true);
                             } catch (Exception e) {
                                 log.warn("[ServiceInstance] 完成日志/额度回填失败: {}", e.getMessage());
+                            } finally {
+                                completed.countDown();
                             }
                         },
                         error -> {
+                            if (buffered && !terminal.compareAndSet(false, true)) return;
                             log.error("[ServiceInstance] 上游调用失败: {}", error.getMessage(), error);
                             try {
                                 if (!st.closed) {
@@ -1630,6 +1641,8 @@ public class ServiceInstanceManager {
                                 consumeQuota(caller, false);
                             } catch (Exception e) {
                                 log.debug("[ai] 回调执行失败，已忽略: {}", e.getMessage());
+                            } finally {
+                                completed.countDown();
                             }
                         },
                         reasoning -> {
@@ -1680,6 +1693,20 @@ public class ServiceInstanceManager {
                             }
                         }
                 ));
+        if (buffered) {
+            try {
+                if (!completed.await(180, TimeUnit.SECONDS) && terminal.compareAndSet(false, true)) {
+                    st.closed = true;
+                    tryWriteError(exchange, 504, "upstream_timeout", "上游响应超时");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                if (terminal.compareAndSet(false, true)) {
+                    st.closed = true;
+                    tryWriteError(exchange, 503, "request_interrupted", "请求已中断");
+                }
+            }
+        }
     }
 
     /**

@@ -14,24 +14,26 @@
     <description>UEBA Spring Boot Starter：用户实体行为分析（IP 异常流量检测 + 行为序列分析 + MiniMind 语义解释）自动装配</description>
 
     <dependencies>
+        <!-- 自动配置与条件注解 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- 配置元数据处理器：仅构建期使用 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- UEBA 分析引擎 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ueba-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
+        <!-- 服务信息贡献契约：当前由 logger-starter 提供，按真实类型直接依赖 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-support-logger-starter</artifactId>
         </dependency>
     </dependencies>
     <build>

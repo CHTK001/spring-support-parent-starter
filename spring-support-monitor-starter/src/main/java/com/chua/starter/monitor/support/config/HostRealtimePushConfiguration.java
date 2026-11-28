@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.support.config;
 
-import com.chua.starter.monitor.support.service.HostProfileService;
+import com.chua.starter.server.support.service.HostProfileService;
 import com.chua.starter.monitor.support.service.HostMetricHistoryService;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
@@ -39,6 +39,11 @@ public class HostRealtimePushConfiguration {
      * 实时推送服务
     */
     private final MonitorPushService monitorPushService;
+
+    /**
+     * 主机延迟与在线状态推送桥接（只提供回调，不注册 hook）
+     */
+    private final HostPushBridgeConfiguration pushBridge;
 
     /**
      * 告警规则引擎（评估主机延迟/在线/使用率规则）
@@ -101,10 +106,7 @@ public class HostRealtimePushConfiguration {
             }
             scheduler.setDelayHook(host -> {
                 try {
-                    monitorPushService.pushHostDelay(
-                            host.getId(), host.getServerHostName(),
-                            host.getServerHostAddress(), host.getServerHostPort(),
-                            host.getServerHostDelayMs());
+                    pushBridge.onDelayDetected(host);
                 } catch (Exception e) {
                     log.debug("[monitor] 延迟推送跳过 hostId={}: {}", host.getId(), e.getMessage());
                 }
@@ -123,7 +125,7 @@ public class HostRealtimePushConfiguration {
             scheduler.setOnlineHook(host -> {
                 try {
                     boolean online = host.getServerHostOnline() != null && host.getServerHostOnline() == 1;
-                    monitorPushService.pushHostOnline(host.getId(), host.getServerHostName(), online);
+                    pushBridge.onOnlineChanged(host);
                     AlarmEngineService alarmEngine = alarmEngineProvider.getIfAvailable();
                     if (alarmEngine != null && host.getId() != null) {
                         // 离线(0)/在线(1)均上送，由规则条件（LT 1）判定离线告警

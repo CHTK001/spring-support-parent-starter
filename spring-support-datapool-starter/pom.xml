@@ -20,14 +20,25 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
-        <!-- 租户数据源查询契约由 common-starter 提供，台账实现不反向依赖 API 租户模块。 -->
+        <!-- 自动配置装配：本模块的 AutoConfiguration / 条件注解与属性绑定基类 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Web 契约：本模块自带 /ms/monitor/db 等 MVC 控制器与 MultipartFile 上传。
+             按 R8 用 spring-web / spring-webmvc + provided（容器由部署壳提供），
+             不把 spring-boot-starter-web（含 Tomcat）带给所有消费方 -->
+        <!-- MVC 注解与 HandlerMethod 类型（@RestController/@RequestMapping 的解析靶点）；provided 同上 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Web MVC 运行时契约：Controller 注册与参数解析（容器由部署壳提供，不传递 Tomcat） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <!-- 数据访问：应用主数据源 + MyBatis-Plus -->
@@ -64,6 +75,11 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
+        <!-- Redis 管理：共享值对象与 Jedis 客户端由 utils-redis 提供，datapool 直接声明 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-redis-starter</artifactId>
+        </dependency>
 
         <!-- AI 文本生成 SQL（text2sql）：optional —— 只有宿主应用同时引入 ai-starter 时
              该能力才生效；未引入时 ObjectProvider 取不到实现，ai/status 端点如实上报
@@ -85,6 +101,7 @@
             <artifactId>utils-support-word-starter</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- PDF 导出（optional）：需宿主提供 wkhtmltopdf 二进制，未引入时端点如实 501 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-pdf-starter</artifactId>
@@ -113,19 +130,16 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasync-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <!-- 数据同步 FILE/DIR 源：Excel(.xlsx/.xls) 读取依赖 Apache POI -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.4.1</version>
         </dependency>
         <!-- 数据同步 HTTP_HTML 源：HTML 表格/CSS 选择器解析依赖 Jsoup -->
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.18.3</version>
         </dependency>
     </dependencies>
 

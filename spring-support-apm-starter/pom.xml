@@ -13,30 +13,49 @@
     <description>APM 基础模块：定义 ApmProvider SPI，聚合 OtnlEngine 数据面为统一 REST 接口，支持嵌入 Servlet 与独立 Server 两种启动方式</description>
 
     <dependencies>
+        <!-- 平台契约：操作日志解析、服务信息贡献与统一响应 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
-
-        <!-- OtnlEngine SPI 与统一数据模型（utils 层） -->
+        <!-- 操作日志仅在宿主提供 DataSource 时装配，持久化编译契约不向 standalone 强制打包 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
+            <artifactId>spring-support-datasource-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
-
-        <!-- 统一 REST 的 JSON 序列化 -->
+        <!-- APM 操作日志持久层：实体、Mapper 与分页；库模块 provided -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 接口文档注解：库模块 provided -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- 嵌入模式的 Servlet 容器 API（optional：不强制使用方引入 Web） -->
+        <!-- 默认写操作落点通过 RequestUtils 读取当前请求的操作人与客户端 IP -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-spring-starter</artifactId>
+        </dependency>
+
+        <!-- 自动配置条件与 DataSourceAutoConfiguration -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <!-- 嵌入模式的 Servlet API：编译期需要，容器由部署宿主提供 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc</artifactId>
+            <scope>provided</scope>
         </dependency>
 
+        <!-- 配置元数据处理器：仅构建期使用 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

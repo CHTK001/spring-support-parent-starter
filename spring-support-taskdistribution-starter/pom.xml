@@ -13,11 +13,7 @@
     <description>任务分发模块 - 基于 TaskDistributionFramework 实现任务派发、结果回传和负载均衡</description>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
+        <!-- 配置元数据处理器：仅构建期使用 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
@@ -30,11 +26,10 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
-        <!-- MyBatis-Plus 集成（数据库存储 SPI） -->
+        <!-- MyBatis-Plus 数据库存储：DB Store 的直接编译与运行依赖 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
-            <optional>true</optional>
         </dependency>
 
         <!-- Swagger API 文档注解（provided，不强制依赖） -->

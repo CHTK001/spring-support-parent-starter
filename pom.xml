@@ -116,8 +116,6 @@
         <module>spring-support-ssh-starter</module>
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
-        <!-- 支付业务模块 -->
-        <module>spring-support-payment-starter</module>
         <!-- 内网穿透标准 starter（SPI + 统一入口 /ms/tunnel），
              下列 ngrok / cloudflared / tailscale 模块均为其提供方实现 -->
         <module>spring-support-tunnel-starter</module>
@@ -127,15 +125,10 @@
         <module>spring-support-tunnel-cloudflared-starter</module>
         <!-- 内网穿透模块（基于 Tailscale Funnel） -->
         <module>spring-support-tunnel-tailscale-starter</module>
-        <!-- 教育AI模块 -->
-        <module>spring-support-eduai-starter</module>
-        <!-- 设备管理模块（海康/大华等平台接入） -->
-        <module>spring-support-device-starter</module>
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datapool-starter</module>
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
-        <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
         <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
         <!-- CDP 调试模块：headless Chromium + /ms/cdp REST + /ws/cdp WebSocket + 实时页面反向代理，
              独立成模块，宿主引入依赖即可使用；monitor-starter 作为聚合方依赖它 -->
@@ -147,8 +140,6 @@
         <module>spring-support-ai-training-starter</module>
         <!-- UEBA 用户实体行为分析模块 -->
         <module>spring-support-ueba-starter</module>
-        <!-- 消息推送模块 -->
-        <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
         <!-- 任务分发模块 -->
         <module>spring-support-taskdistribution-starter</module>       <!-- 任务分发框架 -->
 <module>spring-support-apm-starter</module>            <!-- APM 基础模块：ApmProvider SPI + 统一 REST（嵌入/独立双模式） -->
@@ -170,6 +161,8 @@
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.51</utils.version>
+        <!-- Lucene：collect_record 全文检索内核（docs/查询/中文分析）统一版本 -->
+        <lucene.version>9.12.2</lucene.version>
         <spring.boot.version>4.1.2</spring.boot.version>
         <reactor.core.version>3.8.8</reactor.core.version>
         <!-- javax 命名空间的 JAXB 实现版本：winrm4j/CXF 走 javax.xml.bind，
@@ -224,6 +217,7 @@
         <spel-extension.version>1.0.0</spel-extension.version>     <!-- SpEL扩展版本 -->
         <mybatis-plus-generator.version>3.5.18</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
         <guava.version>33.8.0-jre</guava.version>                              <!-- Google Guava工具库版本 -->
+        <guacamole.version>1.6.0</guacamole.version>                          <!-- Guacamole 协议客户端版本 -->
         <slf4j.version>2.0.20</slf4j.version>                           <!-- SLF4J版本（对齐 Boot 4.1 BOM 托管值 2.0.20，勿用 2.1.0-alpha 预发布） -->
         <unirest.version>3.14.5</unirest.version>
         <justauth.version>1.16.7</justauth.version>
@@ -239,6 +233,7 @@
         <caffeine.version>3.3.1</caffeine.version>                  <!-- Caffeine缓存库版本 -->
         <byte-buddy.version>1.18.17-jdk5</byte-buddy.version>            <!-- ByteBuddy动态代理库版本 -->
         <okhttp.version>4.12.0</okhttp.version>                     <!-- OkHttp HTTP客户端版本 -->
+        <httpclient.version>4.5.14</httpclient.version>             <!-- Apache HttpClient 4.x 单源版本，避免 DL4J 等上游拉到未缓存旧版 -->
         <wechatpay.version>0.2.17</wechatpay.version>               <!-- 微信支付 Java SDK 版本 -->
         <alipay.sdk.version>4.40.1067.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
         <statemachine.version>4.0.2</statemachine.version>           <!-- Spring State Machine 版本 -->
@@ -309,7 +304,6 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- Servlet 契约 - 所有 Web 相关 starter 的通用编译期依赖，只在父模块声明一次；
@@ -409,6 +403,12 @@
                 <version>${ngrok.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.ngrok</groupId>
+                <artifactId>ngrok-java-native</artifactId>
+                <version>${ngrok.version}</version>
+                <classifier>${os.detected.classifier}</classifier>
+            </dependency>
+            <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
@@ -468,6 +468,11 @@
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.guacamole</groupId>
+                <artifactId>guacamole-common</artifactId>
+                <version>${guacamole.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -671,13 +676,17 @@
                 <artifactId>spring-support-collect-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <!-- Docker 独立模块：依赖 server-starter（主机台账/凭据/SSH 连接池） -->
+            <!-- 账号与服务器业务模块：版本随本 reactor -->
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>spring-support-docker-starter</artifactId>
+                <artifactId>spring-support-account-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-server-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <!-- 第三方服务集成 -->
             <dependency>
@@ -732,12 +741,6 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ueba-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <!-- 消息推送模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-message-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!-- 系统管理模块（/v2/user/** / /v2/third/** / /v2/captcha / /v2/sms / /v2/cache /
@@ -810,6 +813,22 @@
                 <artifactId>utils-support-calcite-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
+            <!-- 数据中台执行核心与网页采集工具：版本随 utils 体系 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datalake-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-crawler-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>1.24.1</version>
+            </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-nacos-starter</artifactId>
@@ -870,6 +889,16 @@
                 <version>${utils.version}</version>
             </dependency>
             <!-- Jackson模块版本管理 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-xml</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson.datatype</groupId>
                 <artifactId>jackson-datatype-jdk8</artifactId>
@@ -977,6 +1006,11 @@
                 <version>${byte-buddy.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp</artifactId>
                 <version>${okhttp.version}</version>
@@ -990,6 +1024,42 @@
                 <groupId>com.github.wechatpay-apiv3</groupId>
                 <artifactId>wechatpay-java-core</artifactId>
                 <version>${wechatpay.version}</version>
+            </dependency>
+            <!-- 钉钉 SDK 的 Tea/OpenAPI 传递依赖：根 POM 单源钉版，避免离线解析版本区间 -->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>tea</artifactId>
+                <version>1.4.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>tea-openapi</artifactId>
+                <version>0.3.17</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>tea-util</artifactId>
+                <version>0.2.28</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>tea-xml</artifactId>
+                <version>0.1.7</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>openapiutil</artifactId>
+                <version>0.2.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>endpoint-util</artifactId>
+                <version>0.0.8</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>alibabacloud-gateway-spi</artifactId>
+                <version>0.0.3</version>
             </dependency>
             <dependency>
                 <groupId>com.alipay.sdk</groupId>
@@ -1117,6 +1187,331 @@
                 <groupId>com.jcraft</groupId>
                 <artifactId>jsch</artifactId>
                 <version>${jsch.version}</version>
+            </dependency>
+
+            <!-- ================= 版本单源（2026-11-28 收敛） =================
+                 下列制品此前由各业务模块 inline 声明版本，现统一托管于此：
+                 子模块只写 groupId + artifactId，不得再写 inline <version>。 -->
+
+            <!-- 宿主侧业务 starter（monitor 等按需装配，不在业务模块内写死版本） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-apm-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-control-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datapool-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-tunnel-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- utils 制品：版本随 utils.version 单源，子模块不写 inline 版本 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-cad-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-claude-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-cloudflared-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datalake-sink-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datalake-subscribe-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datasync-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-dl4j-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-jitllm-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-dingding-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-duckduckgo-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-feishu-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-filestorage-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-flyway-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-git-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-guacamole-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-h2-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-ilink-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-kcp-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-maven-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-metrics-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mosi-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-ngrok-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-openai-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-osgi-bundle-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-osgi-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-prometheus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-qq-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-runtime-apm</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-skywalking-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-sqlite-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tailscale-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tika-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tshark-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-ueba-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-whatsapp-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zai-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zhipu-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 第三方运行时：集中托管，子模块不写 inline 版本 -->
+            <!-- Lucene：collect_record 全文检索内核与中文查询分析 -->
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-core</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-queryparser</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.lucene</groupId>
+                <artifactId>lucene-analysis-common</artifactId>
+                <version>${lucene.version}</version>
+            </dependency>
+            <!-- OIDC：oauth-third 的标准授权码流程与 ID Token 校验 -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>oauth2-oidc-sdk</artifactId>
+                <version>11.38.2</version>
+            </dependency>
+            <!-- JOSE：ai 侧签发/校验 JWT 所需的 JOSE 实现 -->
+            <dependency>
+                <groupId>com.nimbusds</groupId>
+                <artifactId>nimbus-jose-jwt</artifactId>
+                <version>9.37.3</version>
+            </dependency>
+            <!-- okio：ai 侧 HTTP 客户端（okhttp 4）的 IO 层 -->
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>3.18.2</version>
+            </dependency>
+            <!-- jvector：ai 侧本地向量索引 -->
+            <dependency>
+                <groupId>io.github.jbellis</groupId>
+                <artifactId>jvector</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+            <!-- MCP SDK：ai 侧 MCP 工具协议客户端 -->
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp</artifactId>
+                <version>1.0.1</version>
+            </dependency>
+            <!-- r2dbc-spi：数据源引擎响应式读取契约 -->
+            <dependency>
+                <groupId>io.r2dbc</groupId>
+                <artifactId>r2dbc-spi</artifactId>
+                <version>0.9.1.RELEASE</version>
+            </dependency>
+            <!-- agrona：高性能并发容器（ai 侧索引/缓冲实现依赖） -->
+            <dependency>
+                <groupId>org.agrona</groupId>
+                <artifactId>agrona</artifactId>
+                <version>1.20.0</version>
+            </dependency>
+            <!-- JGit：发布管理的 Git 仓库操作 -->
+            <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>7.8.0.202609011348-r</version>
+            </dependency>
+            <!-- pty4j：ai 终端会话伪终端支持 -->
+            <dependency>
+                <groupId>org.jetbrains.pty4j</groupId>
+                <artifactId>pty4j</artifactId>
+                <version>0.14.0</version>
+            </dependency>
+            <!-- 串口：服务器资产的串口设备采集 -->
+            <dependency>
+                <groupId>com.fazecast</groupId>
+                <artifactId>jSerialComm</artifactId>
+                <version>2.11.0</version>
+            </dependency>
+            <!-- OSHI：主机硬件/操作系统指标采集（统一到 6.8.0，monitor 与 system 不再各钉一版） -->
+            <dependency>
+                <groupId>com.github.oshi</groupId>
+                <artifactId>oshi-core</artifactId>
+                <version>6.8.0</version>
+            </dependency>
+            <!-- POI：Excel 读写（datapool 导入导出与 device 协议模板，统一到 5.5.1） -->
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>5.5.1</version>
+            </dependency>
+            <!-- JNA：OSHI/Guacamole 的原生层依赖，显式钉住避免上游传旧版 -->
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>5.19.1</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna-platform</artifactId>
+                <version>5.19.1</version>
+            </dependency>
+            <!-- Knife4j：OpenAPI3 文档 UI 的唯一运行时来源（swagger-starter 提供） -->
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>4.5.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

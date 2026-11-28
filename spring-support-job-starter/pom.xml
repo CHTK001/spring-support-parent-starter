@@ -15,11 +15,7 @@
     <description>任务模块: @Job + Scheduler/Executor/SINGLE 三模式, sync 下拆 scheduler/executor</description>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
+        <!-- 共享契约：ReturnResult、异常与鉴权工具 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
@@ -33,21 +29,17 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 持久层（optional）：作业与任务记录的 MyBatis-Plus 映射，宿主已引入时生效 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!-- RSocket 传输：分布式作业调度与执行节点间通信 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-rsocket-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-network-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
 

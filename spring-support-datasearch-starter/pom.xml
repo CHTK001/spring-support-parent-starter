@@ -44,6 +44,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 自动配置装配：本模块 AutoConfiguration、条件注解与属性绑定基类 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -59,7 +60,6 @@
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
-            <version>1.24.1</version>
         </dependency>
 
         <!-- 平台 API 注解契约：@TokenForIgnore 由 common-starter 提供，不引入完整 OAuth 客户端栈 -->

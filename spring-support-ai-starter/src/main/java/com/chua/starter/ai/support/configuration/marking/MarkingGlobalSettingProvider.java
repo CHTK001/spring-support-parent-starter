@@ -14,7 +14,7 @@ import java.util.List;
  * 统一读写，与 {@code paper}（试卷识别）、{@code compose}（AI 组卷）分组并列出现在
  * 「试卷配置」里。</p>
  *
- * <p><b>归属（2026-10-29 收敛）：</b>本类原先住在 {@code spring-support-eduai-starter}，
+ * <p><b>归属（2026-10-29 收敛）：</b>本类原先住在 {@code spring-api-support-common-eduai-starter}，
  * 而渲染 {@code marking} 的「试卷配置」面板是 AI 模块的
  * {@code pages/ai/components/setting/PaperConfigPanel.vue}。分组定义留在业务侧，
  * 会让「只依赖 AI 模块」的宿主的试卷配置缺一组。故迁入本模块，eduai 侧只依赖

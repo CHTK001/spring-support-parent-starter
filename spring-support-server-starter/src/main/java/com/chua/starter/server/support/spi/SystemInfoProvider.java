@@ -1,0 +1,748 @@
+// [P3C A20 豁免] A20/A30/A31: 含日志/界面/SQL 字符串字面量等非业务魔法值场景，豁免。
+package com.chua.starter.server.support.spi;
+
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.server.support.util.HostPlatforms;
+import com.chua.starter.server.support.enums.ServiceAction;
+import com.chua.starter.server.support.enums.ShellDialect;
+import com.chua.starter.server.support.model.DiskPartitionRowVO;
+import com.chua.starter.server.support.model.DiskRowVO;
+import com.chua.starter.server.support.model.DiskUsageNodeVO;
+import com.chua.starter.server.support.model.DriverRowVO;
+import com.chua.starter.server.support.model.DeletedFilesVO;
+import com.chua.starter.server.support.model.EnvVarVO;
+import com.chua.starter.server.support.model.FileEntryVO;
+import com.chua.starter.server.support.model.RemoteFileStatVO;
+import com.chua.starter.server.support.model.FirewallRuleInputVO;
+import com.chua.starter.server.support.model.FirewallRuleRowVO;
+import com.chua.starter.server.support.model.HostActionVO;
+import com.chua.starter.server.support.model.HostInfoVO;
+import com.chua.starter.server.support.model.InodeUsageVO;
+import com.chua.starter.server.support.model.MountRowVO;
+import com.chua.starter.server.support.model.NetProcessRowVO;
+import com.chua.starter.server.support.model.NetworkConfigVO;
+import com.chua.starter.server.support.model.NetworkInterfaceRowVO;
+import com.chua.starter.server.support.model.ProcessRowVO;
+import com.chua.starter.server.support.model.ProcessSummaryVO;
+import com.chua.starter.server.support.model.ProcessThreadRowVO;
+import com.chua.starter.server.support.model.ServiceRowVO;
+import com.chua.starter.server.support.model.SystemConfigItemVO;
+import com.chua.starter.server.support.entity.MsServerHost;
+
+import java.io.InputStream;
+import java.util.List;
+import com.chua.common.support.utils.StringUtils;
+
+/**
+ * 系统信息提供者 SPI 扩展点。
+ *
+ * <p>按主机接入方式提供统一的系统信息采集与动作能力，内置 4 种实现：
+ * Local(OSHI) / Agent-HTTP / Linux-Mac SSH / Windows WinRM。返回值一律为强类型视图，
+ * 通道间的键名与量纲差异在实现内部消化，调用方不再接触散列结构。</p>
+ *
+ * <p>动作（杀进程、重启进程、服务启停、网络配置）与平台专属采集（防火墙、驱动、线程、分区）
+ * 的命令文本不在通道实现里，也不在调用方，统一由 {@link HostOperations} 的平台子类给出：
+ * 通道只提供 {@code exec} 与 {@link #shellDialect}，平台差异由能力集按真实平台解析。</p>
+ *
+ * <p>扩展方式：实现本接口并标注 {@code @Spi(value = "唯一别名", order = N)}，把实现类全限定名追加到
+ * {@code META-INF/extensions/com.chua.starter.server.support.spi.SystemInfoProvider}（同包及子包内的
+ * 实现也会被自动扫描到）。注意三点：</p>
+ * <ul>
+ *   <li>实例由 SPI 框架自行创建，不进 Spring 容器，因此必须保留无参构造，依赖用
+ *       {@code SpringBeanUtils.getBean(...)} 懒查找；</li>
+ *   <li>定义按别名归并，别名重复会相互覆盖，每个通道必须用不同别名；</li>
+ *   <li>{@code order} 决定路由优先级（大者优先），路由器按降序取第一个 {@code supports} 的实现。</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Spi(SystemInfoProvider.SPI_NAME)
+public interface SystemInfoProvider {
+
+    /**
+     * 系统信息采集 SPI 扩展名
+     */
+    String SPI_NAME = "system-info-provider";
+
+    /**
+     * 是否支持采集该主机。
+     *
+     * <p>路由器按 SPI 优先级取第一个返回 true 的实现，因此实现必须以用户所选的采集方式为判据，
+     * 不得凭地址、平台等旁证抢接其他通道的宿主——高优先级实现一旦放宽判据，就会静默顶掉真实通道，
+     * 采回来的是管控机自己的数据。</p>
+     *
+     * @param host 目标主机
+     * @return 支持返回 true
+     */
+    boolean supports(MsServerHost host);
+
+    /**
+     * 目标主机的真实操作系统平台。
+     *
+     * <p>默认按 {@code serverHostOsType} 解析；当该字段承载的是接入方式（AGENT / LOCAL）
+     * 而非平台时，由具体 Provider 用自己的采集结果覆写。</p>
+     *
+     * @param host 目标主机
+     * @return WINDOWS / LINUX / MAC，无法判定时返回空串
+     */
+    default String platform(MsServerHost host) {
+        return HostPlatforms.normalize(host == null ? null : host.getServerHostOsType());
+    }
+
+    /**
+     * 主机基础信息（CPU / 内存 / 操作系统等）。
+     *
+     * @param host 目标主机
+     * @return 基础信息视图，不为 null
+     */
+    HostInfoVO hostInfo(MsServerHost host);
+
+    /**
+     * 分页查询进程列表。
+     *
+     * @param host     目标主机
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 进程视图列表，永不为 null
+     */
+    List<ProcessRowVO> processes(MsServerHost host, int page, int pageSize);
+
+    /**
+     * 进程与线程总数（概览用）。
+     *
+     * <p>默认复用一次全量进程列表；命令行、路径按进程补全的通道应覆写本方法走轻量快照，
+     * 否则概览会被进程明细的补全耗时拖垮。</p>
+     *
+     * @param host 目标主机
+     * @return 计数结果，永不为 null
+     */
+    default ProcessSummaryVO processSummary(MsServerHost host) {
+        List<ProcessRowVO> rows = processes(host, 1, 10000);
+        long threads = 0L;
+        int count = 0;
+        if (rows != null) {
+            for (ProcessRowVO row : rows) {
+                count++;
+                threads += row.threads();
+            }
+        }
+        return new ProcessSummaryVO(count, threads);
+    }
+
+    /**
+     * 分页查询服务列表。
+     *
+     * @param host     目标主机
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 服务视图列表，永不为 null
+     */
+    List<ServiceRowVO> services(MsServerHost host, int page, int pageSize);
+
+    /**
+     * 磁盘列表。
+     *
+     * @param host 目标主机
+     * @return 磁盘视图列表，永不为 null
+     */
+    List<DiskRowVO> disks(MsServerHost host);
+
+    /**
+     * 网络接口列表。
+     *
+     * @param host 目标主机
+     * @return 网卡视图列表，永不为 null
+     */
+    List<NetworkInterfaceRowVO> networkInterfaces(MsServerHost host);
+
+    /**
+     * 网络端口占用列表。
+     *
+     * @param host 目标主机
+     * @return 端口占用视图列表，永不为 null
+     */
+    List<NetProcessRowVO> netProcesses(MsServerHost host);
+
+    /**
+     * 目录文件列表。
+     *
+     * @param host 目标主机
+     * @param path 目录路径
+     * @return 文件条目列表，永不为 null
+     */
+    List<FileEntryVO> files(MsServerHost host, String path);
+
+    /**
+     * 磁盘占用分析默认深度。
+     */
+    int DISK_USAGE_DEPTH = 4;
+
+    /**
+     * 单次分析最多扫描的目录数（防止整盘递归在远端通道上无限放大请求数）。
+     */
+    int DISK_USAGE_MAX_DIRS = 12000;
+
+    /**
+     * 每个目录中拆成独立矩形块的最大文件数（按大小取 Top N，其余小文件合并为一个块）。
+     */
+    int DISK_USAGE_TOP_FILES = 12;
+
+    /**
+     * 磁盘占用树（WizTree 风格）：递归列出目录并累计字节，目录大小为全部子孙之和。
+     *
+     * <p>默认实现复用 {@link #files} 逐目录递归，对所有通道通用；受 {@link #DISK_USAGE_DEPTH}
+     * 与 {@link #DISK_USAGE_MAX_DIRS} 双重约束。逐目录在远端会放大成多次往返，SSH / Agent
+     * 通道可用一条原生 {@code du} / 远端遍历覆写本方法提速。</p>
+     *
+     * @param host  目标主机
+     * @param path  起始路径，为空时由 Provider 决定
+     * @param depth 递归深度，小于等于 0 时取默认深度
+     * @return 占用树根节点，不为 null
+     */
+    default DiskUsageNodeVO diskUsage(MsServerHost host, String path, int depth) {
+        int maxDepth = depth <= 0 ? DISK_USAGE_DEPTH : Math.min(depth, 8);
+        // 分隔符由平台能力集 SPI 给出（Windows 反斜杠、POSIX 斜杠），本方法不判断系统
+        char sep = HostOperationsRegistry.pathSeparator(platform(host));
+        long[] scanned = {0L};
+        return walkUsage(host, path, maxDepth, sep, scanned);
+    }
+
+    /**
+     * 单层递归：列目录 → 建节点 → 对子目录继续递归 → 汇总大小并按大小降序。
+     *
+     * @param host    目标主机
+     * @param path    当前目录
+     * @param remain  剩余深度
+     * @param sep     路径分隔符
+     * @param scanned 已扫描目录计数（可变）
+     * @return 当前层节点
+     */
+    private DiskUsageNodeVO walkUsage(MsServerHost host, String path, int remain, char sep, long[] scanned) {
+        DiskUsageNodeVO node = new DiskUsageNodeVO();
+        node.setDirectory(true);
+        node.setPath(path);
+        node.setName(basename(path, sep));
+        List<FileEntryVO> entries;
+        try {
+            entries = files(host, path);
+        } catch (Exception e) {
+            node.setSize(0L);
+            return node;
+        }
+        scanned[0]++;
+        long total = 0L;
+        long fileCount = 0L;
+        long dirCount = 0L;
+        // 本层散文件先收集，稍后只把最大的若干个拆成独立块（WizTree 为大文件单独分块）
+        List<FileEntryVO> looseFiles = new java.util.ArrayList<>();
+        String latestModified = null;
+        if (entries != null) {
+            for (FileEntryVO e : entries) {
+                if (e.modified() != null && !e.modified().isBlank()
+                        && (latestModified == null || e.modified().compareTo(latestModified) > 0)) {
+                    latestModified = e.modified();
+                }
+                total += e.size();
+                if (e.directory()) {
+                    dirCount++;
+                    if (remain > 1 && scanned[0] < DISK_USAGE_MAX_DIRS) {
+                        DiskUsageNodeVO child = walkUsage(host, joinUsage(path, e.name(), sep),
+                                remain - 1, sep, scanned);
+                        node.addChild(child);
+                        // 子目录累计值可能比单条目录 size 更准确（目录自身 size 常为 0）
+                        total += Math.max(0L, child.getSize() - e.size());
+                        fileCount += child.getFileCount();
+                        dirCount += child.getDirCount();
+                    } else {
+                        DiskUsageNodeVO leaf = new DiskUsageNodeVO();
+                        leaf.setDirectory(true);
+                        leaf.setName(e.name());
+                        leaf.setPath(joinUsage(path, e.name(), sep));
+                        leaf.setSize(e.size());
+                        leaf.setModified(e.modified());
+                        leaf.setDirCount(1L);
+                        node.addChild(leaf);
+                    }
+                } else {
+                    fileCount++;
+                    looseFiles.add(e);
+                }
+            }
+        }
+        // 散文件按大小降序：Top N 拆成独立文件块，其余小文件合并成一个“其它文件”块，
+        // 既保留大文件的文件级粒度，又不被海量小文件切碎
+        looseFiles.sort(java.util.Comparator.comparingLong(FileEntryVO::size).reversed());
+        long restSize = 0L;
+        long restCount = 0L;
+        for (int i = 0; i < looseFiles.size(); i++) {
+            FileEntryVO e = looseFiles.get(i);
+            if (i < DISK_USAGE_TOP_FILES) {
+                DiskUsageNodeVO fileLeaf = new DiskUsageNodeVO();
+                fileLeaf.setDirectory(false);
+                fileLeaf.setName(e.name());
+                fileLeaf.setPath(joinUsage(path, e.name(), sep));
+                fileLeaf.setSize(e.size());
+                fileLeaf.setModified(e.modified());
+                fileLeaf.setFileCount(1L);
+                node.addChild(fileLeaf);
+            } else {
+                restSize += e.size();
+                restCount++;
+            }
+        }
+        if (restCount > 0) {
+            DiskUsageNodeVO rest = new DiskUsageNodeVO();
+            rest.setDirectory(false);
+            rest.setName("__files__");
+            rest.setPath(path);
+            rest.setSize(restSize);
+            rest.setFileCount(restCount);
+            node.addChild(rest);
+        }
+        node.setSize(total);
+        node.setFileCount(fileCount);
+        node.setDirCount(dirCount);
+        node.setModified(latestModified);
+        if (node.getChildren() != null) {
+            node.getChildren().sort(java.util.Comparator.comparingLong(DiskUsageNodeVO::getSize).reversed());
+        }
+        return node;
+    }
+
+    /**
+     * 拼接父路径与子名称。
+     *
+     * @param parent 父路径
+     * @param name   子名称
+     * @param sep    分隔符
+     * @return 完整路径
+     */
+    private static String joinUsage(String parent, String name, char sep) {
+        if (StringUtils.isEmpty(parent)) {
+            return name;
+        }
+        return parent.endsWith(String.valueOf(sep)) ? parent + name : parent + sep + name;
+    }
+
+    /**
+     * 取路径最后一段作为名称。
+     *
+     * @param path 路径
+     * @param sep  分隔符
+     * @return 名称
+     */
+    private static String basename(String path, char sep) {
+        if (StringUtils.isEmpty(path)) {
+            return "/";
+        }
+        int i = Math.max(path.lastIndexOf(sep), path.lastIndexOf(sep == '\\' ? '/' : '\\'));
+        return i >= 0 && i + 1 < path.length() ? path.substring(i + 1) : path;
+    }
+
+    /**
+     * 上传文件到目标主机。
+     *
+     * @param host       目标主机
+     * @param remotePath 远端路径
+     * @param data       数据流
+     * @param size       数据长度
+     * @return 成功返回 true
+     */
+    boolean uploadFile(MsServerHost host, String remotePath, InputStream data, long size);
+
+    /**
+     * 读取远端文件 stat 信息（存在性、大小、最后修改时间、MD5）。
+     *
+     * <p>供上传覆盖判定使用：md5 一致跳过、目标较新拒绝覆盖。默认返回 null 表示通道不支持，
+     * 调用方退回「直接覆盖」的既有行为；实现类应尽力返回结果而不是抛错——stat 失败时
+     * 上传大概率也会失败，不必在这里把可用性打掉。</p>
+     *
+     * @param host       目标主机
+     * @param remotePath 远端文件路径
+     * @return stat 结果；通道不支持或信息不可得时返回 null
+     */
+    default RemoteFileStatVO statFile(MsServerHost host, String remotePath) {
+        return null;
+    }
+
+    /**
+     * 下载目标主机文件。
+     *
+     * @param host       目标主机
+     * @param remotePath 远端路径
+     * @return 文件输入流，失败返回 null
+     */
+    InputStream downloadFile(MsServerHost host, String remotePath);
+
+    /**
+     * 在目标主机执行命令。
+     *
+     * @param host 目标主机
+     * @param cmd  命令
+     * @return 标准输出内容
+     */
+    String exec(MsServerHost host, String cmd);
+
+    /**
+     * {@link #exec} 下发的命令在目标主机上实际运行的 shell 方言。
+     *
+     * <p>默认本机与 Agent 通道按 cmd.exe（Windows）或 /bin/sh（其它）执行；SSH 与 WinRM
+     * 通道在 Windows 上以 PowerShell 承载命令，必须覆写本方法，否则控制层拼出的
+     * {@code cd /d} 与 {@code &&} 会被对端当成语法错误。</p>
+     *
+     * @param host 目标主机
+     * @return shell 方言，不为 null
+     */
+    default ShellDialect shellDialect(MsServerHost host) {
+        // 方言同样由平台能力集 SPI 决定；SSH / WinRM 通道自行覆盖为 PowerShell
+        return HostOperationsRegistry.shellDialect(platform(host));
+    }
+
+    /**
+     * 关闭进程：下发平台杀进程命令，并回查进程确实消失后才算成功。
+     *
+     * <p>命令文本由 {@link HostOperations} 的平台实现给出，通道只负责把命令送进目标机的 shell。</p>
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @param port 端口，仅用于回显，可为空
+     * @return 动作结果，永不为 null
+     */
+    default HostActionVO killProcess(MsServerHost host, int pid, Integer port) {
+        return HostOperations.of(this, host).killProcess(pid, port);
+    }
+
+    /**
+     * 重启进程：按原命令行与工作目录重新拉起。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 动作结果，成功时可能带新进程号
+     */
+    default HostActionVO restartProcess(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).restartProcess(pid);
+    }
+
+    /**
+     * 服务启停：下发动作命令后复查真实状态。
+     *
+     * @param host   目标主机
+     * @param name   服务名称
+     * @param action 动作
+     * @return 动作结果，永不为 null
+     */
+    default HostActionVO controlService(MsServerHost host, String name, ServiceAction action) {
+        return HostOperations.of(this, host).controlService(name, action);
+    }
+
+    /**
+     * 应用网络配置（IP / 网关 / DNS）。
+     *
+     * @param host   目标主机
+     * @param config 配置项
+     * @return 动作结果；平台不具备该能力时返回失败并说明原因
+     */
+    default HostActionVO applyNetworkConfig(MsServerHost host, NetworkConfigVO config) {
+        return HostOperations.of(this, host).applyNetworkConfig(config);
+    }
+
+    /**
+     * 设置系统级环境变量，下发后回读确认。
+     *
+     * @param host  目标主机
+     * @param name  变量名
+     * @param value 变量值
+     * @return 动作结果
+     */
+    default HostActionVO setEnvVar(MsServerHost host, String name, String value) {
+        return HostOperations.of(this, host).setEnvVar(name, value);
+    }
+
+    /**
+     * 删除系统级环境变量，下发后回读确认。
+     *
+     * @param host 目标主机
+     * @param name 变量名
+     * @return 动作结果
+     */
+    default HostActionVO deleteEnvVar(MsServerHost host, String name) {
+        return HostOperations.of(this, host).deleteEnvVar(name);
+    }
+
+    /**
+     * 新增防火墙规则。
+     *
+     * @param host 目标主机
+     * @param rule 规则入参
+     * @return 动作结果
+     */
+    default HostActionVO addFirewallRule(MsServerHost host, FirewallRuleInputVO rule) {
+        return HostOperations.of(this, host).addFirewallRule(rule);
+    }
+
+    /**
+     * 删除防火墙规则。
+     *
+     * @param host  目标主机
+     * @param name  规则名（Windows）
+     * @param chain 链名（Linux）
+     * @param num   序号（Linux）
+     * @return 动作结果
+     */
+    default HostActionVO deleteFirewallRule(MsServerHost host, String name, String chain, Integer num) {
+        return HostOperations.of(this, host).deleteFirewallRule(name, chain, num);
+    }
+
+    /**
+     * 防火墙规则列表。
+     *
+     * @param host 目标主机
+     * @return 规则列表，采集失败时抛出带目标机原因的异常
+     */
+    default List<FirewallRuleRowVO> firewallRules(MsServerHost host) {
+        return HostOperations.of(this, host).firewallRules();
+    }
+
+    /**
+     * 驱动列表。
+     *
+     * @param host 目标主机
+     * @return 驱动列表，采集失败时抛出带目标机原因的异常
+     */
+    default List<DriverRowVO> drivers(MsServerHost host) {
+        return HostOperations.of(this, host).drivers();
+    }
+
+    /**
+     * 进程的线程列表。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 线程列表
+     */
+    default List<ProcessThreadRowVO> processThreads(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).processThreads(pid);
+    }
+
+    /**
+     * 进程的环境变量（进程属性「环境」页签）。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 变量列表，永不为 null
+     */
+    default List<EnvVarVO> processEnv(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).processEnv(pid);
+    }
+
+    /**
+     * 进程的工作目录（进程属性「环境」页签）。
+     *
+     * @param host 目标主机
+     * @param pid  进程 ID
+     * @return 绝对路径，取不到返回空串
+     */
+    default String processCwd(MsServerHost host, int pid) {
+        return HostOperations.of(this, host).processCwd(pid);
+    }
+
+    /**
+     * 主机句柄数（Windows 系统句柄总数 / POSIX 打开文件描述符数）。
+     *
+     * <p>平台差异（PowerShell 汇总 vs {@code /proc} 计数）由 {@link HostOperations} 的平台子类给出，
+     * 通道只负责把命令送进目标机，因此本机 / Agent / SSH / WinRM 四条通道共用同一份实现。
+     * 取不到时返回 -1，绝不抛异常——句柄数只是画像的一项指标，拿不到不应让整页采集失败。</p>
+     *
+     * @param host 目标主机
+     * @return 句柄数，取不到返回 -1
+     */
+    default long handleCount(MsServerHost host) {
+        try {
+            return HostOperations.of(this, host).handleCount();
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
+    /**
+     * 根文件系统 inode 使用情况。
+     *
+     * <p>平台差异（{@code df -i} vs Windows 无 inode）收在 {@link HostOperations} 的平台子类里；
+     * 取不到时返回 {@link InodeUsageVO#unknown()}，不抛异常——状态条缺一个值不该让整页采集失败。</p>
+     *
+     * @param host 目标主机
+     * @return inode 使用情况
+     */
+    default InodeUsageVO inodeUsage(MsServerHost host) {
+        try {
+            return HostOperations.of(this, host).inodeUsage();
+        } catch (Exception e) {
+            return InodeUsageVO.unknown();
+        }
+    }
+
+    /**
+     * 挂载盘列表。
+     *
+     * @param host 目标主机
+     * @return 挂载行列表，永不为 null
+     */
+    default List<MountRowVO> mounts(MsServerHost host) {
+        return HostOperations.of(this, host).mounts();
+    }
+
+    /**
+     * 挂载设备 / 卷。
+     *
+     * @param host   目标主机
+     * @param source 设备或卷标识
+     * @param target 挂载点 / 盘符
+     * @param fsType 文件系统类型，可为空
+     * @return 动作结果
+     */
+    default HostActionVO mount(MsServerHost host, String source, String target, String fsType) {
+        return HostOperations.of(this, host).mount(source, target, fsType);
+    }
+
+    /**
+     * 卸载挂载点 / 盘符。
+     *
+     * @param host   目标主机
+     * @param target 挂载点 / 盘符
+     * @return 动作结果
+     */
+    default HostActionVO unmount(MsServerHost host, String target) {
+        return HostOperations.of(this, host).unmount(target);
+    }
+
+    /**
+     * 已删除但仍被进程占用的文件。
+     *
+     * @param host 目标主机
+     * @return 采集结果，永不为 null
+     */
+    default DeletedFilesVO deletedFiles(MsServerHost host) {
+        return HostOperations.of(this, host).deletedFiles();
+    }
+
+    /**
+     * 释放已删除文件占用的空间（截断描述符，不杀进程）。
+     *
+     * @param host 目标主机
+     * @param pid  持有进程 ID
+     * @param fd   文件描述符编号
+     * @return 动作结果
+     */
+    default HostActionVO releaseDeletedFile(MsServerHost host, long pid, int fd) {
+        return HostOperations.of(this, host).releaseDeletedFile(pid, fd);
+    }
+
+    /**
+     * 主机系统配置项。
+     *
+     * @param host 目标主机
+     * @return 配置项列表，永不为 null
+     */
+    default List<SystemConfigItemVO> systemConfigs(MsServerHost host) {
+        return HostOperations.of(this, host).systemConfigs();
+    }
+
+    /**
+     * 修改主机系统配置项。
+     *
+     * @param host  目标主机
+     * @param key   配置键
+     * @param value 新值
+     * @return 动作结果
+     */
+    default HostActionVO applySystemConfig(MsServerHost host, String key, String value) {
+        return HostOperations.of(this, host).applySystemConfig(key, value);
+    }
+
+    /**
+     * 磁盘分区列表。
+     *
+     * @param host 目标主机
+     * @return 分区列表
+     */
+    default List<DiskPartitionRowVO> diskPartitions(MsServerHost host) {
+        return HostOperations.of(this, host).diskPartitions();
+    }
+
+    /**
+     * 环境变量列表。
+     *
+     * @param host 目标主机
+     * @return 环境变量条目列表，永不为 null
+     */
+    List<EnvVarVO> env(MsServerHost host);
+
+    /**
+     * 创建目录（自动补齐父目录）。
+     *
+     * @param host 目标主机
+     * @param path 目录路径
+     * @return 成功返回 true
+     */
+    boolean mkdir(MsServerHost host, String path);
+
+    /**
+     * 删除文件或目录（目录按递归处理）。
+     *
+     * @param host 目标主机
+     * @param path 路径
+     * @return 成功返回 true
+     */
+    boolean delete(MsServerHost host, String path);
+
+    /**
+     * 重命名 / 移动。
+     *
+     * @param host 目标主机
+     * @param from 原路径
+     * @param to   目标路径
+     * @return 成功返回 true
+     */
+    boolean rename(MsServerHost host, String from, String to);
+
+    /**
+     * 读取文本文件内容（UTF-8）。默认复用下载通道，通道实现可覆写。
+     *
+     * @param host 目标主机
+     * @param path 路径
+     * @return 文本内容；读取失败返回 null
+     */
+    default String readText(MsServerHost host, String path) {
+        try (InputStream in = downloadFile(host, path)) {
+            if (in == null) {
+                return null;
+            }
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                bos.write(buf, 0, n);
+            }
+            return bos.toString(java.nio.charset.StandardCharsets.UTF_8.name());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 写入文本文件内容（UTF-8）。默认复用上传通道，通道实现可覆写。
+     *
+     * <p>失败以异常上报而不是返回 false：吞掉异常会让调用方只能报出「写入失败: 路径」，
+     * 「目录不存在」「通道不支持这个体积」这类可执行的真实原因无人能读到。</p>
+     *
+     * @param host 目标主机
+     * @param path 路径
+     * @param text 文本内容
+     * @return 成功返回 true
+     */
+    default boolean writeText(MsServerHost host, String path, String text) {
+        byte[] data = (text == null ? "" : text).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return uploadFile(host, path, new java.io.ByteArrayInputStream(data), data.length);
+    }
+}

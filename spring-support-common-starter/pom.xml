@@ -56,9 +56,6 @@
             <artifactId>commons-codec</artifactId>
         </dependency>
 
-        <!-- JSON路径查询工具 - 用于JSON数据的路径查询和提取 -->
-
-
 
         <!-- 通用工具类库核心模块 - 提供 CommonConstant, Action, Version 等类 -->
         <dependency>
@@ -93,22 +90,11 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
-        <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
-        <!--<dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-cache-starter</artifactId>
-        </dependency>-->
-
         <!-- Spring Boot参数验证 - 提供Bean Validation支持 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
-
-        <!-- Swagger API文档 - 可选依赖，但为了避免循环依赖，已移除 -->
-        <!-- 如需 Swagger 支持，请直接依赖 spring-support-swagger-starter -->
-        
 
 
         <!-- Jackson JSR310时间处理 - 支持Java 8时间API的JSON序列化 -->
@@ -123,30 +109,10 @@
             <artifactId>jackson-datatype-jdk8</artifactId>
         </dependency>
 
-        <!-- Jackson参数名模块 - 支持使用参数名进行反序列化 -->
-        <!-- 注意：此模块由 Spring Boot 自动提供，无需显式添加依赖 -->
-        <!-- <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-paramnames</artifactId>
-        </dependency> -->
-
         <!-- HTTP客户端工具 - 提供HTTP请求功能 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-httpclient-starter</artifactId>
-        </dependency>
-
-        <!-- HTTP客户端 5.x 核心接口 - HttpClientTraceIdInterceptor 依赖 -->
-        <dependency>
-            <groupId>org.apache.httpcomponents.core5</groupId>
-            <artifactId>httpcore5</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Spring框架扩展工具 - 提供Spring相关的工具类 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-spring-starter</artifactId>
         </dependency>
 
         <!-- JDK 15+特性支持 - 提供新版本JDK特性的支持 -->
@@ -154,8 +120,6 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-jdk15on-starter</artifactId>
         </dependency>
-
-        <!-- ByteBuddy - 已移除（AutoController 已删除，本 starter 不再需要字节码生成） -->
 
         <!-- Google Guava工具库 - 提供Table等集合工具 -->
         <dependency>
@@ -173,13 +137,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-captcha-starter</artifactId>
-            <version>4.0.0.51</version>
-        </dependency>
-
-        <!-- Apache Commons IO - 提供IO工具类 -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
         </dependency>
 
         <!-- Caffeine缓存 - 高性能的本地缓存库 -->
@@ -188,10 +145,10 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
+        <!-- XML 编解码：XML 报文与配置解析需要 Jackson 的 XML 后端 -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <!-- Spring Boot缓存支持 - 提供缓存抽象和管理功能 -->
@@ -200,29 +157,12 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
-        <!-- Spring Boot自动配置 - 提供自动配置功能 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-        <!-- Spring Boot WebMVC自动配置（Boot 4.x 模块化拆分，版本由 BOM 管理） -->
-
-<dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-webmvc</artifactId>
-            <scope>provided</scope>
-        </dependency>
+        <!-- WebFlux 契约（provided）：响应式 HTTP 与流的类型来源，容器由宿主提供 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- Reactor 响应式链路 MDC 自动传播（版本由 spring-boot-dependencies BOM 托管） -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>context-propagation</artifactId>
-        </dependency>
-
     <!-- Spring Boot 4.x 起独立为 spring-boot-webmvc，提供 WebMvcRegistrations 等 -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -237,21 +177,21 @@
         <optional>true</optional>
     </dependency>
 
+        <!-- OkHttp 客户端（provided）：部分 HTTP 探测与下载走 okhttp 实现，运行时由宿主提供 -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>${okhttp.version}</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Jackson 数据绑定：JSON 编解码基础，本模块多处直接使用 ObjectMapper -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
+        <!-- IP2Proxy（provided）：IP 归属地与代理检测的可选实现，未装配时按无数据降级 -->
         <dependency>
             <groupId>com.ip2proxy</groupId>
             <artifactId>ip2proxy-java</artifactId>
-            <version>${ip2proxy.version}</version>
             <scope>provided</scope>
         </dependency>
 

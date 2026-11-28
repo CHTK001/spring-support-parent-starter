@@ -24,21 +24,14 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- MVC 与 SSE：库模块只声明编译期契约，Web 容器由部署宿主提供 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
+        </dependency>        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- 统一 REST 入口 /ms/tunnel 与 SSE 推送；非 Web 应用可不引入 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
             <optional>true</optional>
         </dependency>
 
@@ -49,10 +42,5 @@
             <scope>provided</scope>
         </dependency>
 
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
     </dependencies>
 </project>

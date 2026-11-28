@@ -244,7 +244,7 @@ plugin:
       - /ws
       # 只放行健康检查供探活；其余 actuator 端点必须带登录令牌。
       # 曾整段放行 /actuator/**，等于把 env / beans / configprops / threaddump /
-      # mappings / loggers 全部无鉴权公开——与 spring-support-eduai-starter 的
+      # mappings / loggers 全部无鉴权公开——与 spring-api-support-common-eduai-starter 的
       # ApplicationConfigSecurityTest 要求的策略一致：只放行 /actuator/health。
       - /actuator/health
       # 角色头像通过 <img> 加载（不携带 Authorization 头），头像非敏感放行读取

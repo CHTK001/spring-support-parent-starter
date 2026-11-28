@@ -13,38 +13,43 @@
     宿主实现 SsoLoginBridge 即可接入，无需引入整套系统业务
     </description>
   <dependencies>
+    <!-- 共享契约：ReturnResult、鉴权与用户上下文的公共类型 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
+    <!-- OIDC 协议实现：标准 OpenID Connect 授权码流程与 ID Token 校验（版本待根 POM 托管） -->
     <dependency>
       <groupId>com.nimbusds</groupId>
       <artifactId>oauth2-oidc-sdk</artifactId>
-      <version>11.38.2</version>
     </dependency>
+    <!-- JSON 编解码：第三方平台返回报文与用户信息体的解析 -->
     <dependency>
       <groupId>com.alibaba.fastjson2</groupId>
       <artifactId>fastjson2</artifactId>
     </dependency>
+    <!-- 本仓库 oauth 基础模块：协议抽象、令牌签发与安全身份结果的复用契约 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-oauth-starter</artifactId>
     </dependency>
+    <!-- 持久层：三方账号绑定关系表的 MyBatis-Plus 映射契约 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-mybatis-starter</artifactId>
     </dependency>
+    <!-- OpenAPI 注解：本模块控制器与 VO 的 @Tag/@Operation/@Schema 描述 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-swagger-starter</artifactId>
     </dependency>
-    <!-- Web / Servlet 按同库模块（common-system-starter）的既有约定以 provided 引入：
-         编译期需要，运行时由宿主 Web 应用提供，不把 MVC 库强塞给非 Web 场景的消费者。 -->
+    <!-- Web 契约（provided）：回调控制器依赖的 MVC 类型，容器由宿主提供 -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
       <scope>provided</scope>
     </dependency>
+    <!-- Web MVC（provided）：@RestController 与参数解析的编译期契约 -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-webmvc</artifactId>

@@ -312,7 +312,9 @@ public class RSocketProtocol extends AbstractProtocol {
             metadata.put("x-oauth-uuid", key1);
             metadata.put("x-oauth-encode", String.valueOf(isEncode()));
             metadata.put("x-oauth-serial", createData(key, key1));
-            metadata.put("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            if (authClientProperties.isSignEnabled()) {
+                metadata.put("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+            }
             if (StringUtils.isNotBlank(authType)) {
                 metadata.put("x-oauth-type", authType);
             }

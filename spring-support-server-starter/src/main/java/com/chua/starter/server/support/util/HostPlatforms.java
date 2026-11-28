@@ -109,4 +109,14 @@ public final class HostPlatforms {
         return LINUX.equals(key) || WINDOWS.equals(key) || MACOS.equals(key)
                 || FREEBSD.equals(key) || AIX.equals(key) || SOLARIS.equals(key);
     }
+
+    /**
+     * 判断是否为 Windows 平台。
+     *
+     * @param osType 平台描述
+     * @return Windows 返回 true
+     */
+    public static boolean isWindows(String osType) {
+        return WINDOWS.equals(normalize(osType));
+    }
 }

@@ -14,38 +14,13 @@
     <description>腾讯接口</description>
     
     <dependencies>
+        <!-- OAuth 用户契约：当前由 oauth-starter 提供，渠道用户信息实现依赖它 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Boot 自动配置支持 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.wechatpay-apiv3</groupId>
-            <artifactId>wechatpay-java-core</artifactId>
-        </dependency>
-
+        <!-- 微信支付聚合 SDK：已包含 wechatpay-java-core -->
         <dependency>
             <groupId>com.github.wechatpay-apiv3</groupId>
             <artifactId>wechatpay-java</artifactId>

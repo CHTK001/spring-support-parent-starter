@@ -13,22 +13,18 @@
     <description>APM 扩展模块：Apache SkyWalking 提供者（复用 utils-support-skywalking-starter 的 OtnlEngine）</description>
 
     <dependencies>
+        <!-- APM 基础契约与自动配置 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-apm-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- SkyWalking OAP GraphQL 客户端 + OtnlEngine 实现 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-skywalking-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 配置元数据处理器：仅构建期使用 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

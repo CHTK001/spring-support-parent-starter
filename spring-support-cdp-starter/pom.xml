@@ -16,10 +16,15 @@
     </description>
 
     <dependencies>
-        <!-- 底层能力：Json/StringUtils/ReturnResult、browser-cdp 引擎、chua NIO Server（反向代理）与 swagger 注解 -->
+        <!-- JSON/SPI/NIO Server 与 browser-cdp 引擎 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+        <!-- WebSocket MDC 装饰器：当前由 logger-starter 提供 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-logger-starter</artifactId>
         </dependency>
         <!-- 接口文档注解（@Tag / @Operation）；统一由 swagger-starter 以 provided 提供，
              版本由父 POM dependencyManagement 统一管理 -->

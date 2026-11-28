@@ -8,9 +8,10 @@
   </parent>
   <artifactId>spring-support-discovery-starter</artifactId>
   <dependencies>
+    <!-- 项目信息、服务信息贡献与 Spring 兼容工具 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-      </dependencies>
+  </dependencies>
 </project>

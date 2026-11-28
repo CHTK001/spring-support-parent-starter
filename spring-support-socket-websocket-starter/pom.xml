@@ -14,30 +14,17 @@
     <description>WebSocket 实现模块 - 基于 Spring Boot 原生 WebSocket，与应用同端口运行</description>
 
     <dependencies>
-        <!-- Spring Boot WebSocket -->
+        <!-- Spring WebSocket API：容器由部署宿主提供 -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- 公共工具 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- Sync Starter -->
+        <!-- 同步协议适配：WebsocketSyncServer 的直接编译依赖 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-sync-starter</artifactId>
-        </dependency>
-
-        <!-- Socket 基础模块（可选，如需统一抽象） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-socket-starter</artifactId>
-            
-            <optional>true</optional>
         </dependency>
     </dependencies>
 

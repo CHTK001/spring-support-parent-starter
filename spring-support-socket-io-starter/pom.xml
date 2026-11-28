@@ -24,9 +24,5 @@
       <groupId>com.corundumstudio.socketio</groupId>
       <artifactId>netty-socketio</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
-    </dependency>
   </dependencies>
 </project>

@@ -4,7 +4,7 @@
 
     <resultMap id="metricAggregateResult" type="com.chua.starter.monitor.support.model.MetricAggregate">
         <constructor>
-            <arg column="source" javaType="java.lang.String"/>
+            <arg column="metric_source" javaType="java.lang.String"/>
             <arg column="monitorId" javaType="java.lang.Long"/>
             <arg column="metricName" javaType="java.lang.String"/>
             <arg column="avgValue" javaType="java.lang.Double"/>
@@ -16,7 +16,7 @@
 
     <!-- 两类原始指标合并后在数据库内完成小时聚合，避免把逐点明细传入 JVM。 -->
     <select id="selectHourlyAggregates" resultMap="metricAggregateResult">
-        SELECT source,
+        SELECT metric_source,
                monitor_id AS monitorId,
                metric_name AS metricName,
                AVG(metric_value) AS avgValue,
@@ -24,7 +24,7 @@
                MAX(metric_value) AS maxValue,
                COUNT(*) AS countValue
         FROM (
-            SELECT 'GENERIC' AS source,
+            SELECT 'GENERIC' AS metric_source,
                    ms_monitor_metric_monitor_id AS monitor_id,
                    ms_monitor_metric_metric_name AS metric_name,
                    ms_monitor_metric_metric_value AS metric_value
@@ -32,7 +32,7 @@
             WHERE ms_monitor_metric_collect_time &gt;= #{hourStart}
               AND ms_monitor_metric_collect_time &lt; #{hourEnd}
             UNION ALL
-            SELECT 'REDIS' AS source,
+            SELECT 'REDIS' AS metric_source,
                    ms_monitor_redis_metric_monitor_id AS monitor_id,
                    ms_monitor_redis_metric_metric_name AS metric_name,
                    ms_monitor_redis_metric_metric_value AS metric_value
@@ -40,7 +40,7 @@
             WHERE ms_monitor_redis_metric_collect_time &gt;= #{hourStart}
               AND ms_monitor_redis_metric_collect_time &lt; #{hourEnd}
         ) metric_points
-        GROUP BY source, monitor_id, metric_name
+        GROUP BY metric_source, monitor_id, metric_name
     </select>
 
 </mapper>

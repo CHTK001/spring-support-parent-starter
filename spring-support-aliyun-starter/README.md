@@ -1,6 +1,6 @@
 # spring-support-aliyun-starter
 
-支付宝开放平台集成 Starter：把「电脑网站 / 手机网站 / APP 下单、查单、关单、退款、退款查询、单笔转账、异步通知验签」收敛为一个 `AliyunAlipayGateway` SPI，并把支付宝登录注册为 oauth-client 的 `UserInfoService` 实现（`@Spi("ALIPAY")`）。在 spring-support 体系中，它是 `spring-support-payment-starter` 支付业务的底层网关提供方，与 `spring-support-tencent-starter`（微信侧）同构平行；**只做支付宝**，不含阿里云 OSS / SMS 等其它产品（类名与构件名里的 `Aliyun` 是历史命名）。
+支付宝开放平台集成 Starter：把「电脑网站 / 手机网站 / APP 下单、查单、关单、退款、退款查询、单笔转账、异步通知验签」收敛为一个 `AliyunAlipayGateway` SPI，并把支付宝登录注册为 oauth-client 的 `UserInfoService` 实现（`@Spi("ALIPAY")`）。在 spring-support 体系中，它是 `spring-api-support-common-payment-starter` 支付业务的底层网关提供方，与 `spring-support-tencent-starter`（微信侧）同构平行；**只做支付宝**，不含阿里云 OSS / SMS 等其它产品（类名与构件名里的 `Aliyun` 是历史命名）。
 
 - Maven 坐标：`com.chua:spring-support-aliyun-starter:4.0.0.51`
 - 配置前缀：`plugin.aliyun.alipay`（配置类 `AliyunAlipayProperties`）
@@ -12,7 +12,7 @@
 ```mermaid
 flowchart TB
     HOST["宿主业务应用"]
-    PAY["spring-support-payment-starter<br/>（支付业务服务端：商户/订单/退款/回调）"]
+    PAY["spring-api-support-common-payment-starter<br/>（支付业务服务端：商户/订单/退款/回调）"]
     subgraph MOD["spring-support-aliyun-starter"]
         direction TB
         subgraph L1["自动装配层"]
@@ -48,7 +48,7 @@ flowchart TB
     LOGIN -.->|"实现 UserInfoService SPI"| OAUTH
 ```
 
-- 与 `spring-support-tencent-starter` 互不依赖、可只引其一；`spring-support-payment-starter` 不直接实现支付宝协议，经 SPI 把网关调用分发到本模块。
+- 与 `spring-support-tencent-starter` 互不依赖、可只引其一；`spring-api-support-common-payment-starter` 不直接实现支付宝协议，经 SPI 把网关调用分发到本模块。
 - 模块内依赖方向：自动装配 → 配置/工厂 → 网关 SPI；网关与登录实现走自研 SPI（`ServiceProvider` + `@Spi`），不是 Spring Bean。
 
 ## 2. 核心流程图
@@ -354,10 +354,10 @@ AliyunAlipayPayNotifyPayload payload =
 **不适用 / 慎用：**
 
 - 需要阿里云 **OSS / SMS / 其它阿里云产品**：本模块不含，需另接官方 SDK。
-- 需要开箱即用的**支付业务**（商户管理、订单表、钱包、对账、运营台、回调端点）：用 `spring-support-payment-starter`。
+- 需要开箱即用的**支付业务**（商户管理、订单表、钱包、对账、运营台、回调端点）：用 `spring-api-support-common-payment-starter`。
 - 需要转账**结果查询 / 撤销**，或高并发下对连接复用敏感（默认网关每次调用新建 `AlipayClient`）：需自行扩展实现。
 
-**与相邻模块的取舍：** vs `spring-support-payment-starter`——它是支付**业务服务端**，经提供方 SPI 把网关调用分发到本模块；只要「能调支付宝 API」引本模块，要「完整支付业务与资金流程」引 payment-starter。vs `spring-support-tencent-starter`——同构平行（微信版），互不依赖、可并存；支付宝选本模块，微信选 tencent-starter。上游为 `spring-support-oauth-starter` 与 `utils-support-common-starter`；本模块自身无表、无 Mapper，pom 未直接声明持久层依赖（持久层/缓存/文档等 starter 由 `oauth-client` 传递引入，不属于本模块业务）。
+**与相邻模块的取舍：** vs `spring-api-support-common-payment-starter`——它是支付**业务服务端**，经提供方 SPI 把网关调用分发到本模块；只要「能调支付宝 API」引本模块，要「完整支付业务与资金流程」引 payment-starter。vs `spring-support-tencent-starter`——同构平行（微信版），互不依赖、可并存；支付宝选本模块，微信选 tencent-starter。上游为 `spring-support-oauth-starter` 与 `utils-support-common-starter`；本模块自身无表、无 Mapper，pom 未直接声明持久层依赖（持久层/缓存/文档等 starter 由 `oauth-client` 传递引入，不属于本模块业务）。
 
 ## 8. 扩展点
 

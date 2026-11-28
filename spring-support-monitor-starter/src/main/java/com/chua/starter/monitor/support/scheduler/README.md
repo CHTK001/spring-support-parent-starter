@@ -12,8 +12,6 @@
 | `MonitorScheduler#aggregateHourly` | 指标小时聚合 | `@Scheduled(cron="0 0 * * * ?")` | 每小时整点 | —（代码常量） |
 | `MonitorScheduler#cleanupOldData` | 指标数据保留期清理（滚动窗口；默认每小时跑，避免「保留期 + 最多 24h」的超存） | `@Scheduled(cron="${monitor.cleanup.cron:0 0 * * * ?}")` | 默认每小时，可整体改 cron | `monitor.cleanup.cron`（默认 `0 0 * * * ?`）；保留天数 `monitor.data.retention.days`（默认 30） |
 | `AgentOfflineChecker#check` | 探针离线扫描：心跳超时的目标翻转离线并记 WARN（状态可查 `GET /ms/monitor/agent/status`） | `@Scheduled(fixedDelay=60000, initialDelay=90000)` | 60s（首延 90s） | —（代码常量） |
-| `ApmOperLogScheduler#purgeExpired` | APM 操作日志（`ms_apm_oper_log`）保留清理，固定保留 90 天 | `@Scheduled(cron="0 50 4 * * ?")` | 每天 04:50 | —（retentionDays=90 代码常量，故意不用占位符，防早期 resolver 未就绪炸启动） |
-| `ServerOperLogScheduler#purgeExpired` | 服务节点操作日志（`ms_server_oper_log`）保留清理，固定保留 90 天 | `@Scheduled(cron="0 45 4 * * ?")` | 每天 04:45 | —（retentionDays=90 代码常量，理由同上） |
 | `TsharkRetentionCleanupScheduler#cleanup` | 抓包保留清理：过期会话连同报文 / pcap / SQLite / 日志一起删，会话目录超限也清 | `@Scheduled(fixedDelay=1800000, initialDelay=60000)`；`SchedulingConfigurer` 换单线程池，不占公共调度器 | 30min（首延 60s） | —（代码常量） |
 
 ## 内联 @Scheduled（留在业务类，未搬移）
@@ -21,11 +19,8 @@
 | 位置 | 业务 | 触发参数 | 说明 |
 |---|---|---|---|
 | `alarm.AlarmEventStreamRegistry#heartbeat` | 告警 SSE 心跳保活（推注释帧，清死连接） | `@Scheduled(fixedRate=20000, initialDelay=20000)`（`HEARTBEAT_MS`） | 依赖实例内 `subscribers` 连接集，故留在原类 |
-| `server.ServerEventStreamRegistry#heartbeat` | 服务管理 SSE 心跳保活 | `@Scheduled(fixedRate=20000, initialDelay=20000)`（`HEARTBEAT_MS`） | 与告警 SSE 同构，依赖实例内 `subscribers` |
-| `server.ServerEventStreamService#detect` | 服务节点状态指纹比对，仅变化时广播 `changed` 一帧 | `@Scheduled(fixedDelay=5000, initialDelay=5000)`（`DETECT_INTERVAL_MS`） | 依赖实例内 `lastSignature` 指纹与订阅计数，故留在原类 |
 | `tshark.TsharkPacketStreamRegistry#heartbeat` | 抓包数据包 SSE 心跳保活（按会话分组） | `@Scheduled(fixedRate=20000, initialDelay=20000)` | 依赖实例内按会话分组的 `subscribers` |
 | `tshark.TsharkInstallStreamRegistry#heartbeat` | tshark 安装进度 SSE 心跳保活 | `@Scheduled(fixedRate=20000, initialDelay=20000)` | 依赖实例内 `subscribers` |
-| `service.HostSummarySseService#pushTick` | 主机资源摘要（句柄数 / inode）每 30s 采集并经 `HostAssetsSseHub` 推送 | `@Scheduled(fixedDelay=30000)`（`PUSH_INTERVAL_MS`） | 依赖实例内 `subscriptions` 与专用 `pushExecutor`，故留在原类 |
 | `service.impl.HostMetricHistoryServiceImpl#scheduledCleanup` | 主机指标历史时序数据保留清理 | `@Scheduled(cron="0 17 3 * * ?")` | 每天 03:17；保留天数 `monitor.history.retention-days`（默认 7）；失败上抛交 Spring 错误处理器，不吞成 debug |
 
 ## 其他调度入口（程序化，非 `@Scheduled`）

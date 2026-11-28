@@ -2,7 +2,6 @@ package com.chua.starter.monitor.support.config;
 
 import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.scheduler.HostOnlineScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -10,8 +9,9 @@ import org.springframework.context.annotation.Configuration;
 /**
  * 主机检测推送桥接（服务端-启动 ↔ 监控-启动）
  * <p>
- * 将 {@link HostOnlineScheduler} 的延迟检测 / 在线状态翻转结果
- * 桥接到 {@link MonitorPushService}，经 Socket:push topic 广播到前端
+ * 提供延迟检测 / 在线状态翻转的推送回调，由
+ * {@link HostRealtimePushConfiguration} 统一注册到 {@code HostOnlineScheduler}，
+ * 经 {@link MonitorPushService} 与 Socket:push topic 广播到前端
  * （前端 订阅("监控", "主机-延迟") / ("监控", "主机-online") 接收），
  * 实现资产表实时延迟列的秒级刷新。
  * 仅当 服务端-启动 与 监控-启动 同时装配时生效。
@@ -26,9 +26,8 @@ import org.springframework.context.annotation.Configuration;
 public class HostPushBridgeConfiguration {
 
     /**
-     * 检测器（服务端-启动）
+     * 主机延迟与在线状态推送桥接
     */
-    private final HostOnlineScheduler onlineScheduler;
 
     /**
      * 推送服务（监控-启动）
@@ -36,26 +35,11 @@ public class HostPushBridgeConfiguration {
     private final MonitorPushService pushService;
 
     /**
-     * 装配推送钩子：延迟结果 / 在线状态翻转 → Socket 广播。
-     * <p>
-     * 无入参；由容器在 Bean 初始化后（postconstruct）调用，
-     * 将 {@link #onDelayDetected(MsServerHost)} / {@link #onOnlineChanged(MsServerHost)}
-     * 注册到 {@link HostOnlineScheduler} 的检测钩子上。
-     * </p>
-     */
-    @jakarta.annotation.PostConstruct
-    public void bridge() {
-        onlineScheduler.setDelayHook(this::onDelayDetected);
-        onlineScheduler.setOnlineHook(this::onOnlineChanged);
-        log.info("[monitor] 主机检测推送桥接已装配（host-delay / host-online）");
-    }
-
-    /**
      * 延迟检测结果回调 → 广播实时延迟
      *
      * @param host 完成一次延迟探测的主机（服务端主机延迟ms 已回写，-1 表不可达）
      */
-    private void onDelayDetected(MsServerHost host) {
+    void onDelayDetected(MsServerHost host) {
         pushService.pushHostDelay(
                 host.getId(),
                 host.getServerHostName(),
@@ -70,7 +54,7 @@ public class HostPushBridgeConfiguration {
      *
      * @param host 在线状态发生翻转的主机（服务端主机online 已更新，1 在线 / 0 离线）
      */
-    private void onOnlineChanged(MsServerHost host) {
+    void onOnlineChanged(MsServerHost host) {
         pushService.pushHostOnline(
                 host.getId(),
                 host.getServerHostName(),

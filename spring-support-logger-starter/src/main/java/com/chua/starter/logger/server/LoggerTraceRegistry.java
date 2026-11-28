@@ -99,8 +99,8 @@ public class LoggerTraceRegistry {
                         "phase", phase,
                         "method", safe(method, 16),
                         "path", safe(path, 512),
-                        "status", status == null ? "" : status,
-                        "durationMs", durationMs == null ? "" : Math.max(0, durationMs)));
+                        "status", status == null ? "" : String.valueOf(status),
+                        "durationMs", durationMs == null ? "" : String.valueOf(Math.max(0L, durationMs))));
         store.append(List.of(event));
         bus.publish(List.of(event));
         if (!stateStore.updateTracePhases(traceId, trace.phases(), trace.phases() | phaseBit)) {

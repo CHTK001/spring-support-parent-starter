@@ -19,14 +19,11 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-sync-starter</artifactId>
     </dependency>
-    <!-- Spring Boot Starter WebSocket -->
+    <!-- Spring WebSocket API：容器由部署宿主提供 -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-websocket</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-common-starter</artifactId>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-websocket</artifactId>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 </project>

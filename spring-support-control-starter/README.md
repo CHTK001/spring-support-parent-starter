@@ -287,7 +287,7 @@ control:
 
 - 直接用 `utils-support-webrtc-starter`：非 Spring 环境或要完全自管生命周期 → `new WebRtcServer(setting)` + `start()`；要自动装配、`control.webrtc.*` 配置与 `/control/**` 辅助接口 → 本模块。
 - `spring-support-monitor-starter`：本模块的真实宿主 / 聚合方（还聚合 docker、cdp 等）；只要远控能力不必引入整个 monitor。
-- `spring-support-docker-starter` / `spring-support-cdp-starter`：并列能力（容器管理 / 浏览器调试 / 桌面远控），互不依赖，monitor 中并列引入。
+- `spring-api-support-common-docker-starter` / `spring-support-cdp-starter`：并列能力（容器管理 / 浏览器调试 / 桌面远控），互不依赖，monitor 中并列引入。
 
 ## 8. 扩展点
 

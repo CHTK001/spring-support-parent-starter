@@ -213,7 +213,7 @@ public class TunnelService {
     }
 
     /**
-     * 更新映射。运行中会先停止再按新配置重启。
+     * 更新映射。运行中会先停止，保存后仅对仍启用的映射按新配置重启。
      *
      * <p>提供方不可变更：变更提供方等价于新建，允许原地改会让「已启动的会话
      * 属于旧实现」这种状态难以自洽。</p>
@@ -233,7 +233,7 @@ public class TunnelService {
         input.setOwner(null);
         applyProviderInput(provider, record, input);
         store.save(record);
-        if (running) {
+        if (running && record.isEnabled()) {
             start(id);
         }
         return toView(record);
@@ -276,6 +276,9 @@ public class TunnelService {
      */
     private TunnelView start(String id, boolean takeover) {
         TunnelRecord record = store.require(id);
+        if (!record.isEnabled()) {
+            throw new IllegalStateException("映射已禁用，请先启用后再启动");
+        }
         if (sessions.containsKey(id)) {
             return toView(record);
         }

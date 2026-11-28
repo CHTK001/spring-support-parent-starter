@@ -9,6 +9,7 @@
   <artifactId>spring-support-scatter-starter</artifactId>
   <description>scatter 组网 starter：基于 utils scatter 的去中心化服务发现、组网端口业务端点登记与 self-balance 反向代理 Filter</description>
   <dependencies>
+    <!-- 项目信息、服务信息贡献与 Spring 兼容工具 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>

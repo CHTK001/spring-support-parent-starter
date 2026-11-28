@@ -213,7 +213,7 @@ const loadModelsPage = () => import("@pages/ai/components/models/ModelsPage.vue"
 
 ## 九、参考实现
 
-`spring-support-eduai-starter` 是完整样例：
+`spring-api-support-common-eduai-starter` 是完整样例：
 
 ```
 PaperClient           → EduPaperScanner（阅卷识别：文字块 + 版面框）

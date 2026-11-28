@@ -21,7 +21,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-osgi-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

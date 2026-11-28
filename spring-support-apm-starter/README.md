@@ -75,7 +75,7 @@ flowchart TD
     N --> O
 ```
 
-要点：探测结果由 `ApmRegistry` 按 `plugin.apm.detect-interval`（下限 1000ms）缓存；`/metrics-batch` 单次最多 `MAX_BATCH_SERIES = 24` 条曲线；`POST /config` 执行后经 `ApmOperLogSink`（宿主提供时）留痕，并写入 `ApmSettingsStore`（临时文件 + 原子 move）。
+要点：探测结果由 `ApmRegistry` 按 `plugin.apm.detect-interval`（下限 1000ms）缓存；`/metrics-batch` 单次最多 `MAX_BATCH_SERIES = 24` 条曲线；`POST /config` 执行后经 `ApmOperLogSink`（DataSource 存在时自动装配默认实现）留痕，并写入 `ApmSettingsStore`（临时文件 + 原子 move）。
 
 ## 3. 能力清单
 
@@ -286,7 +286,7 @@ plugin:
 
 ### 生产注意事项
 
-- **访问控制**：嵌入模式接口是独立 `Servlet`，不经过 Spring MVC 的鉴权拦截器、`@ControllerAdvice` 与 `@SysLog` 切面；对外暴露时请在网关或服务器层做访问控制，写操作留痕请提供 `ApmOperLogSink` Bean。
+- **访问控制**：嵌入模式接口是独立 `Servlet`，不经过 Spring MVC 的鉴权拦截器、`@ControllerAdvice` 与 `@SysLog` 切面；对外暴露时请在网关或服务器层做访问控制；写操作留痕由 DataSource 条件下装配的默认 `ApmOperLogSink` 完成。
 - **重启项不要热改**：`mode`、`path`、`host`、`port`、`server-type`、`settings-file` 改了必须重启；`POST /config` 携带这些键会直接报「不支持热改」。
 - **探测频率**：`detect-interval` 不要低于 1000ms，否则等于每次请求都探活，可能把 OAP 打穿；热改低于该值会被拒绝。
 - **监听面**：独立模式 `host=0.0.0.0` 监听所有网卡，注意与网络隔离策略配合；嵌入模式接口路径为 `path + "/*"`，随宿主端口暴露。
@@ -327,7 +327,10 @@ plugin:
 
 | 依赖 | 作用 | 缺了会怎样 |
 | --- | --- | --- |
-| `spring-support-common-starter` | `ServiceInfoContributor` / `ServiceInfoRegistry` | 强制依赖，缺了无法编译 |
+| `spring-support-common-starter` | `ServiceInfoContributor` / `ServiceInfoRegistry` / 操作日志时间解析 | 强制依赖，缺了无法编译 |
+| `spring-support-datasource-starter` / `spring-support-mybatis-starter`（`provided`） | 操作日志 Mapper 与分页 | 宿主提供 DataSource 时才装配日志 Bean；standalone 无 DB 可启动 |
+| `spring-support-swagger-starter`（`provided`） | 操作日志 Controller/VO 注解 | 库模块编译期使用 |
+| `utils-support-spring-starter` | `RequestUtils` 读取操作人与客户端 IP | 默认写操作落点使用 |
 | `utils-support-common-starter` | `OtnlEngine` / `OtnlQuery` / `ServerBuilder` / `ServiceProvider` / `ReturnResult` | 强制依赖，缺了无法编译 |
 | `jackson-databind` | 两种出口的 JSON 序列化（`ObjectMapper`） | 强制依赖，版本由 Spring Boot BOM 托管 |
 | `spring-boot-starter-web`（`optional`） | 嵌入模式所需 `jakarta.servlet` API 与 `spring-web` | 独立模式 / 非 Web 宿主可不引入；缺了且 `mode=embedded` 时 `apmServletRegistration` 因 `@ConditionalOnClass` 不装配，接口无出口 |
@@ -346,7 +349,7 @@ plugin:
 不适用 / 慎用：
 
 - **采集 / 埋点**：本模块是 APM 的查询面，不产数据；探针 / agent 由扩展模块与 APM 自身负责。
-- **需要纳入 Spring MVC 体系的接口**：嵌入模式是独立 Servlet，`@ControllerAdvice`、鉴权拦截器、`@SysLog` 切面都拦不到它；写操作留痕请提供 `ApmOperLogSink` Bean。
+- **需要纳入 Spring MVC 体系的接口**：嵌入模式是独立 Servlet，`@ControllerAdvice`、鉴权拦截器、`@SysLog` 切面都拦不到它；模块在 DataSource 存在时自动装配默认写操作留痕，无 DB 的 standalone 不装配日志 Bean。
 
 与相邻模块的取舍：
 
@@ -354,7 +357,7 @@ plugin:
 | --- | --- | --- |
 | 接入 SkyWalking 数据面 | `spring-support-apm-skywalking-starter` | 实现本模块 `ApmProvider`，`order=0` 优先 |
 | 无商业 APM 时的进程内兜底 | `spring-support-apm-hotspot-starter` | 进程内 hotspot 引擎，参数来自 `-javaagent`，`order=100` |
-| 写操作留痕 | 宿主提供 `ApmOperLogSink` Bean | 本模块只定义回调接口，落库由宿主决定 |
+| 写操作留痕 | `DefaultApmOperLogSink` + `ApmOperLogService` | DataSource 存在时自动落 `ms_apm_oper_log`，URL `/ms/monitor/apm/oper-log` 保持不变 |
 | 服务信息面板展示 | 复用 `spring-support-common-starter` 的 `ServiceInfoContributor` 机制 | `apmServiceInfoContributor` 自动登记状态与入口 |
 | 独立 HTTP 底座 | utils 层 `ServerBuilder`（`Server` SPI） | 不为独立模式引入新的 HTTP 服务器依赖 |
 
@@ -379,7 +382,7 @@ plugin:
 
 生效机制：`ApmRegistry#detect()` 通过 `ServiceProvider.of(ApmProvider.class).forEach(...)` 扫描全部登记项，按 `order()` 升序；`plugin.apm.type` 为空时取第一个 `isAvailable()` 为真者，非空时只认同名提供者。
 
-次要扩展点：`ApmOperLogSink`（`@FunctionalInterface`，`void record(ApmRequest, ApmResult, long costMs)`）。由宿主以 Spring Bean 形式提供，`ApmAutoConfiguration#apmDispatcher` 通过 `ObjectProvider` 注入，不经过 `META-INF` 登记；只在写操作（`POST /config`）后回调，实现抛出的异常会被吞掉并降级为日志。
+次要扩展点：`ApmOperLogSink`（`@FunctionalInterface`，`void record(ApmRequest, ApmResult, long costMs)`）。`ApmOperLogConfiguration` 在 DataSource 存在时注册默认实现 `DefaultApmOperLogSink`，宿主可用同类型 Bean 覆盖；只在写操作（`POST /config`）后回调，实现抛出的异常会被吞掉并降级为日志。日志表由 `db/init/V1.1__init_apm_oper_log.sql` 创建。
 
 自定义入口：`ApmRegistry`、`ApmDispatcher`、`ApmStandaloneServer`、`ApmRuntimeConfig`、`ApmSettingsStore` 都是普通类（公共构造器），可脱离 Spring 手工组装；除 `apmServletRegistration` 外，其余 Bean 均可用自定义同类型 Bean 覆盖（`@ConditionalOnMissingBean`）。
 
@@ -387,7 +390,7 @@ plugin:
 
 - **加了依赖但 `/status` 返回 `present=false`？** 看 `data.message` 与 `data.candidates`：候选为空 = 没引入任何扩展模块；候选里有记录但 `available=false` = 装了但连不上（看 `message`）。若整个模块的 Bean 都没装配，检查 `plugin.apm.enabled` 是否为 `false`——它是类级 `@ConditionalOnProperty`，一票否决全部 Bean（不配置即视为开启）。
 - **改 `mode` / `path` / `port` / `serverType` 为什么不生效？** 它们在 `ApmRuntimeConfig#RESTART_KEYS` 里，`POST /config` 携带会直接报「不支持热改」，必须改启动参数并重启；12801 端口只有 `mode=standalone` 时才由 `ApmStandaloneServer` 监听，嵌入模式接口随宿主端口暴露。
-- **Spring Boot 4 兼容性？** 自动配置只注册在 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`（内容：`com.chua.starter.apm.support.config.ApmAutoConfiguration`），本模块**没有** `spring.factories`；Servlet 使用 `jakarta.servlet.*` 命名空间，Boot 3 之前的 `javax.servlet` 宿主不兼容；按 Spring Boot `4.1.2` + Java `25` 开发。
+- **Spring Boot 4 兼容性？** 自动配置只注册在 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`（内容：`ApmAutoConfiguration` 与按 DataSource 条件装配的 `ApmOperLogConfiguration`），本模块**没有** `spring.factories`；Servlet 使用 `jakarta.servlet.*` 命名空间，Boot 3 之前的 `javax.servlet` 宿主不兼容；按 Spring Boot `4.1.2` + Java `25` 开发。
 - **嵌入模式接口 404 或想替换默认实现？** 404 先确认三点：`mode=embedded`（或缺省）、宿主是 Servlet Web 应用（类路径有 `jakarta.servlet.Servlet`，即引入了 `spring-boot-starter-web`）、访问路径在 `plugin.apm.path + "/*"` 之下。替换实现时注意：除 `apmServletRegistration` 外，其余 Bean 都有 `@ConditionalOnMissingBean`，自定义同类型（或同名）Bean 即可覆盖。
 
 

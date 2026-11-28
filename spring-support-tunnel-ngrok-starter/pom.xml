@@ -10,56 +10,30 @@
     <artifactId>spring-support-tunnel-ngrok-starter</artifactId>
     <name>Spring Support Tunnel Ngrok Starter</name>
     <description>Spring Boot 3 集成 ngrok：自动将本机 Spring 服务（server.port）通过 ngrok 暴露为公网 URL。</description>
-    <properties>
-        <ngrok.version>1.1.1</ngrok.version>
-    </properties>
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- 管理接口（/ms/tunnel/ngrok）用；非 Web 应用可不引入 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <!-- 内网穿透标准 starter：提供 TunnelProvider SPI 与统一入口 /ms/tunnel -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-tunnel-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>com.ngrok</groupId>
             <artifactId>ngrok-java</artifactId>
-            <version>${ngrok.version}</version>
         </dependency>
         <dependency>
             <groupId>com.ngrok</groupId>
             <artifactId>ngrok-java-native</artifactId>
-            <version>${ngrok.version}</version>
             <classifier>${os.detected.classifier}</classifier>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
     <build>
@@ -67,7 +41,7 @@
             <extension>
                 <groupId>kr.motd.maven</groupId>
                 <artifactId>os-maven-plugin</artifactId>
-                <version>1.7.1</version>
+                <version>${os-maven-plugin.version}</version>
             </extension>
         </extensions>
     </build>

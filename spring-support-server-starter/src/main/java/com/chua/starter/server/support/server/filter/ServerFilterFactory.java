@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import com.chua.common.support.utils.CollectionUtils;
+import com.chua.starter.filesystem.support.constants.FileStorageConstants;
 
 /**
    * 服务管理 —— 服务端过滤器 插件工厂。
@@ -449,10 +450,12 @@ public class ServerFilterFactory {
                 if (storageMap != null) {
                     for (Map.Entry<String, Object> entry : storageMap.entrySet()) {
                         if (storageClass.isInstance(entry.getValue())) {
-                            addStorage.invoke(filter, entry.getKey(), entry.getValue());
+                            String bucket = entry.getKey() == null || entry.getKey().isBlank()
+                                    ? FileStorageConstants.DEFAULT_BUCKET : entry.getKey();
+                            addStorage.invoke(filter, bucket, entry.getValue());
                             registered++;
                             log.info("[ServerFilterFactory] 注册文件存储桶(Template): {} -> {}",
-                                    entry.getKey(), entry.getValue().getClass().getSimpleName());
+                                    bucket, entry.getValue().getClass().getSimpleName());
                         }
                     }
                 }

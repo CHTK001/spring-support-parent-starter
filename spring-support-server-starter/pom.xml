@@ -13,11 +13,6 @@
         的 SSH/SFTP/RDP/VNC 远程控制 WebSocket 网关，以及批量命令执行、文件分发与 cron 计划任务。
     </description>
 
-    <properties>
-        <guacamole.version>1.6.0</guacamole.version>
-        <!-- 串口终端依赖 -->
-        <jserialcomm.version>2.11.0</jserialcomm.version>
-    </properties>
 
     <dependencies>
         <!-- Spring 与基础 -->
@@ -42,7 +37,6 @@
         <dependency>
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
-            <version>${jserialcomm.version}</version>
         </dependency>
 
         <!-- 数据访问 -->
@@ -53,6 +47,27 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- 主机运行时控制器与服务使用 Reactor 异步返回，依赖由根 POM 统一管理 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+        <!-- 本机硬件/操作系统采集：OSHI 与 JNA 原生桥由 server 直接声明 -->
+        <dependency>
+            <groupId>com.github.oshi</groupId>
+            <artifactId>oshi-core</artifactId>
+        </dependency>
+        <!-- JNA 核心：OSHI 访问 Windows 系统信息 -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+        </dependency>
+        <!-- JNA 平台映射：进程、服务与网络接口原生结构 -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
         </dependency>
 
         <!-- 数据库驱动（本地直跑/便携部署）：MySQL + H2 双驱动，缺一报 ClassNotFound -->
@@ -86,7 +101,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-guacamole-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
@@ -96,7 +110,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-winrm-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
@@ -118,13 +131,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-websocket-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 服务发现查询控制器直接消费 DiscoveryService，能力与依赖同进退 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-discovery-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
@@ -139,13 +150,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-git-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <!-- MavenClient：Git 发布时本地构建 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-maven-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         <!-- 定时发布 / Git 定时轮询：job-starter 为可选依赖，宿主引入后
@@ -160,7 +169,6 @@
         <dependency>
             <groupId>org.apache.guacamole</groupId>
             <artifactId>guacamole-common</artifactId>
-            <version>${guacamole.version}</version>
         </dependency>
 
         <!-- RDP 直连原生桥：只依赖 utils 侧 SPI 契约（utils-support-common-starter 的 nativeapi 包），
@@ -170,7 +178,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         

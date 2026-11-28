@@ -20,26 +20,12 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-deeplearning-dl4j-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
-
-        <!-- 底层工具：Extractor 解压 SPI、Json 门面等 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- Spring Boot AutoConfiguration -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
         <!-- Spring Boot Configuration Processor -->
@@ -49,10 +35,10 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 鉴权注解 @Permission -->
+        <!-- 平台权限注解 @Permission：只依赖 common 契约，不引入 OAuth 客户端实现 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-starter</artifactId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
         <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->

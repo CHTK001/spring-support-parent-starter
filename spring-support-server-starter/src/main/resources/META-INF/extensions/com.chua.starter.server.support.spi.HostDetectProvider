@@ -4,3 +4,4 @@ com.chua.starter.server.support.provider.server.MacosHostDetectProvider
 com.chua.starter.server.support.provider.server.FreebsdHostDetectProvider
 com.chua.starter.server.support.provider.server.AixHostDetectProvider
 com.chua.starter.server.support.provider.server.SolarisHostDetectProvider
+com.chua.starter.server.support.provider.server.AgentHostDetectProvider

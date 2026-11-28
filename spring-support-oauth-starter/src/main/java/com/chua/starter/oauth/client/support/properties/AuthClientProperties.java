@@ -117,6 +117,12 @@ public class AuthClientProperties {
     private boolean enable = true;
 
     /**
+     * 是否生成 OAuth 传输报文签名，默认关闭；启用时服务端也须开启签名校验。
+     * <p>该无密钥摘要不替代 AK/SK 身份认证或 HTTPS。</p>
+     */
+    private boolean signEnabled = false;
+
+    /**
      * 权限拦截器是否允许「无用户上下文即本地 admin」兜底
      * <p>该兜底等价于绕过鉴权，仅供没有 oauth 服务端的本地联调显式打开；
      * 默认 {@code false}：取不到用户上下文即拒绝。</p>

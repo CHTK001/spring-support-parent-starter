@@ -2,7 +2,6 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.service.ServerHostService;
@@ -26,12 +25,7 @@ import com.chua.starter.monitor.support.model.AiHostAnalyzeVO;
 import com.chua.starter.monitor.support.model.AiStatusVO;
 import com.chua.starter.monitor.support.model.DashboardOverviewVO;
 import com.chua.starter.monitor.support.model.RedisCacheSummaryVO;
-import com.chua.starter.monitor.support.model.RedisKeyDetailVO;
-import com.chua.starter.monitor.support.model.RedisMemberScoreVO;
 import com.chua.starter.monitor.support.model.RedisOperationKeyDetailVO;
-import com.chua.starter.monitor.support.model.RedisScanVO;
-import com.chua.starter.monitor.support.model.RedisStreamEntryVO;
-import com.chua.starter.monitor.support.model.RedisValueVO;
 import com.chua.starter.monitor.support.model.dto.AiAnalyzeDTO;
 import com.chua.starter.monitor.support.model.dto.AiHostAnalyzeDTO;
 
@@ -48,7 +42,6 @@ import com.chua.starter.monitor.support.service.MonitorMetricConfigService;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
-import com.chua.starter.monitor.support.service.SystemRedisKvService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.OperationProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,13 +67,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.model.AiChatResult;
 import com.chua.starter.ai.support.model.AiClientProbe;
 import com.chua.common.support.utils.CollectionUtils;
-import com.chua.common.support.utils.StringUtils;
 
 /**
  * 监控模块 REST 接口
@@ -139,22 +130,6 @@ public class MonitorController {
      * 服务器主机服务（资产联动，服务端主机查询）
      */
     private final ServerHostService serverHostService;
-
-    /**
-     * 系统 Redis 连接（应用自身连接的 Redis，未配置时为空，前端据此隐藏菜单）
-     */
-    private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
-
-    /**
-     * 系统 Redis 集合类型元素操作服务（键详情的 STREAM 分支读取流消息）
-     */
-    private final SystemRedisKvService kvService;
-
-    /**
-     * 键详情一次性读取的流消息上限。
-     */
-    private static final int STREAM_DETAIL_LIMIT = 100;
-
 
     /**
      * AI 对话门面服务（宿主未装配 ai-starter 时为空，接口返回未启用提示）
@@ -762,274 +737,6 @@ public class MonitorController {
     // 数据源台账 CRUD/测试/类型已抽为独立模块 spring-support-datapool-starter，
 
     // ==================== Redis 操作 ====================
-
-    /**
-     * 获取当前系统 Redis 信息（信息 关键指标）。
-     * <p>
-     * 直接读取应用自身连接的 Redis（spring.数据.Redis），与监控资产/Agent 无关；
-     * 无 Redis 配置时前端不显示该菜单。
-     * </p>
-     * <p>
-     * INFO 输出的键集随 Redis 版本变化，属通用动态键值结构而非业务载荷，故不改为 VO。
-     * </p>
-     *
-     * @return Redis 信息 关键指标
-     */
-    @Operation(summary = "获取当前系统 Redis 信息")
-    @GetMapping("/system/redis-info")
-    public ReturnResult<Map<String, Object>> getSystemRedisInfo() {
-        Map<String, Object> data = new java.util.LinkedHashMap<>();
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
-            return ReturnResult.ok(data);
-        }
-        /**
-         * 尝试。
-         * @param redisTemplate.getConnectionFactory( redistemplate.获取connection工厂(
-         */
-        try (var connection = redisTemplate.getConnectionFactory().getConnection()) {
-            if (connection == null) {
-                return ReturnResult.ok(data);
-            }
-            Properties info = connection.serverCommands().info();
-            if (info != null) {
-                for (Map.Entry<Object, Object> entry : info.entrySet()) {
-                    String key = String.valueOf(entry.getKey());
-                    String value = String.valueOf(entry.getValue());
-                    if (StringUtils.isEmpty(key) || key.startsWith("db")) {
-                        continue;
-                    }
-                    Double num = parseRedisDouble(value);
-                    data.put(key, num != null ? num : value);
-                }
-            }
-            return ReturnResult.ok(data);
-        } catch (Exception e) {
-            return ReturnResult.error("Redis 连接失败: " + e.getMessage());
-        }
-    }
-
-    // ==================== 系统 Redis KV 操作（直接操作当前应用连接的 Redis） ====================
-
-    /**
-     * 扫描当前系统 Redis 的 Keys。
-     *
-     * @param pattern 匹配模式，默认 *
-     * @param cursor  游标，默认 0
-     * @param count   每次扫描数量，默认 100
-     * @return 扫描结果（keys + nextCursor）
-     */
-    @Operation(summary = "扫描当前系统 Redis Keys")
-    @GetMapping("/system/redis/keys")
-    public ReturnResult<RedisScanVO> scanSystemRedisKeys(
-            @RequestParam(defaultValue = "*") String pattern,
-            @RequestParam(defaultValue = "0") String cursor,
-            @RequestParam(defaultValue = "100") int count) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        try {
-            var connection = redisTemplate.getConnectionFactory().getConnection();
-            var scanOptions = org.springframework.data.redis.core.ScanOptions.scanOptions()
-                    .match(pattern)
-                    .count(count)
-                    .build();
-            var cursorObj = connection.scan(scanOptions);
-            java.util.List<String> keys = new java.util.ArrayList<>();
-            while (cursorObj.hasNext() && keys.size() < count) {
-                keys.add(new String(cursorObj.next(), java.nio.charset.StandardCharsets.UTF_8));
-            }
-            cursorObj.close();
-            connection.close();
-            return ReturnResult.ok(new RedisScanVO(keys, keys.size() >= count ? "1" : "0", keys.size()));
-        } catch (Exception e) {
-            return ReturnResult.error("扫描 Redis Keys 失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 读取当前系统 Redis 的 Key 值。
-     *
-     * @param key 键名
-     * @return 值
-     */
-    @Operation(summary = "读取当前系统 Redis Key")
-    @GetMapping("/system/redis/kv/{key}")
-    public ReturnResult<String> getSystemRedisKey(@PathVariable String key) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        try {
-            String value = redisTemplate.opsForValue().get(key);
-            return ReturnResult.ok(value);
-        } catch (Exception e) {
-            return ReturnResult.error("读取 Redis Key 失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取当前系统 Redis Key 的详细信息（类型、TTL、值）。
-     *
-     * @param key 键名
-     * @return 详细信息
-     */
-    @Operation(summary = "获取当前系统 Redis Key 详细信息")
-    @GetMapping("/system/redis/kv/{key}/detail")
-    public ReturnResult<RedisKeyDetailVO> getSystemRedisKeyDetail(@PathVariable String key) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        try {
-            String type = redisTemplate.type(key) != null ? redisTemplate.type(key).name() : "none";
-            Long ttl = redisTemplate.getExpire(key);
-            Object value = null;
-            Long size = null;
-            if ("STRING".equals(type)) {
-                value = redisTemplate.opsForValue().get(key);
-                size = value != null ? (long) value.toString().length() : 0L;
-            } else if ("LIST".equals(type)) {
-                value = redisTemplate.opsForList().range(key, 0, -1);
-                size = redisTemplate.opsForList().size(key);
-            } else if ("SET".equals(type)) {
-                value = redisTemplate.opsForSet().members(key);
-                size = redisTemplate.opsForSet().size(key);
-            } else if ("HASH".equals(type)) {
-                value = redisTemplate.opsForHash().entries(key);
-                size = redisTemplate.opsForHash().size(key);
-            } else if ("ZSET".equals(type)) {
-                var zSetValues = redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
-                if (zSetValues != null) {
-                    java.util.List<RedisMemberScoreVO> zSetList = new java.util.ArrayList<>();
-                    for (var v : zSetValues) {
-                        zSetList.add(new RedisMemberScoreVO(v.getValue(), v.getScore()));
-                    }
-                    value = zSetList;
-                }
-                size = redisTemplate.opsForZSet().size(key);
-            } else if ("STREAM".equals(type)) {
-                java.util.List<RedisStreamEntryVO> entries = kvService.readStream(key, STREAM_DETAIL_LIMIT);
-                value = entries;
-                size = (long) entries.size();
-            }
-            return ReturnResult.ok(new RedisKeyDetailVO(key, type,
-                    ttl != null && ttl >= 0 ? ttl : -1, value, size));
-        } catch (Exception e) {
-            return ReturnResult.error("获取 Redis Key 详情失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 写入当前系统 Redis Key。
-     *
-     * @param key   键名
-     * @param body  值（请求体）
-     * @param ttl   过期时间（秒），可选，-1 表示永不过期
-     * @return 是否成功
-     */
-    @Operation(summary = "写入当前系统 Redis Key")
-    @PutMapping("/system/redis/kv/{key}")
-    public ReturnResult<Boolean> setSystemRedisKey(
-            @PathVariable String key,
-            @RequestBody RedisValueVO body,
-            @RequestParam(defaultValue = "-1") long ttl) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        if (body == null || body.value() == null) {
-            return ReturnResult.error("值不能为空");
-        }
-        String value = body.value();
-        try {
-            if (ttl > 0) {
-                redisTemplate.opsForValue().set(key, value, java.time.Duration.ofSeconds(ttl));
-            } else {
-                redisTemplate.opsForValue().set(key, value);
-            }
-            return ReturnResult.ok(true);
-        } catch (Exception e) {
-            return ReturnResult.error("写入 Redis Key 失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 删除当前系统 Redis Keys。
-     *
-     * @param keys 键名列表
-     * @return 删除数量
-     */
-    @Operation(summary = "删除当前系统 Redis Keys")
-    @DeleteMapping("/system/redis/keys")
-    public ReturnResult<Long> deleteSystemRedisKeys(@RequestBody List<String> keys) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        try {
-            Long deleted = redisTemplate.delete(keys);
-            return ReturnResult.ok(deleted != null ? deleted : 0L);
-        } catch (Exception e) {
-            return ReturnResult.error("删除 Redis Keys 失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 设置当前系统 Redis Key 过期时间。
-     *
-     * @param key 键名
-     * @param ttl 过期时间（秒）
-     * @return 是否成功
-     */
-    @Operation(summary = "设置当前系统 Redis Key 过期时间")
-    @PostMapping("/system/redis/expire/{key}")
-    public ReturnResult<Boolean> expireSystemRedisKey(
-            @PathVariable String key,
-            @RequestParam long ttl) {
-        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
-        if (redisTemplate == null) {
-            return ReturnResult.error("当前系统未配置 Redis");
-        }
-        try {
-            Boolean result = redisTemplate.expire(key, java.time.Duration.ofSeconds(ttl));
-            return ReturnResult.ok(result != null && result);
-        } catch (Exception e) {
-            return ReturnResult.error("设置 Redis Key 过期时间失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 解析 Redis 数值（兼容 1.5M / 2G 等单位后缀）
-     *
-     * @param raw 原始值
-     * @return 数值或 空
-     */
-    private static Double parseRedisDouble(String raw) {
-        if (StringUtils.isEmpty(raw)) {
-            return null;
-        }
-        try {
-            String s = raw.trim().toUpperCase();
-            double factor = 1.0;
-            if (s.endsWith("K")) {
-                factor = 1024.0;
-                s = s.substring(0, s.length() - 1);
-            } else if (s.endsWith("M")) {
-                factor = 1024.0 * 1024.0;
-                s = s.substring(0, s.length() - 1);
-            } else if (s.endsWith("G")) {
-                factor = 1024.0 * 1024.0 * 1024.0;
-                s = s.substring(0, s.length() - 1);
-            } else if (s.endsWith("B")) {
-                s = s.substring(0, s.length() - 1);
-            }
-            return Double.parseDouble(s.trim()) * factor;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 
     /**
      * 扫描 Redis Keys（SCAN 游标，单批 100 个）。

@@ -8,9 +8,8 @@
     2. 账号管理：统一账号（密钥 / 邮箱 / 短信）、外部访问密钥（AppKey）、Cookie 池，
        供设备、模板等模块按 accountId 引用
 
-    依赖方向：本模块是可选能力，被设备 / 模板等必选模块直接引用；
-    AI 模块不依赖本模块，也不读写本模块的账号表 —— AI 自己维护 provider / 连接，
-    需要渠道增强时只按 {@code ChatClient} SPI 扩展名取用，两边保持解耦。
+    依赖方向：account 是 ai 的下层能力；ai 只通过 account 的渠道/账号契约取用，
+    不读写 account 的表。account 发布 ChannelCatalogChangedEvent，ai 只处理自身缓存与探针副作用。
 
     @author CH
 -->
@@ -32,18 +31,13 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- MyBatis Plus：渠道健康记录与提供商账号连接持久化 -->
-    <dependency>
-      <groupId>com.baomidou</groupId>
-      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
-    </dependency>
-    <!-- Spring Support MyBatis（审计基类与 Mapper 约定） -->
+    <!-- Spring Support MyBatis（审计基类、Mapper 约定与 MyBatis-Plus 传递） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-mybatis-starter</artifactId>
     </dependency>
-    <!-- 余额查询 SPI（CreditQueryProvider）：上游余额配置存在本模块，
-           真正「去哪查 / 取哪个字段」的实现由 datasearch 模块提供，避免各家口径散落 -->
+    <!-- 余额查询 SPI（CreditQueryProvider）：账号侧保存余额配置并消费 datasearch 契约；
+         具体 provider 实现按部署需要装配，不在账号模块重复实现查询规则 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-datasearch-starter</artifactId>
@@ -54,24 +48,13 @@
       <artifactId>spring-support-swagger-starter</artifactId>
       <scope>provided</scope>
     </dependency>
-    <!-- Web support（@RestController / SseEmitter） -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <!-- 自动配置注解（@AutoConfiguration / TransactionTemplate） -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-autoconfigure</artifactId>
-    </dependency>
-    <!-- 免登录对话 / 文生图渠道的 ChatClient 实现：
-         duckduckgo（duck / duckduckgo 别名）。
-         渠道侧只按扩展名解析，缺失时优雅降级为「空模型 + 明确提示」，
-         因此宿主工程如不需要可在自己的 pom 里排除这个依赖 -->
+    <!-- MVC 契约由 common/MyBatis 依赖链提供，Web 容器由部署宿主声明 -->
+    <!-- 自动配置注解由 common 依赖链提供 -->
+    <!-- 免登录对话 / 文生图渠道的 ChatClient 实现：duckduckgo。
+         渠道侧按扩展名解析，缺失时优雅降级；部署壳可按需选择实现，不使用 exclusions。 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-duckduckgo-starter</artifactId>
-      <version>${utils.version}</version>
     </dependency>
     <!-- 邮件收发：收信走 jakarta.mail(IMAP/POP3)，发信复用 utils 的 MessagePush SPI（EmailPush）。
          账号模块只做编排，不自己实现 SMTP / IMAP 协议 -->
@@ -97,6 +80,7 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- H2（test）：单元/集成测试用内存库，不进生产运行时（R6） -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>

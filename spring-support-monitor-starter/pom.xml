@@ -32,32 +32,27 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-logger-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 服务器台账（资产联动 server-hosts 查询） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-server-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 任务调度：发布管理的定时发布 / Git 定时轮询依赖 job-starter。
              server-starter 中该依赖为 optional，应用侧必须显式引入才会装配调度能力。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-job-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 采集管理由独立模块装配，复用监控宿主认证、数据源与调度运行时。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-collect-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 投递与订阅配置仍属于数据湖模块，宿主只声明依赖。 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datalake-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 端口映射：统一入口 /ms/tunnel 由 tunnel-starter 提供（SPI：TunnelProvider +
              统一控制器 + 文件存储 + 启停编排）；ngrok / cloudflared 只是 SPI 实现。
@@ -66,7 +61,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-tunnel-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- ngrok / cloudflared / tailscale 三种隧道实现默认不打包，按需通过 OSGi 安装。 -->
 
@@ -79,8 +73,8 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-control-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
+        <!-- WebRTC 原生实现：桌面帧采集与键鼠注入的底层能力包（独立分发，必须显式引入） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-webrtc-starter</artifactId>
@@ -90,7 +84,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datapool-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 租户契约：datapool 里的 DatasourceTenantLookupAdapter 实现了租户侧的
              TenantDatasourceLookup 窄接口（该适配器在 hub 里是 @Component），而 hub 对这个
@@ -101,7 +94,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-api-support-common-tenant-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 设备接入默认不随监控端打包，按需通过 OSGi 安装。 -->
         <!-- APM 观测：统一 REST /api/apm/v1（ApmServlet，嵌入宿主 8082 同端口），
@@ -109,21 +101,24 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-apm-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- SkyWalking / Hotspot APM 引擎默认不随监控端打包，按需通过 OSGi 安装。 -->
+        <!-- Spring Boot 自动配置内核：条件装配与属性绑定（Starter 自身也要用） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Web 容器：/ms/** 与 /api/** 的 REST 端点宿主 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Redis 客户端：缓存、会话与设备在线态的读写 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- JPA：部分持久化仓储与实体映射使用 JPA 规范 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -140,23 +135,15 @@
         </dependency>
 
         <!-- 数据访问 -->
+        <!-- 数据源运行时：台账/连接池/跨方言查询，monitor 自身库与资产探活共用 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
+        <!-- MyBatis-Plus：监控业务表（主机、告警、任务等）的映射与分页 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
-        </dependency>
-
-        <!-- 服务发现：为「服务管理」的 service-discovery 插件提供独立查询接口
-             （/ms/monitor/discovery）。声明为 optional，不向下游强制传递；
-             缺失时接口降级为「未启用发现服务」提示，不影响其它功能 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-discovery-starter</artifactId>
-            <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
 
         <!-- 上报客户端注册服务端：接收 sync/client/register 与 monitor/app/report，
@@ -165,10 +152,10 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-sync-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- 缓存 -->
+        <!-- 缓存抽象与本地/远程两级缓存实现（指标快照与字典缓存） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-cache-starter</artifactId>
@@ -178,7 +165,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-ai-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- 账号与渠道管理（统一账号 /api/accounts、AppKey、Cookie 池、免登录对话与文生图渠道）：
@@ -187,12 +173,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-account-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- 阿里云 / 腾讯云 / 百度短信实现默认不随监控端打包，按需通过 OSGi 安装。 -->
 
-        <!-- 文档 -->
+        <!-- 文档：宿主需要 compile 作用域引入，knife4j 与 swagger 注解随运行时上线 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
@@ -212,24 +197,25 @@
 
 
         <!-- 工具 -->
+        <!-- 主机指标采集：MetricsService / MetricsSnapshot（CPU、内存、磁盘、网卡） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-metrics-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
-
+        <!-- SSH 客户端：主机资产远程执行与证书/文件下发 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
+        <!-- Redis 客户端封装：分布式锁、缓存与在线态读写 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-redis-starter</artifactId>
         </dependency>
+        <!-- Prometheus 查询客户端：Prometheus 采集方式的指标读取（PrometheusClient） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-prometheus-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         <!-- 实时推送：plugin.socket.enable=true 时注入 SocketSessionTemplate，
@@ -237,12 +223,11 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
+        <!-- Socket.IO 传输实现：前端 socket 客户端的服务端引擎（netty-socketio） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-io-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- P2P 房间信令节点：服务管理里的 ROOM 协议直接用 RoomServer（WebSocket 引擎 + 定向下发），
@@ -250,7 +235,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-websocket-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- 消息队列：socket 推送经 queue 解耦（MonitorPushService → queue → SocketQueueBridge → 前端），
@@ -258,7 +242,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-queue-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <!-- InfluxDB / ZooKeeper / Elasticsearch 管理引擎默认不随监控端打包，按需通过 OSGi 安装。 -->
@@ -281,7 +264,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-mysql-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         <!-- 引擎的源/Sink 以响应式 Flux 为数据面，契约在本模块直接使用 -->
@@ -295,17 +277,17 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-tshark-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
         <!-- 底层工具：解压 SPI（ExtractorFactory/Extractor），TsharkRuntime 便携包解压使用 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
-        <!-- MySQL 驱动（spring-boot:run 使用 MySQL profile 时需要） -->
+        <!-- MySQL 驱动（spring-boot:run 使用 MySQL profile 时需要）。
+             版本单源例外：显式钉 8.0.33，与 194 生产库已验证的驱动版本保持一致
+             （其余模块走 Boot BOM 的 9.7.0，升级须先在目标库做兼容验证）。 -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
@@ -321,24 +303,22 @@
             <artifactId>postgresql</artifactId>
         </dependency>
 
-        <!-- OSHI 本地硬件/操作系统信息采集 -->
+        <!-- OSHI 本地硬件/操作系统信息采集（版本由根 POM 单源托管，与 system 统一 6.8.0） -->
         <dependency>
             <groupId>com.github.oshi</groupId>
             <artifactId>oshi-core</artifactId>
-            <version>6.6.5</version>
         </dependency>
 
         <!-- JNA：oshi-core 的原生层依赖，必须 >= 5.16。
-             显式钉住 5.19.1，避免其它可选模块传递旧版导致 OSHI 原生采集静默降级。 -->
+             版本由根 POM 单源托管（5.19.1），避免其它可选模块传递旧版导致 OSHI 原生采集静默降级。 -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-            <version>5.19.1</version>
         </dependency>
+        <!-- JNA 平台绑定：OSHI 读取 Windows/Linux 系统接口所需的 platform 映射 -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
-            <version>5.19.1</version>
         </dependency>
 
     </dependencies>

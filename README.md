@@ -5,7 +5,7 @@
 [![Maven](https://img.shields.io/badge/Maven-3.6%2B-blue.svg)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-`com.chua` 的 Spring Boot starter 集合：**55 个在构建模块**，覆盖 Web 公共层、数据源、缓存、队列、实时通信、文件、设备接入、AI、APM、隧道与云服务。
+`com.chua` 的 Spring Boot starter 集合：**48 个在构建模块**，覆盖 Web 公共层、数据源、缓存、队列、实时通信、文件、设备接入、AI、APM、隧道与云服务。
 
 这份 README 是整套 starter 的**使用者总览**，回答四个问题：
 
@@ -14,15 +14,15 @@
 3. 每个模块一句话定位是什么，配置前缀怎么反查；
 4. 版本与兼容性口径是什么。
 
-REST 接口清单、Bean 字段明细、表结构、验收记录不在这里，见各模块自己的 `README.md`（[三、模块详解目录](#三模块详解目录55-个)逐个给出链接）。
+REST 接口清单、Bean 字段明细、表结构、验收记录不在这里，见各模块自己的 `README.md`（[三、模块详解目录](#三模块详解目录48-个)逐个给出链接）。
 
 > 版本：`4.0.0.51`；父 POM 继承 `spring-boot-starter-parent:4.1.2`（`spring.boot.version=4.1.2`），编译级别 Java 25。
 
 **目录**
 
 - [一、仓库定位与总体架构](#一仓库定位与总体架构)
-- [二、模块全景（55 个）](#二模块全景55-个)
-- [三、模块详解目录（55 个）](#三模块详解目录55-个)
+- [二、模块全景（48 个）](#二模块全景48-个)
+- [三、模块详解目录（48 个）](#三模块详解目录48-个)
 - [四、快速上手](#四快速上手)
 - [五、依赖与装配机制](#五依赖与装配机制)
 - [六、配置前缀索引](#六配置前缀索引)
@@ -39,7 +39,7 @@ REST 接口清单、Bean 字段明细、表结构、验收记录不在这里，�
 ```mermaid
 flowchart TB
     HOST["宿主 Spring Boot 应用<br/>按需引入一个或多个 starter"]
-    subgraph STARTERS["spring-support-*-starter（55 个在构建模块）"]
+    subgraph STARTERS["spring-support-*-starter（48 个在构建模块）"]
         direction LR
         WEB["Web 公共<br/>common / oauth-client<br/>swagger / swagger2 / console"]
         DATA["数据<br/>datasource / datapool / mybatis"]
@@ -60,13 +60,13 @@ flowchart TB
 
 **构建口径（重要，依据根 `pom.xml`）**：
 
-- 父 POM 的 `<modules>` 里实际构建 **55 个** `spring-support-*-starter`（当前版本 `4.0.0.51`，`utils.version=4.0.0.51`）；
+- 父 POM 的 `<modules>` 里实际构建 **48 个** `spring-support-*-starter`（当前版本 `4.0.0.51`，`utils.version=4.0.0.51`）；
 - `spring-support-bom` 在父 POM 中被注释，**暂不进 reactor**，因此依赖必须显式写版本号（见[四、快速上手](#四快速上手)）；
 - `spring-api-support-*` 系列 artifact 由独立的 `spring-support-api-starter` 仓库构建，**不在本仓库 reactor 内**；如需本地联调，先在该仓库 `mvn install` 到本地仓库。
 
-## 二、模块全景（55 个）
+## 二、模块全景（48 个）
 
-按业务域归组，给出每组的代表入口 / Bean。逐模块的一句话定位与文档链接见[三、模块详解目录](#三模块详解目录55-个)。
+按业务域归组，给出每组的代表入口 / Bean。逐模块的一句话定位与文档链接见[三、模块详解目录](#三模块详解目录48-个)。
 
 | 业务域 | 模块 | 代表入口 / Bean |
 | --- | --- | --- |
@@ -80,9 +80,9 @@ flowchart TB
 | 设备与资产 | device、server、docker、software、control、cdp、filesystem、ssh | `DeviceProvider`、`DeviceSession`、`FileStorageTemplate`、`FileServerManager`、`SshServerService`、`WebRtcServer` |
 | 隧道与云 | tunnel、tunnel-ngrok、tunnel-cloudflared、tunnel-tailscale、tencent、aliyun | `TunnelProvider`、`TencentWechatPayGateway`、`AliyunAlipayGateway`、`AlipayClient` |
 
-## 三、模块详解目录（55 个）
+## 三、模块详解目录（48 个）
 
-55 个在构建模块的逐一目录，按父 POM `<modules>` 构建顺序排列；一句话定位取自各模块 README 开篇。
+48 个在构建模块的逐一目录，按父 POM `<modules>` 构建顺序排列；一句话定位取自各模块 README 开篇。
 
 | 模块 | 一句话定位 | README |
 | --- | --- | --- |
@@ -120,18 +120,14 @@ flowchart TB
 | spring-support-tunnel-ngrok-starter | ngrok 官方 Agent SDK 实现：本机服务自动暴露公网 URL，无需独立 ngrok CLI | [README.md](spring-support-tunnel-ngrok-starter/README.md) |
 | spring-support-tunnel-cloudflared-starter | Cloudflare Tunnel：管理外部 `cloudflared` 子进程，免账号 Quick Tunnel 开箱可用 | [README.md](spring-support-tunnel-cloudflared-starter/README.md) |
 | spring-support-tunnel-tailscale-starter | Tailscale Funnel：基于 tailscale CLI 子进程把本机服务暴露为公网 HTTPS | [README.md](spring-support-tunnel-tailscale-starter/README.md) |
-| spring-support-eduai-starter | 教育 AI：题库、AI 组卷/阅卷（SSE 进度）、知识库检索、错题库、考试与语文素养语料 | [README.md](spring-support-eduai-starter/README.md) |
-| spring-support-device-starter | 设备接入 SPI：海康/大华/宇视/精讯畅通/GB28181/ONVIF 收敛为 `DeviceProvider` + 能力矩阵 | [README.md](spring-support-device-starter/README.md) |
 | spring-support-datapool-starter | 数据源中心：台账 CRUD、连通性探测、可复用 JDBC、Web 管理器、SSH 隧道与中间件管理面 | [README.md](spring-support-datapool-starter/README.md) |
 | spring-support-monitor-starter | 服务器与中间件监控一站式：资产台账 + 采集 + 时序 + 告警 + 抓包 + AI 诊断 | [README.md](spring-support-monitor-starter/README.md) |
 | spring-support-server-starter | 服务器资产与远程运维：主机台账、远程终端、SFTP、工作台、发布管理、批量执行 | [README.md](spring-support-server-starter/README.md) |
-| spring-support-docker-starter | Docker 管理台后端：容器/镜像/网络/卷/镜像库，经 SSH 执行 docker CLI，SSE 回显 | [README.md](spring-support-docker-starter/README.md) |
 | spring-support-control-starter | WebRTC 远程控制：信令服务 + 桌面采集 + 键鼠注入，`/control/**` 辅助接口 | [README.md](spring-support-control-starter/README.md) |
 | spring-support-cdp-starter | CDP 调试模块：内嵌 headless Chromium，REST + WebSocket 透传 + 全局 SSE 事件流 | [README.md](spring-support-cdp-starter/README.md) |
 | spring-support-ai-starter | AI 能力装配：对话/Agent/RAG/OCR/文生图/文生视频/试卷/用量计价/协议网关 | [README.md](spring-support-ai-starter/README.md) |
 | spring-support-ai-training-starter | AI 训练平台 REST 接入：ZIP 数据上传、异步训练调度、进度与超参数管理 | [README.md](spring-support-ai-training-starter/README.md) |
 | spring-support-ueba-starter | UEBA 行为分析引擎装配：IP 异常流量检测 + 行为序列分析 + 风险融合 + 语义解释 | [README.md](spring-support-ueba-starter/README.md) |
-| spring-support-message-starter | 统一消息推送：提供商/模板/日志三表驱动多渠道发送，渠道实现走 `MessagePush` SPI | [README.md](spring-support-message-starter/README.md) |
 | spring-support-taskdistribution-starter | 任务分发：派发、执行、结果回传、重试/超时与多节点负载均衡 | [README.md](spring-support-taskdistribution-starter/README.md) |
 | spring-support-apm-starter | APM 基础门面：`ApmProvider` SPI 聚合为协议无关 REST，支持嵌入宿主/独立 HTTP 服务 | [README.md](spring-support-apm-starter/README.md) |
 | spring-support-apm-skywalking-starter | SkyWalking 扩展：`ApmProvider`（SPI `skywalking`）+ `plugin.apm.skywalking.*` 配置桥接 | [README.md](spring-support-apm-skywalking-starter/README.md) |
@@ -174,7 +170,7 @@ plugin:
 
 ### 5.1 自动装配发生在哪里
 
-55 个在构建模块中，**53 个**带 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 文件，其中 **50 个共登记 111 条**自动配置类（全仓库 `*.imports` 共 113 条，另 2 条属于未构建的 httpman / payment）；`socket-io`、`socket-rsocket`、`swagger2` 三个文件里只有注释（Socket.IO/RSocket 的 Bean 由 `socket-starter` 门面统一管理，swagger2 只提供注解依赖）。例如：
+在构建模块的自动配置统一经 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 注册，具体条目以各模块实际文件为准；`socket-io`、`socket-rsocket`、`swagger2` 的文件只保留说明，Bean 或注解分别由 `socket-starter` 门面与 swagger 提供方承担。例如：
 
 ```text
 # spring-support-redis-starter
@@ -276,11 +272,11 @@ flowchart LR
 1. 启动加 `--debug`，看 `ConditionEvaluationReport` 里哪个 `@ConditionalOnProperty`/`@ConditionalOnClass` 没通过；
 2. 有 Actuator 时看 `/actuator/conditions` 与 `/actuator/configprops`；
 3. `common-starter` 的 `/service-info` 会汇总各模块注册的开关与端点；
-4. 确认生效方式：`imports`、`spring.factories`、SPI extensions、还是需要手动 `@Import`（software）。
+4. 确认生效方式：`imports`、`spring.factories`、SPI extensions，还是需要手动 `@Import`。
 
 ## 六、配置前缀索引
 
-统计口径：55 个在构建模块的 `src/main/java` 下，含 `@ConfigurationProperties` 注解的文件共 **92 个**，对应 **90 个顶层注解类**——其中 2 个注解标在嵌套类上（`RequestFingerprintAutoConfiguration.FingerprintProps`、`ApiSecurityHeaderFilter.ApiSecurityHeaderProperties`）；另有 3 个属于未构建的 httpman/payment，不计入。下表按模块归并前缀，用于反查；字段明细见各模块 README。
+统计口径：根 POM `<modules>` 中实际在构建的模块；下表按模块归并 `@ConfigurationProperties` 前缀，用于反查，字段明细见各模块 README。
 
 | 模块 | 配置前缀（`@ConfigurationProperties`） |
 | --- | --- |

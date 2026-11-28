@@ -62,20 +62,20 @@ flowchart LR
 | 时序引擎 | `SeriesEngineConfiguration#seriesEngine` | `plugin.monitor.timeseries.engine` |
 | 聚合/清理 | `MonitorScheduler#aggregateHourly` / `#cleanupOldData` | `@Scheduled(cron="0 0 * * * ?")` / `monitor.cleanup.cron` |
 | 告警 | `AlarmController`、`AlarmEngineServiceImpl`、`NotifySender` SPI | `/ms/monitor/alarm` |
-| Redis 运维 | `RedisManageService`、`SystemRedisKvService` | `/ms/monitor/redis-manage`、`/ms/monitor/system/redis/kv` |
-| 主机运维 | `HostOperations` + `HostOperationsProvider` SPI（Posix/Windows/Mac） | `/ms/server/host/**` |
+| Redis 运维 | datapool `RedisManageService` / monitor `OperationProvider` | `/ms/monitor/redis-manage`、`/ms/monitor/operation/redis/{taskId}` |
+| 主机运维（由 server-starter 提供） | `HostOperations` + `HostOperationsProvider` SPI（Posix/Windows/Mac） | `/ms/server/host/**`、`/ms/system` |
 | 网络抓包 | `TsharkCaptureController`、`TsharkCaptureService`、`TsharkRuntime` | `/ms/monitor/tshark` |
 | 数据同步（由 datapool-starter 提供） | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
-| Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentHttpClient`、`AgentOfflineChecker` | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
+| Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentOfflineChecker`；HTTP 客户端由 server-starter 提供 | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
 | Agent 客户端模式 | `MetricPushClient`、`MonitorCapabilityDetector`、`OshiMetricCollector`（协议 record 与 `MetricPoint` 也在本模块） | `plugin.monitor.mode=client` 时向服务端周期推送心跳与 cpu/memory/disk 指标；探测不支持或 OSHI 缺失时静默降级 |
 | 数据库备份（由 datapool-starter 提供） | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/datasource/database-backup`，兼容 `/ms/monitor/database-backup`；配置键仍为 `plugin.monitor.database-backup.enabled`（缺省开） |
 | AI 诊断 / 大屏 | `MonitorController` 注入 `ObjectProvider<AiChatFacadeService>`；`#dashboardOverview` | `/ms/monitor/ai/status`、`/ai/analyze`、`/ai/host/{id}/analyze`、`/ms/monitor/dashboard/overview` |
 | 端口映射 | tunnel-starter 统一编排（ngrok/cloudflared/tailscale 为 SPI 实现） | `/ms/tunnel` |
-| 服务发现查询 | `ServerDiscoveryController`（`@ConditionalOnClass DiscoveryService`）/ `DiscoveryFallbackController`（`@ConditionalOnMissingClass`） | `/ms/monitor/discovery` |
-| 文件资产/网关 | `FileAssetServiceImpl`、`MonitorFileStorageConfig`、`MonitorFileStorageGatewayConfig` | `/ms/monitor/file-assets`、`/fs/default` |
+| 服务发现查询（由 server-starter 提供） | `ServerDiscoveryController` / `DiscoveryFallbackController` | `/ms/monitor/discovery` |
+| 文件资产/网关（由 filesystem-starter 提供） | `FileAssetServiceImpl` / `FileSystemAutoConfiguration` | `/ms/monitor/file-assets`、`/fs/default` |
 | 实时推送 | `MonitorPushService` → `SocketQueueBridge` | socket.io `29181`，`subscribe("monitor", ...)` |
 
-核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、维护计划、节点与操作日志。备份历史表 `ms_backup_history` 与同步任务表 `ms_sync_task*` 的唯一建表入口在 datapool-starter 的 `V3.2__init_backup_and_sync.sql`；monitor 不重复定义。
+核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警与抓包；维护计划、服务节点和节点操作日志分别归 server-starter 的 `V3.3`、`V3.4` 脚本。备份历史表 `ms_backup_history` 与同步任务表 `ms_sync_task*` 的唯一建表入口在 datapool-starter 的 `V3.2__init_backup_and_sync.sql`；monitor 不重复定义。
 
 ## 4. Bean 能力矩阵
 
@@ -90,15 +90,12 @@ flowchart LR
 | `agentTcpSyncServer` | `SyncServer`（`TcpSyncServer`） | 无条件；端口 `plugin.monitor.agent.tcp-port`（默认 19390），`initMethod=start` | 可（同上） | Agent TCP 长连接上报 |
 | `httpExchangeRepository` | `HttpExchangeRepository` | `@ConditionalOnClass(HttpExchangeRepository)` + `@ConditionalOnMissingBean` | 可（宿主仓库优先） | `/actuator/httpexchanges` 数据源（容量 200） |
 | `sseSocketSessionTemplate` | `SseSocketSessionTemplate` | `@ConditionalOnClass` + `plugin.socket.enable=true`（无 matchIfMissing，须显式开） | 可 | socketio 单协议下兜底空实现，保 mailbox SSE 构造注入 |
-| `monitorLocalStorage` | 反射构造的 `LocalFileStorage` | `@ConditionalOnClass(name="...filesystem.support.local.LocalFileStorage")` | 可 | 文件资产本地后端（对外桶名 `default`） |
-| `fileStorageTemplate` / `fileServerConfigController` / `uploadTaskManager` / `uploadTaskController` / `fileCollabStore` / `fileCollabPersistence` / `fileCollabHub` / `fileCollabController` | 对应 filesystem-starter 类 | `@ConditionalOnClass(FileStorageServerLauncher, FileStorageTemplate)` + 均带 `@ConditionalOnMissingBean` | 可 | 补回被 exclude 的 `FileSystemAutoConfiguration` 能力 |
-| `fileStorageEmbeddedFilter` / `fileStorageServerLauncher` | `FilterRegistrationBean<FileStorageEmbeddedFilter>` / `FileStorageServerLauncher` | `plugin.filesystem.storage-server.enable`（缺省开）+ `mode=embedded`（缺省）/ `mode=standalone`（须显式配） | 可 | 内置形态挂应用端口 `{path-prefix}/*`；独立端口（默认 18082）文件服务 |
 | `hostRealtimePushBinder` | `ApplicationRunner` | 无条件；`HostOnlineScheduler` 缺失时运行期跳过 | 可 | 向 server-starter 调度器注册延迟/在线/采集钩子 |
 | `monitorSocketQueueBridge` | `SocketQueueBridge` | `@ConditionalOnProperty plugin.queue.enable=true`（matchIfMissing=true，缺省开） | 可 | 消费 `socket:push` topic 广播到 socket.io |
 | `productionAuthGuard` | `ProductionAuthGuard` | `@ConditionalOnProperty plugin.oauth.require-auth=true` | 可 | 生产启动期鉴权校验 |
 | `debugBeanTrace` | `DebugBeanTrace`（`BeanPostProcessor`） | 无条件 | 可 | Bean 装配追踪（排障） |
 | `monitorScheduler` / `providerRegistry` | `MonitorScheduler` / `ProviderRegistry` | `@Component`，无条件 | 可 | 调度入口 / SPI 双键索引 |
-| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
+| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`HostMetricHistoryServiceImpl`、`TsharkCaptureService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
 
 > 本模块没有 `spring.factories`，自动配置只经 `AutoConfiguration.imports` 注册（Spring Boot 4 口径）。
 
@@ -133,7 +130,7 @@ plugin:
       database: monitor                 # redis 引擎下为逻辑库下标
 ```
 
-### 5.2 `plugin.monitor.ssh`（`MonitorSshProperties`，`@Component` 注册）
+### 5.2 `plugin.monitor.ssh`（`MonitorSshProperties`，由 server-starter 注册）
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
@@ -141,7 +138,7 @@ plugin:
 | `plugin.monitor.ssh.session-timeout-seconds` | `int` | `30` | 认证（session.auth）超时 |
 | `plugin.monitor.ssh.exec-timeout-seconds` | `int` | `60` | 命令执行/读取超时 |
 
-### 5.3 `plugin.monitor.agent`（`AgentDeployProperties`，`@Component` 注册；末行 `tcp-port` 例外为 `@Value`）
+### 5.3 `plugin.monitor.agent`（`AgentDeployProperties`，由 server-starter 注册；末行 `tcp-port` 例外为 `@Value`）
 
 > Agent 安装/卸载/升级等部署能力已下线（监控采集由 monitor 通道承担），历史版本中的 `jar-path`、`jar-url`、`*-service-name`、`remote-dir-name`、`health-wait-seconds`、`java-command`、`report-url`、`apm-*` 等配置项已从 `AgentDeployProperties` 移除，配置它们不再生效；本表仅保留平台访问已部署 Agent 所需的运行时参数。
 
@@ -248,7 +245,6 @@ plugin:
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `monitor.file-storage.local-path` | `String` | `${user.dir}/.data/filesystem-local` | 文件资产落地目录（`MonitorFileStorageConfig` 的 `@Value`，同步注入 `filesystem.temp.path`） |
 | `monitor.cleanup.cron` | `String` | `0 0 * * * ?` | 指标保留清理调度（`@Scheduled(cron="${monitor.cleanup.cron:0 0 * * * ?}")`） |
 | `monitor.collect.interval.ms` / `monitor.data.retention.days` | `long` / `int` | `10000` / `30` | **运行时配置**，存 `ms_monitor_config` 表（页面可改）：采集节奏 / 指标保留天数 |
 | `monitor.history.retention-days` | `int` | `7` | 主机历史指标时序保留天数（`HostMetricHistoryServiceImpl` 的 `@Value`，写入/清理走 SeriesEngine） |
@@ -350,9 +346,8 @@ plugin:
 
 可选依赖说明：
 
-- `spring-support-discovery-starter`：pom 中 `optional=true`。缺失时 `ServerDiscoveryController` 不装配，`DiscoveryFallbackController`（`@ConditionalOnMissingClass`）降级返回「未启用发现服务」，其余功能不受影响。
 - `utils-support-webrtc-starter`：在 control-starter 内是 optional（原生能力包不传递），本模块已显式引入，宿主经 monitor 传递即可；若剔除 control-starter，`ControlRestConfiguration` 因 `@ConditionalOnClass(ControlController)` 整体不装配，远控关闭。
-- `spring-support-filesystem-starter`：类缺失时 `MonitorFileStorageConfig` / `MonitorFileStorageGatewayConfig` 因 `@ConditionalOnClass` 自动失效（反射解耦），不拖垮启动。
+- `spring-support-filesystem-starter`：由 server-starter 直接依赖并传递到 monitor；文件存储只保留 `FileSystemAutoConfiguration` 一个装配入口，`plugin.filesystem.enable=true` 时提供文件资产与 `/fs` 网关。
 - 短信通道（`utils-support-alibaba/tencentcloud/baidu-starter`）：不引则发送时明确报「未安装短信通道」。
 - 打包：默认 `spring-boot.repackage.skip=false` 产出 `*-exec.jar`（`exec` 分类符，不替换主构件）；repackage 后由 antrun 把 `META-INF/spring`、`META-INF/extensions` 复制进 `BOOT-INF/classes`，`java -jar` 才能读到自动配置。
 
@@ -372,7 +367,7 @@ plugin:
 与相邻模块的取舍：
 
 - vs `spring-support-apm-*`：APM 面向「接入该体系的应用」的调用链/指标（`/api/apm/v1`）；monitor 面向「主机与中间件」的资产化运维。
-- vs `spring-support-server-starter`：server 管主机台账与探活调度；monitor 消费其 `HostOnlineScheduler` 钩子做实时推送与告警评估（`HostPushBridgeConfiguration` / `HostRealtimePushConfiguration`），并实现其 `HostCollectProvider` / `HostDetectProvider` / `HostAgentHistoryWriter` 三个 SPI。
+- vs `spring-support-server-starter`：server 管主机台账与探活调度；monitor 消费其 `HostOnlineScheduler` 钩子做实时推送与告警评估（`HostPushBridgeConfiguration` / `HostRealtimePushConfiguration`），并只保留 `HostAgentHistoryWriter` 的 monitor 适配；主机运行时与采集/探测 SPI 已归 server-starter。
 - vs `spring-support-ai-starter`：monitor 是 AI 能力的消费方（智能分析），不是提供方。
 - vs `spring-support-datasearch-starter`：宿主同时装有旧版 `/v2/**` 控制器与 datasearch 新控制器时，`DatasearchConflictResolve` 在注册中心级别移走旧的，避免 `Ambiguous handler methods mapped`。
 
@@ -384,8 +379,8 @@ plugin:
 |---|---|---|
 | `...monitor.support.spi.MetricProvider` | `ServerLocalProvider`、`ServerTerminalProvider`、`ServerHttpProvider`、`RedisLocalProvider`、`PrometheusProvider` | 新增采集方式/服务类型 |
 | `...monitor.support.spi.OperationProvider` | `RedisOperationProvider` | 中间件运维操作 |
-| `...monitor.support.spi.SystemInfoProvider` | `LocalOshiProvider`、`AgentProvider`、`SshProvider`、`WindowsWinrmProvider` | 系统信息分区采集 |
-| `...monitor.support.spi.HostOperationsProvider` | `PosixHostOperationsProvider`、`WindowsHostOperationsProvider`、`MacHostOperationsProvider` | 主机运维动作 |
+| `...server.support.spi.SystemInfoProvider` | `LocalOshiProvider`、`AgentProvider`、`SshProvider`、`WindowsWinrmProvider` | 系统信息分区采集（server-starter） |
+| `...server.support.spi.HostOperationsProvider` | `PosixHostOperationsProvider`、`WindowsHostOperationsProvider`、`MacHostOperationsProvider` | 主机运维动作（server-starter） |
 | `...monitor.support.service.alarm.NotifySender` | `LogNotifySender`、`WebhookNotifySender` | 告警通知渠道 |
 | `...datapool.support.nginx.spi.NginxExecutor`（属 datapool-starter，`@Spi("nginx-ssh")` / `@Spi("nginx-local")` 自动注册） | `SshNginxExecutor`、`LocalNginxExecutor` | Nginx 配置执行通道 |
 | `...datapool.support.nginx.spi.NginxCommandProvider`（同上，`@Spi("nginx-posix")` / `@Spi("nginx-windows")`） | `PosixNginxCommandProvider`、`WindowsNginxCommandProvider` | Nginx 管理命令集 |
@@ -393,7 +388,7 @@ plugin:
 
 > 注：本模块 `META-INF/extensions/` 下另有 `…monitor.support.nginx.spi.NginxExecutor` / `…NginxCommandProvider` 两个文件，是 Nginx 能力迁往 datapool 后的历史残留（登记的类不在本模块源码内）；Nginx 执行通道以上表 datapool-starter 的 `@Spi` 实现为准。
 
-本模块另实现了 server-starter 的三个 SPI（对外提供的实现）：`HostCollectProvider`（`LocalHostCollectProvider`）、`HostDetectProvider`（`AgentHostDetectProvider`）、`HostAgentHistoryWriter`（`AgentHostHistoryWriter`）。
+本模块只保留 `HostAgentHistoryWriter`（`AgentHostHistoryWriter`）的监控历史适配；`HostCollectProvider` 与 `HostDetectProvider` 的实现已归 server-starter。
 
 自定义示例（新增「HTTP exporter 采集 MQ」）：实现 `MetricProvider` 的两个键方法 `providerType()` 与 `supportServiceTypes()`，再在自有 jar 下新建 `META-INF/extensions/com.chua.starter.monitor.support.spi.MetricProvider` 追加一行实现类名即可被路由，无需改本模块代码。失败时用 `CollectResult#fail("原因")` 而不是抛异常，否则页面只能看到「采集异常」。
 

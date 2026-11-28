@@ -1,12 +1,12 @@
 # spring-support-datapool-starter
 
 数据源中心模块：统一登记与管理被采集/被连接的数据源（JDBC / Redis / InfluxDB / Neo4j / Nacos / ZooKeeper / Nginx / Kafka / MongoDB / Elasticsearch / Prometheus / etcd / ClickHouse / DuckDB / SkyWalking 等），
-提供数据源台账 CRUD、连通性探测、可复用的 JDBC 连接（空闲 TTL 缓存 + 跨方言元数据）、数据库 Web 管理器（navicat 风格）、SSH 隧道与中间件管理面。
+提供数据源台账 CRUD、连通性探测、可复用的 JDBC 连接（空闲 TTL 缓存 + 跨方言元数据）、数据库 Web 管理器（navicat 风格）、SSH 隧道、中间件管理面与数据源级 Redis 键/命令管理。
 独立于监控模块，供监控、采集等系统共享依赖。
 
 **能力边界（先看这个）**：
 
-- **能做什么**：台账管理、连通性探测（含 SSH 隧道中转）、JDBC 连接复用与 SQL 控制台、显式事务、数据库文档、库表结构与数据浏览、DDL 执行、表复制、导入导出、结构快照与回滚、跨库合并查询（Calcite）、数据库备份与恢复、数据同步与 CSV 直灌、各中间件的管理页（MongoDB / Elasticsearch / ZooKeeper / Nacos / etcd / InfluxDB / Prometheus / Nginx / SkyWalking / Kafka）、数据源指标监控（SSE）、驱动 jar 与文件库上传。
+- **能做什么**：台账管理、连通性探测（含 SSH 隧道中转）、JDBC 连接复用与 SQL 控制台、显式事务、数据库文档、库表结构与数据浏览、DDL 执行、表复制、导入导出、结构快照与回滚、跨库合并查询（Calcite）、数据库备份与恢复、数据同步与 CSV 直灌、各中间件的管理页（MongoDB / Elasticsearch / ZooKeeper / Nacos / etcd / InfluxDB / Prometheus / Nginx / SkyWalking / Kafka）、数据源级 Redis 管理（`/ms/monitor/redis-manage`）、数据源指标监控（SSE）、驱动 jar 与文件库上传。
 - **明确不做什么**：不拦截运行时 SQL（它是管理面，不是 ORM 代理）；不为业务代码提供多数据源路由与 `@DS` 切换；不保证跨库事务；REST 接口无内置鉴权注解，暴露面由外部网关/oauth 决定（本模块不提供 `@Permission`）。
 
 ## 1. 架构图
@@ -27,7 +27,7 @@ flowchart LR
         COMMON["spring-support-common-starter"]
         DS["spring-support-datasource-starter<br/>应用主数据源"]
         MBP["spring-support-mybatis-starter<br/>Ms*Mapper 持久层"]
-        UTILS["utils-support-*<br/>calcite / datasource(SPI契约) / kafka<br/>influxdb / zookeeper / skywalking / ssh / common"]
+        UTILS["utils-support-*<br/>calcite / datasource(SPI契约) / kafka<br/>influxdb / zookeeper / skywalking / ssh / redis / common"]
     end
 
     subgraph targets["被管理的数据源"]
@@ -61,6 +61,7 @@ flowchart TB
         DC["DatasourceController /ms/datasource<br/>台账 CRUD / merge / test"]
         DBC["DbConsoleController /ms/monitor/db<br/>库表 / SQL 控制台 / 快照 / 事务"]
         MC["*ManageController /ms/monitor/&lt;type&gt;<br/>中间件管理页"]
+        RMC["RedisManageController /ms/monitor/redis-manage<br/>键浏览 / 结构操作 / 命令控制台"]
         TDC["*DatasourceController /ms/datasource/&lt;type&gt;<br/>类型专属能力"]
         OC["DatasourceMetricController / DatasourceTunnelController<br/>OperLogController / JdbcDriverJarController / FileDbUploadController"]
         SYNC["SyncTaskController /ms/monitor/datasync<br/>BulkImportController /ms/monitor/bulkimport"]
@@ -68,7 +69,7 @@ flowchart TB
 
     subgraph svc["service（业务编排）"]
         SVC["DatasourceServiceImpl / SyncTaskServiceImpl 等"]
-        MSVC["*ManageServiceImpl<br/>Mongo / ES / ZK / Nacos / etcd / InfluxDB<br/>Prometheus / Nginx / Neo4j / SkyWalking"]
+        MSVC["*ManageServiceImpl<br/>Mongo / ES / ZK / Nacos / etcd / InfluxDB<br/>Prometheus / Nginx / Neo4j / SkyWalking / Redis"]
     end
 
     subgraph core["support + spi（机制层）"]

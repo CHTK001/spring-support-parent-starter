@@ -8,20 +8,18 @@
   </parent>
   <artifactId>spring-support-swagger-starter</artifactId>
   <description>Swagger模块</description>
-  <properties>
-    <knife4j-springdoc-openapi-jakarta.version>4.5.0</knife4j-springdoc-openapi-jakarta.version>
-  </properties>
   <dependencies>
+    <!-- 共享契约（provided）：Knife4jConfiguration 依赖 ServiceInfoContributor / ServiceInfoRegistry；
+         provided 避免与 common-starter 形成 Maven 环（各 scope 一律拒绝） -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
-      <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
+    <!-- Knife4j（OpenAPI3）：文档 UI 与 springdoc 增强的唯一运行时来源，宿主经本 starter 获得 -->
     <dependency>
       <groupId>com.github.xiaoymin</groupId>
       <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
-      <version>${knife4j-springdoc-openapi-jakarta.version}</version>
     </dependency>
     <!--        <dependency>-->
     <!--            <groupId>org.springdoc</groupId>-->
@@ -38,10 +36,12 @@
       <groupId>io.swagger</groupId>
       <artifactId>swagger-annotations</artifactId>
     </dependency>
+    <!-- Actuator 契约：文档聚合与健康信息暴露所需的端点类型 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-actuator</artifactId>
     </dependency>
+    <!-- Actuator 自动配置：端点装配的条件与属性来源 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-actuator-autoconfigure</artifactId>

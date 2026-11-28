@@ -13,20 +13,15 @@
     <description>APM 扩展模块：自研 hotspot agent 提供者（复用 utils-support-runtime-apm 的 OtnlEngine）</description>
 
     <dependencies>
+        <!-- APM 基础契约与自动配置 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-apm-starter</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <!-- 自研 agent（TraceHandler 与 HotspotOtnlEngine 都在这里） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-runtime-apm</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
     </dependencies>

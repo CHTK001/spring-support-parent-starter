@@ -573,8 +573,11 @@ public class HttpProtocol extends AbstractProtocol {
                                 .header("x-oauth-timestamp", timestamp)
                                 .header("x-oauth-uuid", key1)
                                 .header("x-oauth-encode", String.valueOf(isEncode()))
-                                .header("x-oauth-serial", createData(key, key1))
-                                .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+                                .header("x-oauth-serial", createData(key, key1));
+
+                if (authClientProperties.isSignEnabled()) {
+                    client = client.header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+                }
 
                 // 添加 AK/SK 请求头（如果启用）
                 String accessKey = getAccessKey();

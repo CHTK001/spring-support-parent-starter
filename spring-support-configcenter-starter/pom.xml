@@ -7,14 +7,12 @@
     <version>4.0.0.51</version>
   </parent>
   <artifactId>spring-support-configcenter-starter</artifactId>
+  <description>配置中心核心契约；Nacos 等具体实现由宿主或 OSGi 按需安装。</description>
   <dependencies>
+    <!-- 平台配置契约与服务信息贡献 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-nacos-starter</artifactId>
     </dependency>
   </dependencies>
 </project>

@@ -11,7 +11,7 @@ flowchart TB
         subgraph MOD["spring-support-filesystem-starter"]
             CFG["FileSystemAutoConfiguration<br/>FileStorageProperties / UploadProperties / ServerProperties"]
             TPL["template: FileStorageTemplate (多 Provider 路由)"]
-            API["controller: FileObjectController / UploadTaskController<br/>FileDirController / FileCollabController / FileServerConfigController"]
+            API["controller: FileObjectController / UploadTaskController<br/>FileDirController / FileCollabController / FileServerConfigController<br/>FileAssetController"]
             SVC["task/collab/server: UploadTaskManager / FileCollab*<br/>FileStorageEmbeddedFilter / FileStorageServerLauncher / FileServerManager"]
             SPIF["spi: FileStorageImageFilterProvider<br/>FileStorageRemoteReader / FileStorageUrlPreviewProvider<br/>local: LocalFileStorage"]
         end
@@ -23,7 +23,7 @@ flowchart TB
     end
     BK["存储后端: 本地磁盘 / MinIO / S3 / OSS / COS / OBS"]
     APP -->|注入 Bean| TPL
-    APP -->|HTTP /v2/file/** 与 /fs/**| API
+    APP -->|HTTP /v2/file/**、/ms/monitor/file-assets 与 /fs/**| API
     CFG -->|装配| TPL
     API --> TPL
     SVC --> TPL
@@ -69,6 +69,7 @@ flowchart TB
 | 文件服务器协议（列表/预览/下载/Range/打包/热更新） | `FileStorageServerFilter` | `/{bucket}` 与 `/{bucket}/{key}` |
 | 私有桶 OAuth 鉴权 | `FileStorageServerAssembler`（反射装配 oauth 过滤器） | 令牌 `x-oauth-token` → Bearer → 查询参数 → Cookie |
 | 本机目录浏览 / 服务器配置下发 | `FileDirController` / `FileServerConfigController` | `GET /v2/file/dir/list`（`dir-list=true` 才开放）/ `GET /v2/file/server-config` |
+| 文件资产浏览与读写 | `FileAssetService` / `FileAssetController` | `/ms/monitor/file-assets/**`（URL 保持不变） |
 | 协同文档（快照 + 版本 + SSE） | `FileCollabStore` / `FileCollabHub` / `FileCollabPersistence` / `FileCollabController` | `/v2/file/collab/**` |
 | 图片滤镜 / 远程读取 / 三方 URL 预览 SPI | `FileStorageImageFilterProvider` / `FileStorageRemoteReader` / `FileStorageUrlPreviewProvider` | `storage-server.image-filter` / `open-remote-file` / `third-url-preview` |
 | 服务信息登记 | `fileSystemServiceInfoContributor` | 控制台模块能力页 |
@@ -82,6 +83,7 @@ flowchart TB
 | `fileStorageTemplate` | `FileStorageTemplate` | 模块开启；创建即 `initialize()` 按 `providers` 建 SPI 实例 | 否（无 `@ConditionalOnMissingBean`；同名覆盖需 `spring.main.allow-bean-definition-overriding=true`） | 统一存储操作入口 |
 | `fileObjectController` | `FileObjectController` | 模块开启 + `@ConditionalOnMissingBean` | 可 | HTTP 上传/回显入口 |
 | `fileDirController` | `FileDirController` | 同上 | 可 | 本机目录浏览 |
+| `fileAssetService` / `fileAssetController` | `FileAssetService` / `FileAssetController` | 模块开启 + `@ConditionalOnMissingBean` | 可 | 文件资产同源 REST |
 | `fileServerConfigController` | `FileServerConfigController` | 同上 | 可 | 文件服务器配置下发 |
 | `fileSystemServiceInfoContributor` | `ServiceInfoContributor` | 模块开启（无附加条件） | 否 | 控制台能力登记 |
 | `uploadTaskManager` | `UploadTaskManager` | 模块开启；`destroyMethod="shutdown"` | 否 | 分片任务调度与合并 |

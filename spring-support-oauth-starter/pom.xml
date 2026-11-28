@@ -11,9 +11,9 @@
 
     <artifactId>spring-support-oauth-starter</artifactId>
     <description>单点登录客户端</description>
-    <version>4.0.0.51</version>
 
 <dependencies>
+        <!-- 共享契约：ReturnResult / 异常与权限、AppKeyAuthenticator 台账契约 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
@@ -32,42 +32,23 @@
             <artifactId>spring-support-cache-starter</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.konghq</groupId>
-            <artifactId>unirest-java</artifactId>
-
-        </dependency>
-
+        <!-- OpenAPI 注解（@Tag/@Operation，本模块自带登录/用户控制器）：
+             存量按宿主口径 compile，整改为 provided 须先给 payment 等消费方补显式声明 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-mybatis-starter</artifactId>
-        </dependency>
-
-        <!-- appKey 台账查询已改为依赖 spring-support-common-starter 的 AppKeyAuthenticator 契约，
-             AI 模块提供实现；本模块不再需要数据源引擎（JdbcEngine）也不直连 AI 的持久层。 -->
-
+        <!-- 三方 OAuth 协议实现：GitHub / Gitee / 微信 / 支付宝等授权码换取用户信息 -->
         <dependency>
             <groupId>me.zhyd.oauth</groupId>
             <artifactId>JustAuth</artifactId>
-            
         </dependency>
 
-        <!-- Armeria 协议已整体移除（2026-09-29）。
-             原 ArmeriaProtocol 直接 import com.linecorp.armeria.*，是本模块唯一的直接 armeria 依赖，
-             也是 utils 父 pom 里 armeria 版本号（现 1.41.1，本地仓库无此版本）唯一被真正解析的地方。
-             删掉它以后本模块不再需要 armeria，也不再传递 armeria + netty-all (~30MB)。
-             注意：服务端 spring-api-support-oauth-starter 侧的 armeria 尚未处理，
-             那里已不依赖 utils-support-protocol-starter（该模块已删除），与本模块无关。 -->
-
+        <!-- RSocket 传输：oauth 客户端与服务端的协议通道（版本由根 POM 单源管理） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-rsocket-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
 
@@ -75,12 +56,6 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-httpclient-starter</artifactId>
-        </dependency>
-
-        <!-- Spring框架扩展工具 - 提供Spring相关的工具类 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-spring-starter</artifactId>
         </dependency>
 
         
