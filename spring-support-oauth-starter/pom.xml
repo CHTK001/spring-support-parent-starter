@@ -19,6 +19,13 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 服务发现：认证服务端地址可写成 discovery://<服务名> / 裸服务名，按发现中心解析实例；
+             未装配发现能力时 DiscoveryService 为默认实现、解析不到即回落静态地址 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-discovery-starter</artifactId>
+        </dependency>
+
         <!-- 缓存功能模块 - 提供 CacheProvider 认证信息缓存抽象 -->
         <dependency>
             <groupId>com.chua</groupId>

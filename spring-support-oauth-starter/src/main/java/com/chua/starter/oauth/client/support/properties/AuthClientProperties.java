@@ -440,10 +440,14 @@ public class AuthClientProperties {
      * <p>默认无（{@code null}）：远程校验时取不到地址会告警「鉴权地址不存在」并返回
      * {@code null}，令牌校验随之失败 —— 接入真实认证服务端前必须配置。
      * 支持 <code>${...}</code> 占位符（经 {@code OauthClientRuntimeContext#resolvePlaceholders} 解析）。</p>
+     * <p><b>发现服务优先</b>：值写成 {@code discovery://<服务名>}（或裸服务名，即不含协议/冒号/逗号的单值）时，
+     * 先由 {@code DiscoveryService} 解析出实例地址列表；解析不到再回落本值。服务端扩缩容/换址因此不必改配置。</p>
      * <pre>
      * plugin:
      *   oauth:
      *     address: http://auth-server:9090,http://auth-server-backup:9090
+     *     # 或走发现中心（服务名与认证服务端注册时使用的名称一致）
+     *     # address: discovery://auth-server
      * </pre>
      */
     private String address;
@@ -452,6 +456,7 @@ public class AuthClientProperties {
      * <p>默认 <code>${plugin.oauth.auth-address:}</code>（占位符：优先取系统属性 / 环境变量
      * {@code plugin.oauth.auth-address}，取不到则解析为空串）。为空时
      * {@code WebRequest#isFailure()} 直接判定鉴权失败 —— 依赖登录端点的场景必须显式配置。</p>
+     * <p>与 {@link #address} 同口径支持 {@code discovery://<服务名>}：登录页跳转地址按发现中心解析。</p>
      * <pre>
      * plugin:
      *   oauth:

@@ -16,6 +16,7 @@ import com.chua.common.support.lang.algorithm.crypto.Codec;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
+import com.chua.starter.discovery.support.service.DiscoveryAddressResolver;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.information.AuthenticationInformation;
@@ -358,7 +359,9 @@ public abstract class AbstractProtocol implements Protocol {
     protected String selectUrl() {
         LoadBalance balance = ServiceProvider.of(LoadBalance.class).getExtension(authClientProperties.getBalance());
         LoadBalance stringRobin = balance.create();
-        String address = authClientProperties.getAddress();
+        // 地址优先由服务发现解析（plugin.oauth.address=discovery://<服务名> 或裸服务名），
+        // 解析不到时原样返回静态配置，未装配发现能力的宿主行为不变。
+        String address = DiscoveryAddressResolver.resolve(authClientProperties.getAddress());
         if (null == address) {
             log.warn("鉴权地址不存在");
             return null;

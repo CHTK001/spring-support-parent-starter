@@ -118,6 +118,12 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 - **datapool 不声明这三个实现**，按需引入或 OSGi 后装；因此 8082 宿主上 ZK/Mongo/SkyWalking 页面默认提示未开放属预期，要开就装对应 starter。
 - **`spring-support-datasource-starter` 的文件库引擎适配（`H2EngineAutoConfiguration` / `SqliteEngine*Endpoint`）依赖 `utils-support-h2-starter` / `utils-support-sqlite-starter`，必须声明为 `provided`**（与 druid/hikari/seata 同口径）：`compile` 会把 H2/SQLite 传递给所有消费方，违反「生产模块不携带 H2、SQLite」。
 
+## datasearch 业务归属与冗余判定（2026-11-28）
+
+- **`spring-support-datasearch-starter` 保留，不冗余**：它提供 `/v2/weather`、`/v2/holiday`、`/v2/exchange-rate`、`/v2/ip`、`/v2/location`、`/v2/typhoon` 六组公共数据接口，以及 `CreditQueryProvider` SPI 和对应 provider；account 等模块有 116 处对其 credit 契约/模型的真实引用，删除会直接破坏余额试查能力。
+- **它与 `DbConsoleController` 不是重复实现**：数据库 Web 管理器归 `spring-support-datapool-starter`（`/ms/monitor/db`），datasearch 不查业务库、不承载 SQL 控制台；两者只是名称相近。
+- monitor 的 `DatasearchConflictResolve` 仅用于「monitor 同时装入 datasearch 与 common-service/common-system 历史控制器」时消解 `/v2/holiday/get`、`/v2/ip/lookup` 的重复映射；单独的历史控制器宿主仍依赖原实现，不能为消除重复而整体删除。
+
 ## 提交
 
 只提交自己的文件，避开其它会话的在途改动；`_tmp_cleanup/` 不参与构建。

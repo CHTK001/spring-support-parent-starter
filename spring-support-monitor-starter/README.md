@@ -67,6 +67,7 @@ flowchart LR
 | 网络抓包 | `TsharkCaptureController`、`TsharkCaptureService`、`TsharkRuntime` | `/ms/monitor/tshark` |
 | 数据同步（由 datapool-starter 提供） | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
 | Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentHttpClient`、`AgentOfflineChecker` | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
+| Agent 客户端模式 | `MetricPushClient`、`MonitorCapabilityDetector`、`OshiMetricCollector`（协议 record 与 `MetricPoint` 也在本模块） | `plugin.monitor.mode=client` 时向服务端周期推送心跳与 cpu/memory/disk 指标；探测不支持或 OSHI 缺失时静默降级 |
 | 数据库备份 | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/monitor/database-backup`，`plugin.monitor.database-backup.enabled`（缺省开） |
 | AI 诊断 / 大屏 | `MonitorController` 注入 `ObjectProvider<AiChatFacadeService>`；`#dashboardOverview` | `/ms/monitor/ai/status`、`/ai/analyze`、`/ai/host/{id}/analyze`、`/ms/monitor/dashboard/overview` |
 | 端口映射 | tunnel-starter 统一编排（ngrok/cloudflared/tailscale 为 SPI 实现） | `/ms/tunnel` |

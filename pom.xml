@@ -148,7 +148,6 @@
         <!-- 模板管理已并入账号管理模块（spring-support-account-starter），不再单独成模块 -->
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datapool-starter</module>
-        <module>spring-support-monitor-core-starter</module>   <!-- 监控双模式核心：Agent 协议 record + 指标点 + 客户端引擎基座 -->
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
         <module>spring-support-docker-starter</module>          <!-- Docker 独立模块：容器/镜像/网络/卷/镜像库/模板 -->
@@ -883,6 +882,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-network-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <!-- ACME 证书签发实现（server-starter 的 ACME 契约实现方） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-acme-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
             <!-- WebRTC 远程控制：Java 服务端（webrtc-java）+ 浏览器客户端信令 -->

@@ -15,7 +15,11 @@
         <result column="acme_cert_chain_pem" property="acmeCertChainPem" jdbcType="LONGVARCHAR"/>
         <result column="acme_cert_key_pem" property="acmeCertKeyPem" jdbcType="LONGVARCHAR"/>
         <result column="acme_cert_last_error" property="acmeCertLastError" jdbcType="VARCHAR"/>
+        <result column="acme_cert_deploy_mode" property="acmeCertDeployMode" jdbcType="VARCHAR"/>
+        <result column="acme_cert_webroot_path" property="acmeCertWebrootPath" jdbcType="VARCHAR"/>
+        <result column="create_name" property="createName" jdbcType="VARCHAR"/>
         <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_name" property="updateName" jdbcType="VARCHAR"/>
         <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
         <result column="create_by" property="createBy" jdbcType="VARCHAR"/>
         <result column="update_by" property="updateBy" jdbcType="VARCHAR"/>
@@ -25,7 +29,8 @@
         acme_cert_id, acme_account_id, acme_cert_primary_domain, acme_cert_san,
         acme_cert_challenge_type, acme_cert_status, acme_cert_not_before, acme_cert_not_after,
         acme_cert_renew_at, acme_cert_chain_pem, acme_cert_key_pem, acme_cert_last_error,
-        create_time, update_time, create_by, update_by
+        acme_cert_deploy_mode, acme_cert_webroot_path,
+        create_name, create_time, update_name, update_time, create_by, update_by
     </sql>
 
     <select id="selectByPrimaryDomain" resultMap="BaseResultMap">

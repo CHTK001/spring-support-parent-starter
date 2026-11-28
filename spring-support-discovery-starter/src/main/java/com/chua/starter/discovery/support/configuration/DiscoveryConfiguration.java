@@ -16,6 +16,7 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryNodeProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryProperties;
+import com.chua.starter.discovery.support.service.DiscoveryAddressResolver;
 import com.chua.starter.discovery.support.service.DiscoveryEnvironment;
 import com.chua.starter.discovery.support.service.DiscoveryService;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -409,6 +411,24 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             }
             serviceDiscovery.close();
         }
+    }
+
+    @Bean
+    /**
+     * 服务发现地址解析器
+     *
+     * <p>供「配置里要写对端地址」的模块（认证客户端等）把 {@code discovery://<服务名>} 或裸服务名
+     * 解析成发现中心里的真实实例地址；解析不到时原样返回配置值。
+     * 同时登记到全局静态入口，供 SPI 创建、不归 Spring 管的实现取用。</p>
+     *
+     * @param discoveryServiceProvider 发现服务（未启用发现时是默认实现）
+     * @return 地址解析器
+     */
+    public DiscoveryAddressResolver discoveryAddressResolver(
+            ObjectProvider<DiscoveryService> discoveryServiceProvider) {
+        DiscoveryAddressResolver resolver = new DiscoveryAddressResolver(discoveryServiceProvider);
+        DiscoveryAddressResolver.install(resolver);
+        return resolver;
     }
 
     @Bean

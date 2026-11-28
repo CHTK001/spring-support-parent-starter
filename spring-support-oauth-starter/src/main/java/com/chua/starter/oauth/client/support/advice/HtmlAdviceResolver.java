@@ -9,6 +9,7 @@ import com.chua.common.support.lang.balance.LoadBalance;
 import com.chua.common.support.lang.balance.Node;
 import com.chua.spring.support.utils.RequestUtils;
 import com.chua.starter.common.support.xml.Xml;
+import com.chua.starter.discovery.support.service.DiscoveryAddressResolver;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.google.common.base.Strings;
@@ -88,7 +89,8 @@ public class HtmlAdviceResolver implements AdviceResolver {
 
         LoadBalance balance1 = ServiceProvider.of(LoadBalance.class).getExtension(authProperties.getBalance());
         LoadBalance robin1 = balance1.create();
-        String[] split = OauthClientRuntimeContext.resolvePlaceholders(authProperties.getLoginAddress()).split(",");
+        String[] split = DiscoveryAddressResolver.resolve(
+                OauthClientRuntimeContext.resolvePlaceholders(authProperties.getLoginAddress())).split(",");
         robin1.addNode((Object[]) split);
 
         Node robin = robin1.selectNode();

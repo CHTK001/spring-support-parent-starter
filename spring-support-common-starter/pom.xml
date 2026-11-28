@@ -66,12 +66,6 @@
         <!-- JSON路径查询工具 - 用于JSON数据的路径查询和提取 -->
 
 
-        <!-- SpEL表达式扩展 - 增强Spring表达式语言功能 -->
-        <dependency>
-            <groupId>kim.nzxy</groupId>
-            <artifactId>spel-extension</artifactId>
-            <scope>provided</scope> <!-- 编译时依赖，运行时由其他模块提供 -->
-        </dependency>
 
         <!-- 通用工具类库核心模块 - 提供 CommonConstant, Action, Version 等类 -->
         <dependency>
@@ -123,12 +117,6 @@
         <!-- 如需 Swagger 支持，请直接依赖 spring-support-swagger-starter -->
         
 
-        <!-- Java验证API - 提供标准的验证注解 -->
-        <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-            <scope>provided</scope> <!-- 可选依赖，不强制引入 -->
-        </dependency>
 
         <!-- Jackson JSR310时间处理 - 支持Java 8时间API的JSON序列化 -->
         <dependency>
@@ -225,34 +213,10 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
         <!-- Spring Boot WebMVC自动配置（Boot 4.x 模块化拆分，版本由 BOM 管理） -->
-        <!-- Tomcat 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Undertow 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
-        <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-servlet</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
 <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- Spring WebSocket - MdcWebSocketHandlerDecorator 编译期依赖，运行时由启用 WS 的宿主提供 -->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-websocket</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

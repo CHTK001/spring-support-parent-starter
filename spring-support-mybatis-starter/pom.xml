@@ -13,7 +13,6 @@
     6. 乐观锁插件 - 支持乐观锁并发控制
     7. 数据权限 - 支持数据权限控制和多租户
     8. SQL解析 - 提供SQL解析和优化功能
-    9. 模板引擎 - 集成FreeMarker用于代码生成
 
     @author CH
     @version 4.0.0.41
@@ -47,18 +46,6 @@
     <dependency>
       <groupId>p6spy</groupId>
       <artifactId>p6spy</artifactId>
-    </dependency>
-    <!-- Spring Boot FreeMarker模板引擎 - 用于代码生成器的模板渲染 -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-freemarker</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <!-- MyBatis Plus代码生成器 - 根据数据库表自动生成代码 -->
-    <dependency>
-      <groupId>com.baomidou</groupId>
-      <artifactId>mybatis-plus-generator</artifactId>
-      <scope>provided</scope>
     </dependency>
     <!-- MyBatis Plus关联查询扩展 - 支持多表关联查询 -->
     <dependency>

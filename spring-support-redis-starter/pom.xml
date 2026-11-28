@@ -62,14 +62,6 @@
       <groupId>org.redisson</groupId>
       <artifactId>redisson</artifactId>
     </dependency>
-    <!-- 策略模块 - 提供LockTemplate接口定义 -->
-        <!-- 策略/容错/分布式锁 等功能由 utils-support-springboot-starter 提供 (spring-support-strategy-starter/spring-support-lock-starter 已下线) -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-springboot-starter</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
   </dependencies>
   <!-- 构建配置 -->
   <build>

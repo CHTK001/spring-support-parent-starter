@@ -504,6 +504,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param false false
      */
     @Operation(summary = "OpenAI List Fine-tuning Jobs", description = "OpenAI 标准协议微调任务列表接口")
+    @TokenForIgnore
     @GetMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> listFineTuningJobs(@RequestParam(value = "after", required = false) String after,
                                                                    @RequestParam(value = "limit", required = false, defaultValue = "20") Integer limit,
@@ -524,6 +525,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @PathVariable("job_id" @路径变量("作业_标识"
      */
     @Operation(summary = "OpenAI Retrieve Fine-tuning Job", description = "OpenAI 标准协议微调任务详情接口")
+    @TokenForIgnore
     @GetMapping("/v1/fine_tuning/jobs/{job_id}")
     public ResponseEntity<Map<String, Object>> retrieveFineTuningJob(@PathVariable("job_id") String jobId,
                                                                       HttpServletRequest servletRequest) {
@@ -544,6 +546,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @PathVariable("job_id" @路径变量("作业_标识"
      */
     @Operation(summary = "OpenAI Cancel Fine-tuning Job", description = "OpenAI 标准协议取消微调任务接口")
+    @TokenForIgnore
     @PostMapping("/v1/fine_tuning/jobs/{job_id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelFineTuningJob(@PathVariable("job_id") String jobId,
                                                                     HttpServletRequest servletRequest) {

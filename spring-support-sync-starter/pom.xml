@@ -34,38 +34,11 @@
 
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-job-starter</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-swagger-starter</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
             <artifactId>utils-support-datasync-starter</artifactId>
             <version>4.0.0.51</version>
             <optional>true</optional>
         </dependency>
 
-  <dependency>
-    <groupId>io.rsocket</groupId>
-    <artifactId>rsocket-core</artifactId>
-    <scope>provided</scope>
-  </dependency>
-  <dependency>
-    <groupId>io.rsocket</groupId>
-    <artifactId>rsocket-transport-netty</artifactId>
-    <scope>provided</scope>
-  </dependency>
-  <dependency>
-    <groupId>com.corundumstudio.socketio</groupId>
-    <artifactId>netty-socketio</artifactId>
-    <scope>provided</scope>
-  </dependency>
 
 
 </dependencies>
