@@ -104,6 +104,20 @@ split-package 扫描口径（2026-11-26 修正，旧结论作废）：
 
 - **本地仓上游制品陈旧会伪装成编译错误（2026-11-27 实证）**：`mvn -pl <模块>` 不带 `-am` 时上游依赖取 `D:\maven-repo` 里的 jar；该 jar 比上游源码旧，下游就报「找不到符号」——实例：`eduai` 报 `PaperAiService.QuestionDraft`（嵌套类）/ `generateQuestionDrafts(...)` / `MarkingOutcome.isUnavailable()` 缺失，真因是 `spring-support-ai-starter` 制品停在 11-21，而这三个符号是之后才入源码的。判定：① 报错符号所在文件 `git status` 干净且在 HEAD；② 比对制品 mtime 与上游提交时间；③ 用类字节核对符号（嵌套类条目名是 `PaperAiService$QuestionDraft.class`；`isUnavailable` 由 `@lombok.Data` 生成，在 `PaperAiService$MarkingOutcome.class` 里，主类里搜不到）。修法：先 `mvn -o install -DskipTests -pl <上游模块>` 再装下游；**不要改下游源码去迁就旧 jar**。
 
+## 数据同步（datasync）业务归属
+
+- 同步任务（`ms_sync_task` / `ms_sync_task_run_log`）、`SyncTaskController`/`SyncTaskService`、`support/datasync` 引擎（源读取、字段映射、Sink、CSV 直灌 loader）、`Sync*`/`Bulk*` VO/DTO 全部属于 `spring-support-datapool-starter`；monitor 只依赖它并做宿主装配，不得在自己模块内实现同步业务。
+- 端点路径沿用前端契约 `/ms/monitor/datasync`、`/ms/monitor/bulkimport`（`BulkImportController` 类级 `/ms/monitor`），迁移模块不改 URL。
+- 引擎的 `JdbcCsvLoader`（`mysql` / `postgresql`）走 `META-INF/extensions/<接口 FQN>` 注册；迁包时索引文件名与行内实现 FQN 必须同改，否则整份索引静默失效。
+
+## datapool 中间件客户端口径（2026-11-28 定版）
+
+- **datapool 只留契约消费方，不留客户端实现**：Controller / Service 接口 / VO / 纯展示逻辑在 datapool；ZooKeeper、MongoDB、SkyWalking 的实现分别落 `utils-support-zookeeper-starter`、`utils-support-mongodb-starter`、`utils-support-skywalking-starter`，经 `ServiceProvider` 按名取用（`zookeeper` / `mongodb` / `skywalking`）。
+- **契约落点**：ZK/Mongo 契约（`*ManageProvider` + record）在 `utils-support-datasource-starter` 的 `com.chua.datasource.support.middleware.{zookeeper,mongodb}`；SkyWalking 复用 `utils-support-common-starter` 的 `OtnlEngine` + `OtnlBackend`（`configure` 是默认方法，地址变更由实现作废自己的缓存）。
+- **不装即降级**：`ServiceProvider.getExtension` 未命中静默回落 `getDefaultImpl()`（通常 null），取用方必须判 null 并抛 `MiddlewareNotInstalledException`，控制层转「功能未开放」的业务错误，不能抛 500、也不能给出演示数据。
+- **datapool 不声明这三个实现**，按需引入或 OSGi 后装；因此 8082 宿主上 ZK/Mongo/SkyWalking 页面默认提示未开放属预期，要开就装对应 starter。
+- **`spring-support-datasource-starter` 的文件库引擎适配（`H2EngineAutoConfiguration` / `SqliteEngine*Endpoint`）依赖 `utils-support-h2-starter` / `utils-support-sqlite-starter`，必须声明为 `provided`**（与 druid/hikari/seata 同口径）：`compile` 会把 H2/SQLite 传递给所有消费方，违反「生产模块不携带 H2、SQLite」。
+
 ## 提交
 
 只提交自己的文件，避开其它会话的在途改动；`_tmp_cleanup/` 不参与构建。

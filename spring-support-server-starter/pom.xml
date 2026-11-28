@@ -112,6 +112,14 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-io-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-acme-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-datasearch-starter</artifactId>
         </dependency>
 

@@ -65,7 +65,7 @@ flowchart LR
 | Redis 运维 | `RedisManageService`、`SystemRedisKvService` | `/ms/monitor/redis-manage`、`/ms/monitor/system/redis/kv` |
 | 主机运维 | `HostOperations` + `HostOperationsProvider` SPI（Posix/Windows/Mac） | `/ms/server/host/**` |
 | 网络抓包 | `TsharkCaptureController`、`TsharkCaptureService`、`TsharkRuntime` | `/ms/monitor/tshark` |
-| 数据同步 | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
+| 数据同步（由 datapool-starter 提供） | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
 | Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentHttpClient`、`AgentOfflineChecker` | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
 | 数据库备份 | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/monitor/database-backup`，`plugin.monitor.database-backup.enabled`（缺省开） |
 | AI 诊断 / 大屏 | `MonitorController` 注入 `ObjectProvider<AiChatFacadeService>`；`#dashboardOverview` | `/ms/monitor/ai/status`、`/ai/analyze`、`/ai/host/{id}/analyze`、`/ms/monitor/dashboard/overview` |
@@ -74,7 +74,7 @@ flowchart LR
 | 文件资产/网关 | `FileAssetServiceImpl`、`MonitorFileStorageConfig`、`MonitorFileStorageGatewayConfig` | `/ms/monitor/file-assets`、`/fs/default` |
 | 实时推送 | `MonitorPushService` → `SocketQueueBridge` | socket.io `29181`，`subscribe("monitor", ...)` |
 
-核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、同步任务、维护计划、节点与操作日志、数据库备份历史表。
+核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、维护计划、节点与操作日志、数据库备份历史表（同步任务表 `ms_sync_task*` 属 datapool-starter）。
 
 ## 4. Bean 能力矩阵
 
@@ -97,7 +97,7 @@ flowchart LR
 | `productionAuthGuard` | `ProductionAuthGuard` | `@ConditionalOnProperty plugin.oauth.require-auth=true` | 可 | 生产启动期鉴权校验 |
 | `debugBeanTrace` | `DebugBeanTrace`（`BeanPostProcessor`） | 无条件 | 可 | Bean 装配追踪（排障） |
 | `monitorScheduler` / `providerRegistry` | `MonitorScheduler` / `ProviderRegistry` | `@Component`，无条件 | 可 | 调度入口 / SPI 双键索引 |
-| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`SyncTaskServiceImpl`、`DatabaseBackupService`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
+| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`DatabaseBackupService`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
 
 > 本模块没有 `spring.factories`，自动配置只经 `AutoConfiguration.imports` 注册（Spring Boot 4 口径）。
 
@@ -388,7 +388,7 @@ plugin:
 | `...monitor.support.service.alarm.NotifySender` | `LogNotifySender`、`WebhookNotifySender` | 告警通知渠道 |
 | `...datapool.support.nginx.spi.NginxExecutor`（属 datapool-starter，`@Spi("nginx-ssh")` / `@Spi("nginx-local")` 自动注册） | `SshNginxExecutor`、`LocalNginxExecutor` | Nginx 配置执行通道 |
 | `...datapool.support.nginx.spi.NginxCommandProvider`（同上，`@Spi("nginx-posix")` / `@Spi("nginx-windows")`） | `PosixNginxCommandProvider`、`WindowsNginxCommandProvider` | Nginx 管理命令集 |
-| `...monitor.support.datasync.loader.JdbcCsvLoader` | `mysql=MysqlCsvLoader`、`postgresql=PostgresqlCsvLoader` | CSV 批量导入方言 |
+| `...datapool.support.datasync.loader.JdbcCsvLoader`（属 datapool-starter） | `mysql=MysqlCsvLoader`、`postgresql=PostgresqlCsvLoader` | CSV 批量导入方言 |
 
 > 注：本模块 `META-INF/extensions/` 下另有 `…monitor.support.nginx.spi.NginxExecutor` / `…NginxCommandProvider` 两个文件，是 Nginx 能力迁往 datapool 后的历史残留（登记的类不在本模块源码内）；Nginx 执行通道以上表 datapool-starter 的 `@Spi` 实现为准。
 

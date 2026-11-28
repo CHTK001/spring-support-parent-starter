@@ -6,6 +6,20 @@ Cloudflare Tunnel（cloudflared）的 Spring Boot 集成模块：管理外部 `c
 - 版本：`4.0.0.51`（跟随父 POM；cloudflared 能力自 `4.0.0.42`，SPI 化接入统一入口自 `4.0.0.53`）
 - 硬前提：宿主机需安装 `cloudflared` 二进制（本模块不自带，`CloudflaredTool#isAvailable` 真实探测）
 
+## 从页面创建临时隧道
+
+内网穿透页点击「创建临时隧道」，填写名称及后端所在主机的本地端口，再点击「创建并启动」。例如后端位于 194，端口填写 `18170`，回源地址即为该主机的 `http://127.0.0.1:18170`。也可先「保存」，稍后从列表启动。
+
+- 临时隧道使用 `quick` 模式，无需 Cloudflare 账号、Token 或自有域名；该模式不继承全局命名隧道 Token，也不携带隐藏的域名或 Token 字段。
+- 取得 `https://<随机名称>.trycloudflare.com` 地址且完成 Cloudflare 边缘连接注册后，启动接口才返回成功；公网 DNS 生效及回源服务是否正常仍需实际访问验证。
+- 连接就绪依赖 cloudflared 的 info 事件，子进程会保留最低 info 输出（debug 配置仍生效），输出转交 Java 的 debug 日志，避免 warn/error 配置屏蔽就绪事件而产生假超时。
+- 停止会关闭 cloudflared 子进程，原地址随之失效；重新启动会申请新地址。持久化的是本地映射配置，不是随机域名。
+- 创建成功但启动失败时保留同一条记录，并提示从列表重试，避免重复创建。
+- 页面显示「未安装」时，应在后端主机安装 cloudflared，或配置 `plugin.cloudflared.binary`；能力检测和启动使用同一显式路径。
+- `named` 模式使用记录 Token 或全局 Token。其回源与发布域名由 Cloudflare Zero Trust 入口规则配置，客户端不会追加 Quick 模式的 `--url` / `--hostname`；记录中的域名用于展示访问入口。
+
+Quick Tunnel 适合临时测试，Cloudflare 官方限制为最多 200 个处理中请求，且不支持 SSE；需长期地址或 SSE 时使用正式命名隧道。参见 [官方 Quick Tunnel 文档](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)。
+
 ## 1. 架构图
 
 ```mermaid

@@ -87,13 +87,6 @@
             <artifactId>jakarta.annotation-api</artifactId>
         </dependency>
 
-        <!-- 随包迁移的历史能力：Servlet 过滤器 / 请求工具 / 服务信息认证过滤器。
-             运行时由 Web 宿主提供，故为 provided -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!-- InterfaceLoggerInfo / AbstractLoggerPointcutAdvisor 等使用 Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

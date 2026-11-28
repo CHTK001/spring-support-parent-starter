@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.server.support.acme.mapper.MonitorAcmeAccountMapper">
+
+    <resultMap id="BaseResultMap" type="com.chua.starter.server.support.acme.entity.MonitorAcmeAccount">
+        <id column="acme_account_id" property="acmeAccountId" jdbcType="INTEGER"/>
+        <result column="acme_account_email" property="acmeAccountEmail" jdbcType="VARCHAR"/>
+        <result column="acme_account_server" property="acmeAccountServer" jdbcType="VARCHAR"/>
+        <result column="acme_account_status" property="acmeAccountStatus" jdbcType="VARCHAR"/>
+        <result column="acme_account_private_key_pem" property="acmeAccountPrivateKeyPem" jdbcType="LONGVARCHAR"/>
+        <result column="acme_account_remark" property="acmeAccountRemark" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="VARCHAR"/>
+        <result column="update_by" property="updateBy" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        acme_account_id, acme_account_email, acme_account_server, acme_account_status,
+        acme_account_private_key_pem, acme_account_remark, create_time, update_time, create_by, update_by
+    </sql>
+
+</mapper>

@@ -13,11 +13,5 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- jakarta.servlet-api 在 common-starter 里是 provided（不传递），本 starter 的 Filter 需要显式声明 -->
-    <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
 </project>

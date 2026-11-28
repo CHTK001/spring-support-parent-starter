@@ -326,13 +326,20 @@
         -->
         <undertow.version>2.3.26.Final</undertow.version>
     </properties>
-    <!-- 父模块只提供Lombok作为通用依赖，其他依赖由子模块按需引入 -->
+    <!-- 父模块只提供通用编译期依赖，其余依赖由子模块按需引入 -->
     <dependencies>
         <!-- Lombok - 简化Java代码编写，所有子模块都需要 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Servlet 契约 - 所有 Web 相关 starter 的通用编译期依赖，只在父模块声明一次；
+             运行时由宿主 Servlet 容器提供，业务模块 POM 不再逐个重复声明。 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>

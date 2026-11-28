@@ -6,6 +6,7 @@ import com.chua.common.support.apm.OtnlQuery;
 import com.chua.common.support.apm.OtnlScope;
 import com.chua.common.support.apm.OtnlTraceState;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.datasource.support.middleware.MiddlewareNotInstalledException;
 import com.chua.starter.datapool.support.model.SkywalkingAlarmVO;
 import com.chua.starter.datapool.support.model.SkywalkingEndpointVO;
 import com.chua.starter.datapool.support.model.SkywalkingInstanceVO;
@@ -371,6 +372,9 @@ public class SkywalkingManageController {
     private <T> ReturnResult<T> call(String action, Supplier<T> supplier) {
         try {
             return ReturnResult.ok(supplier.get());
+        } catch (MiddlewareNotInstalledException e) {
+            // 能力包未安装属预期，不是系统错误
+            return ReturnResult.error(e.getMessage());
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ReturnResult.error(e.getMessage());
         } catch (Exception e) {

@@ -63,12 +63,6 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- HTTP客户端工具 - 提供 HTTP 相关功能 -->
         <dependency>

@@ -89,12 +89,6 @@
             <artifactId>aspectjweaver</artifactId>
         </dependency>
 
-        <!-- Jakarta Servlet API - 提供HttpServletRequest等Servlet接口 -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- ========== 数据源连接池依赖 (provided - 用户按需引入) ========== -->
         
@@ -183,7 +177,23 @@
             <artifactId>utils-support-datasource-starter</artifactId>
         </dependency>
 
-        
+        <!-- ========== 文件库引擎适配（provided - 宿主按需引入） ==========
+             H2EngineAutoConfiguration / SqliteEngine*Endpoint 只在对应引擎 jar 在
+             classpath 上时才装配（@ConditionalOnClass），故这里只取编译期类型，
+             不把 H2/SQLite 引擎随本模块带给所有消费方。 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-h2-starter</artifactId>
+            <version>${utils.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-sqlite-starter</artifactId>
+            <version>${utils.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <!-- 构建期将本模块 db/init 下的脚本合并为一份完整 init.sql（输出到 target，不入库） -->

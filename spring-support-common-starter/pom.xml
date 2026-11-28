@@ -113,13 +113,6 @@
             <artifactId>spring-support-cache-starter</artifactId>
         </dependency>-->
 
-        <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Spring Boot参数验证 - 提供Bean Validation支持 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

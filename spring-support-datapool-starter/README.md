@@ -63,10 +63,11 @@ flowchart TB
         MC["*ManageController /ms/monitor/&lt;type&gt;<br/>中间件管理页"]
         TDC["*DatasourceController /ms/datasource/&lt;type&gt;<br/>类型专属能力"]
         OC["DatasourceMetricController / DatasourceTunnelController<br/>OperLogController / JdbcDriverJarController / FileDbUploadController"]
+        SYNC["SyncTaskController /ms/monitor/datasync<br/>BulkImportController /ms/monitor/bulkimport"]
     end
 
     subgraph svc["service（业务编排）"]
-        SVC["DatasourceServiceImpl 等"]
+        SVC["DatasourceServiceImpl / SyncTaskServiceImpl 等"]
         MSVC["*ManageServiceImpl<br/>Mongo / ES / ZK / Nacos / etcd / InfluxDB<br/>Prometheus / Nginx / Neo4j / SkyWalking"]
     end
 
@@ -80,7 +81,7 @@ flowchart TB
 
     subgraph store["持久层与数据"]
         MP["Ms*Mapper（MyBatis-Plus）"]
-        TB["datasource_info 等 10 张表"]
+        TB["datasource_info 等 10 张表<br/>+ ms_sync_task / ms_sync_task_run_log"]
     end
 
     subgraph bg["后台（@Scheduled，依赖宿主 @EnableScheduling）"]
@@ -181,7 +182,9 @@ flowchart LR
 | Nginx 管理与指标 | `NginxManageService` / `NginxRuntimeRouter` / `NginxMetricScheduler` | `/ms/monitor/nginx` |
 | 操作日志 | `DatasourceOperLogController` / `DatasourceOperLogScheduler` / `DatasourceOperLogListener` | `/ms/datasource/oper-log`（清理每日 04:40，保留 90 天） |
 | 服务信息登记 | `datapoolServiceInfoContributor` | 控制台模块能力 |
-| 数据初始化 | `db/init/V3.1__init_all_datapool.sql` | `datasource_info` 等 10 张表（幂等） |
+| 数据同步任务 | `SyncTaskController` / `SyncTaskService` / `SyncTaskServiceImpl`（`datasync` 包：源读取、字段映射、Sink、目录监听、写模式） | `/ms/monitor/datasync`（`/tasks` CRUD + run/enable/disable、`/logs` 列表/详情/统计/趋势/重跑、`/preview`、`/validate-source`、`/write-modes`） |
+| CSV 批量导入 | `BulkImportController` / `JdbcCsvLoader` SPI（`mysql` / `postgresql`） | `/ms/monitor/bulkimport`、`/ms/monitor/bulkimport/preview` |
+| 数据初始化 | `db/init/V3.1__init_all_datapool.sql`、`db/init/V3.2__init_backup_and_sync.sql` | `datasource_info` 等 10 张表 + 备份历史与 `ms_sync_task*`（幂等） |
 
 实际生效的能力：
 
@@ -222,6 +225,7 @@ flowchart LR
 | `JdbcDatasourceConnector`（`@Spi("datasource-jdbc")`） | 同上 | 200 |
 | `MiddlewareClientProvider` 各实现（Kafka / InfluxDB / ZooKeeper / SkyWalking …） | 各 `utils-support-*-starter` 的 `META-INF/extensions/com.chua.datasource.support.middleware.MiddlewareClientProvider`，或 OSGi bundle / 上传 jar（同名以上传为准） | 按 SPI 优先级 |
 | `LocalNginxExecutor`（`@Spi("nginx-local", order=300)`）、`SshNginxExecutor`、`WindowsNginxCommandProvider`、`PosixNginxCommandProvider` | `@Spi` 注解，由 `NginxRuntimeRouter`（`@Component`）按「平台 + 执行通道」配对路由 | 见注解 |
+| `MysqlCsvLoader`（`@Spi("mysql")`）、`PostgresqlCsvLoader`（`@Spi("postgresql")`） | `META-INF/extensions/com.chua.starter.datapool.support.datasync.loader.JdbcCsvLoader` | `键=类名` |
 
 ## 5. 完整配置
 
@@ -498,6 +502,10 @@ curl -N http://127.0.0.1:8080/ms/datasource/metric/stream/1
 - `JdbcDatasourceSupport`、`DatasourceConnectorRegistry`、`MiddlewareClientRegistry` 等均为普通 Spring Bean，可 `@Primary` 替换；
 - 方言级能力（用户/权限/进程/慢查询）走 `DbSpiCapabilityController` 背后的数据库 SPI，按方言分发；
 - **没有**的扩展点：`DynamicApiService` 只有接口契约，当前无实现可替换的运行时行为。
+
+### 8.5 CSV 直灌 SPI `JdbcCsvLoader`
+
+`com.chua.starter.datapool.support.datasync.loader.JdbcCsvLoader`：与 datasync 逐行引擎并行的「LOAD 直灌」路径，按目标方言取用（`mysql` 走 `LOAD DATA LOCAL INFILE`，`postgresql` 走 `COPY ... FROM STDIN`）。索引登记在 `META-INF/extensions/com.chua.starter.datapool.support.datasync.loader.JdbcCsvLoader`（`键=类名`）；未注册的方言返回「不支持」，由调用方回退逐行路径。PostgreSQL 实现按类名反射取 pgjdbc 类型，不携带驱动制品——部署方需提供 `org.postgresql:postgresql`，缺驱动时只影响该目标并给出可读原因。
 
 ## 9. 常见问题
 

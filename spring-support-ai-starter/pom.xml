@@ -361,11 +361,6 @@
       <groupId>io.projectreactor</groupId>
       <artifactId>reactor-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <!-- JWT 认证（nomifun 前端 OAuth 对接） -->
     <dependency>
       <groupId>com.nimbusds</groupId>

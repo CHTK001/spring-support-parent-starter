@@ -34,12 +34,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Jakarta Servlet API -->
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- 测试：独立 SSE 的端到端链路（JUnit 5） -->
     </dependencies>

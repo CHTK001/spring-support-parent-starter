@@ -69,7 +69,7 @@ public class CloudflaredTunnelProvider implements TunnelProvider {
      */
     @Override
     public boolean isAvailable() {
-        return new CloudflaredTool().isAvailable();
+        return configuredTool().isAvailable();
     }
 
     @Override
@@ -99,7 +99,7 @@ public class CloudflaredTunnelProvider implements TunnelProvider {
 
     @Override
     public Map<String, Object> capabilities() {
-        CloudflaredTool tool = new CloudflaredTool();
+        CloudflaredTool tool = configuredTool();
         boolean available = tool.isAvailable();
         Map<String, Object> caps = new LinkedHashMap<>();
         caps.put("provider", NAME);
@@ -109,6 +109,19 @@ public class CloudflaredTunnelProvider implements TunnelProvider {
         caps.put("autoStart", properties.isAutoStart());
         caps.put("autoStartStored", properties.isAutoStartStored());
         return caps;
+    }
+
+    /**
+     * 统一能力检测与启动时的可执行文件选择。
+     *
+     * @return 应用了显式配置的工具定位器
+     */
+    private CloudflaredTool configuredTool() {
+        CloudflaredTool tool = new CloudflaredTool();
+        if (StringUtils.hasText(properties.getBinary())) {
+            tool.withExecutablePath(properties.getBinary().trim());
+        }
+        return tool;
     }
 
     @Override
@@ -124,8 +137,8 @@ public class CloudflaredTunnelProvider implements TunnelProvider {
             throw new IllegalArgumentException("named 模式必须填写 Cloudflare 隧道 Token");
         }
         target.setMode(mode);
-        target.setDomain(TunnelInputs.trimToNull(input.getDomain()));
-        target.setToken(TunnelInputs.trimToNull(input.getToken()));
+        target.setDomain("named".equals(mode) ? TunnelInputs.trimToNull(input.getDomain()) : null);
+        target.setToken("named".equals(mode) ? TunnelInputs.trimToNull(input.getToken()) : null);
         // ngrok 专属字段在 cloudflared 记录上必须清空，避免两套配置互相污染。
         target.setAuthtoken(null);
         target.setRemoteAddress(null);
@@ -215,7 +228,7 @@ public class CloudflaredTunnelProvider implements TunnelProvider {
             }
             client.token(token);
         }
-        if (StringUtils.hasText(record.getDomain())) {
+        if ("named".equals(mode) && StringUtils.hasText(record.getDomain())) {
             client.hostname(record.getDomain().trim());
         }
         client.noAutoUpdate(properties.isNoAutoUpdate());

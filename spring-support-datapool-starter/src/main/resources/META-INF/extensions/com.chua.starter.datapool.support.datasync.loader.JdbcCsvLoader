@@ -1,0 +1,2 @@
+mysql=com.chua.starter.datapool.support.datasync.loader.MysqlCsvLoader
+postgresql=com.chua.starter.datapool.support.datasync.loader.PostgresqlCsvLoader

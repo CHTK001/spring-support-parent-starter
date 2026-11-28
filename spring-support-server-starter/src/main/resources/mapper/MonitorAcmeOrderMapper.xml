@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.server.support.acme.mapper.MonitorAcmeOrderMapper">
+
+    <resultMap id="BaseResultMap" type="com.chua.starter.server.support.acme.entity.MonitorAcmeOrder">
+        <id column="acme_order_id" property="acmeOrderId" jdbcType="INTEGER"/>
+        <result column="acme_account_id" property="acmeAccountId" jdbcType="INTEGER"/>
+        <result column="acme_cert_id" property="acmeCertId" jdbcType="INTEGER"/>
+        <result column="acme_order_url" property="acmeOrderUrl" jdbcType="VARCHAR"/>
+        <result column="acme_authz_urls" property="acmeAuthzUrls" jdbcType="LONGVARCHAR"/>
+        <result column="acme_order_status" property="acmeOrderStatus" jdbcType="VARCHAR"/>
+        <result column="acme_certificate_url" property="acmeCertificateUrl" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <result column="create_by" property="createBy" jdbcType="VARCHAR"/>
+        <result column="update_by" property="updateBy" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        acme_order_id, acme_account_id, acme_cert_id, acme_order_url, acme_authz_urls,
+        acme_order_status, acme_certificate_url, create_time, update_time, create_by, update_by
+    </sql>
+
+</mapper>

@@ -1,5 +1,6 @@
 package com.chua.starter.datapool.support.service.impl;
 
+import com.chua.common.support.apm.OtnlBackend;
 import com.chua.common.support.apm.OtnlEngine;
 import com.chua.common.support.apm.OtnlMetricQuery;
 import com.chua.common.support.apm.OtnlQuery;
@@ -15,6 +16,8 @@ import com.chua.common.support.apm.model.OtnlStatus;
 import com.chua.common.support.apm.model.OtnlTopology;
 import com.chua.common.support.apm.model.OtnlTrace;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.ServiceProvider;
+import com.chua.datasource.support.middleware.MiddlewareNotInstalledException;
 import com.chua.starter.datapool.support.constants.DatapoolConstants;
 import com.chua.starter.datapool.support.model.DataSourceVO;
 import com.chua.starter.datapool.support.model.SkywalkingAlarmVO;
@@ -36,9 +39,6 @@ import com.chua.starter.datapool.support.model.TopologyCallVO;
 import com.chua.starter.datapool.support.model.TopologyNodeVO;
 import com.chua.starter.datapool.support.service.DatasourceService;
 import com.chua.starter.datapool.support.service.SkywalkingManageService;
-import com.chua.skywalking.support.client.SkywalkingOapClient;
-import com.chua.skywalking.support.client.SkywalkingSettings;
-import com.chua.skywalking.support.engine.SkywalkingOtnlEngine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,10 +50,11 @@ import java.util.function.Function;
 /**
  * SkyWalking 控制台服务实现。
  *
- * <p>查询合约由 {@link SkywalkingOtnlEngine}（SPI 名 {@code skywalking}）承担，这里只负责
- * 把每请求指定的数据源运行期注入到 {@link SkywalkingSettings}——OAP 地址、账号、超时与启用标记
- * 都是进程级静态字段，因此每次查询前重新 apply 即可在「当前 OAP 地址」与「上一个」之间切换，
- * 再新建引擎实例即可享用连接失效保护（{@code SkywalkingOapClient} 会在 OAP 地址变更时释放旧连接）。</p>
+ * <p>查询合约由 {@link OtnlEngine}（SPI 名 {@code skywalking}）承担，这里只负责把每请求指定的
+ * 数据源解析成 {@link OtnlBackend}，通过 {@link OtnlEngine#configure(OtnlBackend)} 推给引擎——
+ * OAP 地址、账号、超时与启用标记即随请求生效，可在多个 OAP 之间切换。
+ * 引擎实现由 {@code utils-support-skywalking-starter}（或同等的 OSGi bundle）提供，
+ * 本模块因此不携带 SkyWalking 客户端代码；未安装时提示「功能未开放」。</p>
  * RPG数据源行约定：
  *
  * <p>数据源行约定：{@code host} + {@code port}（默认 12800），
@@ -93,7 +94,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
     @Override
     public SkywalkingOverviewVO overview(Long datasourceId) {
         DataSourceVO ds = requireDatasource(datasourceId);
-        SkywalkingOtnlEngine engine = engine(ds);
+        OtnlEngine engine = engine(ds);
         OtnlStatus status = statusSilently(engine);
         List<OtnlAlarm> alarms = alarmSilently(engine);
         int serviceCount = serviceCountSilently(engine);
@@ -319,20 +320,25 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
     }
 
     /**
-     * 按数据源行重新写入进程级设置并新建引擎实例。
+     * 取当前数据源对应的查询引擎并推入连接参数。
      * <p>
-     * 不必单例持有引擎：{@code SkywalkingOapClient} 会在 OAP 地址变更时自动释放旧连接，
-     * 新的引擎实例使用新的地址建连。
+     * 引擎来自 SPI（{@code skywalking}）；每次现取，OSGi 侧安装/卸载即时生效。
+     * 未安装时抛 {@link MiddlewareNotInstalledException}，由控制层转成「功能未开放」。
+     * </p>
      *
      * @param ds 数据源
      * @return 引擎
      */
-    private static SkywalkingOtnlEngine engine(DataSourceVO ds) {
+    private static OtnlEngine engine(DataSourceVO ds) {
+        OtnlEngine engine = ServiceProvider.of(OtnlEngine.class).getExtension(DS_TYPE);
+        if (engine == null) {
+            throw new MiddlewareNotInstalledException(DS_TYPE);
+        }
         // status 语义：0 停用、1 启用；历史数据可能为 NULL，按启用处理，
         // 避免把「未设置」误判成「已通过配置关闭」导致 APM 工作台整体不可用。
-        SkywalkingSettings.apply(oapUrl(ds), ds.username(), ds.password(),
-                TIMEOUT_MS, ds.status() == null || ds.status() == 1);
-        return new SkywalkingOtnlEngine();
+        engine.configure(new OtnlBackend(oapUrl(ds), ds.username(), ds.password(), TIMEOUT_MS,
+                ds.status() == null || ds.status() == 1));
+        return engine;
     }
 
     /**
@@ -344,7 +350,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @param <T>          返回类型
      * @return 查询结果
      */
-    private <T> T withEngine(Long datasourceId, Function<SkywalkingOtnlEngine, T> work) {
+    private <T> T withEngine(Long datasourceId, Function<OtnlEngine, T> work) {
         return work.apply(engine(requireDatasource(datasourceId)));
     }
 
@@ -356,7 +362,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @param engine 引擎
      * @return 状态结果
      */
-    private static OtnlStatus statusSilently(SkywalkingOtnlEngine engine) {
+    private static OtnlStatus statusSilently(OtnlEngine engine) {
         try {
             return engine.status();
         } catch (Exception e) {
@@ -371,7 +377,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @param engine 引擎
      * @return 告警列表
      */
-    private static List<OtnlAlarm> alarmSilently(SkywalkingOtnlEngine engine) {
+    private static List<OtnlAlarm> alarmSilently(OtnlEngine engine) {
         try {
             return engine.alarms(OtnlQuery.empty());
         } catch (Exception e) {
@@ -386,7 +392,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @param engine 引擎
      * @return 服务数
      */
-    private static int serviceCountSilently(SkywalkingOtnlEngine engine) {
+    private static int serviceCountSilently(OtnlEngine engine) {
         try {
             return engine.services(OtnlQuery.empty()).size();
         } catch (Exception e) {
@@ -401,7 +407,7 @@ public class SkywalkingManageServiceImpl implements SkywalkingManageService {
      * @param engine 引擎
      * @return 最近告警数
      */
-    private static int recentAlarmCountSilently(SkywalkingOtnlEngine engine) {
+    private static int recentAlarmCountSilently(OtnlEngine engine) {
         try {
             OtnlQuery query = OtnlQuery.lastMinutes(RECENT_ALARM_MINUTES);
             return engine.alarms(query).size();

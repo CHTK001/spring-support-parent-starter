@@ -9,6 +9,7 @@ import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -90,6 +91,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 同步模式下返回 {@link ResponseEntity}，流式模式下返回 {@link SseEmitter}
      */
     @Operation(summary = "OpenAI Chat Completions", description = "OpenAI 标准协议聊天补全接口")
+    @TokenForIgnore
     @PostMapping("/v1/chat/completions")
     public Object chatCompletions(@RequestBody OpenAiChatRequest request,
                                   HttpServletRequest servletRequest) {
@@ -155,6 +157,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 补全响应
      */
     @Operation(summary = "OpenAI Completions", description = "OpenAI 标准协议补全接口")
+    @TokenForIgnore
     @PostMapping("/v1/completions")
     public ResponseEntity<Map<String, Object>> completions(@RequestBody OpenAiCompletionRequest request,
                                                             HttpServletRequest servletRequest) {
@@ -193,6 +196,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 模型列表响应
      */
     @Operation(summary = "OpenAI Models", description = "获取支持的模型列表")
+    @TokenForIgnore
     @GetMapping("/v1/models")
     public ResponseEntity<Map<String, Object>> models(HttpServletRequest servletRequest) {
         // 检查 REST 开关
@@ -263,6 +267,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 可用模型列表
      */
     @Operation(summary = "CC Switch - 获取可用模型列表", description = "获取支持切换的模型列表")
+    @TokenForIgnore
     @GetMapping("/v1/cc/switch/models")
     public ResponseEntity<Map<String, Object>> ccSwitchModels(HttpServletRequest servletRequest) {
         // 检查 REST 开关
@@ -294,6 +299,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 切换结果
      */
     @Operation(summary = "CC Switch - 切换模型", description = "切换当前使用的模型")
+    @TokenForIgnore
     @PostMapping("/v1/cc/switch")
     public ResponseEntity<Map<String, Object>> ccSwitch(@RequestBody CcSwitchRequest request,
                                                          HttpServletRequest servletRequest) {
@@ -341,6 +347,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 模型状态
      */
     @Operation(summary = "CC Switch - 获取当前模型状态", description = "获取当前模型配置状态")
+    @TokenForIgnore
     @GetMapping("/v1/cc/switch/status")
     public ResponseEntity<Map<String, Object>> ccSwitchStatus(HttpServletRequest servletRequest) {
         // 检查 REST 开关
@@ -379,6 +386,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 批量配置结果
      */
     @Operation(summary = "CC Switch - 批量模型配置", description = "批量配置多个模型的优先级和权重")
+    @TokenForIgnore
     @PostMapping("/v1/cc/switch/batch")
     public ResponseEntity<Map<String, Object>> ccSwitchBatch(@RequestBody CcBatchSwitchRequest request,
                                                               HttpServletRequest servletRequest) {
@@ -411,6 +419,7 @@ public class AiOpenaiController extends BaseAiController {
      * @return 健康检查结果
      */
     @Operation(summary = "CC Switch - 健康检查", description = "检查 CC Switch 服务健康状态")
+    @TokenForIgnore
     @GetMapping("/v1/cc/switch/health")
     public ResponseEntity<Map<String, Object>> ccSwitchHealth(HttpServletRequest servletRequest) {
         // 检查 REST 开关

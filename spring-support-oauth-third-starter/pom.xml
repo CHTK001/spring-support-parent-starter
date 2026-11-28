@@ -38,10 +38,6 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-swagger-starter</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.swagger</groupId>
-      <artifactId>swagger-annotations</artifactId>
-    </dependency>
     <!-- Web / Servlet 按同库模块（common-system-starter）的既有约定以 provided 引入：
          编译期需要，运行时由宿主 Web 应用提供，不把 MVC 库强塞给非 Web 场景的消费者。 -->
     <dependency>
@@ -52,11 +48,6 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-webmvc</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
   </dependencies>

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -350,6 +351,7 @@ public class AiProtocolController extends BaseAiController {
      * @param false false
      */
     @Operation(summary = "Claude Messages", description = "Anthropic Claude Messages 标准协议入口")
+    @TokenForIgnore
     @PostMapping("/v1/messages")
     public Object messages(@RequestBody(required = false) Map<String, Object> body,
                            HttpServletRequest servletRequest) {
@@ -495,6 +497,7 @@ public class AiProtocolController extends BaseAiController {
      * @param false false
      */
     @Operation(summary = "OpenAI Responses", description = "OpenAI Responses API（Codex CLI 兼容）入口")
+    @TokenForIgnore
     @PostMapping("/v1/responses")
     public Object responses(@RequestBody(required = false) Map<String, Object> body,
                           HttpServletRequest servletRequest) {
@@ -662,6 +665,7 @@ public class AiProtocolController extends BaseAiController {
      * @return Gemini 形状的模型列表 {@code {"models":[{"name":"models/xxx",...}]}}
      */
     @Operation(summary = "Gemini Models", description = "获取支持的模型列表")
+    @TokenForIgnore
     @GetMapping("/v1beta/models")
     public ResponseEntity<Map<String, Object>> geminiModels(HttpServletRequest servletRequest) {
         if (!restEnabled() || !protocolServerEnabled()) {
@@ -694,6 +698,7 @@ public class AiProtocolController extends BaseAiController {
      * @return Gemini 响应
      */
     @Operation(summary = "Gemini", description = "Google Gemini 1beta 协议入口")
+    @TokenForIgnore
     @PostMapping("/v1beta/models/**")
     public Object gemini(HttpServletRequest request,
                          @RequestBody(required = false) Map<String, Object> body) {

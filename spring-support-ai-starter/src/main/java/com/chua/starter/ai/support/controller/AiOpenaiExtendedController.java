@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -106,6 +107,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @return 图像生成响应
      */
     @Operation(summary = "OpenAI Image Generation", description = "OpenAI 标准协议图像生成接口")
+    @TokenForIgnore
     @PostMapping("/v1/images/generations")
     public ResponseEntity<Map<String, Object>> imageGeneration(@RequestBody Map<String, Object> request,
                                                                 HttpServletRequest servletRequest) {
@@ -154,6 +156,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @RequestParam("image" @请求参数("镜像"
      */
     @Operation(summary = "OpenAI Image Edits", description = "OpenAI 标准协议图像编辑接口")
+    @TokenForIgnore
     @PostMapping(value = "/v1/images/edits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageEdits(@RequestParam("image") MultipartFile image,
                                                            @RequestParam("prompt") String prompt,
@@ -200,6 +203,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @RequestParam("image" @请求参数("镜像"
      */
     @Operation(summary = "OpenAI Image Variations", description = "OpenAI 标准协议图像变体接口")
+    @TokenForIgnore
     @PostMapping(value = "/v1/images/variations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageVariations(@RequestParam("image") MultipartFile image,
                                                                 @RequestParam(value = "model", required = false) String model,
@@ -244,6 +248,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Audio Transcription", description = "OpenAI 标准协议音频转录接口")
+    @TokenForIgnore
     @PostMapping(value = "/v1/audio/transcriptions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranscriptions(@RequestParam("file") MultipartFile file,
                                                                     @RequestParam("model") String model,
@@ -289,6 +294,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Audio Translation", description = "OpenAI 标准协议音频翻译接口")
+    @TokenForIgnore
     @PostMapping(value = "/v1/audio/translations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranslations(@RequestParam("file") MultipartFile file,
                                                                   @RequestParam("model") String model,
@@ -331,6 +337,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @return 审核结果
      */
     @Operation(summary = "OpenAI Moderations", description = "OpenAI 标准协议内容审核接口")
+    @TokenForIgnore
     @PostMapping("/v1/moderations")
     public ResponseEntity<Map<String, Object>> moderations(@RequestBody Map<String, Object> request,
                                                             HttpServletRequest servletRequest) {
@@ -366,6 +373,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Upload File", description = "OpenAI 标准协议文件上传接口")
+    @TokenForIgnore
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file,
                                                            @RequestParam("purpose") String purpose,
@@ -391,6 +399,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param false false
      */
     @Operation(summary = "OpenAI List Files", description = "OpenAI 标准协议文件列表接口")
+    @TokenForIgnore
     @GetMapping("/v1/files")
     public ResponseEntity<Map<String, Object>> listFiles(@RequestParam(value = "purpose", required = false) String purpose,
                                                           HttpServletRequest servletRequest) {
@@ -410,6 +419,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Retrieve File", description = "OpenAI 标准协议文件检索接口")
+    @TokenForIgnore
     @GetMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> retrieveFile(@PathVariable("file_id") String fileId,
                                                              HttpServletRequest servletRequest) {
@@ -429,6 +439,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Delete File", description = "OpenAI 标准协议文件删除接口")
+    @TokenForIgnore
     @DeleteMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable("file_id") String fileId,
                                                            HttpServletRequest servletRequest) {
@@ -448,6 +459,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Retrieve File Content", description = "OpenAI 标准协议文件内容检索接口")
+    @TokenForIgnore
     @GetMapping("/v1/files/{file_id}/content")
     public ResponseEntity<Map<String, Object>> retrieveFileContent(@PathVariable("file_id") String fileId,
                                                                     HttpServletRequest servletRequest) {
@@ -470,6 +482,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @return 微调任务信息
      */
     @Operation(summary = "OpenAI Create Fine-tuning Job", description = "OpenAI 标准协议创建微调任务接口")
+    @TokenForIgnore
     @PostMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> createFineTuningJob(@RequestBody Map<String, Object> request,
                                                                     HttpServletRequest servletRequest) {

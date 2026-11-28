@@ -69,11 +69,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
     </dependency>
-    <dependency>
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <!-- 免登录对话 / 文生图渠道的 ChatClient 实现：
          duckduckgo（duck / duckduckgo 别名）。
          渠道侧只按扩展名解析，缺失时优雅降级为「空模型 + 明确提示」，

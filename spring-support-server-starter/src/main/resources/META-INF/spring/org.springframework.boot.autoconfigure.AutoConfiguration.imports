@@ -1,1 +1,2 @@
 com.chua.starter.server.support.config.ServerAutoConfiguration
+com.chua.starter.server.support.acme.config.AcmeAutoConfiguration

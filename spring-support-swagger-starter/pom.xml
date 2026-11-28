@@ -32,6 +32,12 @@
       <groupId>io.swagger.core.v3</groupId>
       <artifactId>swagger-annotations</artifactId>
     </dependency>
+    <!-- Swagger 2.x 注解（io.swagger.annotations.*）与 3.x 注解一并由本模块统一提供：
+         业务模块只依赖本 starter，不再各自声明 swagger-annotations -->
+    <dependency>
+      <groupId>io.swagger</groupId>
+      <artifactId>swagger-annotations</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-actuator</artifactId>

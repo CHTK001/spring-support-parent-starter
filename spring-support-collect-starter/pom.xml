@@ -88,12 +88,9 @@
       <artifactId>utils-support-groovy-starter</artifactId>
       <version>${utils.version}</version>
     </dependency>
-    <!-- JDBC 驱动自动解析（JdbcDriverUtils）：数据源卡未填驱动类名时按连接串前缀兜底 -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>utils-support-datasource-starter</artifactId>
-      <version>${utils.version}</version>
-    </dependency>
+    <!-- JDBC 驱动自动解析（JdbcDriverUtils）来自 utils-support-datasource-starter，
+         它已由上面的 spring-support-datasource-starter 以 compile 作用域传递带入，
+         不再重复声明（R7：同一 POM 不得同时声明两者）。 -->
     <dependency>
       <groupId>org.apache.groovy</groupId>
       <artifactId>groovy</artifactId>
