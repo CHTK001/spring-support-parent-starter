@@ -12,12 +12,14 @@ import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.core.spi.MetricPoint;
 import com.chua.starter.monitor.support.spi.impl.MetricTimeSeriesWriter;
+import com.chua.starter.monitor.support.model.MetricAggregate;
+import com.chua.starter.datapool.support.service.NginxManageService;
+import com.chua.starter.mybatis.mapper.BaseMapperX;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,10 +81,6 @@ public class MetricServiceImpl implements MetricService {
      */
     private final MsMonitorRedisMetricStatisticsMapper redisMetricStatsMapper;
     /**
-     * JDBC 模板
-     */
-    private final JdbcTemplate jdbcTemplate;
-    /**
      * JSON 序列化器
      */
     private final ObjectMapper objectMapper;
@@ -94,6 +92,11 @@ public class MetricServiceImpl implements MetricService {
      * 告警引擎（写入链路尾部评估）
      */
     private final AlarmEngineService alarmEngineService;
+
+    /**
+     * Nginx 时序指标归数据源中心管理；监控侧只调用其清理契约。
+     */
+    private final NginxManageService nginxManageService;
 
     /**
      * Spring 事件发布器（采集入库后发布，解耦告警评估与实时推送）
@@ -170,7 +173,7 @@ public class MetricServiceImpl implements MetricService {
             List<MsMonitorMetricCpu> cpuBatch = new ArrayList<>();
             List<MsMonitorMetricMemory> memBatch = new ArrayList<>();
             List<MsMonitorMetricDisk> diskBatch = new ArrayList<>();
-            List<MsMonitorMetricNetwork> netBatch = new ArrayList<>();
+            List<MetricPoint> networkPoints = new ArrayList<>();
             List<MsMonitorMetricJvm> jvmBatch = new ArrayList<>();
             List<MsMonitorRedisMetric> redisBatch = new ArrayList<>();
 
@@ -185,7 +188,7 @@ public class MetricServiceImpl implements MetricService {
                 } else if ("ms_monitor_metric_disk".equals(target)) {
                     diskBatch.add(buildDiskMetric(monitorId, point, collectTime));
                 } else if ("ms_monitor_metric_network".equals(target)) {
-                    netBatch.add(buildNetworkMetric(monitorId, point, collectTime));
+                    networkPoints.add(point);
                 } else if ("ms_monitor_metric_jvm".equals(target)) {
                     jvmBatch.add(buildJvmMetric(monitorId, point, collectTime));
                 } else if ("ms_monitor_redis_metric".equals(target)) {
@@ -194,41 +197,19 @@ public class MetricServiceImpl implements MetricService {
                     genericBatch.add(buildGenericMetric(monitorId, point, collectTime));
                 }
             }
-            /**
-             * 批量插入generic。
-             * @param genericBatch genericbatch
-             */
-            batchInsertGeneric(genericBatch);
-            /**
-             * 批量插入cpu。
-             * @param cpuBatch cpubatch
-             */
-            batchInsertCpu(cpuBatch);
-            /**
-             * 批量插入内存。
-             * @param memBatch membatch
-             */
-            batchInsertMemory(memBatch);
-            /**
-             * 批量插入disk。
-             * @param diskBatch diskbatch
-             */
-            batchInsertDisk(diskBatch);
-            /**
-             * 批量插入network。
-             * @param netBatch netbatch
-             */
-            batchInsertNetwork(netBatch);
-            /**
-             * 批量插入jvm。
-             * @param jvmBatch jvmbatch
-             */
-            batchInsertJvm(jvmBatch);
-            /**
-             * 批量插入Redis。
-             * @param redisBatch redisbatch
-             */
-            batchInsertRedis(redisBatch);
+            batchInsert(genericBatch, metricMapper);
+            batchInsert(cpuBatch, cpuMapper);
+            batchInsert(memBatch, memoryMapper);
+            batchInsert(diskBatch, diskMapper);
+            Map<String, MsMonitorMetricNetwork> previousNetworkMetrics = loadPreviousNetworkMetrics(
+                    monitorId, networkPoints, collectTime);
+            List<MsMonitorMetricNetwork> netBatch = networkPoints.stream()
+                    .map(point -> buildNetworkMetric(monitorId, point, collectTime,
+                            previousNetworkMetrics.get(networkInterfaceName(point))))
+                    .toList();
+            batchInsert(netBatch, networkMapper);
+            batchInsert(jvmBatch, jvmMapper);
+            batchInsert(redisBatch, redisMetricMapper);
  // 时序明细同步写入（按 监控.timeseries.engine 选择 influxdb/Redis，未配置时跳过），失败不阻断主链路
             timeSeriesWriter.write(result);
  // 写入链路尾部：发布采集完成事件，解耦告警评估 / 实时推送（见 指标collected事件监听器）
@@ -266,11 +247,7 @@ public class MetricServiceImpl implements MetricService {
             for (MetricPoint point : points) {
                 genericBatch.add(buildGenericMetric(monitorId, point, ct));
             }
-            /**
-             * 批量插入generic。
-             * @param genericBatch genericbatch
-             */
-            batchInsertGeneric(genericBatch);
+            batchInsert(genericBatch, metricMapper);
             return ReturnResult.ok();
         } catch (Exception e) {
             log.error("写入指标点失败", e);
@@ -291,97 +268,55 @@ public class MetricServiceImpl implements MetricService {
             LocalDateTime hourStart = hourEnd.minusHours(1);
             log.info("开始小时聚合, 时段 {} ~ {}", hourStart, hourEnd);
 
-            // ---- 聚合通用指标 ----
-            List<MsMonitorMetric> metricList = metricMapper.selectList(
-                    new LambdaQueryWrapper<MsMonitorMetric>()
-                            .ge(MsMonitorMetric::getCollectTime, hourStart)
-                            .lt(MsMonitorMetric::getCollectTime, hourEnd));
-
+            // 原始指标由数据库聚合，避免将整小时明细全部加载到 JVM。
+            List<MetricAggregate> aggregates = metricMapper.selectHourlyAggregates(hourStart, hourEnd);
             List<MsMonitorMetricStatistics> existingStats = statisticsMapper.selectList(
                     new LambdaQueryWrapper<MsMonitorMetricStatistics>()
                             .eq(MsMonitorMetricStatistics::getHourBucket, hourStart));
-
             Map<StatisticsKey, MsMonitorMetricStatistics> statMap = existingStats.stream()
                     .collect(Collectors.toMap(
                             s -> new StatisticsKey(s.getMonitorId(), s.getMetricName()),
                             s -> s));
-
-            Map<StatisticsKey, List<MsMonitorMetric>> grouped = metricList.stream()
-                    .collect(Collectors.groupingBy(
-                            m -> new StatisticsKey(m.getMonitorId(), m.getMetricName())));
-
-            List<MsMonitorMetricStatistics> statsToSave = new ArrayList<>();
-            for (Map.Entry<StatisticsKey, List<MsMonitorMetric>> entry : grouped.entrySet()) {
-                StatisticsKey key = entry.getKey();
-                List<MsMonitorMetric> items = entry.getValue();
-                if (items.isEmpty()) {
+            List<MsMonitorMetricStatistics> statsToInsert = new ArrayList<>();
+            List<MsMonitorMetricStatistics> statsToUpdate = new ArrayList<>();
+            for (MetricAggregate aggregate : aggregates) {
+                if (!"GENERIC".equals(aggregate.source())) {
                     continue;
                 }
+                StatisticsKey key = new StatisticsKey(aggregate.monitorId(), aggregate.metricName());
                 MsMonitorMetricStatistics stat = statMap.getOrDefault(key, new MsMonitorMetricStatistics());
-                stat.setMonitorId(key.monitorId);
-                stat.setMetricName(key.metricName);
-                stat.setHourBucket(hourStart);
-                stat.setAvgValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).average().orElse(0.0));
-                stat.setMinValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).min().orElse(0.0));
-                stat.setMaxVal(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).max().orElse(0.0));
-                stat.setCountValue((long) items.size());
-                statsToSave.add(stat);
+                applyAggregate(stat, aggregate, hourStart);
+                (stat.getId() == null ? statsToInsert : statsToUpdate).add(stat);
             }
-            if (statsToSave.isEmpty()) {
+            if (statsToInsert.isEmpty() && statsToUpdate.isEmpty()) {
                 log.info("小时聚合完成, 无通用指标数据");
             } else {
-                for (MsMonitorMetricStatistics stat : statsToSave) {
-                    if (stat.getId() == null) {
-                        statisticsMapper.insert(stat);
-                    } else {
-                        statisticsMapper.updateById(stat);
-                    }
-                }
-                log.info("小时聚合完成, 通用指标 {} 行, 时段 {} ~ {}", statsToSave.size(), hourStart, hourEnd);
+                persistAggregates(statsToInsert, statsToUpdate, statisticsMapper);
+                log.info("小时聚合完成, 通用指标 {} 行, 时段 {} ~ {}",
+                        statsToInsert.size() + statsToUpdate.size(), hourStart, hourEnd);
             }
-
-            // ---- 聚合 Redis 指标 ----
-            List<MsMonitorRedisMetric> redisList = redisMetricMapper.selectList(
-                    new LambdaQueryWrapper<MsMonitorRedisMetric>()
-                            .ge(MsMonitorRedisMetric::getCollectTime, hourStart)
-                            .lt(MsMonitorRedisMetric::getCollectTime, hourEnd));
 
             List<MsMonitorRedisMetricStatistics> existingRedisStats = redisMetricStatsMapper.selectList(
                     new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
                             .eq(MsMonitorRedisMetricStatistics::getHourBucket, hourStart));
-
             Map<StatisticsKey, MsMonitorRedisMetricStatistics> redisStatMap = existingRedisStats.stream()
                     .collect(Collectors.toMap(
                             s -> new StatisticsKey(s.getMonitorId(), s.getMetricName()),
                             s -> s));
-
-            Map<StatisticsKey, List<MsMonitorRedisMetric>> redisGrouped = redisList.stream()
-                    .collect(Collectors.groupingBy(
-                            m -> new StatisticsKey(m.getMonitorId(), m.getMetricName())));
-
-            int redisCount = 0;
-            for (Map.Entry<StatisticsKey, List<MsMonitorRedisMetric>> entry : redisGrouped.entrySet()) {
-                StatisticsKey key = entry.getKey();
-                List<MsMonitorRedisMetric> items = entry.getValue();
-                if (items.isEmpty()) {
+            List<MsMonitorRedisMetricStatistics> redisStatsToInsert = new ArrayList<>();
+            List<MsMonitorRedisMetricStatistics> redisStatsToUpdate = new ArrayList<>();
+            for (MetricAggregate aggregate : aggregates) {
+                if (!"REDIS".equals(aggregate.source())) {
                     continue;
                 }
+                StatisticsKey key = new StatisticsKey(aggregate.monitorId(), aggregate.metricName());
                 MsMonitorRedisMetricStatistics stat = redisStatMap.getOrDefault(key, new MsMonitorRedisMetricStatistics());
-                stat.setMonitorId(key.monitorId);
-                stat.setMetricName(key.metricName);
-                stat.setHourBucket(hourStart);
-                stat.setAvgValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).average().orElse(0.0));
-                stat.setMinValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).min().orElse(0.0));
-                stat.setMaxVal(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).max().orElse(0.0));
-                stat.setCountValue((long) items.size());
-                if (stat.getId() == null) {
-                    redisMetricStatsMapper.insert(stat);
-                } else {
-                    redisMetricStatsMapper.updateById(stat);
-                }
-                redisCount++;
+                applyAggregate(stat, aggregate, hourStart);
+                (stat.getId() == null ? redisStatsToInsert : redisStatsToUpdate).add(stat);
             }
-            log.info("小时聚合完成, Redis 指标 {} 行, 时段 {} ~ {}", redisCount, hourStart, hourEnd);
+            persistAggregates(redisStatsToInsert, redisStatsToUpdate, redisMetricStatsMapper);
+            log.info("小时聚合完成, Redis 指标 {} 行, 时段 {} ~ {}",
+                    redisStatsToInsert.size() + redisStatsToUpdate.size(), hourStart, hourEnd);
 
             return ReturnResult.ok();
         } catch (Exception e) {
@@ -399,6 +334,37 @@ public class MetricServiceImpl implements MetricService {
     private record StatisticsKey(Long monitorId, String metricName) {
     }
 
+    private static void applyAggregate(MsMonitorMetricStatistics target, MetricAggregate aggregate,
+                                       LocalDateTime hourBucket) {
+        target.setMonitorId(aggregate.monitorId());
+        target.setMetricName(aggregate.metricName());
+        target.setHourBucket(hourBucket);
+        target.setAvgValue(aggregate.avgValue());
+        target.setMinValue(aggregate.minValue());
+        target.setMaxVal(aggregate.maxValue());
+        target.setCountValue(aggregate.countValue());
+    }
+
+    private static void applyAggregate(MsMonitorRedisMetricStatistics target, MetricAggregate aggregate,
+                                       LocalDateTime hourBucket) {
+        target.setMonitorId(aggregate.monitorId());
+        target.setMetricName(aggregate.metricName());
+        target.setHourBucket(hourBucket);
+        target.setAvgValue(aggregate.avgValue());
+        target.setMinValue(aggregate.minValue());
+        target.setMaxVal(aggregate.maxValue());
+        target.setCountValue(aggregate.countValue());
+    }
+
+    private <T> void persistAggregates(List<T> toInsert, List<T> toUpdate, BaseMapperX<T> mapper) {
+        if (!toInsert.isEmpty() && !Boolean.TRUE.equals(mapper.insertBatch(toInsert, BATCH_SIZE))) {
+            throw new IllegalStateException("批量插入指标聚合数据失败");
+        }
+        if (!toUpdate.isEmpty() && !Boolean.TRUE.equals(mapper.updateBatch(toUpdate, BATCH_SIZE))) {
+            throw new IllegalStateException("批量更新指标聚合数据失败");
+        }
+    }
+
     @Override
     /**
      * cleanup旧数据
@@ -408,18 +374,26 @@ public class MetricServiceImpl implements MetricService {
     public ReturnResult<Void> cleanupOldData(int retentionDays) {
         try {
             LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
-            int deleted = jdbcTemplate.update("DELETE FROM ms_monitor_metric WHERE ms_monitor_metric_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_metric_cpu WHERE ms_monitor_metric_cpu_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_metric_memory WHERE ms_monitor_metric_memory_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_metric_disk WHERE ms_monitor_metric_disk_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_metric_network WHERE ms_monitor_metric_network_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_metric_jvm WHERE ms_monitor_metric_jvm_collect_time < ?", cutoff);
-            jdbcTemplate.update("DELETE FROM ms_monitor_redis_metric WHERE ms_monitor_redis_metric_collect_time < ?", cutoff);
-            int deletedStats = jdbcTemplate.update(
-                "DELETE FROM ms_monitor_metric_statistics WHERE ms_monitor_metric_statistics_hour_bucket < ?", cutoff);
-            int deletedRedisStats = jdbcTemplate.update(
-                "DELETE FROM ms_monitor_redis_metric_statistics WHERE ms_monitor_redis_metric_statistics_hour_bucket < ?", cutoff);
-            int deletedNginx = jdbcTemplate.update("DELETE FROM datasource_nginx_metric WHERE datasource_nginx_metric_collect_time < ?", cutoff);
+            int deleted = metricMapper.delete(new LambdaQueryWrapper<MsMonitorMetric>()
+                    .lt(MsMonitorMetric::getCollectTime, cutoff));
+            deleted += cpuMapper.delete(new LambdaQueryWrapper<MsMonitorMetricCpu>()
+                    .lt(MsMonitorMetricCpu::getCollectTime, cutoff));
+            deleted += memoryMapper.delete(new LambdaQueryWrapper<MsMonitorMetricMemory>()
+                    .lt(MsMonitorMetricMemory::getCollectTime, cutoff));
+            deleted += diskMapper.delete(new LambdaQueryWrapper<MsMonitorMetricDisk>()
+                    .lt(MsMonitorMetricDisk::getCollectTime, cutoff));
+            deleted += networkMapper.delete(new LambdaQueryWrapper<MsMonitorMetricNetwork>()
+                    .lt(MsMonitorMetricNetwork::getCollectTime, cutoff));
+            deleted += jvmMapper.delete(new LambdaQueryWrapper<MsMonitorMetricJvm>()
+                    .lt(MsMonitorMetricJvm::getCollectTime, cutoff));
+            deleted += redisMetricMapper.delete(new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                    .lt(MsMonitorRedisMetric::getCollectTime, cutoff));
+            int deletedStats = statisticsMapper.delete(new LambdaQueryWrapper<MsMonitorMetricStatistics>()
+                    .lt(MsMonitorMetricStatistics::getHourBucket, cutoff));
+            int deletedRedisStats = redisMetricStatsMapper.delete(
+                    new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
+                            .lt(MsMonitorRedisMetricStatistics::getHourBucket, cutoff));
+            int deletedNginx = nginxManageService.cleanupMetricsBefore(cutoff);
             log.info("数据清理完成, 删除 {} 条指标, {} 条统计, {} 条 nginx 指标",
                     deleted, deletedStats + deletedRedisStats, deletedNginx);
             return ReturnResult.ok();
@@ -892,102 +866,37 @@ public class MetricServiceImpl implements MetricService {
         return '"' + raw.replace("\"", "\"\"") + '"';
     }
 
-    /**
-     * 批量插入通用指标
-     *
-     * @param batch 指标列表
-     */
-    private void batchInsertGeneric(List<MsMonitorMetric> batch) {
-        if (batch.isEmpty()) {
-            return;
+    private Map<String, MsMonitorMetricNetwork> loadPreviousNetworkMetrics(
+            Long monitorId, List<MetricPoint> points, LocalDateTime collectTime) {
+        if (monitorId == null || points.isEmpty()) {
+            return Map.of();
         }
-        for (int i = 0; i < batch.size(); i += BATCH_SIZE) {
-            int end = Math.min(i + BATCH_SIZE, batch.size());
-            batch.subList(i, end).forEach(metricMapper::insert);
+        List<String> interfaces = points.stream()
+                .map(this::networkInterfaceName)
+                .filter(name -> name != null)
+                .distinct()
+                .toList();
+        if (interfaces.isEmpty()) {
+            return Map.of();
         }
+        return networkMapper.selectPreviousByInterfaces(monitorId, interfaces, collectTime).stream()
+                .collect(Collectors.toMap(
+                        MsMonitorMetricNetwork::getInterfaceName,
+                        metric -> metric,
+                        (first, ignored) -> first));
     }
 
-    /**
-     * 批量插入 CPU 指标
-     *
-     * @param batch CPU 指标列表
-     */
-    private void batchInsertCpu(List<MsMonitorMetricCpu> batch) {
-        if (batch.isEmpty()) {
-            return;
-        }
-        for (MsMonitorMetricCpu cpu : batch) {
-            cpuMapper.insert(cpu);
-        }
+    private String networkInterfaceName(MetricPoint point) {
+        Map<String, String> tags = point.getTags();
+        return tags != null ? tags.get("iface") : null;
     }
 
-    /**
-     * 批量插入内存指标
-     *
-     * @param batch 内存指标列表
-     */
-    private void batchInsertMemory(List<MsMonitorMetricMemory> batch) {
+    private <T> void batchInsert(List<T> batch, BaseMapperX<T> mapper) {
         if (batch.isEmpty()) {
             return;
         }
-        for (MsMonitorMetricMemory mem : batch) {
-            memoryMapper.insert(mem);
-        }
-    }
-
-    /**
-     * 批量插入磁盘指标
-     *
-     * @param batch 磁盘指标列表
-     */
-    private void batchInsertDisk(List<MsMonitorMetricDisk> batch) {
-        if (batch.isEmpty()) {
-            return;
-        }
-        for (MsMonitorMetricDisk disk : batch) {
-            diskMapper.insert(disk);
-        }
-    }
-
-    /**
-     * 批量插入网络指标
-     *
-     * @param batch 网络指标列表
-     */
-    private void batchInsertNetwork(List<MsMonitorMetricNetwork> batch) {
-        if (batch.isEmpty()) {
-            return;
-        }
-        for (MsMonitorMetricNetwork net : batch) {
-            networkMapper.insert(net);
-        }
-    }
-
-    /**
-     * 批量插入 JVM 指标
-     *
-     * @param batch JVM 指标列表
-     */
-    private void batchInsertJvm(List<MsMonitorMetricJvm> batch) {
-        if (batch.isEmpty()) {
-            return;
-        }
-        for (MsMonitorMetricJvm jvm : batch) {
-            jvmMapper.insert(jvm);
-        }
-    }
-
-    /**
-     * 批量插入 Redis 指标
-     *
-     * @param batch Redis 指标列表
-     */
-    private void batchInsertRedis(List<MsMonitorRedisMetric> batch) {
-        if (batch.isEmpty()) {
-            return;
-        }
-        for (MsMonitorRedisMetric r : batch) {
-            redisMetricMapper.insert(r);
+        if (!Boolean.TRUE.equals(mapper.insertBatch(batch, BATCH_SIZE))) {
+            throw new IllegalStateException("批量插入监控指标失败");
         }
     }
 
@@ -1091,7 +1000,8 @@ public class MetricServiceImpl implements MetricService {
      * @param collectTime 采集时间
      * @return 网络指标实体
      */
-    private MsMonitorMetricNetwork buildNetworkMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime) {
+    private MsMonitorMetricNetwork buildNetworkMetric(Long monitorId, MetricPoint point, LocalDateTime collectTime,
+                                                       MsMonitorMetricNetwork prev) {
         MsMonitorMetricNetwork net = new MsMonitorMetricNetwork();
         net.setId(IdUtils.createSnowflakeId());
         net.setMonitorId(monitorId);
@@ -1102,24 +1012,15 @@ public class MetricServiceImpl implements MetricService {
         long txBytes = tags != null ? NumberUtils.toLong(tags.get("tx_bytes"), 0L) : 0L;
         net.setRxBytes(rxBytes);
         net.setTxBytes(txBytes);
-        // 查询前一次采集记录，计算速率增量
+        // 根据批量预取的前一次采集记录计算速率增量
         long speedBps = 0L;
-        if (iface != null) {
-            MsMonitorMetricNetwork prev = networkMapper.selectOne(
-                    new LambdaQueryWrapper<MsMonitorMetricNetwork>()
-                            .eq(MsMonitorMetricNetwork::getMonitorId, monitorId)
-                            .eq(MsMonitorMetricNetwork::getInterfaceName, iface)
-                            .lt(MsMonitorMetricNetwork::getCollectTime, collectTime)
-                            .orderByDesc(MsMonitorMetricNetwork::getCollectTime)
-                            .last("LIMIT 1"));
-            if (prev != null && prev.getRxBytes() != null && prev.getCollectTime() != null) {
-                long seconds = ChronoUnit.SECONDS.between(prev.getCollectTime(), collectTime);
-                if (seconds > 0) {
-                    long rxDelta = rxBytes - prev.getRxBytes();
-                    long txDelta = txBytes - (prev.getTxBytes() != null ? prev.getTxBytes() : 0L);
-                    // 速率 = (增量字节 * 8) / 间隔秒数 (bps)
-                    speedBps = Math.max(0L, Math.max(rxDelta, txDelta) * 8 / seconds);
-                }
+        if (prev != null && prev.getRxBytes() != null && prev.getCollectTime() != null) {
+            long seconds = ChronoUnit.SECONDS.between(prev.getCollectTime(), collectTime);
+            if (seconds > 0) {
+                long rxDelta = rxBytes - prev.getRxBytes();
+                long txDelta = txBytes - (prev.getTxBytes() != null ? prev.getTxBytes() : 0L);
+                // 速率 = (增量字节 * 8) / 间隔秒数 (bps)
+                speedBps = Math.max(0L, Math.max(rxDelta, txDelta) * 8 / seconds);
             }
         }
         net.setSpeedBps(speedBps);

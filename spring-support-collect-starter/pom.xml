@@ -103,12 +103,6 @@
       <artifactId>mysql-connector-j</artifactId>
       <scope>runtime</scope>
     </dependency>
-    <!-- 正式嵌入式数据库适配：默认 h2 配置支持采集平台免外部数据库启动 -->
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>runtime</scope>
-    </dependency>
     <!-- collect_record 全文检索：Lucene 内嵌倒排索引（索引随落库同步更新） -->
     <dependency>
       <groupId>org.apache.lucene</groupId>
@@ -125,7 +119,6 @@
       <artifactId>lucene-analysis-common</artifactId>
       <version>${lucene.version}</version>
     </dependency>
-    <!-- 表达式求值 / SQL 只读判定等纯内存单元测试 -->
   </dependencies>
   <build>
     <resources>

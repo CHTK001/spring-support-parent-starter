@@ -321,11 +321,11 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-mybatis-starter</artifactId>
     </dependency>
-    <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
+    <!-- 接口文档注解（@Tag / @Operation / @Schema）：本模块自带启动类（AiStarterApplication，8787 以 exploded lib 部署），
+         需 compile 让注解与 knife4j 进运行时；库模块才用 provided -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-swagger-starter</artifactId>
-      <scope>provided</scope>
     </dependency>
     <!-- Web support (for HttpServletRequest) -->
     <dependency>

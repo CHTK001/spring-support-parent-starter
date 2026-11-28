@@ -78,6 +78,8 @@
 | `plugin.logger.storage.engine` | String | `datasource-bean` | 存储引擎：`datasource-bean` / `memory` / `redis-bean`；无 DataSource 或 SPI 缺失时回落 `memory` |
 | `plugin.logger.storage.retention-hours` | long | `72` | 原始日志保留时长（小时） |
 | `plugin.logger.storage.memory-capacity` | int | `100000` | `memory` 引擎最大保留条数；配置 &lt; 1000 时按 `1000` 生效；超出丢最旧事件 |
+| `plugin.logger.storage.trace-state-path` | String | `./data/logger/trace-state` | 无 JDBC/Redis 时，SDK trace 登记与频控状态的本地磁盘目录；有 JDBC/Redis 时优先复用持久化 KV |
+| `plugin.logger.server.trace-requests-per-minute` | int | `60` | 单个用户+应用每分钟允许登记的请求生命周期数；超限封锁 30 分钟 |
 
 #### `plugin.log.*`（参数日志 / 慢请求）
 
@@ -147,6 +149,7 @@ plugin:
       engine: datasource-bean   # datasource-bean | memory | redis-bean
       retention-hours: 168      # 保留 7 天
       memory-capacity: 200000   # memory 引擎上限
+      trace-state-path: ./data/logger/trace-state # 无共享 KV 时的磁盘状态目录
 ```
 
 **链路日志汇聚（默认关闭，按需开启）：**

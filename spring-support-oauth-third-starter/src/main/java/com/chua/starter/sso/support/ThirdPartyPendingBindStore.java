@@ -88,19 +88,32 @@ public final class ThirdPartyPendingBindStore {
      * @return 一次性待绑定凭证
      */
     public static String create(String bindType, String extLoginType, AuthUser authUser) {
-        evictExpired();
-        String token = "bind_" + UUID.randomUUID().toString().replace("-", "")
-                + Long.toHexString(RANDOM.nextLong());
-        PendingBind bind = new PendingBind(
+        return create(new PendingBind(
                 bindType,
                 extLoginType,
                 authUser.getUuid(),
                 authUser.getUsername(),
                 authUser.getNickname(),
                 authUser.getAvatar(),
-                authUser.getEmail());
+                authUser.getEmail()));
+    }
+
+    /**
+     * 为已验证的身份签发一次性凭证，供短信等非 OAuth 身份复用绑定流程。
+     *
+     * @param bind 服务端完成身份验证后的快照，不得直接接收客户端自报身份
+     * @return 五分钟内有效、一次性消费的待绑定凭证
+     */
+    public static String create(PendingBind bind) {
+        if (bind == null || StringUtils.isBlank(bind.bindType())
+                || StringUtils.isBlank(bind.extLoginType()) || StringUtils.isBlank(bind.uid())) {
+            throw new IllegalArgumentException("待绑定身份及其平台、唯一标识不能为空");
+        }
+        evictExpired();
+        String token = "bind_" + UUID.randomUUID().toString().replace("-", "")
+                + Long.toHexString(RANDOM.nextLong());
         STORE.put(token, new Entry(bind, System.currentTimeMillis() + EXPIRE_MILLIS));
-        log.info("三方待绑定凭证签发: platform={}, uid={}", extLoginType, authUser.getUuid());
+        log.info("三方待绑定凭证签发: platform={}", bind.extLoginType());
         return token;
     }
 

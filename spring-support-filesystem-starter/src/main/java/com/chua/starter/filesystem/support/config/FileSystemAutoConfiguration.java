@@ -2,6 +2,7 @@
 package com.chua.starter.filesystem.support.config;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.filesystem.support.controller.FileAssetController;
 import com.chua.starter.filesystem.support.controller.FileDirController;
 import com.chua.starter.filesystem.support.controller.FileCollabController;
 import com.chua.starter.filesystem.support.controller.FileObjectController;
@@ -12,6 +13,8 @@ import com.chua.starter.filesystem.support.properties.FileStorageUploadPropertie
 import com.chua.starter.filesystem.support.server.FileServerManager;
 import com.chua.starter.filesystem.support.server.FileStorageServerLauncher;
 import com.chua.starter.filesystem.support.server.embedded.FileStorageEmbeddedFilter;
+import com.chua.starter.filesystem.support.service.FileAssetService;
+import com.chua.starter.filesystem.support.service.impl.FileAssetServiceImpl;
 import com.chua.starter.filesystem.support.controller.UploadTaskController;
 import com.chua.starter.filesystem.support.task.UploadTaskManager;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
@@ -60,6 +63,30 @@ public class FileSystemAutoConfiguration {
         FileStorageTemplate template = new FileStorageTemplate(properties);
         template.initialize();
         return template;
+    }
+
+    /**
+     * 创建文件资产服务。
+     *
+     * @param applicationContext 应用上下文
+     * @return 文件资产服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileAssetService fileAssetService(ApplicationContext applicationContext) {
+        return new FileAssetServiceImpl(applicationContext);
+    }
+
+    /**
+     * 创建文件资产控制器。
+     *
+     * @param fileAssetService 文件资产服务
+     * @return 文件资产控制器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FileAssetController fileAssetController(FileAssetService fileAssetService) {
+        return new FileAssetController(fileAssetService);
     }
 
       /**

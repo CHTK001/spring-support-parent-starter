@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.monitor.support.mapper.MsMonitorMetricNetworkMapper">
+
+    <resultMap id="networkMetricResult" type="com.chua.starter.monitor.support.entity.MsMonitorMetricNetwork">
+        <id column="id" property="id"/>
+        <result column="ms_monitor_metric_network_monitor_id" property="monitorId"/>
+        <result column="ms_monitor_metric_network_interface_name" property="interfaceName"/>
+        <result column="ms_monitor_metric_network_rx_bytes" property="rxBytes"/>
+        <result column="ms_monitor_metric_network_tx_bytes" property="txBytes"/>
+        <result column="ms_monitor_metric_network_speed_bps" property="speedBps"/>
+        <result column="ms_monitor_metric_network_collect_time" property="collectTime"/>
+    </resultMap>
+
+    <!--
+        每个网卡只回读采集时刻之前最新的一行，避免按网卡逐条查询，也避免把全部历史行加载到 JVM。
+    -->
+    <select id="selectPreviousByInterfaces" resultMap="networkMetricResult">
+        SELECT n.id,
+               n.ms_monitor_metric_network_monitor_id,
+               n.ms_monitor_metric_network_interface_name,
+               n.ms_monitor_metric_network_rx_bytes,
+               n.ms_monitor_metric_network_tx_bytes,
+               n.ms_monitor_metric_network_speed_bps,
+               n.ms_monitor_metric_network_collect_time
+        FROM ms_monitor_metric_network n
+        INNER JOIN (
+            SELECT ms_monitor_metric_network_interface_name,
+                   MAX(ms_monitor_metric_network_collect_time) AS collect_time
+            FROM ms_monitor_metric_network
+            WHERE ms_monitor_metric_network_monitor_id = #{monitorId}
+              AND ms_monitor_metric_network_collect_time &lt; #{collectTime}
+              AND ms_monitor_metric_network_interface_name IN
+              <foreach collection="interfaces" item="interfaceName" open="(" separator="," close=")">
+                  #{interfaceName}
+              </foreach>
+            GROUP BY ms_monitor_metric_network_interface_name
+        ) previous
+            ON previous.ms_monitor_metric_network_interface_name = n.ms_monitor_metric_network_interface_name
+           AND previous.collect_time = n.ms_monitor_metric_network_collect_time
+        WHERE n.ms_monitor_metric_network_monitor_id = #{monitorId}
+        ORDER BY n.ms_monitor_metric_network_collect_time DESC, n.id DESC
+    </select>
+
+</mapper>

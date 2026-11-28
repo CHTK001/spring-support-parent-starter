@@ -59,6 +59,16 @@ public interface SsoLoginBridge {
     void updateUser(SysUser user);
 
     /**
+     * 将已验证的手机号绑定到本地账号，由账号所属模块检查占用及既有绑定。
+     * @param user 本地账号
+     * @param phone 已通过短信验证的手机号
+     * @return 绑定成功返回 true
+     */
+    default boolean bindVerifiedPhone(SysUser user, String phone) {
+        return false;
+    }
+
+    /**
      * 签发本地登录令牌（与密码登录同源）
      *
      * @param user 本地用户

@@ -1,6 +1,6 @@
 # spring-support-server-starter
 
-服务器资产与远程运维 starter：主机台账、分组、登录身份与密钥库等资产管理，基于 Guacamole（guacd）的 SSH/RDP/VNC 远程控制 WebSocket 网关与 SSH/VNC/Telnet/RDP 直连桥、SFTP 文件管理、批量命令执行与 cron 计划任务、Git+Maven 发布管理、Docker/Kubernetes 主机工作台、代理池与主机隧道、邮箱、远控令牌、SSE 推送及 Arthas/Agent 构件投放。在 spring-support 体系中属业务 starter 层：向下依赖 common/datasource/mybatis/filesystem/socket 等 starter 与 utils-* 工具包，向上被 spring-support-monitor-starter、spring-support-docker-starter 依赖；以内部库形式由宿主应用引入，经 `ServerAutoConfiguration` 自动装配。
+服务器资产与远程运维 starter：主机台账、分组、登录身份与密钥库等资产管理，基于 Guacamole（guacd）的 SSH/RDP/VNC 远程控制 WebSocket 网关与 SSH/VNC/Telnet/RDP 直连桥、SFTP 文件管理、批量命令执行与 cron 计划任务、Git+Maven 发布管理、Docker/Kubernetes 主机工作台、代理池与主机隧道、邮箱、远控令牌、SSE 推送、Arthas/Agent 构件投放及维护计划台账。在 spring-support 体系中属业务 starter 层：向下依赖 common/datasource/mybatis/filesystem/socket 等 starter 与 utils-* 工具包，向上被 spring-support-monitor-starter、spring-support-docker-starter 依赖；以内部库形式由宿主应用引入，经 `ServerAutoConfiguration` 自动装配。
 
 ## 1. 架构图
 
@@ -266,7 +266,7 @@ server:
 - **guacd 是外部进程**：本模块只做协议对接，不内嵌 guacd；先独立部署 guacd（默认 `127.0.0.1:4822`），再配置 `guacd.host/port`。`guacd.client-host` 必须是浏览器可达地址；前后端同域（反向代理）部署时置空。
 - **会话与并发**：`session-idle-minutes` 按业务巡检节奏设置（0/负数无兜底，会话会被立即判定超时）；`exec-concurrency` 必须为正整数，且不要超过目标机 SSH 并发承受能力。
 - **磁盘与权限**：`guacd.drive-path`、`guacd.recording-path` 指向的目录需真实存在、对 guacd 进程可写；录屏文件可能很大，需配额与定期清理。
-- **数据库初始化**：首次启用需执行 `src/main/resources/db/init/V3.1__init_all_server.sql`（或由宿主启动时的 FlywayLike 初始化），共 15 张 `server_*` 表。
+- **数据库初始化**：首次启用需执行 `src/main/resources/db/init/V3.1__init_all_server.sql`（或由宿主启动时的 FlywayLike 初始化），共 15 张 `server_*` 表；维护计划表由 `V3.3__init_maintenance_plan.sql` 创建。
 - **运行期键值优先**：5.3 的 `server_config` 运行期键值读取优先于本节静态配置，且保存后热生效（`ServerConfigChangedEvent`）；调整 guacd/RDP/VNC/SSH 体验参数优先走 `/ms/server/config`，无需重启。
 - **开关语义**：`plugin.server.support.enabled` 与 `plugin.server.support.serial.enabled` 都不是模块开关（本模块无 `@ConditionalOnProperty`）；真要停用只能移除依赖。
 - **上传默认值不覆盖显式配置**：5.4 的默认值仅在对应键未配置时追加；一旦显式配置 `spring.servlet.multipart.*` / `server.tomcat.*`，以显式值为准。
@@ -281,7 +281,7 @@ server:
 </dependency>
 ```
 
-最小启用（本模块不可单独运行，`spring-boot-maven-plugin` 已 `skip`，产出原始 jar）：宿主引入依赖并保证有数据源 → 执行建表脚本 `src/main/resources/db/init/V3.1__init_all_server.sql`（建全部 15 张 `server_*` 表）→ 按需覆盖配置 → 注入服务调用：
+最小启用（本模块不可单独运行，`spring-boot-maven-plugin` 已 `skip`，产出原始 jar）：宿主引入依赖并保证有数据源 → 执行建表脚本 `src/main/resources/db/init/V3.1__init_all_server.sql`（建全部 15 张 `server_*` 表）→ 执行 `V3.3__init_maintenance_plan.sql`（维护计划）→ 按需覆盖配置 → 注入服务调用：
 
 ```yaml
 plugin:

@@ -114,6 +114,18 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-io-starter</artifactId>
         </dependency>
+        <!-- 服务管理 ROOM 节点直接使用 RoomServer/RoomProperties，必须由 server 自带该实现 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-websocket-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 服务发现查询控制器直接消费 DiscoveryService，能力与依赖同进退 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-discovery-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-acme-starter</artifactId>
@@ -161,12 +173,12 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <!-- 日志 -->
+        
 
-        <!-- 测试 -->
-        <!-- JUnit Jupiter：发布脚本生成回归探针 ReleaseScriptProbe 以 @Test 承载，
-             使改动 ProjectScripts / 平台 Provider 时能由 mvn test 直接拦住，
-             不再依赖只能手工执行的 main() 运行器。与 monitor-starter 保持同源依赖。 -->
+        
+        
+             
+             
 
     </dependencies>
 

@@ -63,8 +63,7 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- Spring Boot Test - 测试依赖 -->
-    
+        
   </dependencies>
   <!-- 构建配置 -->
   <build>

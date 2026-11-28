@@ -11,9 +11,11 @@ import com.chua.starter.logger.properties.LoggerProperties;
 import com.chua.starter.logger.server.LoggerController;
 import com.chua.starter.logger.server.LoggerSseBroker;
 import com.chua.starter.logger.server.LoggerTcpServer;
+import com.chua.starter.logger.server.LoggerTraceRegistry;
 import com.chua.starter.logger.store.LoggerEventBus;
 import com.chua.starter.logger.store.LoggerEventStore;
 import com.chua.starter.logger.store.LoggerStores;
+import com.chua.starter.logger.store.LoggerTraceStateStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -174,6 +176,23 @@ public class LoggerAutoConfiguration {
             return broker;
         }
 
+        /** SDK trace 生命周期登记与频控。 */
+        @Bean
+        public LoggerTraceRegistry loggerTraceRegistry(LoggerEventStore loggerEventStore,
+                                                       LoggerEventBus loggerEventBus,
+                                                       LoggerTraceStateStore loggerTraceStateStore,
+                                                       LoggerProperties properties) {
+            return new LoggerTraceRegistry(loggerEventStore, loggerEventBus, loggerTraceStateStore, properties);
+        }
+
+        /** SDK trace 生命周期状态：优先 JDBC/Redis，缺少共享 KV 时落本地磁盘。 */
+        @Bean
+        public LoggerTraceStateStore loggerTraceStateStore(LoggerProperties properties,
+                                                           ObjectProvider<DataSource> dataSourceProvider) {
+            return LoggerStores.createTraceStateStore(properties.getStorage().getEngine(),
+                    properties.getStorage().getTraceStatePath(), dataSourceProvider.getIfAvailable());
+        }
+
         /**
          * TCP 接收端（SmartLifecycle）
          */
@@ -191,12 +210,13 @@ public class LoggerAutoConfiguration {
         @Bean
         @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
         public LoggerController loggerController(LoggerEventStore loggerEventStore,
-                                                 LoggerSseBroker loggerSseBroker,
-                                                 LoggerEventBus loggerEventBus,
-                                                 LoggerProperties properties,
-                                                 Environment environment) {
+                                                  LoggerSseBroker loggerSseBroker,
+                                                  LoggerEventBus loggerEventBus,
+                                                  LoggerTraceRegistry loggerTraceRegistry,
+                                                  LoggerProperties properties,
+                                                  Environment environment) {
             return new LoggerController(loggerEventStore, loggerSseBroker, loggerEventBus,
-                    properties, environment);
+                    loggerTraceRegistry, properties, environment);
         }
     }
 }

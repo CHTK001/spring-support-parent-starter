@@ -2684,6 +2684,19 @@ public class NginxManageServiceImpl implements NginxManageService {
         return rows.size();
     }
 
+    @Override
+    public int cleanupMetricsBefore(LocalDateTime cutoff) {
+        if (cutoff == null) {
+            return 0;
+        }
+        MsMonitorNginxMetricMapper mapper = nginxMetricMapper.getIfAvailable();
+        if (mapper == null) {
+            return 0;
+        }
+        return mapper.delete(new LambdaQueryWrapper<MsMonitorNginxMetric>()
+                .lt(MsMonitorNginxMetric::getCollectTime, cutoff));
+    }
+
     /**
      * 组装一行指标；值为 null 时跳过，不占位。
      *

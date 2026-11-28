@@ -100,8 +100,6 @@
          <module>spring-support-bundle-starter</module>
          <!-- 数据中台管理：/v2/datalake/** 管理端点 + 管线配置落库（宿主 datalake.enabled=true 时生效） -->
          <module>spring-support-datalake-starter</module>
-        <!-- 搜索和数据处理模块 -->
-        <module>spring-support-datasearch-starter</module>
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <!-- scatter 组网：去中心化服务发现 + self-balance 反向代理（谁用谁依赖） -->
         <module>spring-support-scatter-starter</module>
@@ -118,7 +116,7 @@
         <module>spring-support-ssh-starter</module>
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
-        <!-- 支付模块（2026-11-25 复活挂载：strategy-starter 依赖已由 utils-support-springboot-starter 替代，SB4 下编译通过） -->
+        <!-- 支付业务模块 -->
         <module>spring-support-payment-starter</module>
         <!-- 内网穿透标准 starter（SPI + 统一入口 /ms/tunnel），
              下列 ngrok / cloudflared / tailscale 模块均为其提供方实现 -->
@@ -638,9 +636,6 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- 搜索和数据处理模块 - spring-support-elasticsearch-starter 已删除, 由 utils-support-springboot-starter 提供 ES 能力 (如有) -->
-            <!-- spring-support-spider-starter 已下线 (2026-09-26)，能力由采集平台模块承接，
-                 依赖声明一并移除，避免有人误加依赖后从远端拉一个空壳 artifact 进来。 -->
             <!-- 服务发现和配置模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -745,8 +740,6 @@
                 <artifactId>spring-support-message-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <!-- 统一模板库已并入账号管理模块（spring-support-account-starter） -->
-            
             <!-- 系统管理模块（/v2/user/** / /v2/third/** / /v2/captcha / /v2/sms / /v2/cache /
                  /v2/announcement / /manage/* / /monitor/*）：pages/system 路由的后端接口全部由
                  spring-api-support-common-system-starter 提供。monitor 应用是这些页面的宿主，
@@ -935,8 +928,7 @@
                 <artifactId>utils-support-datasearch-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
-            <!-- 策略/容错/分布式锁 等 spring-boot 整合能力
-                 (替代已下线的 spring-support-lock-starter + spring-support-strategy-starter) -->
+            <!-- 策略/容错/分布式锁等 Spring Boot 整合能力 -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-springboot-starter</artifactId>

@@ -75,6 +75,30 @@ public final class LoggerStores {
     }
 
     /**
+     * 创建 SDK trace 状态存储。trace 状态不跟随 memory 日志引擎进入堆内，优先复用
+     * JDBC/Redis 的持久化 KV；两者均不可用时落本地磁盘文件。
+     *
+     * @param engineName 日志存储引擎名
+     * @param traceStatePath 本地磁盘兜底目录
+     * @param dataSource 容器数据源，可为空
+     * @return 持久化状态存储
+     */
+    public static LoggerTraceStateStore createTraceStateStore(String engineName, String traceStatePath,
+                                                              DataSource dataSource) {
+        if (dataSource != null) {
+            return new KvLoggerTraceStateStore(new JdbcKvEngine(dataSource));
+        }
+        if ("redis-bean".equalsIgnoreCase(engineName)) {
+            KvEngineHolder redis = redisEngine();
+            if (redis != null) {
+                return new KvLoggerTraceStateStore(redis.kv);
+            }
+        }
+        log.warn("[logger] trace 状态没有可共享的 JDBC/Redis KV，使用本地磁盘目录: {}", traceStatePath);
+        return new FileLoggerTraceStateStore(traceStatePath);
+    }
+
+    /**
      * SPI 探测 Redis 版 KvEngine（含可用的 SeriesEngine 时一并返回）。
      */
     private static KvEngineHolder redisEngine() {

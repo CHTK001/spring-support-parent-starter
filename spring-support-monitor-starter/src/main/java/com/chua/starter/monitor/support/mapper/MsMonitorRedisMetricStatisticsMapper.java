@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.support.mapper;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
+import com.chua.starter.mybatis.mapper.BaseMapperX;
 
 /**
  * Redis 指标统计 映射器
@@ -8,4 +8,4 @@ import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
  * @since 2026/8/4
  * @author CH
  */
-public interface MsMonitorRedisMetricStatisticsMapper extends BaseMapper<MsMonitorRedisMetricStatistics> {}
+public interface MsMonitorRedisMetricStatisticsMapper extends BaseMapperX<MsMonitorRedisMetricStatistics> {}

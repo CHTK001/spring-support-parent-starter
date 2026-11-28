@@ -33,12 +33,6 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- MyBatis Plus (Spring Boot 4) -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
-        </dependency>
-
         <!-- Spring Support MyBatis(PageResult / 分页拦截器) -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -76,15 +70,9 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- OAuth 客户端注解（@TokenForIgnore）：设备模块自己声明免登录态的 webhook 入站端点，
-             不写宿主 yaml 白名单。optional=true：未引入 oauth-client 的宿主不会被强加依赖，
-             注解在运行时不存在时静默失效，不影响模块编译与启动 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-starter</artifactId>
-            <version>${project.version}</version>
-            <optional>true</optional>
-        </dependency>
+        
+             
+             
 
         <!-- 海康综合安防平台官方 SDK：artemis 网关签名（x-ca-*）由 SDK 内部完成。
              官方只在 Maven Central 发布了这一个安防类 SDK；云曜/云眸/大华/乐橙均无官方 Java SDK，
@@ -114,7 +102,6 @@
             <version>5.19.1</version>
         </dependency>
 
-        <!-- 测试依赖 -->
         
     </dependencies>
 

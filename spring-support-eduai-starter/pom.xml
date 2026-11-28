@@ -160,25 +160,23 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- 单元测试：覆盖学生口令摘要/校验这类安全核心逻辑。
-             刻意不引 mockito：被测对象是纯函数（无外部依赖），
-             打桩只会掩盖真实行为。 -->
+        
+             
+             
 
-        <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
+        <!-- 接口文档注解（@Tag / @Operation / @Schema）：本模块自带启动类（EduAiApplication），
+             需 compile 让注解与 knife4j 进可执行 jar；库模块才用 provided -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
-            <scope>provided</scope>
         </dependency>
 
-        <!-- ONNX 模型资产（paddleocrv6-tiny / ppdoclayoutv3 / doc-orientation）
-             嵌入式小模型（6.4MB / 124.5MB / 6.5MB，共约 137MB），不走下载：
-             - 已从 maven 依赖移除（com/chua 本地仓库已清理），源文件见 utils-support-models-parent 各模块 src/main/resources；
-             - classpath 相对路径由 OnnxModelRegistrar 注册项约定（ocr/PP-OCRv6/tiny/…、vision/detection/pp_doc_layoutv3/…、ocr/direction/doc_ori/…）；
-             - 部署时随包提供：放入模型目录（-Ddeeplearning.model.root-dir 指定，默认 models/onnx）或直接打入应用资源。
-        -->
+        
+             
+             
+             
+             
 
-        <!-- 测试依赖 -->
         
     </dependencies>
 

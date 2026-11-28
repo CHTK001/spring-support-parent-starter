@@ -5,7 +5,7 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import com.chua.common.support.annotation.Ignore;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;

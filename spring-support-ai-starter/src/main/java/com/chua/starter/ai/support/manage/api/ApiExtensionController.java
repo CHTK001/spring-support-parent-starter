@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.manage.api;
 
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;

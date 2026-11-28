@@ -62,16 +62,10 @@
             <version>1.24.1</version>
         </dependency>
 
-        <!-- ReturnResult 统一响应、ServiceProvider SPI 装载 -->
+        <!-- 平台 API 注解契约：@TokenForIgnore 由 common-starter 提供，不引入完整 OAuth 客户端栈 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- @TokenForIgnore：顶栏在登录前就要出数，四个接口必须匿名可访问 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-starter</artifactId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
         <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->

@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.support.mapper;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricCpu;
+import com.chua.starter.mybatis.mapper.BaseMapperX;
 
 /**
  * CPU 指标 映射器
@@ -8,4 +8,4 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricCpu;
  * @since 2026/8/4
  * @author CH
  */
-public interface MsMonitorMetricCpuMapper extends BaseMapper<MsMonitorMetricCpu> {}
+public interface MsMonitorMetricCpuMapper extends BaseMapperX<MsMonitorMetricCpu> {}

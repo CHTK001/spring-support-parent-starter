@@ -32,6 +32,14 @@
 - **sync**：已内建 `plugin.sync.client.discovery-name` / `scatter-id` 寻址；租户模块的 `client.discovery-name` 会串联到这里，`server-host` 允许写 `discovery://<服务名>`。
 - **不装即降级**：发现未启用时 `DiscoveryConfiguration` 仍注册默认 `DiscoveryService`，解析器查不到实例就返回配置原值，不得因为发现中心抖动让鉴权/同步整体不可用。
 
+## Swagger 注解收敛（2026-11-28 定版）
+
+- `io.swagger.core.v3:swagger-annotations`（v3）与 `io.swagger:swagger-annotations`（v1 兼容）**只在 `spring-support-swagger-starter` 声明**，版本只在根 POM `<dependencyManagement>` 单源管理（`swagger.annotations.v3.version` / `swagger.annotations.v2.version`），任何模块不得写 inline `<version>`。
+- 业务 / 库模块需要 `@Tag` / `@Operation` / `@Schema` 时，声明 `spring-support-swagger-starter` + `<scope>provided</scope>`：注解编译期可见，knife4j 与 springdoc 不随之传染给宿主（`mvn dependency:tree` 可验证整棵子树都是 provided）。
+- **唯一例外 `spring-support-common-starter`**：swagger-starter 以 provided 依赖 common（`Knife4jConfiguration` 需要 `ServiceInfoContributor` / `ServiceInfoRegistry`），反向声明会构成 Maven 环（各 scope 一律拒绝），故 common 保留对注解制品的直接 `provided` 声明；解开该环的正路是把这两个 serviceinfo 类下沉到 utils 层。
+- 部署壳 / 宿主用 `compile` 声明 `spring-support-swagger-starter` 才会带 knife4j 运行时（monitor-starter 即如此）；壳已由业务模块传递获得时不要重复声明（R7）。
+- 本轮已收敛 12 个模块：**库模块用 `provided`**（ai-training / cdp / collect / account / tunnel / tunnel-tailscale / docker / message / datasearch，knife4j 不再传染宿主）；**自带启动类的宿主用 `compile`**（ai / eduai / job，注解与 knife4j 必须进运行时）。存量 `compile` 声明（common-system / oauth / oauth-third / payment / server / datapool / device）属待整改：翻转前先给每个消费宿主补显式 `compile`，不得只翻库模块让宿主丢文档端点。`--include=pom.xml` 全仓 grep 现在只剩根 POM 的两条 `dependencyManagement`、common-starter 的例外声明、以及 swagger / swagger2 两个提供者自身。
+
 ## 依赖即带入（R5）
 
 新增 `xxx-starter` 依赖前，先确认对方的 `AutoConfiguration` 会往本服务塞什么 Controller / 定时任务 / 表迁移，是否真的需要。

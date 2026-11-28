@@ -9,7 +9,7 @@ import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.ai.support.service.AppKeyModelScope;
 import com.chua.starter.datasearch.provider.support.ProviderModelMetrics;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;

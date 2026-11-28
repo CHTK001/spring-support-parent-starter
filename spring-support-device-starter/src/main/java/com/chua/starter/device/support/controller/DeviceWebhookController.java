@@ -11,7 +11,7 @@ import com.chua.starter.device.support.model.AppKeyView;
 import com.chua.starter.device.support.model.WebhookPushResult;
 import com.chua.starter.device.support.model.VehiclePassPush;
 import com.chua.starter.device.support.service.DeviceWebhookService;
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

@@ -8,13 +8,12 @@ import com.chua.starter.monitor.support.asset.model.AssetDetailView.MonitorItem;
 import com.chua.starter.monitor.support.asset.model.AssetSearchItemVO;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
-import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmEventMapper;
-import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
-import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.server.model.ServerNodeView;
 import com.chua.starter.server.support.service.ServerHostService;
+import com.chua.starter.server.support.service.ServerManageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,13 +46,11 @@ public class AssetLinkageService {
     */
     private final ServerHostService serverHostService;
     /**
-     * 服务节点 映射器
+     * 服务节点查询门面（含运行态）
     */
-    private final MsServerNodeMapper nodeMapper;
+    private final ServerManageService serverManageService;
     /**
-     * 服务节点运行时注册表
     */
-    private final ServerNodeRegistry nodeRegistry;
     /**
      * 监控项 服务，主机↔监控归属解析出口
     */
@@ -129,11 +126,11 @@ public class AssetLinkageService {
                 .setAgentEnabled(toBoolean(host.getServerHostAgentEnabled()))
                 .setRemoteEnabled(toBoolean(host.getServerHostRemoteEnabled()));
 
-        List<MsServerNode> nodes = loadNodesForHost(host);
+        List<ServerNodeView> nodes = loadNodesForHost(host);
         view.setNodeCount(nodes.size());
         List<NodeChannel> channels = new ArrayList<>();
         int running = 0;
-        for (MsServerNode node : nodes) {
+        for (ServerNodeView node : nodes) {
             NodeChannel ch = toChannel(node);
             if ("RUNNING".equals(ch.getStatus())) {
                 running++;
@@ -267,7 +264,7 @@ public class AssetLinkageService {
      * @param host 主机
      * @return 节点列表
      */
-    private List<MsServerNode> loadNodesForHost(MsServerHost host) {
+    private List<ServerNodeView> loadNodesForHost(MsServerHost host) {
         String address = host.getServerHostAddress();
         if (address == null || address.isBlank()) {
             return new ArrayList<>();
@@ -281,9 +278,14 @@ public class AssetLinkageService {
         if (host.getServerHostPrivateIp() != null && !host.getServerHostPrivateIp().isBlank()) {
             candidates.add(host.getServerHostPrivateIp().trim());
         }
-        return nodeMapper.selectList(new LambdaQueryWrapper<MsServerNode>()
-                .in(MsServerNode::getHost, candidates)
-                .orderByAsc(MsServerNode::getId));
+        ReturnResult<List<ServerNodeView>> result = serverManageService.list();
+        if (result == null || !result.isOk() || result.getData() == null) {
+            return new ArrayList<>();
+        }
+        return result.getData().stream()
+                .filter(node -> candidates.contains(node.host()))
+                .sorted(java.util.Comparator.comparing(ServerNodeView::id))
+                .toList();
     }
 
     /**
@@ -292,39 +294,18 @@ public class AssetLinkageService {
      * @param node 节点定义
      * @return 通道摘要
      */
-    private NodeChannel toChannel(MsServerNode node) {
+    private NodeChannel toChannel(ServerNodeView node) {
         NodeChannel ch = new NodeChannel()
-                .setNodeId(node.getId())
-                .setName(node.getName())
-                .setProtocol(node.getProtocol())
-                .setPort(node.getPort());
-        String url = buildUrl(node);
-        ServerNodeRegistry.RuntimeServer runtime = nodeRegistry.get(node.getId());
-        String status = runtime == null ? "STOPPED" : runtime.status();
-        if ("RUNNING".equals(status) && url != null) {
-            ch.setUrl(url);
+                .setNodeId(node.id())
+                .setName(node.name())
+                .setProtocol(node.protocol())
+                .setPort(node.port());
+        if ("RUNNING".equals(node.status()) && node.serverUrl() != null) {
+            ch.setUrl(node.serverUrl());
         }
-        ch.setStatus(status);
-        ch.setExtra(nodeRegistry.parseConfig(node));
+        ch.setStatus(node.status());
+        ch.setExtra(node.config());
         return ch;
-    }
-
-    /**
-     * 构造节点访问地址（仅对已运行的 HTTP 节点给出完整 URL）。
-     *
-     * @param node 节点
-     * @return 访问地址；未知协议返回 空
-     */
-    private String buildUrl(MsServerNode node) {
-        if (node.getPort() == null) {
-            return null;
-        }
-        String protocol = node.getProtocol();
-        if ("HTTP".equalsIgnoreCase(protocol)) {
-            return "http://" + node.getHost() + ":" + node.getPort() + "/";
-        }
- // 代理/sip 仅给出 tcp://主机:端口 形式提示
-        return null;
     }
 
     /**

@@ -3,7 +3,7 @@ package com.chua.starter.monitor.support.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsApmOperLog;
-import com.chua.starter.monitor.support.server.model.ApmOperLogVO;
+import com.chua.starter.server.support.server.model.ApmOperLogVO;
 
 import java.time.LocalDateTime;
 

@@ -1,6 +1,6 @@
 package com.chua.starter.monitor.support.mapper;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricJvm;
+import com.chua.starter.mybatis.mapper.BaseMapperX;
 
 /**
  * JVM 指标 映射器
@@ -8,4 +8,4 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricJvm;
  * @since 2026/8/4
  * @author CH
  */
-public interface MsMonitorMetricJvmMapper extends BaseMapper<MsMonitorMetricJvm> {}
+public interface MsMonitorMetricJvmMapper extends BaseMapperX<MsMonitorMetricJvm> {}

@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.security.Principal;
 
 /**
  * 日志检索 API（{@code /v2/logger}）。
@@ -71,6 +72,7 @@ public class LoggerController {
     private final LoggerEventStore store;
     private final LoggerSseBroker broker;
     private final LoggerEventBus bus;
+    private final LoggerTraceRegistry traceRegistry;
     private final LoggerProperties properties;
     private final String defaultApp;
 
@@ -82,10 +84,11 @@ public class LoggerController {
      * @param environment 容器环境（解析缺省应用名）
      */
     public LoggerController(LoggerEventStore store, LoggerSseBroker broker, LoggerEventBus bus,
-                            LoggerProperties properties, Environment environment) {
+                            LoggerTraceRegistry traceRegistry, LoggerProperties properties, Environment environment) {
         this.store = store;
         this.broker = broker;
         this.bus = bus;
+        this.traceRegistry = traceRegistry;
         this.properties = properties;
         this.defaultApp = LoggerAutoConfiguration.resolveAppName(properties, environment);
     }
@@ -242,6 +245,85 @@ public class LoggerController {
         }
         bus.publish(events);
         return ReturnResult.ok(events.size());
+    }
+
+    /** 为当前已认证用户与应用登记一个新的请求级 traceId。 */
+    @PostMapping(value = "/trace/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<Map<String, Object>> registerTrace(HttpServletRequest request,
+                                                           @RequestBody(required = false) JsonNode body) {
+        String userId = requireUserId(request);
+        String app = requireApp(firstNonBlank(request.getHeader("x-logger-app"), text(body, "app")));
+        return ReturnResult.ok(traceRegistry.register(userId, app));
+    }
+
+    /** 登记请求前/响应后阶段；任一阶段对同一 traceId 只允许成功一次。 */
+    @PostMapping(value = "/trace/report", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<Void> reportTrace(HttpServletRequest request, @RequestBody JsonNode body) {
+        String userId = requireUserId(request);
+        String app = requireApp(request.getHeader("x-logger-app"));
+        traceRegistry.report(userId, app,
+                text(body, "traceId"), text(body, "phase"), text(body, "method"), text(body, "path"),
+                integer(body, "status"), longValue(body, "durationMs"));
+        return ReturnResult.ok(null);
+    }
+
+    /** 管理员查看仍处于封锁期的 SDK 身份。 */
+    @GetMapping("/trace/blocked")
+    public ReturnResult<List<Map<String, Object>>> blockedTraces(HttpServletRequest request) {
+        requireAdmin(request);
+        return ReturnResult.list(traceRegistry.blocked());
+    }
+
+    /** 管理员按应用或用户解除 SDK 频控封锁。 */
+    @PostMapping(value = "/trace/unblock", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<Integer> unblockTrace(HttpServletRequest request, @RequestBody JsonNode body) {
+        requireAdmin(request);
+        return ReturnResult.ok(traceRegistry.unblock(text(body, "scope"), text(body, "value")));
+    }
+
+    private String requireUserId(HttpServletRequest request) {
+        Object userId = request.getAttribute("userId");
+        if (userId != null && !userId.toString().isBlank()) {
+            return userId.toString();
+        }
+        Principal principal = request.getUserPrincipal();
+        if (principal != null && principal.getName() != null && !principal.getName().isBlank()) {
+            return principal.getName();
+        }
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "SDK trace API 需要有效登录身份");
+    }
+
+    private void requireAdmin(HttpServletRequest request) {
+        requireUserId(request);
+        if (!request.isUserInRole("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅管理员可管理 SDK 封锁");
+        }
+    }
+
+    private String requireApp(String app) {
+        if (app == null || app.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "x-logger-app 不能为空");
+        }
+        return app.trim();
+    }
+
+    private static String firstNonBlank(String first, String second) {
+        return first == null || first.isBlank() ? second : first;
+    }
+
+    private static String text(JsonNode body, String name) {
+        JsonNode value = body == null ? null : body.get(name);
+        return value == null || value.isNull() ? null : value.asText();
+    }
+
+    private static Integer integer(JsonNode body, String name) {
+        JsonNode value = body == null ? null : body.get(name);
+        return value == null || !value.canConvertToInt() ? null : value.asInt();
+    }
+
+    private static Long longValue(JsonNode body, String name) {
+        JsonNode value = body == null ? null : body.get(name);
+        return value == null || !value.canConvertToLong() ? null : value.asLong();
     }
 
     /**

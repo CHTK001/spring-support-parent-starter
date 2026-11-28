@@ -15,7 +15,7 @@ import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
 import com.chua.starter.message.support.service.SysMessageService;
 import com.chua.starter.mybatis.utils.PageResultUtils;
-import com.chua.starter.oauth.client.support.constants.AuthConstant;
+import com.chua.starter.common.support.api.permission.PermissionRules;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -73,7 +73,7 @@ public class SysMessageController {
      */
     @Operation(summary = "提供商分页查询")
     @GetMapping("/provider/page")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnPageResult<SysMessageProvider> pageForProvider(@ParameterObject SysMessageProvider provider,
                                                                 @RequestParam(value = "page", defaultValue = "1") long page,
                                                                 @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
@@ -87,7 +87,7 @@ public class SysMessageController {
      */
     @Operation(summary = "提供商列表查询")
     @GetMapping("/provider/list")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<List<SysMessageProvider>> listForProvider() {
         return ReturnResult.ok(sysMessageService.listForProvider());
     }
@@ -102,7 +102,7 @@ public class SysMessageController {
      */
     @Operation(summary = "已注册消息渠道列表")
     @GetMapping("/channel/list")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<List<ChannelInfo>> listChannels() {
         return ReturnResult.ok(sysMessageService.listChannels());
     }
@@ -115,7 +115,7 @@ public class SysMessageController {
      */
     @Operation(summary = "新增提供商")
     @PostMapping("/provider/save")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<SysMessageProvider> saveProvider(@RequestBody SysMessageProvider provider) {
         return sysMessageService.saveProvider(provider);
     }
@@ -128,7 +128,7 @@ public class SysMessageController {
      */
     @Operation(summary = "更新提供商")
     @PutMapping("/provider/update")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Boolean> updateProvider(@RequestBody SysMessageProvider provider) {
         return sysMessageService.updateProvider(provider);
     }
@@ -141,7 +141,7 @@ public class SysMessageController {
      */
     @Operation(summary = "删除提供商")
     @DeleteMapping("/provider/delete")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Boolean> deleteProvider(@RequestParam Integer providerId) {
         return sysMessageService.deleteProvider(providerId);
     }
@@ -156,7 +156,7 @@ public class SysMessageController {
      */
     @Operation(summary = "模板分页查询")
     @GetMapping("/template/page")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnPageResult<SysMessageTemplate> pageForTemplate(@ParameterObject SysMessageTemplate template,
                                                                 @RequestParam(value = "page", defaultValue = "1") long page,
                                                                 @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
@@ -170,7 +170,7 @@ public class SysMessageController {
      */
     @Operation(summary = "模板列表查询")
     @GetMapping("/template/list")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<List<SysMessageTemplate>> listForTemplate() {
         return ReturnResult.ok(sysMessageService.listForTemplate());
     }
@@ -183,7 +183,7 @@ public class SysMessageController {
      */
     @Operation(summary = "新增模板")
     @PostMapping("/template/save")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<SysMessageTemplate> saveTemplate(@RequestBody SysMessageTemplate template) {
         return sysMessageService.saveTemplate(template);
     }
@@ -196,7 +196,7 @@ public class SysMessageController {
      */
     @Operation(summary = "更新模板")
     @PutMapping("/template/update")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Boolean> updateTemplate(@RequestBody SysMessageTemplate template) {
         return sysMessageService.updateTemplate(template);
     }
@@ -209,7 +209,7 @@ public class SysMessageController {
      */
     @Operation(summary = "删除模板")
     @DeleteMapping("/template/delete")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Boolean> deleteTemplate(@RequestParam Integer templateId) {
         return sysMessageService.deleteTemplate(templateId);
     }
@@ -222,7 +222,7 @@ public class SysMessageController {
      */
     @Operation(summary = "按模板发送消息")
     @PostMapping("/send")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<List<MessageResponse>> send(@RequestBody MessageSendRequest request) {
         return sysMessageService.send(request);
     }
@@ -235,7 +235,7 @@ public class SysMessageController {
      */
     @Operation(summary = "按内容发送消息")
     @PostMapping("/send/content")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<List<MessageResponse>> sendContent(@RequestBody MessageContentSendRequest request) {
         return sysMessageService.sendContent(request);
     }
@@ -248,7 +248,7 @@ public class SysMessageController {
      */
     @Operation(summary = "手动同步模板")
     @PostMapping("/template/sync")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Integer> syncTemplate(@RequestParam Integer providerId) {
         return sysMessageService.syncTemplate(providerId);
     }
@@ -261,7 +261,7 @@ public class SysMessageController {
      */
     @Operation(summary = "模板内容渲染预览")
     @PostMapping("/template/preview")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<TemplatePreviewResponse> previewTemplate(@RequestBody TemplatePreviewRequest request) {
         return sysMessageService.previewTemplate(request);
     }
@@ -275,7 +275,7 @@ public class SysMessageController {
      */
     @Operation(summary = "清理推送日志")
     @PostMapping("/log/clean")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnResult<Integer> cleanLog(@RequestParam(required = false) java.time.LocalDateTime beforeTime) {
         return sysMessageService.cleanLog(beforeTime);
     }
@@ -290,7 +290,7 @@ public class SysMessageController {
      */
     @Operation(summary = "推送日志分页查询")
     @GetMapping("/log/page")
-    @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    @Permission(role = {PermissionRules.ADMIN, PermissionRules.SUPER_ADMIN})
     public ReturnPageResult<SysMessageLog> pageForLog(@ParameterObject SysMessageLog log,
                                                       @RequestParam(value = "page", defaultValue = "1") long page,
                                                       @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {

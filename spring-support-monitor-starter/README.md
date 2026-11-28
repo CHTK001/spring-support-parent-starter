@@ -98,7 +98,7 @@ flowchart LR
 | `productionAuthGuard` | `ProductionAuthGuard` | `@ConditionalOnProperty plugin.oauth.require-auth=true` | 可 | 生产启动期鉴权校验 |
 | `debugBeanTrace` | `DebugBeanTrace`（`BeanPostProcessor`） | 无条件 | 可 | Bean 装配追踪（排障） |
 | `monitorScheduler` / `providerRegistry` | `MonitorScheduler` / `ProviderRegistry` | `@Component`，无条件 | 可 | 调度入口 / SPI 双键索引 |
-| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
+| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
 
 > 本模块没有 `spring.factories`，自动配置只经 `AutoConfiguration.imports` 注册（Spring Boot 4 口径）。
 

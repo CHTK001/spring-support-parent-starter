@@ -61,17 +61,17 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 接口文档注解 - 仅 API 文档标记, 运行期缺失不影响；统一由 swagger-starter 以 provided 提供 -->
+        <!-- 接口文档注解 - 仅 API 文档标记；本模块自带启动类（Job*Application），
+             需 compile 让注解与 knife4j 进可执行 jar -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
-            <scope>provided</scope>
         </dependency>
 
 
-        <!-- 分组作用域探针：真实 MySQL/MariaDB 驱动（版本与生产 lib 的 mysql-connector-j 9.7.0 保持一致）。
-             本模块《全功能单元测试文档.md》成文规定不使用 JUnit 断言，验证走真实链路；
-             且分组收敛的缺陷在 SQL 作用域上，必须在真方言真数据上验，故不使用 H2。 -->
+        
+             
+             
 
     </dependencies>
 

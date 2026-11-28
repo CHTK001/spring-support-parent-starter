@@ -62,6 +62,42 @@ public class SysUserThirdPartyServiceImpl extends ServiceImpl<SysUserThirdPartyM
     }
 
     @Override
+    public SysUserThirdParty getByThirdPartyValue(String type, String value) {
+        if (type == null || value == null) {
+            return null;
+        }
+        return getOne(Wrappers.<SysUserThirdParty>lambdaQuery()
+                .eq(SysUserThirdParty::getSysUserThirdPartyType, type)
+                .eq(SysUserThirdParty::getSysUserThirdPartyValue, value));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void bindMiniAppByValue(String type, String name, String value, String uid) {
+        if (type == null || value == null || uid == null) {
+            return;
+        }
+        SysUserThirdParty existingByUid = getOne(Wrappers.<SysUserThirdParty>lambdaQuery()
+                .eq(SysUserThirdParty::getSysUserThirdPartyType, type)
+                .eq(SysUserThirdParty::getSysUserThirdPartyUid, uid));
+        if (existingByUid != null) {
+            return;
+        }
+        SysUserThirdParty existing = getByThirdPartyValue(type, value);
+        if (existing != null) {
+            existing.setSysUserThirdPartyUid(uid);
+            updateById(existing);
+            return;
+        }
+        SysUserThirdParty created = new SysUserThirdParty();
+        created.setSysUserThirdPartyType(type);
+        created.setSysUserThirdPartyName(name);
+        created.setSysUserThirdPartyValue(value);
+        created.setSysUserThirdPartyUid(uid);
+        save(created);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     /**
      * 绑定

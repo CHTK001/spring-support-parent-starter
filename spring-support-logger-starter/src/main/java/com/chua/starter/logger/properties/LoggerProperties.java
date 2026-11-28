@@ -37,9 +37,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       scatter-id: prod-cluster    # 注册分组；空则回落 service-name
  *       ingest-token: change-me     # POST /v2/logger/ingest 共享密钥；空不校验（请求头 x-logger-token）
  *     storage:
- *       engine: datasource-bean     # 存储引擎：datasource-bean | memory | redis-bean
- *       retention-hours: 72         # 原始日志保留时长（小时）
- *       memory-capacity: 100000     # memory 引擎最大保留条数
+     *       engine: datasource-bean     # 存储引擎：datasource-bean | memory | redis-bean
+     *       retention-hours: 72         # 原始日志保留时长（小时）
+     *       memory-capacity: 100000     # memory 引擎最大保留条数
+     *       trace-state-path: ./data/logger/trace-state # 无 JDBC/Redis 时的 trace 状态磁盘目录
  * }</pre>
  *
  * @author CH
@@ -309,6 +310,9 @@ public class LoggerProperties {
          * }</pre>
          */
         private String ingestToken = "";
+
+        /** 每个用户与应用组合每分钟允许登记的请求生命周期数量。 */
+        private int traceRequestsPerMinute = 60;
     }
 
     /**
@@ -371,5 +375,8 @@ public class LoggerProperties {
          * }</pre>
          */
         private int memoryCapacity = 100000;
+
+        /** 无 JDBC/Redis 时保存 trace 登记与频控状态的本地磁盘目录。 */
+        private String traceStatePath = "./data/logger/trace-state";
     }
 }

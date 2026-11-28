@@ -60,7 +60,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
             return false;
         }
  // 跳过 @令牌forignore 标注的方法（登录、登出、令牌 刷新等免鉴权场景）
-        if (AnnotatedElementUtils.hasAnnotation(method, com.chua.starter.oauth.client.support.annotation.TokenForIgnore.class)) {
+        if (AnnotatedElementUtils.hasAnnotation(method, com.chua.starter.common.support.api.annotation.TokenForIgnore.class)) {
             return false;
         }
         return AnnotatedElementUtils.hasAnnotation(method, Permission.class) ||

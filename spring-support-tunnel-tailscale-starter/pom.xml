@@ -62,10 +62,10 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
-        <!-- 测试：统一入口 /ms/tunnel/providers 可查看 Tailscale 提供方
-             注意：本模块的 spring-boot-starter-web 仅在可选范围（optional），
-             因此测试上下文仍需显式引入，否则嵌入式 Tomcat（TomcatServletWebServerAutoConfiguration）
-             不注册 ServletWebServerFactory bean，@SpringBootTest(RANDOM_PORT) 启动失败。 -->
+        
+             
+             
+             
     </dependencies>
     <build>
         <plugins>

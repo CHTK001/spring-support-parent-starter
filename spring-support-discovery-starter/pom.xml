@@ -12,6 +12,5 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
-    <!-- 单元测试：注册/反注册与同协议多实例解析的回归探针 -->
-  </dependencies>
+      </dependencies>
 </project>

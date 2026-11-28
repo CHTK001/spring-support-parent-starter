@@ -3,7 +3,7 @@ package com.chua.starter.datasearch.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.datasearch.pojo.holiday.HolidayVO;
 import com.chua.starter.datasearch.service.HolidayDataService;
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

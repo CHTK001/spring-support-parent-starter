@@ -183,15 +183,17 @@ public class FaceStores {
             log.debug("[Face] {} 但事件未携带账号，跳过重建", reason);
             return;
         }
-        AccountFace account = accounts.get(userId);
-        if (account == null) {
-            return;
-        }
-        try {
-            account.reload();
-            log.info("[Face] {}，重建账号 '{}' 的人脸库", reason, userId);
-        } catch (Exception ex) {
-            log.warn("[Face] 账号 '{}' 人脸库重建失败: {}", userId, ex.getMessage());
+        // map 的键是“账号 + 分组”，按账号裸键查找会永远漏掉已创建的管线。
+        for (AccountFace account : accounts.values()) {
+            if (!userId.equals(account.account)) {
+                continue;
+            }
+            try {
+                account.reload();
+                log.info("[Face] {}，重建账号 '{}' 分组 '{}' 的人脸库", reason, userId, account.group);
+            } catch (Exception ex) {
+                log.warn("[Face] 账号 '{}' 分组 '{}' 人脸库重建失败: {}", userId, account.group, ex.getMessage());
+            }
         }
     }
 

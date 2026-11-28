@@ -56,7 +56,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- 日志 -->
     </dependencies>
 
     <build>

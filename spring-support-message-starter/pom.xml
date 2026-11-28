@@ -61,12 +61,6 @@
             <artifactId>spring-support-socket-starter</artifactId>
         </dependency>
 
-        <!-- OAuth 客户端权限注解 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-starter</artifactId>
-        </dependency>
-
         <!-- 接口文档注解（@Tag / @Operation / @Schema）：统一由 swagger-starter 以 provided 提供，不进运行时 -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -74,14 +68,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- 各渠道实现为可选依赖
-        用户根据需要在自己的项目中添加对应的渠道依赖：
-        - utils-support-dingding-starter   钉钉机器人
-        - utils-support-feishu-starter     飞书消息
-        - utils-support-alibaba-starter    阿里云短信
-        - utils-support-tencent-starter    腾讯微信公众号
-        - utils-support-email-starter      邮件
-        -->
     </dependencies>
 
     <!-- 构建配置 -->

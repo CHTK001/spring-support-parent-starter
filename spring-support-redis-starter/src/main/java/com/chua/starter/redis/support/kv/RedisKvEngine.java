@@ -3,10 +3,12 @@ package com.chua.starter.redis.support.kv;
 import com.chua.common.support.lang.datasource.kv.KvEngine;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import com.chua.common.support.utils.StringUtils;
 
@@ -58,6 +60,47 @@ public class RedisKvEngine implements KvEngine {
      * 扫描 命令每次扫描的批次大小
      */
     private static final int SCAN_BATCH_SIZE = 1000;
+
+    /** 单键比较更新脚本；空 TTL 保留服务器端剩余有效期，不延长验证码生命周期。 */
+    private static final DefaultRedisScript<Long> COMPARE_AND_SET = new DefaultRedisScript<>("""
+            local old = redis.call('GET', KEYS[1])
+            if ARGV[1] == '0' then
+                if old then return 0 end
+            elseif not old or old ~= ARGV[2] then
+                return 0
+            end
+            if ARGV[3] == '0' then
+                redis.call('DEL', KEYS[1])
+            elseif ARGV[5] ~= '' then
+                redis.call('SET', KEYS[1], ARGV[4], 'PX', ARGV[5])
+            else
+                redis.call('SET', KEYS[1], ARGV[4], 'KEEPTTL')
+            end
+            return 1
+            """, Long.class);
+
+    @Override
+    public boolean supportsCompareAndSet() {
+        return true;
+    }
+
+    @Override
+    public boolean compareAndSet(String key, String expectedValue, String newValue, Duration ttl) {
+        if (key == null || key.isEmpty()) {
+            throw new IllegalArgumentException("键不能为空");
+        }
+        if (ttl != null && (ttl.isNegative() || ttl.toMillis() < 1)) {
+            throw new IllegalArgumentException("过期时长必须至少为一毫秒");
+        }
+        if (expectedValue == null && newValue != null && ttl == null) {
+            throw new IllegalArgumentException("条件创建必须指定过期时长");
+        }
+        Long result = redisTemplate.execute(COMPARE_AND_SET, List.of(key),
+                expectedValue == null ? "0" : "1", expectedValue == null ? "" : expectedValue,
+                newValue == null ? "0" : "1", newValue == null ? "" : newValue,
+                ttl == null ? "" : Long.toString(ttl.toMillis()));
+        return Long.valueOf(1).equals(result);
+    }
 
     /**
      * 构造基于指定 {@link StringRedisTemplate} 的 KV 引擎。

@@ -62,8 +62,6 @@ flowchart TB
 
 - 父 POM 的 `<modules>` 里实际构建 **55 个** `spring-support-*-starter`（当前版本 `4.0.0.51`，`utils.version=4.0.0.51`）；
 - `spring-support-bom` 在父 POM 中被注释，**暂不进 reactor**，因此依赖必须显式写版本号（见[四、快速上手](#四快速上手)）；
-- 目录存在但**不在构建清单**：`spring-support-httpman-starter`、`spring-support-payment-starter`；`spring-support-email-starter`、`spring-support-test-app` 目录已不存在（仅历史 / pom 注释提及）；
-- 已删除模块：`spring-support-spider-starter`、`spring-support-elasticsearch-starter`，不要在新项目里引用；
 - `spring-api-support-*` 系列 artifact 由独立的 `spring-support-api-starter` 仓库构建，**不在本仓库 reactor 内**；如需本地联调，先在该仓库 `mvn install` 到本地仓库。
 
 ## 二、模块全景（55 个）
@@ -134,14 +132,10 @@ flowchart TB
 | spring-support-ai-training-starter | AI 训练平台 REST 接入：ZIP 数据上传、异步训练调度、进度与超参数管理 | [README.md](spring-support-ai-training-starter/README.md) |
 | spring-support-ueba-starter | UEBA 行为分析引擎装配：IP 异常流量检测 + 行为序列分析 + 风险融合 + 语义解释 | [README.md](spring-support-ueba-starter/README.md) |
 | spring-support-message-starter | 统一消息推送：提供商/模板/日志三表驱动多渠道发送，渠道实现走 `MessagePush` SPI | [README.md](spring-support-message-starter/README.md) |
-| spring-support-software-starter | 软件资产与安装管理：目录/源/安装记录 + 已装软件扫描与安装进度实时推送 | [README.md](spring-support-software-starter/README.md) |
 | spring-support-taskdistribution-starter | 任务分发：派发、执行、结果回传、重试/超时与多节点负载均衡 | [README.md](spring-support-taskdistribution-starter/README.md) |
-| spring-support-agent-starter | 向当前 JVM 自注入 Runtime Agent：字节码插桩 + APM 采集，零启动参数、零代码侵入 | [README.md](spring-support-agent-starter/README.md) |
-| spring-support-hotsport-starter | APM 热点观测后台：传输/调用链/依赖图/JVM 观测数据 + 内置前端，可独立部署 | [README.md](spring-support-hotsport-starter/README.md) |
 | spring-support-apm-starter | APM 基础门面：`ApmProvider` SPI 聚合为协议无关 REST，支持嵌入宿主/独立 HTTP 服务 | [README.md](spring-support-apm-starter/README.md) |
 | spring-support-apm-skywalking-starter | SkyWalking 扩展：`ApmProvider`（SPI `skywalking`）+ `plugin.apm.skywalking.*` 配置桥接 | [README.md](spring-support-apm-skywalking-starter/README.md) |
 | spring-support-apm-hotspot-starter | 自研 hotspot agent 扩展：进程内 Span 数据的 `ApmProvider`（SPI `hotspot`），无外部后端 | [README.md](spring-support-apm-hotspot-starter/README.md) |
-| spring-support-lowcode-starter | 低代码表单管理：目录 → 表单/页面 → 版本发布，加依赖即生效的独立 starter | [README.md](spring-support-lowcode-starter/README.md) |
 
 ## 四、快速上手
 
@@ -345,7 +339,6 @@ flowchart LR
 | 跨仓库 artifact | `spring-api-support-*` 由 `spring-support-api-starter` 仓库构建，联调前先 `mvn install` |
 
 - 从 Boot 3 升级到 Boot 4：`@AutoConfiguration`、`AutoConfiguration.imports` 机制不变，主要核对三方依赖与 `spring.factories` 扩展点（见 Q7）。
-- 未参与构建 / 已下线：`spring-support-httpman-starter`、`spring-support-payment-starter`（目录保留，不进 reactor）；`spring-support-email-starter`、`spring-support-spider-starter`、`spring-support-elasticsearch-starter`、`spring-support-test-app` 已移除。不要在新项目里引用它们。
 - GraalVM Native Image 支持见[附录 B](#附录-bgraalvm-native-image-支持)。
 
 ## 九、使用场景

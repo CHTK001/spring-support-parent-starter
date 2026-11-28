@@ -6,9 +6,6 @@ spring:
     name: monitor-test
   autoconfigure:
     exclude:
-      # filesystem-starter 自带的 web 分片上传链(auto-config 引用 monitor 未装配的 Service/Controller Bean), 排除之;
-      # 我们只需其 FileStorageServerFilter/Setting/LocalFileStorage 类(file-storage 插件反射加载)
-      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
       # redis-starter 的 RedisConfiguration 在 Spring Boot 4 下出现 RedisProperties 重复注册冲突，本地联调排除
       - com.chua.starter.redis.support.RedisConfiguration
       # crypto-starter 密钥块完整性校验需口令，本地联调无密钥环境排除
@@ -206,19 +203,18 @@ plugin:
     # enable=false 或留空时文件服务器按公共桶运行；/ot 一次性链接本身即凭证，始终放行
     file-storage:
       private-buckets: default
-  # 服务器目录浏览（filesystem-starter 的 FileDirController）：数据同步的「选择文件 / 文件夹」
-  # 和 AI 的目录选择器都走 /v2/file/dir/list。接口本身是 @Permission(admin/superadmin)，
-  # 生产由 OAuth 把关。控制器由本应用的 MonitorFileStorageGatewayConfig#fileDirController
-  # 注册（FileSystemAutoConfiguration 已被上面 exclude，原注册点不存在）；本开关只控制
-  # 是否真正对外开放：关闭时接口返回业务错误而不是 404。
+  # 文件存储与目录浏览：唯一装配点为 filesystem-starter 的 FileSystemAutoConfiguration。
+  # 目录浏览供数据同步与 AI 的目录选择器共用；关闭时接口返回业务错误而不是 404。
   filesystem:
+    enable: true
     dir-list: true
-    # 默认存储桶：/v2/file/server-config 会把这里的值作为 bucket 下发给前端，
-    # 前端拿它拼 /fs/{bucket}。必须与 MonitorFileStorageGatewayConfig.BUCKET
-    # （= default，即网关实际注册的桶名）一致。
-    # 不配时该字段为 null，前端回退到自己的默认值 local —— 落到一个不存在的桶，
-    # 文件管理页直接 404/空列表，且报错信息与「服务没起来」无法区分。
+    # 默认桶与 provider 键均为 default，前端 /fs/default 与文件资产页使用同一后端。
     default-provider: default
+    providers:
+      default:
+        type: local
+        bucket: default
+        base-path: ${user.dir}/.data/filesystem-local
   # OSGi 插件中心（前端 @pages/osgi 「插件中心」分组，/osgi/**）：
   # spring-support-osgi-starter 已随本模块引入；endpoint.enabled 默认 false，
   # 显式开启才装配 OsgiMonitorController（bundle 管理 REST，带 Bearer 鉴权）。

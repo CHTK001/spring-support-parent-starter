@@ -24,6 +24,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResult {
 
+    /** 手机号身份已验证但尚未绑定本地账号时的一次性凭证。 */
+    @Schema(description = "待绑定凭证，与访问令牌互斥")
+    private String bindToken;
+
     /**
      * 访问令牌
      */

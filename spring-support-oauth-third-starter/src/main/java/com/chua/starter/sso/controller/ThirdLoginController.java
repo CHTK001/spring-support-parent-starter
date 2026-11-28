@@ -3,7 +3,7 @@ import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.annotations.SysLog;
 
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
+import com.chua.starter.common.support.api.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.provider.ThirdLoginData;
 import com.chua.starter.sso.service.ThirdPartyLoginOrchestrator;

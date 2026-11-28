@@ -42,6 +42,25 @@ public interface SysUserThirdPartyService extends IService<SysUserThirdParty> {
     SysUserThirdParty getByThirdPartyUid(String type, String uid);
 
     /**
+     * 按第三方类型和值查询绑定记录。
+     *
+     * @param type 平台类型
+     * @param value 第三方账号值
+     * @return 绑定记录或空
+     */
+    SysUserThirdParty getByThirdPartyValue(String type, String value);
+
+    /**
+     * 微信小程序登录后按既有手机号绑定规则更新或创建记录。
+     *
+     * @param type 平台类型
+     * @param name 平台名称
+     * @param value 手机号
+     * @param uid 微信 OpenID
+     */
+    void bindMiniAppByValue(String type, String name, String value, String uid);
+
+    /**
      * 绑定第三方账号到本地用户(已存在则更新名称)。
      *
      * @param record 绑定记录

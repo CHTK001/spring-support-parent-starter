@@ -24,6 +24,7 @@ import com.chua.starter.datapool.support.model.dto.NginxApplyDTO;
 import com.chua.starter.datapool.support.model.dto.NginxDashboardDTO;
 import com.chua.starter.datapool.support.model.dto.NginxSaveConfigDTO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -282,6 +283,16 @@ public interface NginxManageService {
      * @return 本次写入的指标条数
      */
     int collectMetric(Long datasourceId);
+
+    /**
+     * 清理指定时间之前的 Nginx 时序指标。
+     *
+     * <p>时序表归数据源中心管理，调用方只提供保留窗口，不直接操作表。</p>
+     *
+     * @param cutoff 保留窗口起点
+     * @return 删除的行数
+     */
+    int cleanupMetricsBefore(LocalDateTime cutoff);
 
     /**
      * 查询指标趋势。

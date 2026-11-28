@@ -3,18 +3,14 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.datapool.support.service.DatasourceService;
 import com.chua.starter.server.support.entity.MsMaintenancePlan;
 import com.chua.starter.server.support.mapper.MsMaintenancePlanMapper;
 import com.chua.starter.server.support.model.dto.MaintenancePlanDTO;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -22,8 +18,7 @@ import java.util.Set;
 /**
  * 维护计划服务：台账的增删改查。
  *
- * <p>表先由 Spring SQL 初始化脚本创建；这里再用 PostConstruct 自愈一次，兼容
- * 生产部署使用外部 application.yml、未把新脚本纳入 schema-locations 的旧库。</p>
+ * <p>表由 server-starter 的数据源初始化脚本创建。</p>
  *
  * @author CH
  * @since 4.0.0.44
@@ -47,25 +42,6 @@ public class MaintenancePlanService {
      * 维护计划映射器
      */
     private final MsMaintenancePlanMapper planMapper;
-
-    /**
-     * 平台默认数据源（用于表结构自愈）
-     */
-    private final DatasourceService datasourceService;
-
-    /**
-     * 启动时确保维护计划表可用。
-     */
-    @PostConstruct
-    public void ensureSchema() {
-        try (Connection connection = datasourceService.connection(null);
-             Statement statement = connection.createStatement()) {
-            statement.execute(CREATE_TABLE_SQL);
-            log.info("[maintenance-plan] ms_maintenance_plan 表已就绪");
-        } catch (Exception e) {
-            log.warn("[maintenance-plan] 初始化 ms_maintenance_plan 表失败: {}", e.getMessage());
-        }
-    }
 
     /**
      * 列出全部维护计划。
@@ -228,28 +204,4 @@ public class MaintenancePlanService {
         }
         return trim;
     }
-
-    /**
-     * 建表 SQL；与 db/init/V2.0__init_all_monitor.sql 中的 22 号表保持一致。
-     */
-    private static final String CREATE_TABLE_SQL = """
-            CREATE TABLE IF NOT EXISTS `ms_maintenance_plan` (
-                `id`                                 BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-                `ms_maintenance_plan_name`           VARCHAR(128) NOT NULL COMMENT '计划名称',
-                `ms_maintenance_plan_type`           VARCHAR(32)  NOT NULL DEFAULT 'MAINTENANCE' COMMENT '计划类型 MAINTENANCE/UPGRADE/BACKUP/REBOOT',
-                `ms_maintenance_plan_start_time`     DATETIME     NOT NULL COMMENT '开始时间',
-                `ms_maintenance_plan_end_time`       DATETIME     NOT NULL COMMENT '结束时间',
-                `ms_maintenance_plan_target_host_ids` VARCHAR(1024) DEFAULT NULL COMMENT '目标主机 ID JSON 数组',
-                `ms_maintenance_plan_status`         VARCHAR(32)  NOT NULL DEFAULT 'PENDING' COMMENT '计划状态 PENDING/RUNNING/COMPLETED/CANCELLED',
-                `ms_maintenance_plan_description`    VARCHAR(512) DEFAULT NULL COMMENT '计划说明',
-                `create_name`                        VARCHAR(64)  DEFAULT NULL COMMENT '创建人姓名',
-                `create_by`                          INT          DEFAULT NULL COMMENT '创建人',
-                `create_time`                        DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                `update_name`                        VARCHAR(64)  DEFAULT NULL COMMENT '更新人姓名',
-                `update_by`                          INT          DEFAULT NULL COMMENT '更新人',
-                `update_time`                        DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                PRIMARY KEY (`id`),
-                KEY `idx_ms_maintenance_plan_status` (`ms_maintenance_plan_status`),
-                KEY `idx_ms_maintenance_plan_window` (`ms_maintenance_plan_start_time`, `ms_maintenance_plan_end_time`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='维护计划'
-            """;}
+}

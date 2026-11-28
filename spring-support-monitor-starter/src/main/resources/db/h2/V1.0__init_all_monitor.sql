@@ -343,30 +343,6 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_maintenance_window (
     KEY `ms_monitor_alarm_maintenance_window_alarm_mw_enabled` (ms_monitor_alarm_maintenance_window_enabled)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警维护窗口';
 
--- ----------------------------------------------------------
--- 19. 协议服务器节点(服务管理)
--- ----------------------------------------------------------
-CREATE TABLE IF NOT EXISTS ms_server_node (
-    id                               BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
-    ms_server_node_name              VARCHAR(64)   NOT NULL              COMMENT '节点名称(唯一)',
-    ms_server_node_protocol          VARCHAR(32)   NOT NULL              COMMENT '协议类型: HTTP / HTTP_PROXY / TCP_PROXY / SIP',
-    ms_server_node_engine            VARCHAR(32)   DEFAULT 'jdk'         COMMENT '传输引擎: http= jdk/nio/aio, 代理= jdk, sip= sip',
-    ms_server_node_host              VARCHAR(128)  DEFAULT '0.0.0.0'     COMMENT '监听地址',
-    ms_server_node_port              INT           NOT NULL              COMMENT '监听端口',
-    ms_server_node_enabled           TINYINT       NOT NULL DEFAULT 1    COMMENT '是否启用: 1 启用(随应用自动拉起), 0 停用',
-    ms_server_node_remark            VARCHAR(255)  NULL                  COMMENT '备注',
-    ms_server_node_config            TEXT          NULL                  COMMENT '协议专属配置(JSON): sip.token, proxy.backendHost/backendPort 等',
-    ms_server_node_filters           TEXT          NULL                  COMMENT 'ServerFilter 插件配置(JSON 数组)',
-    create_name                      VARCHAR(64)   DEFAULT NULL          COMMENT '创建人姓名',
-    create_by                        INT           DEFAULT NULL          COMMENT '创建人',
-    create_time                      DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_name                      VARCHAR(64)   DEFAULT NULL          COMMENT '更新人姓名',
-    update_by                        INT           DEFAULT NULL          COMMENT '更新人',
-    update_time                      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id),
-    UNIQUE KEY `ms_server_node_ms_server_node_name` (ms_server_node_name)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务管理-协议服务器节点';
-
 -- ============================================================
 -- 补列/索引（建表之后统一执行，幂等 IF NOT EXISTS）
 -- ============================================================
@@ -484,27 +460,4 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
 -- 建表与执行日志见该模块 V3.2__init_backup_and_sync.sql。
 -- ============================================================
 
--- ============================================================
--- 22. 维护计划
--- 由 MaintenancePlanService 读写；维护窗口供值班人员规划升级、备份、重启等窗口期任务。
--- 本表只保存计划台账，不负责调度执行，状态由运维流程或后续编排任务推进。
--- ============================================================
-CREATE TABLE IF NOT EXISTS `ms_maintenance_plan` (
-    `id`                                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `ms_maintenance_plan_name`              VARCHAR(128) NOT NULL COMMENT '计划名称',
-    `ms_maintenance_plan_type`              VARCHAR(32)  NOT NULL DEFAULT 'MAINTENANCE' COMMENT '计划类型 MAINTENANCE/UPGRADE/BACKUP/REBOOT',
-    `ms_maintenance_plan_start_time`        DATETIME     NOT NULL COMMENT '开始时间',
-    `ms_maintenance_plan_end_time`          DATETIME     NOT NULL COMMENT '结束时间',
-    `ms_maintenance_plan_target_host_ids`   VARCHAR(1024) DEFAULT NULL COMMENT '目标主机 ID JSON 数组',
-    `ms_maintenance_plan_status`            VARCHAR(32)  NOT NULL DEFAULT 'PENDING' COMMENT '计划状态 PENDING/RUNNING/COMPLETED/CANCELLED',
-    `ms_maintenance_plan_description`       VARCHAR(512) DEFAULT NULL COMMENT '计划说明',
-    `create_name`                           VARCHAR(64)  DEFAULT NULL COMMENT '创建人姓名',
-    `create_by`                             INT          DEFAULT NULL COMMENT '创建人',
-    `create_time`                           DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_name`                           VARCHAR(64)  DEFAULT NULL COMMENT '更新人姓名',
-    `update_by`                             INT          DEFAULT NULL COMMENT '更新人',
-    `update_time`                           DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_ms_maintenance_plan_status` (`ms_maintenance_plan_status`),
-    KEY `idx_ms_maintenance_plan_window` (`ms_maintenance_plan_start_time`, `ms_maintenance_plan_end_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='维护计划';
+

@@ -294,10 +294,17 @@ public class ThirdPartyLoginOrchestrator {
         if (!bridge.verifyPassword(user, bindRequest.password())) {
             return ReturnResult.error("账号或密码错误");
         }
+        if ("phone".equals(pending.extLoginType())) {
+            if (!bridge.bindVerifiedPhone(user, pending.uid())) {
+                return ReturnResult.error("手机号已被使用或当前账号已绑定其他手机号");
+            }
+            return issueThirdBindToken(user, pending, request, response);
+        }
         // 防重：三方身份已被绑定（绑到当前用户则直接视为登录成功；绑到他人则拒绝）
         SysUserThirdParty existed = sysUserThirdPartyMapper.selectOne(
                 Wrappers.<SysUserThirdParty>lambdaQuery()
-                        .eq(SysUserThirdParty::getSysUserThirdPartyUid, pending.uid()));
+                        .eq(SysUserThirdParty::getSysUserThirdPartyUid, pending.uid())
+                        .eq(SysUserThirdParty::getSysUserThirdPartyType, pending.bindType()));
         if (null != existed) {
             if (ObjectUtils.nullSafeEquals(existed.getSysUserId(), user.getSysUserId())) {
                 return issueThirdBindToken(user, pending, request, response);
@@ -393,8 +400,13 @@ public class ThirdPartyLoginOrchestrator {
         ext.put("loginType", thirdType);
         ext.put("thirdPartyType", thirdType);
         ext.put("address", RequestUtils.getIpAddress(request));
+        if ("phone".equals(thirdType)) {
+            ext.put("loginType", "sms");
+            ext.put("phone", user.getSysUserPhone());
+        }
         return AuthClientExecute.getInstance()
-                .getAccessToken(String.valueOf(user.getSysUserId()), null, AuthType.THIRD_PARTY, ext);
+                .getAccessToken(String.valueOf(user.getSysUserId()), null,
+                        "phone".equals(thirdType) ? AuthType.SMS : AuthType.THIRD_PARTY, ext);
     }
 
     /**
