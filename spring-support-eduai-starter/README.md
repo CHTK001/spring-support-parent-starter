@@ -24,7 +24,7 @@ flowchart TB
     subgraph siblings["依赖的兄弟 starter"]
         AI["spring-support-ai-starter<br/>PaperPipelineProperties / PaperScanPipeline / PaperAiService"]
         ACCOUNT["spring-support-account-starter<br/>TemplateService 统一模板库"]
-        OAUTH["spring-support-oauth-client-starter<br/>@Permission / CredentialProvider / LoginHandler 契约"]
+        OAUTH["spring-support-oauth-starter<br/>@Permission / CredentialProvider / LoginHandler 契约"]
         COLLECT["spring-support-collect-starter<br/>/v2/collect/** 采集平台"]
     end
     subgraph infra["底层 / 基础设施"]
@@ -391,7 +391,7 @@ plugin:
 - 只做题目采集、不需要教育业务闭环 —— 用 `spring-support-collect-starter`；
 - 不需要 AI 的纯题库 CRUD 极简场景 —— 本模块引入成本（Redis/队列/模型资产）偏高，可自行裁剪。
 
-**与相邻模块的取舍**：`spring-support-ai-starter` 是通用 AI 管线基础设施，eduai 是面向教育业务的功能模块（把 `plugin.eduai.*` 映射给 `PaperPipelineProperties`），要「AI 能力」找 ai、要「教育业务」找 eduai；`spring-support-collect-starter` 负责采集平台 `/v2/collect/**`；`spring-support-account-starter` 提供统一模板库（`EduPaperTemplateSyncer` 的目标）；`spring-support-oauth-client-starter` 提供 `@Permission` 与登录扩展点；`spring-support-common-starter` 提供 `ReturnResult` / `ServiceInfoContributor` 等公共契约。
+**与相邻模块的取舍**：`spring-support-ai-starter` 是通用 AI 管线基础设施，eduai 是面向教育业务的功能模块（把 `plugin.eduai.*` 映射给 `PaperPipelineProperties`），要「AI 能力」找 ai、要「教育业务」找 eduai；`spring-support-collect-starter` 负责采集平台 `/v2/collect/**`；`spring-support-account-starter` 提供统一模板库（`EduPaperTemplateSyncer` 的目标）；`spring-support-oauth-starter` 提供 `@Permission` 与登录扩展点；`spring-support-common-starter` 提供 `ReturnResult` / `ServiceInfoContributor` 等公共契约。
 
 ## 8. 扩展点
 

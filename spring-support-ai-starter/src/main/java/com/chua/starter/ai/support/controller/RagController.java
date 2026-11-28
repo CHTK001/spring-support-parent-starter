@@ -184,6 +184,18 @@ public class RagController {
     }
 
     /**
+     * 以查询参数传递完整文档标识，支持知识库文件标识中的目录分隔符。
+     *
+     * @param id 完整文档标识
+     * @return 删除结果
+     */
+    @Permission("admin")
+    @DeleteMapping("/document")
+    public ReturnResult<Boolean> deleteDocumentById(@RequestParam String id) {
+        return deleteDocument(id);
+    }
+
+    /**
      * 预览文档原始文本内容（仅限文本文件）。
      *
      * @param id 文档 ID
@@ -198,6 +210,18 @@ public class RagController {
             return ReturnResult.error("文档内容不可读取或文件不存在");
         }
         return ReturnResult.ok(content);
+    }
+
+    /**
+     * 预览包含目录分隔符的完整文档标识。
+     *
+     * @param id 完整文档标识
+     * @return 原始文本
+     */
+    @Permission("admin")
+    @GetMapping("/document/content")
+    public ReturnResult<String> getDocumentContentById(@RequestParam String id) {
+        return getDocumentContent(id);
     }
 
     /**
@@ -221,6 +245,18 @@ public class RagController {
         headers.setContentType(MediaType.parseMediaType(contentType));
         headers.setContentLength(data.length);
         return new org.springframework.http.ResponseEntity<>(data, headers, 200);
+    }
+
+    /**
+     * 读取包含目录分隔符的来源图片标识。
+     *
+     * @param id 完整文档标识
+     * @return 图片响应
+     */
+    @Permission("admin")
+    @GetMapping("/document/image")
+    public org.springframework.http.ResponseEntity<byte[]> getDocumentImageById(@RequestParam String id) {
+        return getDocumentImage(id);
     }
 
     /**
@@ -281,7 +317,9 @@ public class RagController {
                 // 图片来源标记 + 图片回读地址（前端据此渲染缩略图 / 预览）
                 item.put("isImage", s.isImage());
                 if (s.isImage()) {
-                    item.put("imageUrl", "/v2/rag/document/" + s.documentId() + "/content");
+                    item.put("imageUrl", "/v2/rag/document/image?id="
+                            + java.net.URLEncoder.encode(s.documentId(), StandardCharsets.UTF_8)
+                            .replace("+", "%20"));
                 }
                 return item;
             }).toList());

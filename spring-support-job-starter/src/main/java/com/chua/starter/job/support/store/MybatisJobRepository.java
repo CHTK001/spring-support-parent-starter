@@ -267,6 +267,12 @@ public class MybatisJobRepository implements JobRepository {
             if (nextFire < 0L) {
                 continue;
             }
+            // 首次触发尚无 last_time，必须固定首次槽位；逐拍以 now 重算会让零预读永远追不上。
+            // 兼容历史 next_time 为空的行：本拍先落下首次槽位，下拍按同一个时刻判定到期。
+            if (nextFire > upperBound && (target.getSysJobTriggerNextTime() == null
+                    || target.getSysJobTriggerNextTime() <= 0L)) {
+                persistNextFire(target, nextFire);
+            }
             if (nextFire <= upperBound) {
                   // 错过的判定: 上一轮已派发的触发点早于本轮计算出的触发点, 且已过 1s 容差。
                   // 基线同样要走 lastFireBaseline: Leader 切换后进程内 map 是空的, 只读 map 会让
@@ -1109,7 +1115,12 @@ public class MybatisJobRepository implements JobRepository {
        * @return 下次触发时间, 未配置或计算失败返回 -1
        */
     private long nextFireMs(JobEntity entity, String key, long now) {
-        return nextFireAfter(entity, key, lastFireBaseline(entity, key), now);
+        long baseline = lastFireBaseline(entity, key);
+        Long firstSlot = entity.getSysJobTriggerNextTime();
+        if (baseline <= 0L && firstSlot != null && firstSlot > 0L) {
+            return firstSlot;
+        }
+        return nextFireAfter(entity, key, baseline, now);
     }
 
       /**

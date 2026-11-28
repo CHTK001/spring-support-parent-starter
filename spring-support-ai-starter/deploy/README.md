@@ -87,7 +87,7 @@ pwsh -File deploy/release.ps1
 
 ## 依赖变了怎么办
 
-依赖（含本仓其它 starter，比如 `spring-support-oauth-client-starter`）变化时，
+依赖（含本仓其它 starter，比如 `spring-support-oauth-starter`）变化时，
 需要让 lib 跟上：
 
 ```powershell

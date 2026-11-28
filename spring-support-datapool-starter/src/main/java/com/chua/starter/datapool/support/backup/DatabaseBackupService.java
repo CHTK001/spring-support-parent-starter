@@ -1,0 +1,893 @@
+package com.chua.starter.datapool.support.backup;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.task.backup.BackupEvent;
+import com.chua.common.support.task.backup.BackupListener;
+import com.chua.common.support.task.backup.BackupManager;
+import com.chua.common.support.task.backup.BackupManifest;
+import com.chua.common.support.task.backup.BackupResult;
+import com.chua.common.support.task.backup.BackupVerifier;
+import com.chua.common.support.task.backup.DatabaseBackupConfig;
+import com.chua.common.support.task.backup.DatabaseRestoreConfig;
+import com.chua.common.support.task.backup.DatabaseRestoreResult;
+import com.chua.common.support.task.backup.RestoreEvent;
+import com.chua.common.support.task.backup.RestoreListener;
+import com.chua.common.support.task.backup.RestorePreflight;
+import com.chua.starter.datapool.support.entity.MsBackupHistory;
+import com.chua.starter.datapool.support.mapper.MsBackupHistoryMapper;
+import com.chua.starter.datapool.support.model.DataSourceVO;
+import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
+import com.chua.starter.datapool.support.service.DatasourceService;
+import com.zaxxer.hikari.HikariDataSource;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Service;
+
+import javax.sql.DataSource;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
+
+/**
+ * 数据库备份中心服务。
+ *
+ * <p>能力门面是 utils 层 {@link BackupManager}（逻辑备份：导出建表语句 + 全量数据
+ * INSERT 脚本）。本服务归属 {@code spring-support-datapool-starter}，负责编排：</p>
+ * <ul>
+ *   <li>支持宿主默认主数据源与同模块数据源中心已启用的 JDBC 数据源；</li>
+ *   <li>备份/恢复在单线程工作池异步执行，同一时间只允许一个任务（防并发）；</li>
+ *   <li>进度经 {@link BackupEventStreamRegistry} 以 SSE 实时推送（不依赖队列与 socket 组件）；</li>
+ *   <li>备份审计记录经 {@link DbBackupHistoryStore} 落 {@code ms_backup_history} 表。</li>
+ * </ul>
+ *
+ * <p>恢复是危险操作：必须显式确认（confirm=true），且删除备份文件的接口只允许
+ * 清理备份目录内 {@code database-*} 与 {@code manifest.json}（与 utils 保留策略同口径），
+ * 防止误删任意文件。</p>
+ *
+ * @author CH
+ * @since 2026/11/24
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DatabaseBackupService {
+
+    /**
+     * 事件类型：备份
+     */
+    public static final String TYPE_BACKUP = "backup";
+
+    /**
+     * 事件类型：恢复
+     */
+    public static final String TYPE_RESTORE = "restore";
+
+    private final DatabaseBackupProperties properties;
+    private final MsBackupHistoryMapper backupHistoryMapper;
+    private final DbBackupHistoryStore dbBackupHistoryStore;
+    private final BackupEventStreamRegistry eventStreamRegistry;
+    private final DatasourceService datasourceService;
+    private final ObjectProvider<DataSourceProperties> dataSourcePropertiesProvider;
+    private final ObjectProvider<DataSource> dataSourceProvider;
+    private final Environment environment;
+
+    /**
+     * utils 备份门面（无状态，可复用）。
+     */
+    private final BackupManager backupManager = new BackupManager();
+
+    /**
+     * 任务互斥锁：同一时间只允许一个备份/恢复任务在执行。
+     */
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
+    /**
+     * 当前任务状态快照（volatile，供 {@code /status} 读取与前端轮询兜底）。
+     */
+    private volatile Map<String, Object> currentStatus = Map.of("running", false);
+
+    /**
+     * 备份/恢复工作线程池：单线程串行执行，守护线程不阻塞 JVM 退出。
+     */
+    private ExecutorService executor;
+
+    /**
+     * 初始化工作线程池。
+     */
+    @PostConstruct
+    public void init() {
+        executor = Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "database-backup-worker");
+            thread.setDaemon(true);
+            return thread;
+        });
+    }
+
+    /**
+     * 释放工作线程池。
+     */
+    @PreDestroy
+    public void destroy() {
+        if (executor != null) {
+            executor.shutdownNow();
+        }
+    }
+
+    // ==================== 查询 ====================
+
+    /**
+     * 当前任务状态快照（含 SSE 订阅数）。
+     *
+     * @return 状态字段表
+     */
+    public Map<String, Object> status() {
+        Map<String, Object> snapshot = new LinkedHashMap<>(currentStatus);
+        snapshot.put("sseSubscribers", eventStreamRegistry.subscriberCount());
+        return snapshot;
+    }
+
+    /**
+     * 可备份目标列表：宿主默认主数据源 + 数据源中心已启用的 JDBC 数据源。
+     *
+     * @return 目标列表（首项恒为宿主默认库）
+     */
+    public List<BackupTarget> targets() {
+        List<BackupTarget> result = new ArrayList<>();
+        String defaultUrl = null;
+        try {
+            defaultUrl = resolveDefaultConnection()[0];
+        } catch (Exception ignored) {
+            // 宿主默认库未配置时仍返回占位项，available=false
+        }
+        result.add(new BackupTarget(
+                "default",
+                null,
+                "默认主数据源",
+                "default",
+                extractDbName(defaultUrl),
+                maskJdbcUrl(defaultUrl),
+                true,
+                defaultUrl != null && !defaultUrl.isBlank(),
+                "宿主应用当前主库"));
+        try {
+            ReturnResult<List<DataSourceVO>> listResult = datasourceService.list();
+            List<DataSourceVO> items = listResult == null ? null : listResult.getData();
+            if (items == null) {
+                return result;
+            }
+            for (DataSourceVO vo : items) {
+                if (vo == null || vo.id() == null || !"jdbc".equalsIgnoreCase(vo.type())) {
+                    continue;
+                }
+                if (vo.status() != null && vo.status() == 0) {
+                    continue;
+                }
+                String url = null;
+                String dbName = vo.database();
+                boolean available = false;
+                try {
+                    DatasourceJdbcInfo info = datasourceService.jdbcInfo(vo.id());
+                    if (info != null && info.url() != null && !info.url().isBlank()) {
+                        url = info.url();
+                        String parsedDb = extractDbName(url);
+                        if (parsedDb != null && !parsedDb.isBlank()) {
+                            dbName = parsedDb;
+                        }
+                        available = true;
+                    }
+                } catch (Exception e) {
+                    log.debug("[database-backup] 解析数据源 {} JDBC 信息失败: {}", vo.id(), e.getMessage());
+                }
+                result.add(new BackupTarget(
+                        String.valueOf(vo.id()),
+                        vo.id(),
+                        vo.name() != null && !vo.name().isBlank() ? vo.name() : ("数据源 #" + vo.id()),
+                        vo.type(),
+                        dbName,
+                        maskJdbcUrl(url),
+                        false,
+                        available,
+                        vo.remark()));
+            }
+        } catch (Exception e) {
+            log.warn("[database-backup] 获取数据源中心列表失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * 备份配置视图（连接密码不外泄，jdbcUrl 中的密码段脱敏）。
+     *
+     * @return 配置字段表
+     */
+    public Map<String, Object> config() {
+        return config(null);
+    }
+
+    /**
+     * 指定目标数据源的备份配置视图（datasourceId 为空时回落宿主默认库）。
+     *
+     * @param datasourceId 数据源中心 ID（可选）
+     * @return 配置字段表
+     */
+    public Map<String, Object> config(Long datasourceId) {
+        String jdbcUrl;
+        try {
+            jdbcUrl = resolveConnection(datasourceId)[0];
+        } catch (Exception e) {
+            jdbcUrl = null;
+        }
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("enabled", properties.isEnabled());
+        view.put("backupDir", backupDir().toString());
+        view.put("retentionDays", properties.getRetentionDays());
+        view.put("maxBackupCount", properties.getMaxBackupCount());
+        view.put("consistentSnapshot", properties.isConsistentSnapshot());
+        view.put("writeManifest", properties.isWriteManifest());
+        view.put("datasourceId", isExternalDatasource(datasourceId) ? datasourceId : null);
+        view.put("targetName", resolveTargetName(datasourceId));
+        view.put("jdbcUrl", maskJdbcUrl(jdbcUrl));
+        view.put("dbName", extractDbName(jdbcUrl));
+        view.put("running", running.get());
+        return view;
+    }
+
+    /**
+     * 查询备份历史（按落库时间倒序）。
+     *
+     * @param limit 最多返回条数（1~500）
+     * @return 历史记录列表
+     */
+    public List<MsBackupHistory> history(int limit) {
+        return history(limit, null, null);
+    }
+
+    /**
+     * 查询备份历史（按落库时间倒序，支持按数据源 ID 或库名过滤）。
+     *
+     * @param limit        最多返回条数（1~500）
+     * @param datasourceId 数据源中心 ID（可选，非空时按该数据源库名过滤）
+     * @param dbName       数据库名（可选，优先于 datasourceId）
+     * @return 历史记录列表
+     */
+    public List<MsBackupHistory> history(int limit, Long datasourceId, String dbName) {
+        int capped = Math.min(Math.max(limit, 1), 500);
+        String filterDb = (dbName != null && !dbName.isBlank()) ? dbName.trim() : null;
+        if (filterDb == null && isExternalDatasource(datasourceId)) {
+            try {
+                filterDb = extractDbName(resolveConnection(datasourceId)[0]);
+            } catch (Exception e) {
+                log.debug("[database-backup] 按数据源 {} 过滤历史时解析库名失败: {}", datasourceId, e.getMessage());
+            }
+        }
+        var query = Wrappers.<MsBackupHistory>lambdaQuery();
+        if (filterDb != null && !filterDb.isBlank()) {
+            query.eq(MsBackupHistory::getDbName, filterDb);
+        }
+        return backupHistoryMapper.selectList(query
+                .orderByDesc(MsBackupHistory::getCreateTime)
+                .orderByDesc(MsBackupHistory::getId)
+                .last("LIMIT " + capped));
+    }
+
+    // ==================== 备份 ====================
+
+    /**
+     * 触发一次数据库备份（异步执行，进度经 SSE 推送）。
+     *
+     * <p>同一时间只允许一个备份/恢复任务；重复触发抛 {@link IllegalStateException}。</p>
+     */
+    public void triggerBackup() {
+        triggerBackup(null);
+    }
+
+    /**
+     * 触发一次指定目标数据源的数据库备份（异步执行，进度经 SSE 推送）。
+     *
+     * <p>同一时间只允许一个备份/恢复任务；重复触发抛 {@link IllegalStateException}。</p>
+     *
+     * @param datasourceId 数据源中心 ID（为空或 &le;0 时备份宿主默认库）
+     */
+    public void triggerBackup(Long datasourceId) {
+        checkEnabled();
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("已有备份/恢复任务在执行中，请等待完成后再试");
+        }
+        try {
+            publishSubmitted(TYPE_BACKUP, datasourceId);
+            executor.submit(() -> doBackup(datasourceId));
+        } catch (Exception e) {
+            running.set(false);
+            throw e;
+        }
+    }
+
+    /**
+     * 备份任务体：构建配置 → 交给 utils 门面执行；进度与终态由监听器广播。
+     *
+     * @param datasourceId 数据源中心 ID（可选）
+     */
+    private void doBackup(Long datasourceId) {
+        try {
+            BackupResult result = backupManager.backupDatabase(buildBackupConfig(datasourceId));
+            if (result != null && !result.isSuccess()
+                    && !BackupEvent.PHASE_FAILURE.equals(currentStatus.get("phase"))) {
+                publishFailure(TYPE_BACKUP, result.getErrorMessage());
+            }
+        } catch (Exception e) {
+            log.error("[database-backup] 备份任务异常", e);
+            publishFailure(TYPE_BACKUP, e.getMessage());
+        } finally {
+            finishTask();
+        }
+    }
+
+    /**
+     * 构建数据库备份配置：连接信息 + 备份目录/保留策略 + 历史落库 + SSE 监听器。
+     *
+     * @param datasourceId 数据源中心 ID（可选）
+     * @return 备份配置
+     */
+    private DatabaseBackupConfig buildBackupConfig(Long datasourceId) {
+        String[] conn = resolveConnection(datasourceId);
+        return DatabaseBackupConfig.builder()
+                .jdbcUrl(conn[0])
+                .username(conn[1])
+                .password(conn[2])
+                .backupDir(backupDir())
+                .retentionDays(properties.getRetentionDays())
+                .maxBackupCount(properties.getMaxBackupCount())
+                .consistentSnapshot(properties.isConsistentSnapshot())
+                .writeManifest(properties.isWriteManifest())
+                .historyStore(dbBackupHistoryStore)
+                .listeners(List.of(backupListener()))
+                .build();
+    }
+
+    /**
+     * 备份事件监听器：把 utils 回调转成 SSE 广播与状态快照更新。
+     *
+     * @return 备份监听器
+     */
+    private BackupListener backupListener() {
+        return new BackupListener() {
+            @Override
+            public void onStart(BackupEvent event) {
+                publishBackupEvent(event);
+            }
+
+            @Override
+            public void onTableDone(BackupEvent event) {
+                publishBackupEvent(event);
+            }
+
+            @Override
+            public void onSuccess(BackupEvent event) {
+                publishBackupEvent(event);
+            }
+
+            @Override
+            public void onFailure(BackupEvent event) {
+                publishBackupEvent(event);
+            }
+        };
+    }
+
+    /**
+     * 备份事件 → SSE 载荷（Path 等对象转字符串，避免序列化噪音）。
+     *
+     * @param event utils 备份事件
+     */
+    private void publishBackupEvent(BackupEvent event) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", TYPE_BACKUP);
+        payload.put("phase", event.getPhase());
+        payload.put("time", str(event.getTime()));
+        payload.put("dbName", event.getDbName());
+        payload.put("table", event.getTable());
+        payload.put("tableRows", event.getTableRows());
+        payload.put("totalRows", event.getTotalRows());
+        payload.put("totalTables", event.getTotalTables());
+        payload.put("finishedTables", event.getFinishedTables());
+        payload.put("errorMessage", event.getErrorMessage());
+        BackupResult result = event.getResult();
+        if (result != null) {
+            payload.put("success", result.isSuccess());
+            payload.put("backupPath", str(result.getBackupPath()));
+            payload.put("fileCount", result.getFileCount());
+            payload.put("totalSize", result.getTotalSize());
+            payload.put("durationMillis", result.getDurationMillis());
+            if (result.getErrorMessage() != null) {
+                payload.put("errorMessage", result.getErrorMessage());
+            }
+        }
+        publish(payload);
+    }
+
+    // ==================== 恢复 ====================
+
+    /**
+     * 触发一次恢复（异步执行，进度经 SSE 推送）。
+     *
+     * <p>恢复会向目标库写入数据，必须显式确认（confirm=true）。</p>
+     *
+     * @param params 恢复参数
+     */
+    public void triggerRestore(RestoreParams params) {
+        checkEnabled();
+        if (!params.confirm()) {
+            throw new IllegalArgumentException("恢复操作会写入目标库，必须显式传 confirm=true");
+        }
+        if (!running.compareAndSet(false, true)) {
+            throw new IllegalStateException("已有备份/恢复任务在执行中，请等待完成后再试");
+        }
+        try {
+            publishSubmitted(TYPE_RESTORE, params.datasourceId());
+            executor.submit(() -> doRestore(params));
+        } catch (Exception e) {
+            running.set(false);
+            throw e;
+        }
+    }
+
+    /**
+     * 恢复任务体。
+     *
+     * @param params 恢复参数
+     */
+    private void doRestore(RestoreParams params) {
+        try {
+            String[] conn = resolveConnection(params.datasourceId());
+            DatabaseRestoreConfig config = DatabaseRestoreConfig.builder()
+                    .jdbcUrl(conn[0])
+                    .username(conn[1])
+                    .password(conn[2])
+                    .scriptFile(Paths.get(params.scriptFile()))
+                    .dropBeforeCreate(params.dropBeforeCreate())
+                    .continueOnError(params.continueOnError())
+                    .skipEmptyCheck(params.skipEmptyCheck())
+                    .verifyChecksum(params.verifyChecksum())
+                    .listeners(List.of(restoreListener()))
+                    .build();
+            DatabaseRestoreResult result = backupManager.restoreDatabase(config);
+            if (result != null && !result.isSuccess()
+                    && !RestoreEvent.PHASE_FAILURE.equals(currentStatus.get("phase"))) {
+                publishFailure(TYPE_RESTORE, result.getErrorMessage());
+            }
+        } catch (Exception e) {
+            log.error("[database-backup] 恢复任务异常", e);
+            publishFailure(TYPE_RESTORE, e.getMessage());
+        } finally {
+            finishTask();
+        }
+    }
+
+    /**
+     * 恢复事件监听器：把 utils 回调转成 SSE 广播与状态快照更新。
+     *
+     * @return 恢复监听器
+     */
+    private RestoreListener restoreListener() {
+        return new RestoreListener() {
+            @Override
+            public void onStart(RestoreEvent event) {
+                publishRestoreEvent(event);
+            }
+
+            @Override
+            public void onProgress(RestoreEvent event) {
+                publishRestoreEvent(event);
+            }
+
+            @Override
+            public void onSuccess(RestoreEvent event) {
+                publishRestoreEvent(event);
+            }
+
+            @Override
+            public void onFailure(RestoreEvent event) {
+                publishRestoreEvent(event);
+            }
+        };
+    }
+
+    /**
+     * 恢复事件 → SSE 载荷。
+     *
+     * @param event utils 恢复事件
+     */
+    private void publishRestoreEvent(RestoreEvent event) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", TYPE_RESTORE);
+        payload.put("phase", event.getPhase());
+        payload.put("time", str(event.getTime()));
+        payload.put("currentFile", str(event.getCurrentFile()));
+        payload.put("filesTotal", event.getFilesTotal());
+        payload.put("filesDone", event.getFilesDone());
+        payload.put("statementsProcessed", event.getStatementsProcessed());
+        payload.put("statementsExecuted", event.getStatementsExecuted());
+        payload.put("statementsSkipped", event.getStatementsSkipped());
+        payload.put("dryRun", event.isDryRun());
+        payload.put("message", event.getMessage());
+        payload.put("errorMessage", event.getErrorMessage());
+        DatabaseRestoreResult result = event.getResult();
+        if (result != null) {
+            payload.put("success", result.isSuccess());
+            payload.put("statements", result.getStatements());
+            payload.put("skippedStatements", result.getSkippedStatements());
+            payload.put("droppedTables", result.getDroppedTables());
+            payload.put("durationMs", result.getDurationMs());
+            if (result.getErrorMessage() != null) {
+                payload.put("errorMessage", result.getErrorMessage());
+            }
+        }
+        publish(payload);
+    }
+
+    // ==================== 预检 / 校验 / 删除 ====================
+
+    /**
+     * 恢复前预检 / 试运行（只读，不对目标库写数据）。
+     *
+     * @param params 预检参数
+     * @return 预检结果
+     */
+    public RestorePreflight.PreflightResult preflight(PreflightParams params) {
+        String[] conn = resolveConnection(params.datasourceId());
+        DatabaseRestoreConfig config = DatabaseRestoreConfig.builder()
+                .jdbcUrl(conn[0])
+                .username(conn[1])
+                .password(conn[2])
+                .scriptFile(Paths.get(params.scriptFile()))
+                .dryRun(params.dryRun())
+                .verifyChecksum(params.verifyChecksum())
+                .build();
+        return params.dryRun()
+                ? backupManager.dryRunRestore(config)
+                : backupManager.preflightRestore(config);
+    }
+
+    /**
+     * 离线校验备份产物完整性（按清单核对字节数与 SHA-256）。
+     *
+     * @param target 备份目录、.sql 脚本或 .zip 归档
+     * @return 校验结果
+     */
+    public BackupVerifier.VerificationResult verify(String target) {
+        Path path = Paths.get(target);
+        if (!path.isAbsolute()) {
+            Path root = backupDir().toAbsolutePath().normalize();
+            path = root.resolve(target).normalize();
+            if (!path.startsWith(root) || path.equals(root)) {
+                throw new IllegalArgumentException("校验目标必须在备份目录内: " + target);
+            }
+        }
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("备份不存在: " + target);
+        }
+        return backupManager.verifyBackup(path);
+    }
+
+    /**
+     * 删除备份产物。
+     *
+     * @param target 相对备份根目录的路径
+     * @return 删除的文件数
+     */
+    public int deleteBackup(String target) {
+        Path root = backupDir().toAbsolutePath().normalize();
+        Path path = root.resolve(target).normalize();
+        if (!path.startsWith(root) || path.equals(root)) {
+            throw new IllegalArgumentException("删除目标必须在备份目录内: " + target);
+        }
+        if (!Files.exists(path)) {
+            throw new IllegalArgumentException("备份不存在: " + target);
+        }
+        int removed = deleteAllowed(path);
+        cleanupEmptyDirs(root, path);
+        return removed;
+    }
+
+    private int deleteAllowed(Path path) {
+        if (Files.isRegularFile(path)) {
+            return isDeletableBackupFile(path) && deleteQuietly(path) ? 1 : 0;
+        }
+        int removed = 0;
+        for (Path child : listChildren(path)) {
+            if (isDeletableBackupFile(child) || child.getFileName().toString().startsWith("database-")) {
+                removed += deleteTree(child);
+            } else if (Files.isDirectory(child)) {
+                removed += deleteAllowed(child);
+            }
+        }
+        if (removed > 0 && listChildren(path).isEmpty()) {
+            deleteQuietly(path);
+        }
+        return removed;
+    }
+
+    private int deleteTree(Path path) {
+        int removed = 0;
+        if (Files.isDirectory(path)) {
+            for (Path child : listChildren(path)) {
+                removed += deleteTree(child);
+            }
+        }
+        if (deleteQuietly(path)) {
+            removed++;
+        }
+        return removed;
+    }
+
+    private void cleanupEmptyDirs(Path root, Path from) {
+        Path parent = from.getParent();
+        while (parent != null && !parent.equals(root)) {
+            if (!listChildren(parent).isEmpty() || !deleteQuietly(parent)) {
+                break;
+            }
+            parent = parent.getParent();
+        }
+    }
+
+    private static boolean isDeletableBackupFile(Path path) {
+        String name = path.getFileName().toString();
+        return name.startsWith("database-") || BackupManifest.MANIFEST_FILE_NAME.equals(name);
+    }
+
+    private List<Path> listChildren(Path dir) {
+        try (Stream<Path> stream = Files.list(dir)) {
+            return stream.toList();
+        } catch (IOException e) {
+            log.warn("[database-backup] 遍历目录失败: {}", dir);
+            return List.of();
+        }
+    }
+
+    private boolean deleteQuietly(Path path) {
+        try {
+            return Files.deleteIfExists(path);
+        } catch (IOException e) {
+            log.warn("[database-backup] 删除失败: {} ({})", path, e.getMessage());
+            return false;
+        }
+    }
+
+    // ==================== 内部工具 ====================
+
+    private void checkEnabled() {
+        if (!properties.isEnabled()) {
+            throw new IllegalStateException("备份中心未启用（plugin.monitor.database-backup.enabled=false）");
+        }
+    }
+
+    private void publishSubmitted(String type, Long datasourceId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", type);
+        payload.put("phase", "SUBMITTED");
+        payload.put("time", LocalDateTime.now().toString());
+        if (isExternalDatasource(datasourceId)) {
+            payload.put("datasourceId", datasourceId);
+        }
+        publish(payload);
+    }
+
+    private void publishFailure(String type, String message) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", type);
+        payload.put("phase", "FAILURE");
+        payload.put("time", LocalDateTime.now().toString());
+        payload.put("success", false);
+        payload.put("errorMessage", message);
+        publish(payload);
+    }
+
+    private void publish(Map<String, Object> payload) {
+        payload.put("running", running.get());
+        currentStatus = Collections.unmodifiableMap(payload);
+        eventStreamRegistry.broadcast(payload);
+    }
+
+    private void finishTask() {
+        running.set(false);
+        Map<String, Object> snapshot = new LinkedHashMap<>(currentStatus);
+        snapshot.put("running", false);
+        currentStatus = Collections.unmodifiableMap(snapshot);
+    }
+
+    private Path backupDir() {
+        String configured = properties.getBackupDir();
+        Path dir = (configured == null || configured.isBlank())
+                ? Paths.get(System.getProperty("user.home"), "monitor-backup", "database")
+                : Paths.get(configured);
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new IllegalStateException("备份目录不可创建: " + dir + " (" + e.getMessage() + ")");
+        }
+        return dir;
+    }
+
+    private String[] resolveConnection(Long datasourceId) {
+        if (!isExternalDatasource(datasourceId)) {
+            return resolveDefaultConnection();
+        }
+        DatasourceJdbcInfo info = datasourceService.jdbcInfo(datasourceId);
+        if (info == null || info.url() == null || info.url().isBlank()) {
+            throw new IllegalStateException("数据源 #" + datasourceId + " 未解析出有效的 JDBC 连接串");
+        }
+        return new String[]{info.url(), info.username(), info.password()};
+    }
+
+    private static boolean isExternalDatasource(Long datasourceId) {
+        return datasourceId != null && datasourceId > 0;
+    }
+
+    private String resolveTargetName(Long datasourceId) {
+        if (!isExternalDatasource(datasourceId)) {
+            return "默认主数据源";
+        }
+        try {
+            ReturnResult<DataSourceVO> res = datasourceService.get(datasourceId);
+            if (res != null && res.getData() != null && res.getData().name() != null
+                    && !res.getData().name().isBlank()) {
+                return res.getData().name();
+            }
+        } catch (Exception ignored) {
+            // 回落编号展示
+        }
+        return "数据源 #" + datasourceId;
+    }
+
+    private String[] resolveDefaultConnection() {
+        DataSourceProperties props = dataSourcePropertiesProvider.getIfAvailable();
+        if (props != null) {
+            try {
+                String url = props.determineUrl();
+                if (url != null && !url.isBlank()) {
+                    return new String[]{url, props.determineUsername(), props.determinePassword()};
+                }
+            } catch (Exception e) {
+                log.debug("[database-backup] DataSourceProperties 解析失败，尝试数据源实例: {}", e.getMessage());
+            }
+        }
+        HikariDataSource hikari = unwrapHikari();
+        if (hikari != null && hikari.getJdbcUrl() != null && !hikari.getJdbcUrl().isBlank()) {
+            return new String[]{hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword()};
+        }
+        String url = environment.getProperty("spring.datasource.url");
+        if (url != null && !url.isBlank()) {
+            return new String[]{url,
+                    environment.getProperty("spring.datasource.username"),
+                    environment.getProperty("spring.datasource.password")};
+        }
+        throw new IllegalStateException(
+                "无法解析当前数据源连接信息（DataSourceProperties / HikariDataSource / spring.datasource.url 均不可用）");
+    }
+
+    private HikariDataSource unwrapHikari() {
+        DataSource dataSource = dataSourceProvider.getIfAvailable();
+        if (dataSource instanceof HikariDataSource hikari) {
+            return hikari;
+        }
+        if (dataSource != null) {
+            try {
+                return dataSource.unwrap(HikariDataSource.class);
+            } catch (Exception ignored) {
+                // 非 Hikari 连接池（Druid 等），交由后续解析路径处理
+            }
+        }
+        return null;
+    }
+
+    private static String maskJdbcUrl(String jdbcUrl) {
+        if (jdbcUrl == null) {
+            return null;
+        }
+        return jdbcUrl.replaceAll("://([^:@/]+):[^@/]+@", "://$1:****@");
+    }
+
+    private static String extractDbName(String jdbcUrl) {
+        if (jdbcUrl == null) {
+            return null;
+        }
+        try {
+            String noParams = jdbcUrl.split("\\?", 2)[0];
+            int slash = noParams.lastIndexOf('/');
+            return slash >= 0 ? noParams.substring(slash + 1) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String str(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    /**
+     * 可备份目标数据源视图。
+     *
+     * @param id            目标标识（默认库为 {@code default}，外部源为数据源 ID 文本）
+     * @param datasourceId  数据源中心 ID（默认库为 null）
+     * @param name          展示名称
+     * @param type          类型（default / jdbc）
+     * @param dbName        目标库名
+     * @param jdbcUrl       脱敏后的 JDBC 连接串
+     * @param defaultTarget 是否为宿主默认主数据源
+     * @param available     连接信息是否可解析
+     * @param remark        备注
+     */
+    public record BackupTarget(String id,
+                               Long datasourceId,
+                               String name,
+                               String type,
+                               String dbName,
+                               String jdbcUrl,
+                               boolean defaultTarget,
+                               boolean available,
+                               String remark) {
+    }
+
+    /**
+     * 恢复参数。
+     *
+     * @param scriptFile       待恢复的备份脚本/归档路径
+     * @param dropBeforeCreate 恢复前对 CREATE TABLE 先执行 DROP TABLE IF EXISTS
+     * @param continueOnError  单条语句失败是否继续
+     * @param skipEmptyCheck   跳过「目标库非空拒绝恢复」检查
+     * @param verifyChecksum   恢复前校验 manifest.json 的 SHA-256
+     * @param confirm          显式确认（必须 true）
+     * @param datasourceId     目标数据源 ID（可选，为空回落宿主默认库）
+     */
+    public record RestoreParams(String scriptFile,
+                                boolean dropBeforeCreate,
+                                boolean continueOnError,
+                                boolean skipEmptyCheck,
+                                boolean verifyChecksum,
+                                boolean confirm,
+                                Long datasourceId) {
+        public RestoreParams(String scriptFile,
+                             boolean dropBeforeCreate,
+                             boolean continueOnError,
+                             boolean skipEmptyCheck,
+                             boolean verifyChecksum,
+                             boolean confirm) {
+            this(scriptFile, dropBeforeCreate, continueOnError, skipEmptyCheck, verifyChecksum, confirm, null);
+        }
+    }
+
+    /**
+     * 预检参数。
+     *
+     * @param scriptFile     待预检的备份脚本/归档路径
+     * @param dryRun         true=试运行（事务内执行后回滚）；false=只读预检
+     * @param verifyChecksum 预检时是否校验 SHA-256 清单
+     * @param datasourceId   目标数据源 ID（可选，为空回落宿主默认库）
+     */
+    public record PreflightParams(String scriptFile,
+                                  boolean dryRun,
+                                  boolean verifyChecksum,
+                                  Long datasourceId) {
+        public PreflightParams(String scriptFile,
+                               boolean dryRun,
+                               boolean verifyChecksum) {
+            this(scriptFile, dryRun, verifyChecksum, null);
+        }
+    }
+}

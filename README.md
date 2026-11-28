@@ -94,7 +94,8 @@ flowchart TB
 | spring-support-collect-starter | 采集调度一体化平台：可视化流程编排 + 复用调度平台作业台账 | [README.md](spring-support-collect-starter/README.md) |
 | spring-support-cache-starter | Caffeine + Redis 多级缓存：`@Cacheable` 增强、租户级缓存键、`CacheTemplate` | [README.md](spring-support-cache-starter/README.md) |
 | spring-support-mybatis-starter | MyBatis-Plus 增强：分页/乐观锁/逻辑删除、`@DataScope` 数据权限、慢 SQL、XML 热重载 | [README.md](spring-support-mybatis-starter/README.md) |
-| spring-support-oauth-client-starter | 单点登录客户端：令牌校验、白名单、权限判定、登录页、会话控制 | [README.md](spring-support-oauth-client-starter/README.md) |
+| spring-support-oauth-starter | 单点登录客户端：令牌校验、白名单、权限判定、登录页、会话控制 | [README.md](spring-support-oauth-starter/README.md) |
+| spring-support-oauth-third-starter | 第三方登录：授权 URL、回调换票、账号绑定/解绑、待绑定身份、一次性换票 | [README.md](spring-support-oauth-third-starter/README.md) |
 | spring-support-console-starter | 运行期管理控制台：`@ApiFeature`/`@ApiGray` 覆盖与键值设置（FTL 页面 + SQLite 持久化） | [README.md](spring-support-console-starter/README.md) |
 | spring-support-redis-starter | Redis 集成：Redisson、统一序列化模板、7 档 `CacheManager`、分布式锁、统一 KV 引擎 | [README.md](spring-support-redis-starter/README.md) |
 | spring-support-filesystem-starter | 统一对象存储抽象（多 Provider）+ 内置 HTTP 文件服务器与任务化分片上传 | [README.md](spring-support-filesystem-starter/README.md) |

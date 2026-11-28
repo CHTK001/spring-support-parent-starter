@@ -60,21 +60,6 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasource-starter</artifactId>
         </dependency>
-        <!-- Kafka 管理能力（SPI 实现）：宿主只认契约，这一行决定「Kafka 功能是否开放」。
-             去掉它（或改为 OSGi bundle 后装），Kafka 功能即变为「未开放」，
-             而主依赖树里不会留下任何 kafka-clients 痕迹 —— 这正是拆分的意义。 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-kafka-starter</artifactId>
-        </dependency>
-        <!-- 以下两个中间件管理能力同为 SPI 实现：装配方式与 Kafka 完全一致
-             （引进来即开放功能，删掉即变为「功能未开放」），
-             差别只在「默认带」还是「按需带」。 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-influxdb-starter</artifactId>
-            <version>${utils.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
@@ -132,60 +117,27 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- 文件库直连：H2 与 SQLite 驱动进运行时 classpath。
-             不加的话文件库只能走上传 jar，而“新建文件库”本应开箱即用
-             （版本由 Spring Boot BOM 管理，与 console-starter 的 sqlite-jdbc 写法一致）。 -->
+        <!-- 文件库只随包带 H2；SQLite/DuckDB/ClickHouse 驱动走 JDBC 驱动 jar 上传端点按需安装 -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <dependency>
-            <groupId>org.xerial</groupId>
-            <artifactId>sqlite-jdbc</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- ClickHouse：走 JDBC（HTTP 协议，默认 8123），数据库管理台/打开表/设计表/查询
-             与版本探测全部复用 jdbc 那一套，只需驱动在 classpath 上。
-             用 all 分类器的 shaded 包：普通包会连带拉进自己的 Jackson/HttpClient，
-             与应用的版本在同一 classpath 上打架，表现为别的功能莫名报 NoSuchMethod。 -->
-        <dependency>
-            <groupId>com.clickhouse</groupId>
-            <artifactId>clickhouse-jdbc</artifactId>
-            <version>0.11.0</version>
-            <classifier>all</classifier>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- DuckDB：单文件嵌入式库（可直查 Parquet/CSV、ATTACH 其它库做联邦查询）。
-             驱动内含各平台 native 库，故体积偏大（约 60MB），仅运行时需要 -->
-        <dependency>
-            <groupId>org.duckdb</groupId>
-            <artifactId>duckdb_jdbc</artifactId>
-            <version>1.5.6.0</version>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- ZooKeeper 管理页：复用本仓 Curator 封装，不额外引入第三方注册中心客户端
-             （坐标照抄 monitor-starter，用于 ZookeeperClient/ZookeeperManageServiceImpl） -->
+
+        <!-- ZooKeeper 管理页由本模块自身实现（ZookeeperClient），编译期直接引用 Curator/ZK -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-zookeeper-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
-
-        <!-- Curator 5.9.0 传递依赖 3.9.3，本仓已备 3.9.4 补丁版，就近覆盖以免重复拉取
-             （坐标照抄 monitor-starter，用于 ZookeeperClient/ZookeeperManageServiceImpl） -->
+        <!-- Curator 传递的 3.9.3 就近覆盖为本仓补丁版 3.9.6，避免重复拉取 -->
         <dependency>
             <groupId>org.apache.zookeeper</groupId>
             <artifactId>zookeeper</artifactId>
             <version>3.9.6</version>
         </dependency>
 
-        <!-- MongoDB 管理页：官方同步驱动（MongoClient），与其它中间件一致按数据源行
-             host/port/database/用户名/密码 建连，不引入 Spring Data MongoDB。
-             版本口径：sync 自身声明 core/bson 同版本（5.13.0），但父链（Spring Boot 4.1
-             的 mongodb-bom）把 org.mongodb:bson / mongodb-driver-core 钉在 5.8.1 ——
-             混版会在运行期炸 NoClassDefFoundError（sync 5.13.0 要调 core 5.13 才有的
-             AsyncClientExecutor），故三件套就近显式钉齐（写法参照上方 zookeeper 覆盖）。 -->
+        <!-- MongoDB 管理页（MongoManageClient）编译期引用官方同步驱动；三件套同版本，混版运行期会 NCDFE -->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
@@ -202,12 +154,30 @@
             <version>5.13.0</version>
         </dependency>
 
-        <!-- SkyWalking 控制台：查询走 OAP GraphQL（端口 12800），鉴权与地址
-             按数据源行动态注入（见 SkywalkingManageServiceImpl） -->
+        <!-- SkyWalking 控制台（SkywalkingManageServiceImpl）编译期引用 OAP 客户端 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-skywalking-starter</artifactId>
             <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 数据同步：复用 utils 层已有的 DataSyncEngine / JdbcSyncSource / SyncMapping -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasync-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <!-- 数据同步 FILE/DIR 源：Excel(.xlsx/.xls) 读取依赖 Apache POI -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+        <!-- 数据同步 HTTP_HTML 源：HTML 表格/CSS 选择器解析依赖 Jsoup -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
         </dependency>
 
         <!-- 日志 -->

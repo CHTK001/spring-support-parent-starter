@@ -767,22 +767,7 @@ CREATE TABLE IF NOT EXISTS `monitor_acme_order` (
 -- ============================================================
 
 -- ----------------------------------------------------------
--- 20. 数据库备份历史（备份中心）
+-- 20. 数据库备份历史（已归位至 spring-support-datapool-starter）
 -- ----------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `ms_backup_history` (
-    `id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `record_id`        VARCHAR(64)  DEFAULT NULL            COMMENT '备份记录ID(批次标识)',
-    `db_name`          VARCHAR(128) DEFAULT NULL            COMMENT '数据库名',
-    `success`          TINYINT      DEFAULT NULL            COMMENT '结果: 1 成功 / 0 失败',
-    `backup_path`      VARCHAR(512) DEFAULT NULL            COMMENT '备份产物路径',
-    `manifest_path`    VARCHAR(512) DEFAULT NULL            COMMENT '备份清单路径',
-    `file_count`       INT          DEFAULT 0               COMMENT '产物文件数',
-    `total_size_bytes` BIGINT       DEFAULT 0               COMMENT '产物总大小(字节)',
-    `duration_millis`  BIGINT       DEFAULT 0               COMMENT '耗时(毫秒)',
-    `start_time`       VARCHAR(48)  DEFAULT NULL            COMMENT '开始时间(ISO-8601)',
-    `end_time`         VARCHAR(48)  DEFAULT NULL            COMMENT '结束时间(ISO-8601)',
-    `error_message`    TEXT         DEFAULT NULL            COMMENT '错误信息',
-    `create_time`      DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '落库时间',
-    PRIMARY KEY (`id`),
-    KEY `ms_backup_history_idx_create_time` (`create_time`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '数据库备份历史';
+--   本段原为 ms_backup_history 建表语句，已随备份中心模块整体迁入
+--   spring-support-datapool-starter（见 V3.2__init_backup_and_sync.sql）。

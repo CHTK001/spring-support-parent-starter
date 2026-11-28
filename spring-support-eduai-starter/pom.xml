@@ -134,7 +134,7 @@
         <!-- OAuth 客户端权限注解 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
         <!-- OSGi 源码扩展点：把「学生凭据校验」这类 SPI 实现改为源码声明，
@@ -156,8 +156,8 @@
         <!-- SSO 三方登录契约（LoginResult 等）：AccountTypeLoginHandler 直接使用 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-api-support-common-sso-starter</artifactId>
-            <version>4.0.0.51</version>
+            <artifactId>spring-support-oauth-third-starter</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- 单元测试：覆盖学生口令摘要/校验这类安全核心逻辑。

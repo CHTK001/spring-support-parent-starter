@@ -84,7 +84,7 @@ Spring Support Parent Starter
 │   ├── spring-support-datasource-starter      # DataSource configuration
 │   └── spring-support-mybatis-starter         # MyBatis Plus integration
 ├── 🔐 Authentication
-│   └── spring-support-oauth-client-starter    # OAuth client authentication
+│   └── spring-support-oauth-starter    # OAuth client authentication
 ├── 💾 Cache & Storage
 │   ├── spring-support-redis-starter           # Redis cache integration
 │   ├── spring-support-filesystem-minio-starter # MinIO object storage
@@ -625,7 +625,7 @@ Integrate Grafana Loki for log collection and analysis:
 
 ### Authentication & Security
 
-#### spring-support-oauth-client-starter
+#### spring-support-oauth-starter
 
 **OAuth client authentication module**
 
@@ -641,7 +641,7 @@ OAuth 2.0 client integration:
 ```xml
 <dependency>
     <groupId>com.chua</groupId>
-    <artifactId>spring-support-oauth-client-starter</artifactId>
+    <artifactId>spring-support-oauth-starter</artifactId>
     <version>4.0.0.32</version>
 </dependency>
 ```
@@ -972,7 +972,8 @@ Thanks to these open-source projects:
 - **[spring-support-common-starter](spring-support-common-starter/README.md)** - Common utilities module
 - **[spring-support-swagger-starter](spring-support-swagger-starter/README.md)** - API docs module
 - **[spring-support-gateway-starter](spring-support-gateway-starter/README.md)** - Gateway module
-- **[spring-support-oauth-client-starter](spring-support-oauth-client-starter/README.md)** - OAuth client module
+- **[spring-support-oauth-starter](spring-support-oauth-starter/README.md)** - OAuth client module
+- **[spring-support-oauth-third-starter](spring-support-oauth-third-starter/README.md)** - Third-party login, binding and callback orchestration
 - **[spring-support-datasource-starter](spring-support-datasource-starter/README.md)** - DataSource module
 - **[spring-support-mybatis-starter](spring-support-mybatis-starter/README.md)** - MyBatis module
 - **[spring-support-redis-starter](spring-support-redis-starter/README.md)** - Redis module

@@ -20,7 +20,7 @@ flowchart TB
     COMMON["spring-support-common-starter<br/>ServiceProvider SPI / ServiceInfoContributor"]
     MYB["spring-support-mybatis-starter<br/>PageResult / 分页拦截器"]
     SOC["spring-support-socket-starter（optional）"]
-    OA["spring-support-oauth-client-starter（optional）"]
+    OA["spring-support-oauth-starter（optional）"]
     VENDOR["海康 / 大华 / 宇视 / 精讯 / GB28181 / ONVIF"]
 
     APP -->|"引入依赖即装配"| AC
@@ -269,7 +269,7 @@ device:
 - **`retention-days<=0` 表示永不清理**，长期运行需自行评估磁盘水位。
 - **可选依赖降级是「降级不失败」**：`engine=redis` 但宿主没有 `spring-data-redis` / `StringRedisTemplate`，或 `engine=influxdb` 但未配 `url` 时，时序引擎标记为「不可用」并在页面如实提示原因，模块其余功能照常运行。
 - **时序写入是旁路**：写入失败只记 WARN（带分类 / 设备 / 序列键），不阻断设备入库、告警、考勤等主链路；页面查不到数据时先查 `[Device][Series]` 日志。
-- **webhook 免登录态依赖**：`spring-support-oauth-client-starter` 未引入时 `@TokenForIgnore` 静默失效，四个 webhook 入站路径需宿主自行放行；引入后仍要求 appKey 签名校验通过。
+- **webhook 免登录态依赖**：`spring-support-oauth-starter` 未引入时 `@TokenForIgnore` 静默失效，四个 webhook 入站路径需宿主自行放行；引入后仍要求 appKey 签名校验通过。
 - **凭据与任务节奏**：离线检测 / 事件轮询 / 同步 / 指标采集的开关与间隔都按凭据（`device_provider_credential`）配置，没有全局 yaml 开关；新增凭据后记得触发一次目录同步。
 
 ## 6. 使用方式
@@ -311,7 +311,7 @@ public class DeviceHostApplication {
 |---|---|---|
 | `spring-boot-starter-data-redis` | optional | `engine=redis` 不可用，引擎降级为「不可用」并说明原因，模块照常启动 |
 | `spring-support-socket-starter` | optional | 实时推送退化为 `noopDeviceRealtimePublisher`（只打 debug 日志），事件仍落库 |
-| `spring-support-oauth-client-starter` | optional | `@TokenForIgnore` 注解静默失效，webhook 路径需宿主自行放行 |
+| `spring-support-oauth-starter` | optional | `@TokenForIgnore` 注解静默失效，webhook 路径需宿主自行放行 |
 | `lombok` | provided | 仅编译期需要，运行时无关 |
 
 必需依赖：`spring-boot-starter-web`、`mybatis-plus-spring-boot4-starter`、`spring-support-mybatis-starter`、`spring-support-common-starter`、`spring-support-swagger-starter`、`com.hikvision.ga:artemis-http-client:1.1.3`、`poi-ooxml:5.5.1`、`jna` / `jna-platform:5.19.1`（后三者为海康 / 大华 SDK 直连与 Excel 导出的硬依赖）。
@@ -330,7 +330,7 @@ public class DeviceHostApplication {
 - 只接一家厂商且不换：直接用该厂商官方 SDK 更轻，本模块价值在统一契约与能力治理；
 - 毫秒级实时控制（云台 / 开闸）：HTTP 云平台链路延迟不可控，应走局域网 SDK 直连（`authType=SDK`）。
 
-与相邻模块的取舍：`spring-support-common-starter` 提供 SPI 注册表与服务信息（必依赖）；`spring-support-mybatis-starter` 提供分页（必依赖，宿主已有插件则模块退避）；`spring-support-socket-starter` 决定实时推送是否广播（可选）；`spring-support-oauth-client-starter` 决定 webhook 免登录态是否生效（可选）；本模块不依赖缓存模块，会话缓存用内存 `ConcurrentHashMap`。
+与相邻模块的取舍：`spring-support-common-starter` 提供 SPI 注册表与服务信息（必依赖）；`spring-support-mybatis-starter` 提供分页（必依赖，宿主已有插件则模块退避）；`spring-support-socket-starter` 决定实时推送是否广播（可选）；`spring-support-oauth-starter` 决定 webhook 免登录态是否生效（可选）；本模块不依赖缓存模块，会话缓存用内存 `ConcurrentHashMap`。
 
 ## 8. 扩展点
 

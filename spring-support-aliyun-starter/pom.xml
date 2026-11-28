@@ -15,7 +15,7 @@
     <dependencies>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
         <dependency>

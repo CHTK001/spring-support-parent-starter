@@ -71,7 +71,7 @@
         <!-- @TokenForIgnore：顶栏在登录前就要出数，四个接口必须匿名可访问 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
         <!-- OpenAPI 注解（@Tag / @Operation / @Schema），仅文档用途 -->

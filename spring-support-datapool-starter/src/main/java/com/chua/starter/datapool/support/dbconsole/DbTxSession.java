@@ -1,5 +1,8 @@
 package com.chua.starter.datapool.support.dbconsole;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -30,6 +33,9 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class DbTxSession {
 
+    /** 连接回收失败时保留事务标识与原因。 */
+    private static final Logger LOG = LoggerFactory.getLogger(DbTxSession.class);
+
     /** 事务标识 */
     private final String txId;
 
@@ -41,6 +47,9 @@ public final class DbTxSession {
 
     /** 持有的连接，autoCommit=false */
     private final Connection connection;
+
+    /** 借出连接时的自动提交状态，归还前恢复。 */
+    private final boolean originalAutoCommit;
 
     /** 串行化同一事务上的并发请求 */
     private final ReentrantLock lock = new ReentrantLock();
@@ -54,6 +63,12 @@ public final class DbTxSession {
     /** 是否已经 commit / rollback 过；已结束的事务不再接受任何语句 */
     private volatile boolean finished;
 
+    /** 是否已经进入释放流程；阻止等待锁的请求在超时后继续执行。 */
+    private volatile boolean closing;
+
+    /** 是否已执行连接释放，防止并发回收重复操作。 */
+    private boolean closed;
+
     /**
      * 构造事务会话。
      *
@@ -63,10 +78,25 @@ public final class DbTxSession {
      * @param connection   已置 autoCommit=false 的连接
      */
     public DbTxSession(String txId, Long datasourceId, String database, Connection connection) {
+        this(txId, datasourceId, database, connection, true);
+    }
+
+    /**
+     * 构造保留连接原始自动提交状态的事务会话。
+     *
+     * @param txId 事务标识
+     * @param datasourceId 数据源 ID
+     * @param database 库名，可为空
+     * @param connection 已置 autoCommit=false 的连接
+     * @param originalAutoCommit 借出连接时的自动提交状态
+     */
+    public DbTxSession(String txId, Long datasourceId, String database, Connection connection,
+                       boolean originalAutoCommit) {
         this.txId = txId;
         this.datasourceId = datasourceId;
         this.database = database;
         this.connection = connection;
+        this.originalAutoCommit = originalAutoCommit;
     }
 
     /**
@@ -144,12 +174,12 @@ public final class DbTxSession {
      * @throws IllegalStateException 事务已结束
      */
     public <T> T run(java.util.function.Function<Connection, T> action) {
-        if (finished) {
+        if (finished || closing) {
             throw new IllegalStateException("事务已结束，请重新开启");
         }
         lock.lock();
         try {
-            if (finished) {
+            if (finished || closing) {
                 throw new IllegalStateException("事务已结束，请重新开启");
             }
             touch();
@@ -162,23 +192,24 @@ public final class DbTxSession {
     /**
      * 提交。
      *
-     * <p>提交后**立刻把 autoCommit 复位为 true**：这条连接交回去时若还停在
-     * 事务模式，后续复用它的每个请求都会静默地不提交。这个复位放在 commit
-     * 里而不是只放在 {@link #close}，是为了让「提交成功但连接没关掉」
-     * 也不会留下一个永远不提交的连接。</p>
+     * <p>提交成功后恢复借出连接时的自动提交状态；注册表随后关闭连接租约。
+     * 不能固定设为 true，因为宿主连接池也可以配置默认 autoCommit=false。</p>
      *
      * @throws SQLException 提交失败
      */
     public void commit() throws SQLException {
         lock.lock();
         try {
+            if (closing) {
+                throw new IllegalStateException("事务正在释放，请重新开启");
+            }
             if (finished) {
                 return;
             }
             connection.commit();
             finished = true;
             if (!connection.isClosed()) {
-                connection.setAutoCommit(true);
+                connection.setAutoCommit(originalAutoCommit);
             }
         } finally {
             lock.unlock();
@@ -196,6 +227,9 @@ public final class DbTxSession {
     public void rollback() throws SQLException {
         lock.lock();
         try {
+            if (closing) {
+                throw new IllegalStateException("事务正在释放，请重新开启");
+            }
             if (finished) {
                 return;
             }
@@ -207,45 +241,94 @@ public final class DbTxSession {
     }
 
     /**
-     * 关闭连接。幂等，且**先回滚、恢复 autoCommit、再关**：
-     * 连接池会把连接还回去复用，带着未提交的事务还池，下一个借用者可能看到脏状态
-     * 或直接被驱动拒绝；而 {@code autoCommit=false} 没复位的话更隐蔽 ——
-     * 后面**所有**借用者都会静默地跑在一个永不提交的事务里，
-     * 表现为「语句返回成功、数据却不变」。
+     * 关闭连接。先结束事务，再恢复借出时的自动提交状态，最后归还连接。
+     *
+     * <p>回滚失败时不能设置 autoCommit=true，否则 JDBC 驱动可能隐式提交未完成事务。
+     * 回滚或状态复位失败时尝试终止底层连接，并始终执行 close；释放异常不覆盖原异常。</p>
      *
      * @param swallow 是否吞掉关闭期的异常（回收路径用；用户显式关闭不吞）
      */
     public void close(boolean swallow) {
+        closing = true;
         lock.lock();
         try {
-            if (!finished) {
-                try {
-                    connection.rollback();
-                } catch (SQLException e) {
-                    if (!swallow) {
-                        // 记到日志而不是静默：连接池里最常见的一种「莫名其妙的状态」
-                        throw new IllegalStateException("回滚未提交事务失败: " + e.getMessage(), e);
-                    }
-                }
-            }
-            finished = true;
-            // 必须复位，否则这条连接（若被复用）会永远停留在事务模式
-            try {
-                if (!connection.isClosed()) {
-                    connection.setAutoCommit(true);
-                }
-            } catch (SQLException e) {
-                if (!swallow) {
-                    throw new IllegalStateException("复位 autoCommit 失败: " + e.getMessage(), e);
-                }
-            }
-            connection.close();
-        } catch (SQLException e) {
-            if (!swallow) {
-                throw new IllegalStateException("关闭事务连接失败: " + e.getMessage(), e);
-            }
+            closeLocked(swallow);
         } finally {
             lock.unlock();
+        }
+    }
+
+    /**
+     * 空闲回收专用的非阻塞关闭：正在执行 SQL 的会话不会被超时回收打断。
+     *
+     * @param idleLimit 空闲上限
+     * @return true 表示连接已关闭或已由本次调用关闭
+     */
+    public boolean closeIfIdle(Duration idleLimit) {
+        if (!lock.tryLock()) {
+            return false;
+        }
+        try {
+            if (closed) {
+                return true;
+            }
+            if (idleFor().compareTo(idleLimit) < 0) {
+                return false;
+            }
+            closing = true;
+            closeLocked(true);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** 在持有会话锁时结束事务并释放连接。 */
+    private void closeLocked(boolean swallow) {
+        if (closed) {
+            return;
+        }
+        SQLException failure = null;
+        if (!finished) {
+            try {
+                connection.rollback();
+            } catch (SQLException e) {
+                failure = e;
+            }
+        }
+        finished = true;
+        if (failure == null) {
+            try {
+                if (!connection.isClosed()) {
+                    connection.setAutoCommit(originalAutoCommit);
+                }
+            } catch (SQLException e) {
+                failure = e;
+            }
+        }
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            if (failure == null) {
+                failure = e;
+            } else {
+                failure.addSuppressed(e);
+            }
+        }
+        if (failure != null) {
+            try {
+                connection.abort(Runnable::run);
+            } catch (SQLException | RuntimeException | AbstractMethodError e) {
+                failure.addSuppressed(e);
+            }
+        }
+        closed = true;
+        if (failure != null) {
+            if (!swallow) {
+                throw new IllegalStateException("释放事务连接失败: " + failure.getMessage(), failure);
+            }
+            LOG.warn("释放事务连接失败: txId={} datasourceId={} database={}",
+                    txId, datasourceId, database, failure);
         }
     }
 }

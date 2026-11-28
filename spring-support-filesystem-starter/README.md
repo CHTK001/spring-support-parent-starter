@@ -412,7 +412,7 @@ plugin:
 - 需要强持久化的上传任务元数据（任务在内存，重启即清空；落库仅在提供 `JdbcTemplate` 时部分生效）；
 - 非 Servlet 栈（依赖 `spring-boot-starter-web` 与 Servlet 过滤器）。
 
-**与相邻模块取舍**：只做 API 级对象操作、不需要 HTTP 服务器/任务上传 → 直接用 `utils-support-common-starter` 的 `FileStorage` SPI + 对应云厂商 `utils-support-*-starter` 实现（本模块的 `FileStorageTemplate` 与 `LocalFileStorage` 也可单独使用）；SSH **服务端**能力在 `spring-support-ssh-starter`（本模块的远程读取走 utils 层 SSH 客户端）；私有桶鉴权由 `spring-support-oauth-client-starter` 反射装配，类缺失时按公共桶运行、不会报错；`spring-support-common-starter` 提供时间轮、模块日志与服务信息登记。
+**与相邻模块取舍**：只做 API 级对象操作、不需要 HTTP 服务器/任务上传 → 直接用 `utils-support-common-starter` 的 `FileStorage` SPI + 对应云厂商 `utils-support-*-starter` 实现（本模块的 `FileStorageTemplate` 与 `LocalFileStorage` 也可单独使用）；SSH **服务端**能力在 `spring-support-ssh-starter`（本模块的远程读取走 utils 层 SSH 客户端）；私有桶鉴权由 `spring-support-oauth-starter` 反射装配，类缺失时按公共桶运行、不会报错；`spring-support-common-starter` 提供时间轮、模块日志与服务信息登记。
 
 ## 8. 扩展点
 

@@ -113,7 +113,24 @@ mybatis-plus:
     # 既拖慢调度又使日志暴涨）；需要排查 SQL 时临时改为 org.apache.ibatis.logging.stdout.StdOutImpl
     log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
+datalake:
+  enabled: true
+
 plugin:
+  # 采集嵌入监控宿主，共用认证、主数据源和现有调度实例。
+  collect:
+    enable: true
+    persistence:
+      search-index-path: ${COLLECT_SEARCH_INDEX_PATH:./data/collect-search-index}
+  job:
+    enable: true
+    role: SINGLE
+    cluster:
+      # 空串扫描所有业务组，兼容 collect-flow、release 与普通 default 作业。
+      group: ""
+      election-namespace: monitor-collect-8082
+    manage:
+      enable: true
   # 内网穿透：三种实现共用「一份配置文件一条映射」的本地持久化目录，不写数据库。
   # 启动方式有两种，互不冲突：
   #   1. properties 启动：auto-start=true 时应用就绪后自动拉起映射；
@@ -172,7 +189,7 @@ plugin:
   oauth:
     enable: true
     protocol: static
-    local-admin-fallback: true
+    local-admin-fallback: false
     temp:
       user: ${OAUTH_TEMP_USER:admin:admin123}
     whitelist:

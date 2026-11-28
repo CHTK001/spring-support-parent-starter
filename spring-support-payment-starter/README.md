@@ -70,7 +70,7 @@
 | `spring-support-mybatis-starter` / `spring-support-datasource-starter` | Mapper 装配与数据源 |
 | `spring-support-redis-starter` | Redis（模块内仅声明 `RedisTemplate` 序列化方案，业务代码未使用） |
 | `spring-support-swagger-starter` | OpenAPI 文档标注（`@Tag`/`@Operation`） |
-| `spring-support-oauth-client-starter` | `@Permission` 鉴权与回调接口 OAuth 白名单 |
+| `spring-support-oauth-starter` | `@Permission` 鉴权与回调接口 OAuth 白名单 |
 | `spring-support-tencent-starter` | 微信支付网关 SPI（`TencentWechatPayGateway`） |
 | `spring-support-aliyun-starter` | 支付宝网关 SPI（`AliyunAlipayGateway`） |
 | `spring-support-job-starter` | `@Job` 注解与调度派发（内置任务统一接入任务平台） |
@@ -406,7 +406,7 @@ plugin:
 | `spring-support-common-starter` | 本模块依赖 | 统一返回协议、`ServiceInfoContributor`、`Permission` 注解 |
 | `spring-support-mybatis-starter` / `spring-support-datasource-starter` | 本模块依赖 | Mapper/数据源/分页 |
 | `spring-support-redis-starter` | 本模块依赖 | 提供 Redis 能力；模块内仅声明 `RedisTemplate` 序列化 Bean，业务未使用 |
-| `spring-support-oauth-client-starter` | 本模块依赖 | `@Permission` 鉴权；`PaymentOauthWhitelistConfiguration` 向 OAuth 白名单合并 `/api/notify/**` |
+| `spring-support-oauth-starter` | 本模块依赖 | `@Permission` 鉴权；`PaymentOauthWhitelistConfiguration` 向 OAuth 白名单合并 `/api/notify/**` |
 | `spring-support-tencent-starter` | 本模块依赖 | 微信支付网关 SPI（`TencentWechatPayGateway`），含 `epay` 扩展 |
 | `spring-support-aliyun-starter` | 本模块依赖 | 支付宝网关 SPI（`AliyunAlipayGateway`），含沙箱开关 |
 | `spring-support-job-starter` | 本模块依赖 | `@Job` 注解；`scheduler.engine=job` 时 `PaymentPlatformSchedulerTaskOpsService` 代理到调度平台 |

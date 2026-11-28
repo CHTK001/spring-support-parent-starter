@@ -181,6 +181,36 @@ public class WorkspacePathResolver {
     }
 
     /**
+     * 删除系统为会话创建的默认子目录。账号根目录及自定义项目目录始终保留。
+     *
+     * @param sessionId 已校验归属的数字会话标识
+     * @return 是否存在并删除了默认目录
+     */
+    public boolean deleteDefaultSessionWorkspace(String sessionId) {
+        if (sessionId == null || !sessionId.matches("\\d+")) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "会话标识无效");
+        }
+        Path workspace = agentWorkspace();
+        Path target = resolveWithin(workspace, sessionId);
+        if (!Files.exists(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+            return false;
+        }
+        try {
+            Path realWorkspace = workspace.toRealPath();
+            Path realTarget = target.toRealPath();
+            if (Files.isSymbolicLink(target) || !Files.isDirectory(target)
+                    || !realTarget.equals(realWorkspace.resolve(sessionId).normalize())) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "默认工作目录不在允许的删除范围内");
+            }
+            log.debug("[Workspace] 删除会话默认目录 sessionId={} path={}", sessionId, realTarget);
+            return org.springframework.util.FileSystemUtils.deleteRecursively(target);
+        } catch (IOException e) {
+            log.warn("[Workspace] 删除会话默认目录失败 sessionId={}: {}", sessionId, e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除默认工作目录失败，会话已保留");
+        }
+    }
+
+    /**
      * 从会话目录向上查找 Git 仓库根目录。
      *
      * <p>只在账号工作目录范围内查找，命中 {@code .git} 即返回；未找到返回 {@code null}。</p>

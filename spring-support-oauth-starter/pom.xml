@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+                <version>4.0.0.51</version>
+    </parent>
+
+    <artifactId>spring-support-oauth-starter</artifactId>
+    <description>单点登录客户端</description>
+    <version>4.0.0.51</version>
+
+<dependencies>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 缓存功能模块 - 提供 CacheProvider 认证信息缓存抽象 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cache-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.konghq</groupId>
+            <artifactId>unirest-java</artifactId>
+
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- appKey 台账查询已改为依赖 spring-support-common-starter 的 AppKeyAuthenticator 契约，
+             AI 模块提供实现；本模块不再需要数据源引擎（JdbcEngine）也不直连 AI 的持久层。 -->
+
+        <dependency>
+            <groupId>me.zhyd.oauth</groupId>
+            <artifactId>JustAuth</artifactId>
+            
+        </dependency>
+
+        <!-- Armeria 协议已整体移除（2026-09-29）。
+             原 ArmeriaProtocol 直接 import com.linecorp.armeria.*，是本模块唯一的直接 armeria 依赖，
+             也是 utils 父 pom 里 armeria 版本号（现 1.41.1，本地仓库无此版本）唯一被真正解析的地方。
+             删掉它以后本模块不再需要 armeria，也不再传递 armeria + netty-all (~30MB)。
+             注意：服务端 spring-api-support-oauth-starter 侧的 armeria 尚未处理，
+             那里已不依赖 utils-support-protocol-starter（该模块已删除），与本模块无关。 -->
+
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-rsocket-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- HTTP客户端工具 - 提供 HTTP 相关功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-httpclient-starter</artifactId>
+        </dependency>
+
+        <!-- Spring框架扩展工具 - 提供Spring相关的工具类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-spring-starter</artifactId>
+        </dependency>
+
+        <!-- 单元测试：覆盖临时令牌（管理员代入）的标记/过期/路径限权，
+             以及凭据解析顺序这类安全核心逻辑。
+             刻意不引 mockito：被测对象是纯静态逻辑，打桩只会掩盖真实行为。 -->
+
+    </dependencies>
+
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${os-maven-plugin.version}</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
+                        <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
+                        <arg>-parameters</arg>
+                        <arg>-proc:full</arg>
+                    </compilerArgs>
+                    <fork>true</fork>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

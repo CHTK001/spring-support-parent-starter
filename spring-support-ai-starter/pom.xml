@@ -296,7 +296,7 @@
     <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>spring-support-oauth-client-starter</artifactId>
+      <artifactId>spring-support-oauth-starter</artifactId>
     </dependency>
     <!-- RPC 提供者（Dubbo 3.3.6 / 事件协议）：把 AI 能力暴露为 RPC 接口，
          消费方用 @RpcResource 注入代理，RPC 断连时自动熔断降级到本应用的本地 Bean

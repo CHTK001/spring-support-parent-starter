@@ -462,7 +462,7 @@ curl -N http://127.0.0.1:8080/ms/datasource/metric/stream/1
 | `spring-support-monitor-starter` | 同源不同模块 | 数据库管理台与全部 `Db*` 支撑类从 monitor 迁到本模块，URL 保持 `/ms/monitor/db/**` 不变；监控与采集各自依赖本模块即得同一套控制台 |
 | `spring-support-collect-starter` | 可组合 | 采集任务的「数据源」取自本模块台账；`DatasourceConnector` 拆分的直接动因是让采集复用同一套建连细节 |
 | `spring-support-ai-starter` | optional | 只为 text2sql；不要为了渠道/模型管理引入（那是 account/ai 的事） |
-| `spring-support-oauth-client-starter` | 不依赖 | 暴露面由部署侧决定 |
+| `spring-support-oauth-starter` | 不依赖 | 暴露面由部署侧决定 |
 
 ## 8. 扩展点
 

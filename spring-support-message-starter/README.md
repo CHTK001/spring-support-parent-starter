@@ -30,7 +30,7 @@ flowchart TB
         ACC["spring-support-account-starter：TemplateService / SourceSyncer / ProviderSource"]
         SOCK["spring-support-socket-starter：SocketSessionTemplate"]
         MB["spring-support-mybatis-starter：SysBase / PageResultUtils / 分页"]
-        OAC["spring-support-oauth-client-starter：AuthConstant（@Permission 来自 common-starter）"]
+        OAC["spring-support-oauth-starter：AuthConstant（@Permission 来自 common-starter）"]
     end
 
     subgraph UT["底层 utils（可选渠道实现，按需引入）"]

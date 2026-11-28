@@ -2758,11 +2758,17 @@ public class AiSessionController {
        * @return Return结果 对象
        */
     @DeleteMapping("/{id}")
-    public ReturnResult<Map<String, Object>> delete(@PathVariable("id") String id) {
+    public ReturnResult<Map<String, Object>> delete(@PathVariable("id") String id,
+            @RequestParam(value = "deleteWorkspace", defaultValue = "false") boolean deleteWorkspace) {
         Long sessionId = Long.parseLong(id);
    // 写出口校验：仅归属人可删，管理员对他人数据只读
         requireWritableSession(sessionId);
         SysAiSession deleting = sessionMapper.selectById(sessionId);
+
+        // 仅清理系统自动创建的会话子目录，不能把项目根或账号根作为删除目标。
+        if (deleteWorkspace) {
+            workspacePathResolver.deleteDefaultSessionWorkspace(id);
+        }
         
           // 删除会话的所有消息
         LambdaQueryWrapper<SysAiMessage> messageWrapper = new LambdaQueryWrapper<>();

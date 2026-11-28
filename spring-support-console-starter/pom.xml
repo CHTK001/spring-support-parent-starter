@@ -18,7 +18,7 @@
         <!-- oauth-client：@Permission 页面鉴权（传递引入 common-starter 的注解与拦截器体系） -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
         <!-- Web MVC：控制台页面与接口 -->

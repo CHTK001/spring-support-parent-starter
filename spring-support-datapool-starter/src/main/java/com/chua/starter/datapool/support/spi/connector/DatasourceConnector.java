@@ -59,10 +59,10 @@ public interface DatasourceConnector {
     boolean supports(String type);
 
     /**
-     * 取可复用连接。
+     * 取本次操作独占的连接租约。
      *
-     * <p>调用方沿用 try-with-resources 不会误关底层连接：可复用的实现必须返回
-     * 屏蔽了 {@code close} 的代理，真实关闭交给各自的生命周期管理。</p>
+     * <p>调用方必须用 try-with-resources 关闭；池化实现将连接归还原池，
+     * 非池化实现释放底层连接。不能向并发请求借出同一条物理连接。</p>
      *
      * @param datasourceId 数据源 ID；应用主库为 null 或 {@code 0}
      * @param row          台账记录；应用主库为 null
@@ -72,7 +72,7 @@ public interface DatasourceConnector {
     Connection connection(Long datasourceId, MsDatasource row) throws Exception;
 
     /**
-     * 取一条独立连接（用后即关，不进复用池）。
+     * 取一条独占管理生命周期的连接（主库仍从容器连接池借出）。
      *
      * @param datasourceId 数据源 ID；应用主库为 null 或 {@code 0}
      * @param row          台账记录；应用主库为 null

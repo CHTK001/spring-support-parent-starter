@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.sso.mapper.SysUserThirdPartyMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.entity.system.SysUserThirdParty">
+    <!--@mbg.generated-->
+    <!--@Table sys_user_third_party-->
+    <id column="sys_user_third_party_id" jdbcType="INTEGER" property="sysUserThirdPartyId" />
+    <result column="sys_user_third_party_type" jdbcType="VARCHAR" property="sysUserThirdPartyType" />
+    <result column="sys_user_third_party_name" jdbcType="VARCHAR" property="sysUserThirdPartyName" />
+    <result column="sys_user_third_party_value" jdbcType="VARCHAR" property="sysUserThirdPartyValue" />
+    <result column="sys_user_id" jdbcType="INTEGER" property="sysUserId" />
+    <result column="sys_user_third_party_uid" jdbcType="VARCHAR" property="sysUserThirdPartyUid" />
+    <result column="create_name" jdbcType="VARCHAR" property="createName" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    sys_user_third_party_id, sys_user_third_party_type, sys_user_third_party_name, sys_user_third_party_value, 
+    sys_user_id, sys_user_third_party_uid, create_name, create_by, create_time, update_time, 
+    update_name, update_by
+  </sql>
+</mapper>

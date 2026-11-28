@@ -64,7 +64,7 @@
         <!-- OAuth 客户端权限注解 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
+            <artifactId>spring-support-oauth-starter</artifactId>
         </dependency>
 
         <!-- Swagger 注解 -->

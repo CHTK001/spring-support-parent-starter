@@ -30,7 +30,7 @@ flowchart TB
 
     subgraph COLLAB["配合方（运行期反射识别 2.x 注解，非本模块依赖）"]
         COMMON["spring-support-logger-starter<br/>AbstractLoggerPointcutAdvisor<br/>（com.chua.starter.common.support.logger 包）"]
-        OAUTH["spring-support-oauth-client-starter<br/>UserLoggerPointcutAdvisor"]
+        OAUTH["spring-support-oauth-starter<br/>UserLoggerPointcutAdvisor"]
         MB["spring-support-mybatis-starter<br/>SysLoggerPointcutAdvisor"]
     end
 
@@ -70,7 +70,7 @@ flowchart TB
 | 能力域 | 关键类 | 入口/触发方式 |
 |:-------|:-------|:--------------|
 | Swagger 2.x 注解供给 | `io.swagger.annotations.*`（`@Api`、`@ApiOperation`、`@ApiParam`、`@ApiModel`、`@ApiModelProperty` 等，来自 provided 依赖 jar，本模块不含源码） | 宿主 pom 引入本模块并自行声明 `io.swagger:swagger-annotations` 后，编译期直接标注在代码上 |
-| 操作日志接口名识别（配合方能力，非本模块代码） | `AbstractLoggerPointcutAdvisor`（spring-support-logger-starter，`com.chua.starter.common.support.logger` 包，类寄宿于 common 命名空间）；`UserLoggerPointcutAdvisor`（spring-support-oauth-client-starter）；`SysLoggerPointcutAdvisor`（spring-support-mybatis-starter） | 请求命中日志切面时，按"注解 name > 3.x `Operation.summary` > 2.x `ApiOperation.value`"回退链反射读取，拿到接口中文描述 |
+| 操作日志接口名识别（配合方能力，非本模块代码） | `AbstractLoggerPointcutAdvisor`（spring-support-logger-starter，`com.chua.starter.common.support.logger` 包，类寄宿于 common 命名空间）；`UserLoggerPointcutAdvisor`（spring-support-oauth-starter）；`SysLoggerPointcutAdvisor`（spring-support-mybatis-starter） | 请求命中日志切面时，按"注解 name > 3.x `Operation.summary` > 2.x `ApiOperation.value`"回退链反射读取，拿到接口中文描述 |
 | 自动配置 | — | **无**：`AutoConfiguration.imports` 仅含 2 行注释，无自动配置类、无 Bean、无端点 |
 
 实际生效的能力边界：

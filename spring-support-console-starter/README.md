@@ -22,7 +22,7 @@ flowchart TB
             SVC["核心服务层<br/>AnnotationSwitchScanner / SwitchInventory<br/>ConsoleSqliteStore / ConsoleStartupResetter"]
             SPI["SPI 桥接层<br/>ConsoleOverrideProvider"]
         end
-        OAUTH["spring-support-oauth-client-starter<br/>PermissionInterceptor（执行 @Permission 鉴权）"]
+        OAUTH["spring-support-oauth-starter<br/>PermissionInterceptor（执行 @Permission 鉴权）"]
         COMMON["spring-support-common-starter<br/>@ApiFeature / @ApiGray / @Permission<br/>ApiControlInterceptor / ApiSwitchOverrideProvider 契约"]
         APP["业务 Controller（标注开关注解）"]
     end
@@ -269,7 +269,7 @@ public class DemoController {
 
 | 依赖 | 作用 | 缺失后果 |
 |---|---|---|
-| `com.chua:spring-support-oauth-client-starter` | `@Permission` 页面鉴权；传递引入 common 的注解与拦截器体系 | 不可省；若被宿主排除，鉴权注解失效，`/console/**` 失去访问闸门 |
+| `com.chua:spring-support-oauth-starter` | `@Permission` 页面鉴权；传递引入 common 的注解与拦截器体系 | 不可省；若被宿主排除，鉴权注解失效，`/console/**` 失去访问闸门 |
 | `org.springframework.boot:spring-boot-starter-web` | MVC 控制器与 `RequestMappingHandlerMapping`（注解扫描数据源） | 缺失则模块无法工作（非 Web MVC 宿主勿引入本模块） |
 | `org.springframework.boot:spring-boot-starter-freemarker` | 渲染 `templates/console/*.ftl` | 缺失则页面视图无法解析 |
 | `org.xerial:sqlite-jdbc` | 自包含 SQLite 持久化（版本由 Boot BOM 托管，无需宿主 DataSource） | 缺失则 `consoleSqliteStore` 初始化抛 `IllegalStateException` |

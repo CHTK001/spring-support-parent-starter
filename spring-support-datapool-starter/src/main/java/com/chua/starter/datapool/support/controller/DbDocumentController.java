@@ -8,8 +8,8 @@ import com.chua.common.support.lang.document.DocumentParser;
 import com.chua.common.support.lang.document.DocumentProvider;
 import com.chua.common.support.lang.document.DocumentTemplateType;
 import com.chua.common.support.lang.document.TableData;
-import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datapool.support.service.DatasourceService;
+import com.chua.starter.datapool.support.support.JdbcDialectSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +26,8 @@ import java.io.File;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.sql.Connection;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -47,8 +49,8 @@ import com.chua.common.support.utils.ArrayUtils;
  * {@link DocumentProvider} SPI（markdown / html / word / pdf 四种实现）。
  * 这里只做三件胶水活：</p>
  * <ol>
- *   <li>把数据源台账里的「主机/端口/库/账号/口令」拼成 parser 认识的 JDBC URL —— 复用
- *       {@link DatasourceService#jdbcInfo(Long)}，它已是全项目唯一拼 URL 的出口；</li>
+ *   <li>通过 {@link DatasourceService#newConnection(Long)} 取得连接交给 parser；
+ *       应用主库直接复用容器已有的 DataSource，不复制部署凭据；</li>
  *   <li>把 parser 返回的 {@link DocumentData} 交给 {@link DocumentProvider} 落盘；</li>
  *   <li>把落盘文件读回字节流，按格式给正确的 Content-Type 与文件名。</li>
  * </ol>
@@ -118,8 +120,8 @@ public class DbDocumentController {
     /**
      * 导出数据库设计文档。
      *
-     * @param datasourceId 数据源 ID（必填，不接受应用默认主数据源）
-     * @param database    目标库名；为空则用台账里登记的默认库
+     * @param datasourceId 数据源 ID，null/0 表示应用主库
+     * @param database    目标库名；为空则使用连接默认库
      * @param format      导出格式，见 {@code /document/formats}
      * @param template    模板样式，markdown/html 生效；word 渲染器固定版式、忽略此参数
      * @param tables      只导出这些表（逗号分隔）；为空导出整库
@@ -128,7 +130,7 @@ public class DbDocumentController {
     @Operation(summary = "导出数据库文档", description = "结构采集走既有 DocumentParser，渲染走既有 DocumentProvider")
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(
-            @RequestParam Long datasourceId,
+            @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database,
             @RequestParam(required = false, defaultValue = "markdown") String format,
             @RequestParam(required = false, defaultValue = "SCREW") String template,
@@ -141,22 +143,12 @@ public class DbDocumentController {
                     + "（word/pdf 需要宿主引入对应模块）");
         }
 
-        DatasourceJdbcInfo info = datasourceService.jdbcInfo(datasourceId);
-        String url = withDatabase(info.url(), database);
-
         DocumentParser parser = DocumentParser.create("database");
         if (parser == null) {
             return text(501, "当前实例未装配数据库文档采集器（utils-support-datasource-starter）");
         }
 
-        DocumentData data = parser.parse(DocumentConfig.builder()
-                .type("database")
-                .url(url)
-                .username(info.username())
-                .password(info.password())
-                // 不传 driverClass：让驱动管理器按 URL 自动发现（与既有 DataSourceDocumentService 同口径）
-                .options(Map.of())
-                .build());
+        DocumentData data = parseDocument(parser, datasourceId, database);
 
         List<TableData> picked = filterTables(data.getTables(), tables);
         if (picked.isEmpty()) {
@@ -206,8 +198,8 @@ public class DbDocumentController {
      *   <li>word / pdf → 这两种是二进制格式，浏览器无法直接渲染，返回 501 提示下载。</li>
      * </ul>
      *
-     * @param datasourceId 数据源 ID
-     * @param database    目标库名；为空则用台账里登记的默认库
+     * @param datasourceId 数据源 ID，null/0 表示应用主库
+     * @param database    目标库名；为空则使用连接默认库
      * @param format      导出格式（默认 markdown）
      * @param template    模板样式
      * @param tables      只导出这些表（逗号分隔）
@@ -216,7 +208,7 @@ public class DbDocumentController {
     @Operation(summary = "在线预览数据库文档", description = "将文档内容转成 HTML 后返回，适合在 iframe 中渲染；word/pdf 格式不支持预览")
     @GetMapping("/preview")
     public ResponseEntity<byte[]> preview(
-            @RequestParam Long datasourceId,
+            @RequestParam(required = false) Long datasourceId,
             @RequestParam(required = false) String database,
             @RequestParam(required = false, defaultValue = "markdown") String format,
             @RequestParam(required = false, defaultValue = "SCREW") String template,
@@ -236,21 +228,12 @@ public class DbDocumentController {
             return text(501, "当前实例未装配 " + targetFormat + " 文档渲染器");
         }
 
-        DatasourceJdbcInfo info = datasourceService.jdbcInfo(datasourceId);
-        String url = withDatabase(info.url(), database);
-
         DocumentParser parser = DocumentParser.create("database");
         if (parser == null) {
             return text(501, "当前实例未装配数据库文档采集器");
         }
 
-        DocumentData data = parser.parse(DocumentConfig.builder()
-                .type("database")
-                .url(url)
-                .username(info.username())
-                .password(info.password())
-                .options(Map.of())
-                .build());
+        DocumentData data = parseDocument(parser, datasourceId, database);
 
         List<TableData> picked = filterTables(data.getTables(), tables);
         if (picked.isEmpty()) {
@@ -629,27 +612,37 @@ public class DbDocumentController {
     }
 
     /**
-     * 把目标库名拼到 JDBC URL 上。
+     * 通过数据源 SPI 获取连接，按元数据范围采集结构，用后关闭或归还原池。
      *
-     * <p>parser 是从 URL 里截 catalog 的（{@code extractCatalog}），不拼的话只能导出
-     * 台账登记的那个默认库，而控制台允许浏览同实例下的任意库。已带库名的 URL 会被
-     * 换成目标库；query 段（{@code ?useSSL=false} 等）原样保留。</p>
-     *
-     * @param url      原始 URL
+     * @param parser 数据库文档解析器
+     * @param datasourceId 数据源 ID，null/0 表示应用主库
      * @param database 目标库名，可为空
-     * @return 拼接后的 URL
+     * @return 文档结构
+     * @throws Exception 建连或结构采集失败
      */
-    private static String withDatabase(String url, String database) {
-        if (database == null || database.isBlank() || url == null) {
-            return url;
+    private DocumentData parseDocument(DocumentParser parser, Long datasourceId, String database) throws Exception {
+        try (Connection connection = datasourceService.newConnection(datasourceId)) {
+            Map<String, Object> options = new LinkedHashMap<>();
+            options.put("connection", connection);
+            String target = database == null ? null : database.trim();
+            if (JdbcDialectSupport.isMysqlFamily(connection)) {
+                if (target != null && !target.isBlank()) {
+                    options.put("catalog", target);
+                }
+            } else {
+                if (target == null || target.isBlank()) {
+                    try {
+                        target = connection.getSchema();
+                    } catch (SQLFeatureNotSupportedException ignored) {
+                        // 驱动未提供当前 schema 时沿用 catalog 范围。
+                    }
+                }
+                if (target != null && !target.isBlank()) {
+                    options.put("schemas", target);
+                }
+            }
+            return parser.parse(DocumentConfig.builder().type("database").options(options).build());
         }
-        String db = database.trim();
-        int q = url.indexOf('?');
-        String base = q >= 0 ? url.substring(0, q) : url;
-        String query = q >= 0 ? url.substring(q) : "";
-        int slash = base.lastIndexOf('/');
-        String prefix = slash >= 0 ? base.substring(0, slash + 1) : base + "/";
-        return prefix + db + query;
     }
 
     /**

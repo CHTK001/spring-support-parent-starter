@@ -25,7 +25,7 @@ flowchart TB
     end
 
     WEB["spring-boot-starter-web / spring-boot-autoconfigure<br/>REST 端点、MultipartFile、@AutoConfiguration"]
-    OAUTH["spring-support-oauth-client-starter → spring-support-common-starter<br/>@Permission / ServiceInfoContributor"]
+    OAUTH["spring-support-oauth-starter → spring-support-common-starter<br/>@Permission / ServiceInfoContributor"]
     DL4J["utils-support-deeplearning-dl4j-starter<br/>TrainArgument / TrainProgress / TrainResult / TrainListener / ResNet50TransferTrainer"]
     UCOMMON["utils-support-common-starter<br/>Extractor 解压 SPI / ReturnResult / ServiceProvider"]
     HOST --> MOD
@@ -219,7 +219,7 @@ Maven 坐标（版本由父 POM `com.chua:spring-support-parent-starter:4.0.0.51
 | `com.chua:utils-support-common-starter` | compile | `Extractor` 解压 SPI、`ReturnResult`、`ServiceProvider` |
 | `org.springframework.boot:spring-boot-starter-web` | compile | REST 端点与 `MultipartFile` |
 | `org.springframework.boot:spring-boot-autoconfigure` | compile | `@AutoConfiguration` / `@ConditionalOn*` |
-| `com.chua:spring-support-oauth-client-starter` | compile | 传递引入 `spring-support-common-starter` 的 `@Permission` 鉴权注解与 `ServiceInfoContributor`（注解本身定义在 common，不在本依赖内） |
+| `com.chua:spring-support-oauth-starter` | compile | 传递引入 `spring-support-common-starter` 的 `@Permission` 鉴权注解与 `ServiceInfoContributor`（注解本身定义在 common，不在本依赖内） |
 | `io.swagger.core.v3:swagger-annotations` | compile | `@Tag` / `@Operation` / `@Schema` |
 | `org.projectlombok:lombok` | `provided` | 编译期生成样板代码；缺失则本模块源码无法编译（对依赖方无运行时影响） |
 | `jakarta.servlet:jakarta.servlet-api` | `provided` | Servlet 规范，由宿主 Web 容器提供 |
@@ -301,7 +301,7 @@ public class TrainWatcher {
 | `utils-support-deeplearning-dl4j-starter` | 本模块依赖它 | 训练引擎与超参模型在底层；只要引擎不要 REST 时可直接用底层 starter |
 | `spring-support-filesystem-starter` | 无依赖 | 本模块直接落本地磁盘目录（`upload-path` 等），不走统一文件存储抽象；需要对象存储时自行扩展 `DataService` |
 | `spring-support-socket-*`（websocket / sse 等） | 无依赖 | 训练进度可经 `TrainLifecycleEvent` 自行桥接到任意推送通道 |
-| `spring-support-oauth-client-starter` | 依赖 | 仅取 `@Permission` 与 `ServiceInfoContributor`；宿主无鉴权实现时注解不拦截 |
+| `spring-support-oauth-starter` | 依赖 | 仅取 `@Permission` 与 `ServiceInfoContributor`；宿主无鉴权实现时注解不拦截 |
 
 ## 8. 扩展点
 

@@ -96,12 +96,6 @@
       <artifactId>spring-support-socket-starter</artifactId>
       <optional>true</optional>
     </dependency>
-    <!-- SQLite 驱动：仅「从配置导入供应商」读取 cc-switch.db / Cursor state.vscdb 时使用；
-         运行时加载、非常驻连接，版本由 Spring Boot BOM 管理（与 console/datasource 模块同口径） -->
-    <dependency>
-      <groupId>org.xerial</groupId>
-      <artifactId>sqlite-jdbc</artifactId>
-    </dependency>
     <!-- 单元测试：账号归属隔离 / 加密 / 掩码回归，走 H2 真库 + MyBatis-Plus 真实 Mapper。
          刻意不用 spring-boot-starter-test：它会传递引入 mockito-core，
          而 AGENTS.md §3 与 example-p3c-review 规约四十禁止 mockito / @MockBean / 打桩 Mapper。

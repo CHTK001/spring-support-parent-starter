@@ -133,21 +133,20 @@ public interface DatasourceService {
     ReturnResult<DataSourceTestVO> probeOnly(Long id);
 
     /**
-     * 构建 JDBC 连接（空闲 TTL 缓存 + 屏蔽 close 的代理）。
+     * 借出本次操作独占的 JDBC 连接，调用方必须关闭以归还连接池。
      *
      * @param datasourceId 数据源 ID，null/0 表示应用默认主数据源
-     * @return 连接，调用方负责关闭（代理的 close 为空操作）
+     * @return 连接租约，close 时归还原池或释放底层连接
      * @throws Exception 数据源不存在、类型不受支持或连接失败
      */
     Connection connection(Long datasourceId) throws Exception;
 
     /**
-     * 新建一条独立的 JDBC 连接（不缓存、不屏蔽 close）。
+     * 取得一条生命周期由调用方独占管理的 JDBC 连接。
      *
-     * <p>与 {@link #connection(Long)} 的区别：本方法每次返回**新的物理连接**，
-     * 调用方拥有完整所有权，用完可以真正关闭。Calcite 的 {@code JdbcSchema} 对
-     * {@code getConnection()} 返回的连接用后即关 —— 共享 TTL 连接会被它关掉
-     * （H2 报 {@code object already closed}），联邦成员必须走这条「按次新建」的路。</p>
+     * <p>台账 JDBC 每次建立独立连接；应用主库从容器已有的 DataSource 借出连接，
+     * 关闭时归还原池。适用于跨请求事务会话与 Calcite 联邦成员；不承诺新建物理连接，
+     * 不得为了满足该调用而绕过主库连接池。</p>
      *
      * @param datasourceId 数据源 ID，null/0 表示应用默认主数据源
      * @return 新连接，调用方负责关闭

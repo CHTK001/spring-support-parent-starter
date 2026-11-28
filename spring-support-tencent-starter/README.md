@@ -1,6 +1,6 @@
 # spring-support-tencent-starter
 
-腾讯（微信）能力集成 Starter：把微信支付五种通道（JSAPI / H5 / Native / APP / 小程序）的下单、查单、关单、退款、支付分（先享后付）与支付/退款通知验签，收敛为一个 `TencentWechatPayGateway` SPI；并把微信小程序登录注册为 `spring-support-oauth-client-starter` 的 `UserInfoService` 实现（`@Spi("WECHAT_MINI")`）。在 spring-support 体系中属「外部渠道适配」业务 starter：宿主引入即得能力，不携带 Controller、表结构与定时任务。范围仅限微信支付 + 小程序登录，**不含**短信、COS、公众号消息、小程序码。
+腾讯（微信）能力集成 Starter：把微信支付五种通道（JSAPI / H5 / Native / APP / 小程序）的下单、查单、关单、退款、支付分（先享后付）与支付/退款通知验签，收敛为一个 `TencentWechatPayGateway` SPI；并把微信小程序登录注册为 `spring-support-oauth-starter` 的 `UserInfoService` 实现（`@Spi("WECHAT_MINI")`）。在 spring-support 体系中属「外部渠道适配」业务 starter：宿主引入即得能力，不携带 Controller、表结构与定时任务。范围仅限微信支付 + 小程序登录，**不含**短信、COS、公众号消息、小程序码。
 
 ## 1. 架构图
 
@@ -19,7 +19,7 @@ flowchart TB
     end
 
     subgraph SIB["依赖的兄弟模块"]
-        OAUTH["spring-support-oauth-client-starter<br/>UserInfoService / UserResume / UserResult"]
+        OAUTH["spring-support-oauth-starter<br/>UserInfoService / UserResume / UserResult"]
         COMMON["spring-support-common-starter（传递依赖）<br/>ServiceInfoContributor / ServiceInfoRegistry"]
     end
 
@@ -243,7 +243,7 @@ plugin:
 - **通知幂等**：本模块不落库、不去重；`parsePayNotify` / `parseRefundNotify` 只做验签解密，微信会重试回调，同一订单可能收到多次通知，幂等与状态机由业务侧实现。
 - **性能**：默认网关每次调用都新建 `RSAAutoCertificateConfig`（含平台证书自动更新），无缓存；高并发场景建议在业务侧做网关实例缓存，或注册自定义 `TencentWechatPayGateway` 实现（见第 8 节）。
 - **死开关勿误信**：`wechat-pay.enable/enabled`、`mini-app.enable/enabled`、`sandbox`、`sandbox-sign-key` 当前均无代码读取（见第 9 节 Q2/Q3）；能力启停靠依赖管理与业务侧判断。
-- **依赖即带入（R5）**：本模块传递引入 `spring-support-oauth-client-starter` 与 `spring-support-common-starter` 的自动装配，引入前确认宿主需要这些副作用。
+- **依赖即带入（R5）**：本模块传递引入 `spring-support-oauth-starter` 与 `spring-support-common-starter` 的自动装配，引入前确认宿主需要这些副作用。
 
 ## 6. 使用方式
 
@@ -255,7 +255,7 @@ plugin:
 </dependency>
 ```
 
-依赖说明：`com.github.wechatpay-apiv3:wechatpay-java` / `wechatpay-java-core`（0.2.17，父 pom 管理）、`spring-support-oauth-client-starter`、`utils-support-common-starter`、`spring-boot-autoconfigure`、`jackson-databind`、`slf4j-api` 均为**必需编译期依赖（无 optional）**，缺任一都会导致模块不可编译或自动装配失败；`lombok` 为 provided，仅编译期生成 getter/setter，缺失只影响编译不影响运行时。本模块会传递带入 oauth-client 与 common-starter 的自动装配（依赖即带入，引入前确认宿主需要这些副作用）。
+依赖说明：`com.github.wechatpay-apiv3:wechatpay-java` / `wechatpay-java-core`（0.2.17，父 pom 管理）、`spring-support-oauth-starter`、`utils-support-common-starter`、`spring-boot-autoconfigure`、`jackson-databind`、`slf4j-api` 均为**必需编译期依赖（无 optional）**，缺任一都会导致模块不可编译或自动装配失败；`lombok` 为 provided，仅编译期生成 getter/setter，缺失只影响编译不影响运行时。本模块会传递带入 oauth-client 与 common-starter 的自动装配（依赖即带入，引入前确认宿主需要这些副作用）。
 
 最小启用示例：
 
@@ -303,14 +303,14 @@ public class WechatPayService {
 
 **适用**：
 - Spring Boot 服务接入微信支付：五通道下单/查单/关单、退款、支付与退款通知验签、支付分（先享后付）。
-- 已用 `spring-support-oauth-client-starter` 做统一登录，需要接入微信小程序登录（`WECHAT_MINI`）。
+- 已用 `spring-support-oauth-starter` 做统一登录，需要接入微信小程序登录（`WECHAT_MINI`）。
 - 需要按扩展名切换/聚合支付网关实现（内置 `default`/`wechat-pay`/`epay`）的收单场景。
 
 **不适用/慎用**：
 - 需要短信、COS、公众号模板消息、小程序码等能力——本模块不含，请直连腾讯云/微信官方 SDK。
 - 需要托管回调端点、订单/退款单持久化、对账账单——本模块无 Controller、无表、无任务，通知幂等与状态机由业务侧实现；高并发场景慎用默认网关（每次调用新建 `RSAAutoCertificateConfig`，不缓存）。
 
-**与相邻模块取舍**：与 `spring-support-aliyun-starter` 为平行模块（同为「支付网关 SPI + 登录实现」结构），互不依赖，可只取其一或共存，均按 `ServiceProvider` 扩展名取用互不干扰；做登录必须同时引入 `spring-support-oauth-client-starter`（本模块已传递依赖，纯支付也会带入）。
+**与相邻模块取舍**：与 `spring-support-aliyun-starter` 为平行模块（同为「支付网关 SPI + 登录实现」结构），互不依赖，可只取其一或共存，均按 `ServiceProvider` 扩展名取用互不干扰；做登录必须同时引入 `spring-support-oauth-starter`（本模块已传递依赖，纯支付也会带入）。
 
 ## 8. 扩展点
 

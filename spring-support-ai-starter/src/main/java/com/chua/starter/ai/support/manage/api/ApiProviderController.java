@@ -2761,16 +2761,7 @@ public class ApiProviderController {
         }
         String primary = chain.isEmpty() ? null : chain.get(0);
         // 账密登录仅当候选链里存在可登录 SPI（或已显式配置登录页）时可用
-        boolean canLogin = str(extra, "credit_login_url") != null;
-        if (!canLogin) {
-            for (String kind : chain) {
-                CreditQueryProvider provider = CreditQueries.find(kind);
-                if (provider != null && provider.loginPageUrl(entity.getBaseUrl()) != null) {
-                    canLogin = true;
-                    break;
-                }
-            }
-        }
+        boolean canLogin = findLoginUrl(entity, extra) != null;
         return ApiResult.ok(new CreditKindSpec(primary,
                 primary == null ? null : creditKindLabel(primary),
                 List.copyOf(chain), List.copyOf(chainLabels),
@@ -2858,10 +2849,6 @@ public class ApiProviderController {
         List<String> keys = effectiveCreditKeys(entity, extra);
         // 是否为 AK/SK 占位链路：读数行统一标「AK/SK」，让用户知道走的不是余额令牌
         boolean akSkOnly = keys.size() == 1 && CREDIT_AKSK_KEY.equals(keys.get(0));
-        // 「账号密码登录」（extra.credit_kind = account-login）：余额令牌来自页面上的
-        // 「登录」按钮——弹出内嵌浏览器窗口，用户手动登录后截获回填。查询链路不自动弹窗
-        // （无人值守时窗口没人操作），没令牌时按待登录状态返回，面板据此展示登录按钮
-        boolean accountLogin = ProviderCreditLoginService.KIND.equals(str(extra, "credit_kind"));
         // 本次按哪条链路查的：自动识别时是「厂商官方 → OpenAI → OpenAI 兼容计费 → Moss 非官方 → 表达式」
         List<String> candidates = candidateKinds(entity, extra);
         // 余额口径分级：official（有官方预设）/ openai（OpenAI 官方）/ uncovered（官方站点但未收录余额接口）/
@@ -2869,6 +2856,8 @@ public class ApiProviderController {
         String level = creditLevel(entity, extra);
         // 「账号登录」入口：候选实现里能给出登录页的（如 Agnes），前端据此展示按钮
         String loginUrl = findLoginUrl(entity, extra);
+        // 账密登录是令牌来源，与最终选择的余额查询类型无关；只要有可用登录页就引导登录
+        boolean accountLogin = loginUrl != null;
         CreditPanelPayload blocked = null;
         if (baseUrl.isBlank() && str(extra, "credit_url") == null) {
             blocked = new CreditPanelPayload(providerId, baseUrl, kind, candidates, level, loginUrl,

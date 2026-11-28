@@ -20,7 +20,7 @@ flowchart TB
     subgraph UTILS["utils-support-datasearch-starter（utils 层数据源 SPI）"]
         SPI["WeatherProvider / TyphoonProvider / LocationProvider<br/>GeocodeProvider / HolidayProvider / ExchangeRateProvider"]
     end
-    OAUTH["spring-support-oauth-client-starter<br/>@TokenForIgnore 匿名放行"]
+    OAUTH["spring-support-oauth-starter<br/>@TokenForIgnore 匿名放行"]
     COMMON["utils-support-common-starter<br/>ReturnResult / ServiceProvider"]
     FE -->|"HTTP /v2/**（登录前可访问）"| CTRL
     SVC -->|"SpiProviders#list 装载"| SPI
@@ -206,7 +206,7 @@ curl -s "http://localhost:8080/v2/ip/lookup?ip=114.114.114.114"
 </dependency>
 ```
 
-**最小启用示例**——宿主是 Servlet Web 应用并已装配 `spring-support-oauth-client-starter` 的 `@TokenForIgnore` 支持，引入依赖即生效；开关默认开启，可不写：
+**最小启用示例**——宿主是 Servlet Web 应用并已装配 `spring-support-oauth-starter` 的 `@TokenForIgnore` 支持，引入依赖即生效；开关默认开启，可不写：
 
 ```yaml
 plugin:
@@ -226,7 +226,7 @@ curl -s "http://localhost:8080/v2/ip/lookup?ip=114.114.114.114"
 
 | 依赖 | 缺了会怎样 |
 |---|---|
-| `spring-boot-starter-web` / `spring-boot-autoconfigure` / `utils-support-datasearch-starter` / `utils-support-common-starter` / `spring-support-oauth-client-starter` | 必需（传递引入），缺一自动装配或端点即失效 |
+| `spring-boot-starter-web` / `spring-boot-autoconfigure` / `utils-support-datasearch-starter` / `utils-support-common-starter` / `spring-support-oauth-starter` | 必需（传递引入），缺一自动装配或端点即失效 |
 | `jakarta.servlet-api` | `provided`，由 Web 容器提供；仅定位接口用 `HttpServletRequest` |
 | `org.projectlombok:lombok` | `provided`，仅编译期；运行期不需要 |
 | `io.swagger.core.v3:swagger-annotations` | 仅文档注解，缺失不影响功能 |

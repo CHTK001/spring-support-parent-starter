@@ -1,6 +1,5 @@
 package com.chua.starter.datapool.support.dbconsole;
 
-import com.chua.starter.datapool.support.model.DatasourceJdbcInfo;
 import com.chua.starter.datapool.support.service.DatasourceService;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -13,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +52,12 @@ public class DbTxRegistry {
     /** 正在持有连接的会话 */
     private final Map<String, DbTxSession> sessions = new ConcurrentHashMap<>();
 
+    /** 串行化开启事务与应用关闭，避免并发开启突破上限或越过停机边界。 */
+    private final Object lifecycleLock = new Object();
+
+    /** 应用已进入关闭阶段，不再接受新的事务会话。 */
+    private volatile boolean closing;
+
     /** 数据源服务，用于开启事务时拿连接 */
     private final DatasourceService datasourceService;
 
@@ -75,61 +79,49 @@ public class DbTxRegistry {
      * @throws Exception 连接获取失败
      */
     public DbTxSession begin(Long datasourceId, String database) throws Exception {
-        purgeIdle();
-        if (sessions.size() >= MAX_SESSIONS) {
-            throw new IllegalStateException("同时开启的事务数已达上限 " + MAX_SESSIONS
-                    + "，请先提交或回滚已有事务");
+        synchronized (lifecycleLock) {
+            if (closing) {
+                throw new IllegalStateException("应用正在关闭，不能开启新事务");
+            }
+            purgeIdle();
+            if (sessions.size() >= MAX_SESSIONS) {
+                throw new IllegalStateException("同时开启的事务数已达上限 " + MAX_SESSIONS
+                        + "，请先提交或回滚已有事务");
+            }
+            java.sql.Connection conn = dedicatedConnection(datasourceId);
+            boolean originalAutoCommit;
+            try {
+                originalAutoCommit = conn.getAutoCommit();
+                conn.setAutoCommit(false);
+            } catch (java.sql.SQLException e) {
+                try {
+                    conn.close();
+                } catch (java.sql.SQLException closeFailure) {
+                    e.addSuppressed(closeFailure);
+                }
+                throw e;
+            }
+            String txId = UUID.randomUUID().toString();
+            DbTxSession session = new DbTxSession(txId, datasourceId, database, conn, originalAutoCommit);
+            sessions.put(txId, session);
+            LOG.info("开启事务会话 {}（数据源 {}，库 {}）", txId, datasourceId, database);
+            return session;
         }
-        java.sql.Connection conn = dedicatedConnection(datasourceId);
-        try {
-            conn.setAutoCommit(false);
-        } catch (java.sql.SQLException e) {
-            conn.close();
-            throw e;
-        }
-        String txId = UUID.randomUUID().toString();
-        DbTxSession session = new DbTxSession(txId, datasourceId, database, conn);
-        sessions.put(txId, session);
-        LOG.info("开启事务会话 {}（数据源 {}，库 {}）", txId, datasourceId, database);
-        return session;
     }
 
     /**
      * 为事务开一条**独占**连接。
      *
-     * <p><b>这里绝对不能用 {@code datasourceService.connection(id)}</b>：那返回的是
-     * 按数据源缓存、并在 TTL 内被所有请求复用的<b>同一个物理连接</b>，
-     * 而且 {@code close()} 被屏蔽成空操作。对它做 {@code setAutoCommit(false)}
-     * 会把**这个数据源上所有并发请求**一起拖进同一个事务，而且因为连接从不真正
-     * 关闭，{@code autoCommit} 也永远不会恢复 —— 表现为事务结束后所有普通请求
-     * 报 MariaDB 1412「Table definition has changed」，改动全部静默不落库。</p>
-     *
-     * <p>实测踩过：2026-10-05 第一版就是复用它，事务一提交，后续所有非事务
-     * UPDATE 都变成「返回成功但数据没变」。事务必须独占连接。</p>
+     * <p>经数据源 SPI 的 {@code newConnection} 获取，整个事务会话独占至提交、回滚
+     * 或超时回收。应用主库从容器已有的 {@code DataSource} 借出连接，关闭时归还原池；
+     * 台账 JDBC 由连接实现处理驱动与隧道，不在事务注册表里重建连接参数。</p>
      *
      * @param datasourceId 数据源 ID
      * @return 独占连接，调用方负责关闭
      * @throws Exception 数据源不可用于 JDBC 或建连失败
      */
     private java.sql.Connection dedicatedConnection(Long datasourceId) throws Exception {
-        DatasourceJdbcInfo info = datasourceService.jdbcInfo(datasourceId);
-        String url = info.url();
-        if (url == null || url.isBlank()) {
-            throw new IllegalStateException("数据源没有 JDBC URL，显式事务不可用: " + datasourceId);
-        }
-        if (info.driverClassName() != null && !info.driverClassName().isBlank()) {
-            Class.forName(info.driverClassName());
-        }
-        Properties props = new Properties();
-        props.setProperty("user", info.username() == null ? "" : info.username());
-        props.setProperty("password", info.password() == null ? "" : info.password());
-        // 与 DataSourceServiceImpl#connection 保持一致：不显式开启的话，
-        // MySQL/MariaDB 驱动不读 information_schema，列注释与索引元数据会缺。
-        if (url.regionMatches(true, 0, "jdbc:mysql:", 0, "jdbc:mysql:".length())
-                || url.regionMatches(true, 0, "jdbc:mariadb:", 0, "jdbc:mariadb:".length())) {
-            props.setProperty("useInformationSchema", "true");
-        }
-        return java.sql.DriverManager.getConnection(url, props);
+        return datasourceService.newConnection(datasourceId);
     }
 
     /**
@@ -140,6 +132,9 @@ public class DbTxRegistry {
      * @throws IllegalArgumentException 会话不存在或已结束
      */
     public DbTxSession require(String txId) {
+        if (closing) {
+            throw new IllegalStateException("应用正在关闭，事务不可用");
+        }
         DbTxSession session = txId == null ? null : sessions.get(txId);
         if (session == null) {
             throw new IllegalArgumentException("事务不存在或已结束: " + txId);
@@ -214,17 +209,8 @@ public class DbTxRegistry {
         AtomicInteger purged = new AtomicInteger();
         for (Map.Entry<String, DbTxSession> e : sessions.entrySet()) {
             DbTxSession s = e.getValue();
-            if (s.idleFor().compareTo(limit) < 0) {
-                continue;
-            }
-            // 先摘除再关：并发下 commit 也会摘除，
-            // 先摘除才能保证连接只被关一次。
-            if (sessions.remove(e.getKey(), s)) {
-                try {
-                    s.close(true);
-                } catch (RuntimeException ex) {
-                    LOG.warn("回收空闲事务 {} 时关闭连接失败: {}", e.getKey(), ex.getMessage());
-                }
+            // tryLock 失败表示会话正在执行 SQL；不得先摘除，否则正在运行的连接会成为孤儿。
+            if (s.closeIfIdle(limit) && sessions.remove(e.getKey(), s)) {
                 purged.incrementAndGet();
                 LOG.info("回收空闲事务 {}（空闲超过 {} 分钟）", e.getKey(), IDLE_TIMEOUT_MINUTES);
             }
@@ -251,13 +237,16 @@ public class DbTxRegistry {
      */
     @PreDestroy
     public void closeAll() {
-        for (String txId : sessions.keySet()) {
-            DbTxSession s = sessions.remove(txId);
-            if (s != null) {
-                try {
-                    s.close(true);
-                } catch (RuntimeException ex) {
-                    LOG.warn("应用关闭时回滚事务 {} 失败: {}", txId, ex.getMessage());
+        synchronized (lifecycleLock) {
+            closing = true;
+            for (String txId : sessions.keySet()) {
+                DbTxSession s = sessions.remove(txId);
+                if (s != null) {
+                    try {
+                        s.close(true);
+                    } catch (RuntimeException ex) {
+                        LOG.warn("应用关闭时回滚事务 {} 失败: {}", txId, ex.getMessage());
+                    }
                 }
             }
         }
