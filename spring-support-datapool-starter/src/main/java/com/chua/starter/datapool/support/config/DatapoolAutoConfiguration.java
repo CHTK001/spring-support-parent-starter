@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 数据源中心自动配置。
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan(basePackages = "com.chua.starter.datapool.support")
 @MapperScan(basePackages = "com.chua.starter.datapool.support.mapper")
 @EnableConfigurationProperties(DatapoolProperties.class)
+@EnableScheduling
 public class DatapoolAutoConfiguration {
 
     /**

@@ -41,11 +41,6 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
         <!-- 实时日志不依赖 socket：插件操作日志（OsgiLogEvent，契约在 logger-starter）
              经 Spring 事件发布，由 socket-starter 侧的 SocketOsgiLogBridge 监听广播。
              若本模块依赖 socket（哪怕 optional），common -> osgi -> socket -> common

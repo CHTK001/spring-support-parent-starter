@@ -1,4 +1,0 @@
-import{Dn as e,Ht as t,Mt as n,St as r,Wt as i,X as a,_t as o,ct as s,ht as c,in as l,vt as u,wt as d}from"./lib-antv-DPUBrK1v.js";import{t as f}from"./_plugin-vue_export-helper-BDNMzG2s.js";var p={key:0,class:`koi-loading-box`},m={class:`koi-loading`},h=f(d({name:`ReLoading`,inheritAttrs:!0,__name:`ReLoading`,props:{loading:{type:Boolean,default:!1}},setup(d){let f=d;return(d,h)=>(t(),u(`span`,n({class:`re-loading`},d.$attrs),[r(a,{name:`el-fade-in-linear`},{default:l(()=>[f.loading?(t(),u(`div`,p,[c(`div`,m,[(t(),u(s,null,i(7,t=>c(`span`,{style:e({"--i":t}),key:t},null,4)),64))]),h[0]||=c(`svg`,null,[c(`filter`,{id:`koi-gooey`},[c(`feGaussianBlur`,{in:`SourceGraphic`,stdDeviation:`10`}),c(`feColorMatrix`,{values:`1 0 0 0 0 
-                      0 1 0 0 0
-                      0 0 1 0 0 
-                      0 0 0 20 -10`})])],-1)])):o(``,!0)]),_:1})],16))}}),[[`__scopeId`,`data-v-237393b7`]]);export{h as default};

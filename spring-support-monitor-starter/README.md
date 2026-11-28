@@ -68,14 +68,14 @@ flowchart LR
 | 数据同步（由 datapool-starter 提供） | `SyncTaskService`、`JdbcCsvLoader` SPI（mysql/postgresql） | `ms_sync_task`，`/ms/monitor/datasync` |
 | Agent 接入 | `AgentEndpointController`、`AgentTcpServerConfiguration`、`AgentHttpClient`、`AgentOfflineChecker` | agent 侧上报端点 `/ms/monitor/agent`；TCP 上报端口 `plugin.monitor.agent.tcp-port`（默认 `19390`） |
 | Agent 客户端模式 | `MetricPushClient`、`MonitorCapabilityDetector`、`OshiMetricCollector`（协议 record 与 `MetricPoint` 也在本模块） | `plugin.monitor.mode=client` 时向服务端周期推送心跳与 cpu/memory/disk 指标；探测不支持或 OSHI 缺失时静默降级 |
-| 数据库备份 | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/monitor/database-backup`，`plugin.monitor.database-backup.enabled`（缺省开） |
+| 数据库备份（由 datapool-starter 提供） | `DatabaseBackupController`、`DatabaseBackupService`、`DatabaseBackupProperties` | `/ms/datasource/database-backup`，兼容 `/ms/monitor/database-backup`；配置键仍为 `plugin.monitor.database-backup.enabled`（缺省开） |
 | AI 诊断 / 大屏 | `MonitorController` 注入 `ObjectProvider<AiChatFacadeService>`；`#dashboardOverview` | `/ms/monitor/ai/status`、`/ai/analyze`、`/ai/host/{id}/analyze`、`/ms/monitor/dashboard/overview` |
 | 端口映射 | tunnel-starter 统一编排（ngrok/cloudflared/tailscale 为 SPI 实现） | `/ms/tunnel` |
 | 服务发现查询 | `ServerDiscoveryController`（`@ConditionalOnClass DiscoveryService`）/ `DiscoveryFallbackController`（`@ConditionalOnMissingClass`） | `/ms/monitor/discovery` |
 | 文件资产/网关 | `FileAssetServiceImpl`、`MonitorFileStorageConfig`、`MonitorFileStorageGatewayConfig` | `/ms/monitor/file-assets`、`/fs/default` |
 | 实时推送 | `MonitorPushService` → `SocketQueueBridge` | socket.io `29181`，`subscribe("monitor", ...)` |
 
-核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、维护计划、节点与操作日志、数据库备份历史表（同步任务表 `ms_sync_task*` 属 datapool-starter）。
+核心数据表 14 张：`ms_monitor` / `_config` / `_task` / `_metric_config` / `_gateway` / `_metric` / `_metric_statistics` / `_metric_cpu|memory|disk|network|jvm` / `_redis_metric` / `_redis_metric_statistics`；DDL 见 `src/main/resources/db/init/V5.2__init_all_monitor.sql`，另含告警、抓包、维护计划、节点与操作日志。备份历史表 `ms_backup_history` 与同步任务表 `ms_sync_task*` 的唯一建表入口在 datapool-starter 的 `V3.2__init_backup_and_sync.sql`；monitor 不重复定义。
 
 ## 4. Bean 能力矩阵
 
@@ -98,7 +98,7 @@ flowchart LR
 | `productionAuthGuard` | `ProductionAuthGuard` | `@ConditionalOnProperty plugin.oauth.require-auth=true` | 可 | 生产启动期鉴权校验 |
 | `debugBeanTrace` | `DebugBeanTrace`（`BeanPostProcessor`） | 无条件 | 可 | Bean 装配追踪（排障） |
 | `monitorScheduler` / `providerRegistry` | `MonitorScheduler` / `ProviderRegistry` | `@Component`，无条件 | 可 | 调度入口 / SPI 双键索引 |
-| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`DatabaseBackupService`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
+| `alarmEngineService` 等业务服务 | `AlarmEngineServiceImpl`、`MetricServiceImpl`、`MonitorServiceImpl`、`MonitorTaskServiceImpl`、`MonitorConfigServiceImpl`、`MonitorMetricConfigServiceImpl`、`MonitorGatewayServiceImpl`、`RedisManageServiceImpl`、`SystemRedisKvServiceImpl`、`HostProfileServiceImpl`、`HostMetricHistoryServiceImpl`、`FileAssetServiceImpl`、`ServerManageServiceImpl`、`TsharkCaptureService`、`LocalSystemInfoServiceImpl`、`MaintenancePlanService` | `@Service`，无条件 | 可（按接口注入覆盖） | 各自接口的构造注入 |
 
 > 本模块没有 `spring.factories`，自动配置只经 `AutoConfiguration.imports` 注册（Spring Boot 4 口径）。
 
@@ -217,9 +217,9 @@ plugin:
         enabled: true  # 关闭后只统计空间、不删文件
 ```
 
-### 5.6 `plugin.monitor.database-backup`（`DatabaseBackupProperties`，`@Component` 注册）
+### 5.6 `plugin.monitor.database-backup`（datapool-starter 的兼容配置）
 
-数据库备份中心配置；数据库连接信息不从这里配置，而是从宿主当前 Spring `DataSource` 解析，保证备份的「当前库」与业务库一致。
+数据库备份中心的配置类、服务、接口、历史记录与 SSE 心跳全部属于 datapool-starter，见[数据源中心配置](../spring-support-datapool-starter/README.md#54-数据库备份兼容配置)。这里保留宿主使用示例；`plugin.monitor.database-backup` 前缀和旧 URL 兼容保留。当前库的连接参数从宿主 `DataSourceProperties` / `DataSource` / `spring.datasource.*` 解析，外部数据源从 datapool 台账解析。
 
 | 配置路径 | 类型 | 默认值 | 说明 |
 |---|---|---|---|

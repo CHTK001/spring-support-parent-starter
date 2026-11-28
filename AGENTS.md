@@ -25,6 +25,13 @@
 - 方向唯一 `account ← ai`，通过 `ChannelCatalogChangedEvent` 单向通知。
 - 免登录生成类渠道（`image-*` / `video-*` / `model3d-*`）的能力由 common-starter 的 `KeylessMediaChannel` 契约声明。免登录生成模型（出图 flux / turbo、视频 doubao-video / qwen-video 等）由 account 模块启动时物化进 `sys_account_channel_model`（`KeylessGenerateModelMaterializer`，挂 `free-channel` 聚合渠道行下，capabilities 按渠道声明的任务类型标注）；生成目录（`/v2/ai/generate/models`）以库行为唯一来源，管理员在模型管理里启停即生效。ai 侧不得为它们补库或写渠道表；`GenerateClientResolver` 仅对「库里还没有行」的旧库保留 `free-channel` 兜底（出图 / 视频同口径），已有行的模型停用即拒。
 
+## 发现服务优先（2026-11-28 定版）
+
+- **地址解析只有一份实现**：`spring-support-discovery-starter` 的 `DiscoveryAddressResolver`（`discovery://<服务名>` 或裸服务名 → 发现中心实例地址列表；解析不到回落配置值，5 秒缓存，静态入口供 SPI 创建的实现取用）。其它模块不得再写第二套解析（R4）。
+- **oauth**：`plugin.oauth.address` / `login-address` 支持 `discovery://<服务名>`／裸服务名（`AbstractProtocol#selectUrl`、`HtmlAdviceResolver` 两处消费）；未装配发现能力时与静态地址行为一致，认证服务端仍可独立配置。
+- **sync**：已内建 `plugin.sync.client.discovery-name` / `scatter-id` 寻址；租户模块的 `client.discovery-name` 会串联到这里，`server-host` 允许写 `discovery://<服务名>`。
+- **不装即降级**：发现未启用时 `DiscoveryConfiguration` 仍注册默认 `DiscoveryService`，解析器查不到实例就返回配置原值，不得因为发现中心抖动让鉴权/同步整体不可用。
+
 ## 依赖即带入（R5）
 
 新增 `xxx-starter` 依赖前，先确认对方的 `AutoConfiguration` 会往本服务塞什么 Controller / 定时任务 / 表迁移，是否真的需要。

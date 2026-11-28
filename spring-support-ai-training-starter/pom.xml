@@ -15,12 +15,6 @@
     <description>AI 训练平台 REST 接口模块：数据上传、异步训练、状态查询、超参数配置</description>
 
     <dependencies>
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- DL4J 训练核心 -->
         <dependency>

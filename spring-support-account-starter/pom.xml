@@ -27,12 +27,6 @@
   <description>Spring Support框架账号与渠道管理模块，提供统一账号管理（密钥/邮箱/短信 + AppKey + Cookie 池）与免登录 ChatClient、文生图、文生视频、图生 3D 渠道能力</description>
   <!-- 依赖配置 -->
   <dependencies>
-    <!-- Lombok -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <!-- Spring Support Common：@Permission 鉴权注解、ApiReturnFormatIgnore、Json 序列化 -->
     <dependency>
       <groupId>com.chua</groupId>

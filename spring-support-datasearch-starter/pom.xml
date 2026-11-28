@@ -80,11 +80,6 @@
             <artifactId>swagger-annotations</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!-- 单元测试：版本由继承的 spring-boot-dependencies 统一管理 -->
         <!-- 仅用 JUnit 5，不引 spring-boot-starter-test（它会传递 mockito，项目规约禁用） -->
         <dependency>

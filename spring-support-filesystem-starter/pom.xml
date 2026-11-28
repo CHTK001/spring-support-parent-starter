@@ -31,13 +31,6 @@
     <description>统一文件存储抽象层，支持 MinIO、OSS、COS 等多种存储后端</description>
 
     <dependencies>
-        <!-- Lombok (编译期, 不会打入运行时 JAR; version 由父 pom dependencyManagement 提供) -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-filestorage-starter</artifactId>

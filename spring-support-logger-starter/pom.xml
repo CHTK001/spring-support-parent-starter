@@ -88,11 +88,6 @@
         </dependency>
 
         <!-- InterfaceLoggerInfo / AbstractLoggerPointcutAdvisor 等使用 Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!-- LogConfiguration / TracePortalConfiguration / ServiceInfo* 条件装配 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

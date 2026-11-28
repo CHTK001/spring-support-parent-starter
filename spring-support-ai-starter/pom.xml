@@ -78,12 +78,6 @@
   </dependencyManagement>
   <!-- 依赖配置 -->
   <dependencies>
-    <!-- Lombok -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <scope>provided</scope>
-    </dependency>
     <!-- Git 操作：仅引入 JGit 本体，避免 git-starter 传递依赖拉低现有 utils 版本 -->
     <dependency>
       <groupId>org.eclipse.jgit</groupId>

@@ -480,51 +480,9 @@ CREATE TABLE IF NOT EXISTS `ms_host_metric_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='主机内置指标历史(宽表)';
 
 -- ============================================================
--- 21. 数据同步任务
--- 由 SyncTaskServiceImpl 读写；源/目标均为 datasource_info 里的 jdbc 类型数据源。
--- 数据面复用本仓 datasync 引擎：JdbcDataSyncAgentSource 读、DefaultFieldMappingConverter 转、
--- MonitorJdbcSyncSink 写；调度由 Spring ThreadPoolTaskScheduler 驱动（引擎自带调度器有
--- 「同 topic 只订阅一次」语义，改任务后仍会写旧 Sink，故不采用）。
--- 列名沿用「完整表名做前缀」的模块规范。
+-- 21. 数据同步任务（已归位至 spring-support-datapool-starter）
+-- 建表与执行日志见该模块 V3.2__init_backup_and_sync.sql。
 -- ============================================================
-CREATE TABLE IF NOT EXISTS `ms_sync_task` (
-    `id`                                    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `ms_sync_task_name`                     VARCHAR(128) NOT NULL COMMENT '任务名称',
-    `ms_sync_task_source_type`              VARCHAR(16)  NOT NULL DEFAULT 'JDBC' COMMENT '输入源类型 JDBC/FILE/DIR/HTTP_JSON/HTTP_HTML',
-    `ms_sync_task_source_datasource_id`     BIGINT       DEFAULT NULL COMMENT '源数据源 ID(datasource_info.id)，仅 JDBC 源使用',
-    `ms_sync_task_source_sql`               TEXT         DEFAULT NULL COMMENT '源读取 SQL，必须是 SELECT，仅 JDBC 源使用',
-    `ms_sync_task_source_path`              VARCHAR(512) DEFAULT NULL COMMENT '源定位：FILE=本地文件绝对路径 / DIR=本地目录绝对路径 / HTTP_*=http(s) 请求地址',
-    `ms_sync_task_source_options`           TEXT         DEFAULT NULL COMMENT '输入源扩展选项 JSON：文件族 {format,delimiter,sheetIndex,pattern,recursive,afterProcess}；HTTP 族 {method,headers,body,encoding,jsonPath,rowSelector,cellSelector,headerRow,timeoutSeconds}',
-    `ms_sync_task_target_datasource_id`     BIGINT       NOT NULL COMMENT '目标数据源 ID(datasource_info.id)',
-    `ms_sync_task_target_table`             VARCHAR(128) NOT NULL COMMENT '目标表名',
-    `ms_sync_task_column_mapping`           TEXT         DEFAULT NULL COMMENT '字段映射 JSON 数组 [{"source":"a","target":"b"}]，空表示按同名匹配',
-    `ms_sync_task_write_mode`               VARCHAR(16)  NOT NULL DEFAULT 'INSERT' COMMENT '写入模式 INSERT/REPLACE/UPSERT/OVERWRITE',
-    `ms_sync_task_batch_size`               INT          NOT NULL DEFAULT 500 COMMENT '批量提交条数',
-    `ms_sync_task_cron`                     VARCHAR(64)  DEFAULT NULL COMMENT '定时表达式(Spring 6 段 cron)，空表示仅手动执行',
-    `ms_sync_task_enabled`                  TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否启用定时 1启用 0停用',
-    `ms_sync_task_last_run_time`            DATETIME     DEFAULT NULL COMMENT '最近一次执行时间',
-    `ms_sync_task_last_status`              VARCHAR(16)  DEFAULT NULL COMMENT '最近一次状态 SUCCESS/FAILED/RUNNING',
-    `ms_sync_task_last_read_count`          BIGINT       DEFAULT NULL COMMENT '最近一次读取行数',
-    `ms_sync_task_last_write_count`         BIGINT       DEFAULT NULL COMMENT '最近一次写入行数',
-    `ms_sync_task_last_cost_ms`             BIGINT       DEFAULT NULL COMMENT '最近一次耗时(毫秒)',
-    `ms_sync_task_last_message`             VARCHAR(512) DEFAULT NULL COMMENT '最近一次结果说明/错误信息',
-    `ms_sync_task_sync_mode`                VARCHAR(16)  NOT NULL DEFAULT 'FULL' COMMENT '同步模式 FULL 全量/INCREMENTAL 增量',
-    `ms_sync_task_inc_field`                VARCHAR(64)  DEFAULT NULL COMMENT '增量字段（仅增量模式），只允许字母数字下划线',
-    `ms_sync_task_inc_batch_size`           INT          DEFAULT NULL COMMENT '增量每批数量：单次执行最多同步条数，空表示不限',
-    `ms_sync_task_last_seq`                 VARCHAR(255) DEFAULT NULL COMMENT '增量水位：上次成功同步到的最大增量字段值（服务端回写）',
-    `ms_sync_task_hook_url`                 VARCHAR(512) DEFAULT NULL COMMENT 'Hook 通知地址（http/https），空表示不通知',
-    `ms_sync_task_hook_notify`              VARCHAR(16)  DEFAULT NULL COMMENT 'Hook 通知时机 DONE 完成通知/ROW 每条数据+完成，全量固定 DONE',
-    `create_name`                           VARCHAR(64)  DEFAULT NULL COMMENT '创建人姓名',
-    `create_by`                             INT          DEFAULT NULL COMMENT '创建人',
-    `create_time`                           DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_name`                           VARCHAR(64)  DEFAULT NULL COMMENT '更新人姓名',
-    `update_by`                             INT          DEFAULT NULL COMMENT '更新人',
-    `update_time`                           DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_ms_sync_task_enabled` (`ms_sync_task_enabled`),
-    KEY `idx_ms_sync_task_source_ds` (`ms_sync_task_source_datasource_id`),
-    KEY `idx_ms_sync_task_target_ds` (`ms_sync_task_target_datasource_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据同步任务';
 
 -- ============================================================
 -- 22. 维护计划
@@ -550,4 +508,3 @@ CREATE TABLE IF NOT EXISTS `ms_maintenance_plan` (
     KEY `idx_ms_maintenance_plan_status` (`ms_maintenance_plan_status`),
     KEY `idx_ms_maintenance_plan_window` (`ms_maintenance_plan_start_time`, `ms_maintenance_plan_end_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='维护计划';
-

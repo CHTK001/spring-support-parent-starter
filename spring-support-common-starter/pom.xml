@@ -37,13 +37,6 @@
     <!-- 项目属性配置 -->
     <!-- 依赖配置 -->
     <dependencies>
-        <!-- Lombok - 简化Java代码编写 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Apache Commons Lang3 - 提供反射等工具类 -->
         <dependency>
             <groupId>org.apache.commons</groupId>

@@ -30,7 +30,7 @@
 
 ## 其他调度入口（程序化，非 `@Scheduled`）
 
-- `service.impl.SyncTaskServiceImpl`：自持 `ThreadPoolTaskScheduler`，`@PostConstruct` 恢复库中启用的同步任务（任务级 cron 在 `ms_sync_task` 行上）；执行日志清理以 `CronTrigger("0 30 3 * * ?")` 注册在同一调度器（保留 30 天）。类内注释明确「不再另引 `@Scheduled`」，故不入上表。
+- 数据同步的 `SyncTaskServiceImpl` 已整体归 datapool-starter，不属于本模块任务。它自持 `ThreadPoolTaskScheduler`，在 `@PostConstruct` 恢复启用任务，并在同一调度器注册每日 03:30 的执行日志清理（保留 30 天）；monitor 仅作宿主装配。
 
 ## @EnableScheduling 入口
 

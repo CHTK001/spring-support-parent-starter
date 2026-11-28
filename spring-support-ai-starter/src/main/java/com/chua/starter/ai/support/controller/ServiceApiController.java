@@ -9,11 +9,14 @@ import com.chua.starter.ai.support.mapper.SysAiServiceInstanceMapper;
 import com.chua.starter.ai.support.service.RuntimeLogService;
 import com.chua.starter.ai.support.service.ServiceInstanceManager;
 import com.chua.starter.ai.support.util.AiUserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -55,6 +58,10 @@ public class ServiceApiController {
     private final ServiceInstanceManager instanceManager;
     private final RuntimeLogService runtimeLogService;
 
+    /** 独立协议端口对外主机名；留空使用管理接口收到的主机名。 */
+    @Value("${plugin.ai.service.advertised-host:}")
+    private String advertisedHost;
+
     /**
      * 应用就绪后恢复启用的服务实例（默认低优先级，晚于注册中心初始化）。
      */
@@ -73,11 +80,13 @@ public class ServiceApiController {
      * 列出全部对外服务实例及其运行状态。
      *
      * @param hours 统计窗口小时数（1-720，默认 24，越界自动收敛）
+     * @param request 管理接口请求，用于确定服务端对外主机名
      * @return 服务实例列表响应（instances + statsWindowHours）
      */
     @GetMapping("/v2/service/instances")
     public Map<String, Object> listInstances(
-            @RequestParam(defaultValue = "" + DEFAULT_STATS_WINDOW_HOURS) int hours) {
+            @RequestParam(defaultValue = "" + DEFAULT_STATS_WINDOW_HOURS) int hours,
+            HttpServletRequest request) {
         int windowHours = Math.min(Math.max(hours, 1), 720);
         List<SysAiServiceInstance> list = instanceMapper.selectList(null);
         Map<String, SysAiServiceAccessLogMapper.InstanceStatRow> stats = loadInstanceStats(windowHours);
@@ -89,6 +98,10 @@ public class ServiceApiController {
             m.put("instanceId", i.getInstanceId());
             m.put("instanceName", i.getInstanceName());
             m.put("port", i.getPort());
+            String host = advertisedHost == null || advertisedHost.isBlank()
+                    ? request.getServerName() : advertisedHost.trim();
+            m.put("endpoint", UriComponentsBuilder.newInstance().scheme("http")
+                    .host(host).port(i.getPort()).path("/v1").build().toUriString());
             m.put("enabled", i.getEnabled());
             m.put("running", instanceManager.isRunning(i.getInstanceId()));
             m.put("openaiEnabled", i.getOpenaiEnabled());

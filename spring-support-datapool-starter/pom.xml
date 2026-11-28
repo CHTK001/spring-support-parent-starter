@@ -20,17 +20,7 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
-        <!--
-            租户库连接口：租户模块（tenant-starter）只定义 TenantDatasourceLookup 这个窄接口，
-            由本模块的 DatasourceTenantLookupAdapter 在装了台账的应用里补上实现。
-            optional=true：本模块单独使用时不强制引入 tenant-starter；
-            依赖方向仍是「hub → tenant 的契约」，不会让 tenant-starter 反过来依赖整个数据源中心。
-        -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-api-support-common-tenant-starter</artifactId>
-            <optional>true</optional>
-        </dependency>
+        <!-- 租户数据源查询契约由 common-starter 提供，台账实现不反向依赖 API 租户模块。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -109,18 +99,13 @@
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
 
-        <!-- 数据库驱动（本地直跑/便携部署）：MySQL + H2 双驱动 -->
+        <!-- 数据库驱动（本地直跑/便携部署）：MySQL -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- 文件库只随包带 H2；SQLite/DuckDB/ClickHouse 驱动走 JDBC 驱动 jar 上传端点按需安装 -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
+        <!-- H2/SQLite/DuckDB/ClickHouse 为文件库与可选驱动，统一走 JDBC 驱动 jar 上传端点按需安装，不随包携带 -->
 
         <!-- ZooKeeper / MongoDB / SkyWalking 管理面实现按需安装（utils-support-*-starter 或 OSGi 能力包），本模块只依赖 SPI 契约。 -->
 
@@ -142,16 +127,6 @@
             <artifactId>jsoup</artifactId>
             <version>1.18.3</version>
         </dependency>
-
-        <!-- 日志 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- 测试 -->
-        <!-- 仅测试作用域。规约要求测试必须真实，禁止引入 mockito/easymock/jmock（任何作用域） -->
     </dependencies>
 
     <build>

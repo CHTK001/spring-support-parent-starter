@@ -21,8 +21,8 @@
         <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
         <result column="update_name" property="updateName" jdbcType="VARCHAR"/>
         <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
-        <result column="create_by" property="createBy" jdbcType="VARCHAR"/>
-        <result column="update_by" property="updateBy" jdbcType="VARCHAR"/>
+        <result column="create_by" property="createBy" jdbcType="INTEGER"/>
+        <result column="update_by" property="updateBy" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">

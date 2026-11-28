@@ -162,11 +162,6 @@
         </dependency>
 
         <!-- 日志 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
 
         <!-- 测试 -->
         <!-- JUnit Jupiter：发布脚本生成回归探针 ReleaseScriptProbe 以 @Test 承载，

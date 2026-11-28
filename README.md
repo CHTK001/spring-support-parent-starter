@@ -192,12 +192,11 @@ com.chua.starter.redis.support.LockTemplateConfiguration
 
 ### 5.2 例外生效方式
 
-有三个模块不走标准 `imports` 路径，接入时必须知道：
+有两个模块不走标准 `imports` 路径，接入时必须知道：
 
 | 模块 | 生效方式 |
 | --- | --- |
 | `spring-support-apm-hotspot-starter` | 没有 `imports`，走 `META-INF/extensions/com.chua.starter.apm.support.spi.ApmProvider` 的 SPI 扩展文件 |
-| `spring-support-software-starter` | `SoftwareConfiguration` 带 `@AutoConfiguration`，但**未登记**到 `imports`；引入依赖后需宿主 `@Import(SoftwareConfiguration.class)`，或让组件扫描覆盖 `com.chua.starter.software.support` |
 | `spring-support-taskdistribution-starter` | 已迁移到标准 `imports`（`TaskDistributionAutoConfiguration`）；其 `spring.factories` 现在只剩注释 |
 
 ### 5.3 spring.factories 扩展点

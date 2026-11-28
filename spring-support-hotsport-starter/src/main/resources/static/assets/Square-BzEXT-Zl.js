@@ -1,1 +1,0 @@
-import{t as e}from"./Square-BXViX690.js";export{e as default};
