@@ -21,22 +21,27 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datalake-starter</artifactId>
         </dependency>
+        <!-- 数据湖投递端：Pipeline Sink 实现 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datalake-sink-starter</artifactId>
         </dependency>
+        <!-- 数据湖订阅端：变更事件订阅实现 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datalake-subscribe-starter</artifactId>
         </dependency>
+        <!-- 自动配置内核：条件装配与属性绑定 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Spring Web 契约（MVC 注解与过滤器，编译期需要） -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
         </dependency>
+        <!-- 配置元数据生成（仅构建期，optional） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

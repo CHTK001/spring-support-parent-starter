@@ -233,19 +233,12 @@ public class GiteeCallbackController {
         }
 
         LoginAuthResult accessToken = thirdPartyLoginOrchestrator.issueThirdPartyToken(userThirdParty.getSysUserId(), THIRD_PARTY_TYPE, request);
-        if (null == accessToken || StringUtils.isBlank(accessToken.getToken())) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(accessToken)) {
             log.warn("Gitee三方登录换取令牌失败");
             ThirdPartyCallbackSupport.markFailure(attributes, errorView, "第三方登录失败，请重试");
             return errorView;
         }
-        LoginResult loginResult = LoginResult.builder()
-                .userInfo(accessToken.getUserResume() != null
-                        ? thirdPartyLoginOrchestrator.buildUserInfo(accessToken.getUserResume())
-                        : thirdPartyLoginOrchestrator.getUserLoginInfo(accessToken.getToken()))
-                .tokenType("Bearer")
-                .accessToken(accessToken.getToken())
-                .build();
-        CookieUtil.set(response, "x-oauth-cookie", accessToken.getToken(), true);
+        LoginResult loginResult = thirdPartyLoginOrchestrator.toLoginResult(accessToken, response);
         RedirectView view = new RedirectView();
         String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, '0');
         // 加密登录结果 + 登记一次性 nonce（供 /v2/user/third/login/exchange 兑换）
@@ -292,19 +285,12 @@ public class GiteeCallbackController {
         RedirectView view = new RedirectView();
         view.setUrl(ThirdPartyCallbackSupport.safeSystemCallback(systemCallback, securityProperties));
         LoginAuthResult accessToken = thirdPartyLoginOrchestrator.issueThirdPartyToken(user.getSysUserId(), THIRD_PARTY_TYPE, request);
-        if (null == accessToken || StringUtils.isBlank(accessToken.getToken())) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(accessToken)) {
             log.warn("Gitee自动注册后登录签发令牌失败: userId={}", user.getSysUserId());
             ThirdPartyCallbackSupport.markFailure(attributes, view, "Gitee登录失败，请重试");
             return view;
         }
-        LoginResult loginResult = LoginResult.builder()
-                .userInfo(accessToken.getUserResume() != null
-                        ? thirdPartyLoginOrchestrator.buildUserInfo(accessToken.getUserResume())
-                        : thirdPartyLoginOrchestrator.getUserLoginInfo(accessToken.getToken()))
-                .tokenType("Bearer")
-                .accessToken(accessToken.getToken())
-                .build();
-        CookieUtil.set(response, "x-oauth-cookie", accessToken.getToken(), true);
+        LoginResult loginResult = thirdPartyLoginOrchestrator.toLoginResult(accessToken, response);
         String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, '0');
         // 加密登录结果 + 登记一次性 nonce（供 /v2/user/third/login/exchange 兑换）
         String encrypt = ThirdPartyCallbackSupport.encryptRedirectParam(loginResult, securityProperties);

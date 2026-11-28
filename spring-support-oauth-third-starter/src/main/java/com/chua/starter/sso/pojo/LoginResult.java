@@ -24,6 +24,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResult {
 
+    /** 二次认证挑战；此时不包含正式令牌或用户信息。 */
+    private com.chua.starter.oauth.client.support.user.SecondFactorChallenge secondFactor;
+
     /** 手机号身份已验证但尚未绑定本地账号时的一次性凭证。 */
     @Schema(description = "待绑定凭证，与访问令牌互斥")
     private String bindToken;

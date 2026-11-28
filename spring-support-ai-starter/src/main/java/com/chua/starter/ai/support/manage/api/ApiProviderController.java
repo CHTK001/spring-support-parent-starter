@@ -16,9 +16,9 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.engine.ModelHardwareFilter;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.starter.common.support.channel.KeylessMediaChannel;
+import com.chua.starter.common.support.message.StationMessage;
+import com.chua.starter.common.support.message.StationMessageSender;
 import com.chua.starter.common.support.service.MailService;
-import com.chua.starter.entity.service.SysMessage;
-import com.chua.starter.system.service.SysMessageService;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -239,7 +239,7 @@ public class ApiProviderController {
      * 没有该 Bean，直接注入会启动失败，所以用 ObjectProvider 承接——
      * 拿不到就跳过告警，不影响余额查询主链路。</p>
      */
-    private final ObjectProvider<SysMessageService> messageServiceProvider;
+    private final ObjectProvider<StationMessageSender> stationMessageSenderProvider;
 
     /**
      * 邮件服务：余额告警的邮件渠道出口。
@@ -3156,8 +3156,8 @@ public class ApiProviderController {
     /**
      * 站内信渠道：写一条消息到消息中心（sys_message），登录后在消息中心可见。
      *
-     * <p>复用平台既有消息中心（{@code common-system-starter} 的
-     * {@link SysMessageService#broadcast}）。消息中心服务拿不到（宿主未接该依赖）、
+     * <p>复用平台既有消息中心（通过 common-starter 的
+     * {@link StationMessageSender#broadcast} 契约）。消息中心服务拿不到（宿主未接该依赖）、
      * 未配置接收人或写库失败都只记日志并返回 false。</p>
      */
     private boolean deliverCreditInbox(String type, String title, String content, List<Integer> receivers) {
@@ -3165,22 +3165,16 @@ public class ApiProviderController {
             log.debug("[credit] 站内信渠道未配置接收人，跳过");
             return false;
         }
-        SysMessageService service = messageServiceProvider.getIfAvailable();
-        if (service == null) {
+        StationMessageSender sender = stationMessageSenderProvider.getIfAvailable();
+        if (sender == null) {
             log.debug("[credit] 宿主未接入消息中心，站内信渠道跳过");
             return false;
         }
         boolean warn = SysAiProviderCreditAlertLog.TYPE_WARN.equals(type);
-        SysMessage message = new SysMessage();
-        message.setSysMessageTitle(title);
-        message.setSysMessageContent(content);
-        message.setSysMessageType(warn ? "warning" : "info");
-        message.setSysMessageLevel(warn ? "high" : "normal");
-        message.setSysMessageChannel("PLATFORM");
-        message.setSysMessageSenderId(0);
-        message.setSysMessageSenderName("模型管理");
+        StationMessage message = new StationMessage(title, content, warn ? "warning" : "info",
+                warn ? "high" : "normal", "PLATFORM", 0, "模型管理");
         try {
-            ReturnResult<Integer> result = service.broadcast(message, receivers);
+            ReturnResult<Integer> result = sender.broadcast(message, receivers);
             boolean ok = result != null && result.isOk();
             if (ok) {
                 log.info("[credit] 余额告警站内信已推送 receivers={}", receivers.size());

@@ -16,11 +16,10 @@ import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.mapper.SysAiServiceAccessLogMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.mapper.settings.AiAlertMapper;
+import com.chua.starter.common.support.message.StationMessage;
+import com.chua.starter.common.support.message.StationMessageSender;
+import com.chua.starter.common.support.message.StationUserDirectory;
 import com.chua.starter.common.support.service.MailService;
-import com.chua.starter.entity.service.SysMessage;
-import com.chua.starter.entity.system.SysUser;
-import com.chua.starter.system.service.SysMessageService;
-import com.chua.starter.system.service.SysUserService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -72,7 +71,7 @@ import com.chua.common.support.utils.CollectionUtils;
  * 每轮 tick 执行完再注册下一次，天然不重叠），与 {@link CreditRefreshScheduler}
  * 口径一致。投递实现与余额告警（ApiProviderController#dispatchCreditAlert）
  * 同款：逐渠道投递任一成功即成功，站内信复用 common-system-starter 的
- * {@link SysMessageService#broadcast}，邮件复用 common-starter 的
+     * {@link StationMessageSender#broadcast}，邮件复用 common-starter 的
  * {@link MailService#sendNoticeMail}，Webhook 按机器人地址主机自适应卡片格式。</p>
  *
  * @since 4.0.0.62
@@ -171,7 +170,7 @@ public class AlertEvaluateScheduler {
     /**
      * 消息中心服务（宿主未接该依赖时站内信渠道跳过）。
      */
-    private final ObjectProvider<SysMessageService> messageServiceProvider;
+    private final ObjectProvider<StationMessageSender> stationMessageSenderProvider;
 
     /**
      * 邮件服务（宿主未接 spring.mail.* 时邮件渠道跳过）。
@@ -181,7 +180,7 @@ public class AlertEvaluateScheduler {
     /**
      * 系统用户服务（归属用户名 → sysUserId 定向投递）。
      */
-    private final ObjectProvider<SysUserService> userServiceProvider;
+    private final ObjectProvider<StationUserDirectory> stationUserDirectoryProvider;
 
     /**
      * 全局设置读取（开关 / 周期 / 收件配置每轮实时读）。
@@ -519,15 +518,14 @@ public class AlertEvaluateScheduler {
         if (appKey == null || appKey.getUserId() == null || appKey.getUserId().isBlank()) {
             return List.of();
         }
-        SysUserService userService = userServiceProvider.getIfAvailable();
-        if (userService == null) {
+        StationUserDirectory userDirectory = stationUserDirectoryProvider.getIfAvailable();
+        if (userDirectory == null) {
             return List.of();
         }
         try {
-            SysUser user = userService.getOne(new LambdaQueryWrapper<SysUser>()
-                    .eq(SysUser::getSysUserUsername, appKey.getUserId()), false);
-            if (user != null && user.getSysUserId() != null) {
-                return List.of(user.getSysUserId());
+            Integer userId = userDirectory.findUserIdByUsername(appKey.getUserId());
+            if (userId != null) {
+                return List.of(userId);
             }
         } catch (Exception e) {
             log.debug("[AlertEvaluate] 解析归属用户失败 userId={} err={}", appKey.getUserId(), e.getMessage());
@@ -572,21 +570,14 @@ public class AlertEvaluateScheduler {
      * 消息中心服务拿不到或写库失败只记日志并返回 false。</p>
      */
     private boolean deliverInbox(String title, String content, List<Integer> receivers) {
-        SysMessageService service = messageServiceProvider.getIfAvailable();
-        if (service == null) {
+        StationMessageSender sender = stationMessageSenderProvider.getIfAvailable();
+        if (sender == null) {
             log.debug("[AlertEvaluate] 宿主未接入消息中心，站内信渠道跳过");
             return false;
         }
-        SysMessage message = new SysMessage();
-        message.setSysMessageTitle(title);
-        message.setSysMessageContent(content);
-        message.setSysMessageType("warning");
-        message.setSysMessageLevel("high");
-        message.setSysMessageChannel("PLATFORM");
-        message.setSysMessageSenderId(0);
-        message.setSysMessageSenderName("AI 告警");
+        StationMessage message = new StationMessage(title, content, "warning", "high", "PLATFORM", 0, "AI 告警");
         try {
-            ReturnResult<Integer> result = service.broadcast(message, receivers);
+            ReturnResult<Integer> result = sender.broadcast(message, receivers);
             boolean ok = result != null && result.isOk();
             if (ok) {
                 log.info("[AlertEvaluate] 告警站内信已推送 receivers={}（空=全局广播）", receivers.size());

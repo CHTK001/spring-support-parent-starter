@@ -367,7 +367,7 @@ public class GenerateService {
           // 拿到一张纯文生图结果，属于假成功。
         if (GenerateConfigSupport.TYPE_IMAGE.equalsIgnoreCase(type)
                 && request.referenceImage() != null && !request.referenceImage().isBlank()) {
-            GenerateClientResolver.Resolved<ImageClient> probe = clientResolver.resolveImage(request.model());
+            GenerateClientResolver.Resolved<ImageClient> probe = clientResolver.resolveImage(model);
             if (probe == null || !probe.ok()) {
                 throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
             }
@@ -401,7 +401,7 @@ public class GenerateService {
           // 视频此前是「先同步打上游、成功才 insert」，限流时一条记录都不留，与图像不一致。
         taskMapper.insert(task);
         log.info("[Generate] 任务已创建 type={} model={} taskId={} status={}",
-                type, request.model(), task.getTaskId(), task.getStatus());
+                type, model, task.getTaskId(), task.getStatus());
 
         if (GenerateConfigSupport.TYPE_VIDEO.equalsIgnoreCase(type)) {
               // 视频是上游异步接口，提交本身只是一次 HTTP 调用；失败回写 FAILED 即可，
@@ -804,7 +804,7 @@ public class GenerateService {
        * @return 需要在线程池内同步生成的客户端；返回 null 表示已原生异步提交
        */
     private SyncImage prepareImage(SysAiGenerateTask task, Request request) {
-        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver.resolveImage(request.model());
+        GenerateClientResolver.Resolved<ImageClient> resolved = clientResolver.resolveImage(task.getModel());
         if (!resolved.ok()) {
             throw new IllegalStateException("该模型未配置可用的图像生成实现，请在模型管理中检查供应商与密钥");
         }
@@ -1281,7 +1281,7 @@ public class GenerateService {
        * @param request 生成请求
        */
     private void submitVideo(SysAiGenerateTask task, Request request) {
-        GenerateClientResolver.Resolved<VideoClient> first = clientResolver.resolveVideo(request.model());
+        GenerateClientResolver.Resolved<VideoClient> first = clientResolver.resolveVideo(task.getModel());
         if (!first.ok()) {
             throw new IllegalStateException("该模型未配置可用的视频生成实现，请在模型管理中检查供应商与密钥");
         }
@@ -1290,7 +1290,7 @@ public class GenerateService {
           // 遇限流换下一个 API Key 重试：模型与全部参数保持不变
         for (int i = 0; i < Math.max(1, keyCount); i++) {
             GenerateClientResolver.Resolved<VideoClient> resolved =
-                    i == 0 ? first : clientResolver.resolveVideo(request.model(), i);
+                    i == 0 ? first : clientResolver.resolveVideo(task.getModel(), i);
             if (!resolved.ok()) {
                 continue;
             }

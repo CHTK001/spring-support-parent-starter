@@ -14,11 +14,13 @@
     <description>同步协议模块 - 基于 SyncProtocol 实现客户端/服务端通信</description>
 
 <dependencies>
+        <!-- Spring Boot 核心启动器：自动配置与日志门面 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- 配置元数据生成（仅构建期，optional） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
@@ -32,6 +34,7 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 数据同步客户端：SyncServer / DataSyncAgent 实现 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasync-starter</artifactId>

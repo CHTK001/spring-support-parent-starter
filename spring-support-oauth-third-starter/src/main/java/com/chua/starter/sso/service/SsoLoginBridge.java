@@ -69,12 +69,32 @@ public interface SsoLoginBridge {
     }
 
     /**
+     * 为平台已验证的手机号查找或注册本地账号，参与调用方的绑定事务。
+     * @param phone 平台服务端返回的手机号
+     * @param request 注册请求
+     * @return 唯一且可用的账号
+     */
+    default SysUser resolveVerifiedPhone(String phone, HttpServletRequest request) {
+        throw new IllegalStateException("宿主未提供手机号注册能力");
+    }
+
+    /**
      * 签发本地登录令牌（与密码登录同源）
      *
      * @param user 本地用户
      * @return 登录认证结果
      */
     LoginAuthResult issueLocalToken(SysUser user);
+
+    /**
+     * 已验证的三方或手机号身份进入宿主统一认证策略；宿主负责二次验证及协议签发。
+     * @param user 已验证账号
+     * @param type 首次认证类型
+     * @param ext 服务端生成的登录归因
+     * @return 正式令牌或二次认证挑战
+     */
+    LoginAuthResult issueVerifiedLogin(SysUser user,
+            com.chua.starter.oauth.client.support.enums.AuthType type, java.util.Map<String, Object> ext);
 
     /**
      * 组装登录用户信息

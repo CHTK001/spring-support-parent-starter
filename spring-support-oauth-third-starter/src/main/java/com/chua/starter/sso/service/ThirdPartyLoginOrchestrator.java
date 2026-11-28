@@ -253,7 +253,7 @@ public class ThirdPartyLoginOrchestrator {
             return ReturnResult.error("登录凭证不能为空");
         }
         LoginResult loginResult = ThirdPartyCallbackSupport.redeemRedirectParam(redirectParam, ssoProperties);
-        if (null == loginResult || StringUtils.isBlank(loginResult.getAccessToken())) {
+        if (null == loginResult || loginResult.getSecondFactor() == null && StringUtils.isBlank(loginResult.getAccessToken())) {
             log.warn("三方登录换票失败: 凭证缺失、已使用或已过期");
             return ReturnResult.error("登录凭证已失效，请重新发起第三方登录");
         }
@@ -360,19 +360,11 @@ public class ThirdPartyLoginOrchestrator {
     private ReturnResult<LoginResult> issueThirdBindToken(SysUser user, ThirdPartyPendingBindStore.PendingBind pending,
                                                           HttpServletRequest request, HttpServletResponse response) {
         LoginAuthResult accessToken = issueThirdPartyToken(user.getSysUserId(), pending.extLoginType(), request);
-        if (null == accessToken || StringUtils.isBlank(accessToken.getToken())) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(accessToken)) {
             log.warn("三方绑定后签发令牌失败: userId={}", user.getSysUserId());
             return ReturnResult.error("绑定已完成，但登录令牌签发失败，请返回登录页重试");
         }
-        LoginResult loginResult = LoginResult.builder()
-                .userInfo(accessToken.getUserResume() != null
-                        ? bridge.buildUserInfo(accessToken.getUserResume())
-                        : bridge.getUserLoginInfo(accessToken.getToken()))
-                .tokenType("Bearer")
-                .accessToken(accessToken.getToken())
-                .build();
-        CookieUtil.set(response, "x-oauth-cookie", accessToken.getToken(), true);
-        return ReturnResult.ok(loginResult);
+        return ReturnResult.ok(toLoginResult(accessToken, response));
     }
 
     /**
@@ -393,20 +385,37 @@ public class ThirdPartyLoginOrchestrator {
             log.warn("三方登录签发令牌失败: 本地用户不存在 - userId={}", userId);
             return null;
         }
-        if (authProperties != null && "static".equalsIgnoreCase(authProperties.getProtocol())) {
-            return bridge.issueLocalToken(user);
-        }
         Map<String, Object> ext = new HashMap<>();
         ext.put("loginType", thirdType);
         ext.put("thirdPartyType", thirdType);
         ext.put("address", RequestUtils.getIpAddress(request));
         if ("phone".equals(thirdType)) {
             ext.put("loginType", "sms");
-            ext.put("phone", user.getSysUserPhone());
         }
-        return AuthClientExecute.getInstance()
-                .getAccessToken(String.valueOf(user.getSysUserId()), null,
-                        "phone".equals(thirdType) ? AuthType.SMS : AuthType.THIRD_PARTY, ext);
+        return bridge.issueVerifiedLogin(user,
+                "phone".equals(thirdType) ? AuthType.SMS : AuthType.THIRD_PARTY, ext);
+    }
+
+    /**
+     * 所有三方回调共用结果转换，挑战不能创建认证 Cookie 或读取正式用户会话。
+     * @param authentication 统一认证策略返回的结果
+     * @param response 成功时写 Cookie
+     * @return 与正式令牌互斥的挑战或登录结果
+     */
+    public LoginResult toLoginResult(LoginAuthResult authentication, HttpServletResponse response) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(authentication)) {
+            throw new IllegalArgumentException("登录未通过");
+        }
+        if (authentication.getSecondFactor() != null) {
+            return LoginResult.builder().secondFactor(authentication.getSecondFactor()).build();
+        }
+        LoginResult result = LoginResult.builder()
+                .userInfo(authentication.getUserResume() != null ? bridge.buildUserInfo(authentication.getUserResume())
+                        : bridge.getUserLoginInfo(authentication.getToken()))
+                .tokenType("Bearer").accessToken(authentication.getToken())
+                .refreshToken(authentication.getRefreshToken()).build();
+        CookieUtil.set(response, "x-oauth-cookie", authentication.getToken(), true);
+        return result;
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.workspace;
 
+import com.chua.common.support.utils.PathContainment;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -92,7 +93,11 @@ public class WorkspacePathResolver {
         // 与对话链路（AiChatFacadeServiceImpl#resolveSessionWorkspace）同口径：
         // 首次打开终端 / Git 时账号目录可能还不存在，这里统一建好，避免 PTY 因 cwd 不存在而启动失败
         try {
+            PathContainment.requireUnaliased(basePath, workspace);
             Files.createDirectories(workspace);
+            PathContainment.requireUnaliased(basePath, workspace);
+        } catch (SecurityException e) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "工作目录越界");
         } catch (IOException e) {
             log.warn("[Workspace] 创建账号工作目录失败 path={} error={}", workspace, e.getMessage());
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建账号工作目录失败");
@@ -127,7 +132,11 @@ public class WorkspacePathResolver {
             throw new ApiException(ApiErrorCode.FORBIDDEN, "终端存储目录越界");
         }
         try {
+            PathContainment.requireUnaliased(basePath, directory);
             Files.createDirectories(directory);
+            PathContainment.requireUnaliased(basePath, directory);
+        } catch (SecurityException e) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "终端存储目录越界");
         } catch (IOException e) {
             log.warn("[Workspace] 创建终端存储目录失败 path={} error={}", directory, e.getMessage());
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建终端存储目录失败");
@@ -220,9 +229,14 @@ public class WorkspacePathResolver {
      * @return Git 仓库根目录，未找到返回 {@code null}
      */
     public Path findRepositoryRoot(Path sessionRoot, Path workspaceRoot) {
-        Path current = sessionRoot;
+        Path current;
+        try {
+            current = PathContainment.requireWithin(workspaceRoot, sessionRoot);
+        } catch (SecurityException e) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "工作目录越界");
+        }
         while (current != null && current.startsWith(workspaceRoot)) {
-            if (Files.exists(current.resolve(GIT_DIRECTORY))) {
+            if (Files.exists(resolveWithin(workspaceRoot, workspaceRoot.relativize(current.resolve(GIT_DIRECTORY)).toString()))) {
                 return current;
             }
             if (current.equals(workspaceRoot)) {
@@ -255,7 +269,11 @@ public class WorkspacePathResolver {
         if (!resolved.startsWith(root.normalize())) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "路径越界");
         }
-        return resolved;
+        try {
+            return PathContainment.requireWithin(root, resolved);
+        } catch (SecurityException e) {
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "路径越界或无法校验");
+        }
     }
 
     /**

@@ -22,10 +22,10 @@
             <artifactId>utils-support-deeplearning-dl4j-starter</artifactId>
         </dependency>
 
-        <!-- Spring Boot Web -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat；容器由宿主提供） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
 
         <!-- Spring Boot Configuration Processor -->

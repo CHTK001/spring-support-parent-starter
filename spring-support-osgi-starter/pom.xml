@@ -20,6 +20,7 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-logger-starter</artifactId>
         </dependency>
+        <!-- OSGi 运行时：Felix 框架与 bundle 生命周期 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-osgi-starter</artifactId>
@@ -30,10 +31,12 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-osgi-bundle-starter</artifactId>
         </dependency>
+        <!-- 自动配置内核：条件装配与属性绑定 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- 配置元数据生成（仅构建期，optional） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

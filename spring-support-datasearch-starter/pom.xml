@@ -39,10 +39,10 @@
     <description>数据检索服务化：天气 / 定位 / 台风的后台统一契约（前端顶栏数据源）</description>
 
     <dependencies>
-        <!-- Web：@RestController / @GetMapping / 自动配置条件 -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat）：@RestController / @GetMapping / 自动配置条件 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
         <!-- 自动配置装配：本模块 AutoConfiguration、条件注解与属性绑定基类 -->
         <dependency>

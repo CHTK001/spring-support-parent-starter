@@ -31,6 +31,7 @@
     <description>统一文件存储抽象层，支持 MinIO、OSS、COS 等多种存储后端</description>
 
     <dependencies>
+        <!-- 文件存储 SPI：本地 FILESYSTEM 桶实现底座 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-filestorage-starter</artifactId>
@@ -40,19 +41,21 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
+        <!-- CAD 图纸解析（DWG / DXF 预览） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-cad-starter</artifactId>
         </dependency>
+        <!-- 压缩与解压（zip / tar 归档上传与预览） -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
         </dependency>
 
-        <!-- Spring Web（提供 @RestController 等） -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat）：提供 @RestController 等 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
 
         <!-- Spring Boot Common -->

@@ -31,6 +31,11 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Jakarta lifecycle and nullability annotations used by logger sources -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
         <!-- 服务端 MVC/SSE：可选 Web 能力，由宿主提供容器 -->
         <dependency>
             <groupId>org.springframework</groupId>
@@ -49,6 +54,7 @@
             <artifactId>logback-classic</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Log4j2 运行实现（自定义 Appender 与日志事件） -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
@@ -60,6 +66,7 @@
             <groupId>io.micrometer</groupId>
             <artifactId>context-propagation</artifactId>
         </dependency>
+        <!-- Apache HttpClient 5 核心层（日志接收端 HTTP 探测） -->
         <dependency>
             <groupId>org.apache.httpcomponents.core5</groupId>
             <artifactId>httpcore5</artifactId>

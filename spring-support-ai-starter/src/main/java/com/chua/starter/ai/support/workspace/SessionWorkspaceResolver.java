@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.workspace;
 
+import com.chua.common.support.utils.PathContainment;
 import com.chua.starter.ai.support.entity.SysAiSession;
 import com.chua.starter.ai.support.mapper.SysAiSessionMapper;
 import com.chua.starter.ai.support.util.AiUserContext;
@@ -147,8 +148,8 @@ public class SessionWorkspaceResolver {
             return pathResolver.sessionWorkspace(sessionId);
         }
         if (sessionId != null && !sessionId.isBlank()) {
-            Path sessionDir = project.resolve(sessionId).normalize();
-            if (sessionDir.startsWith(project) && Files.isDirectory(sessionDir)) {
+            Path sessionDir = pathResolver.resolveWithin(project, sessionId);
+            if (Files.isDirectory(sessionDir)) {
                 return sessionDir;
             }
         }
@@ -164,15 +165,22 @@ public class SessionWorkspaceResolver {
      */
     private boolean isAllowed(Path candidate, Path agent) {
         // 账号自己的子树（不含账号根本身：根就是「未指定项目」）
-        if (candidate.startsWith(agent) && !candidate.equals(agent)) {
+        try {
+            if (candidate.startsWith(agent) && !candidate.equals(agent)) {
+                PathContainment.requireWithin(agent, candidate);
+                return !Files.isSameFile(candidate, agent);
+            }
+            Path base = agent.getParent();
+            if (base == null) {
+                return false;
+            }
+            Path publicDir = base.resolve(PUBLIC_DIRECTORY).normalize();
+            PathContainment.requireUnaliased(base, publicDir);
+            PathContainment.requireWithin(publicDir, candidate);
             return true;
-        }
-        Path base = agent.getParent();
-        if (base == null) {
+        } catch (java.io.IOException | SecurityException e) {
             return false;
         }
-        Path publicDir = base.resolve(PUBLIC_DIRECTORY).normalize();
-        return candidate.startsWith(publicDir);
     }
 
     /**

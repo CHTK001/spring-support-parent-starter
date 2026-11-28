@@ -306,6 +306,20 @@ public class AgentManager {
         state.put("subAgentCount", definition != null && definition.getAgents() != null
                 ? definition.getAgents().size() : 0);
         state.put("implementation", managed.agent.getClass().getName());
+        if (definition != null) {
+            Map<String, Object> runtimeDefinition = new LinkedHashMap<>();
+            runtimeDefinition.put("memory", definition.isMemory());
+            runtimeDefinition.put("planning", definition.isPlanning());
+            runtimeDefinition.put("mcp", definition.isMcp());
+            runtimeDefinition.put("maxToolIterations", definition.getMaxToolIterations());
+            state.put("definition", runtimeDefinition);
+        }
+        try {
+            var budget = managed.agent.budget();
+            state.put("maxTotalTokens", budget == null ? "0" : Long.toString(budget.maxTotalTokens()));
+        } catch (RuntimeException unsupported) {
+            state.put("maxTotalTokens", null);
+        }
         state.put("interrupted", guard != null && guard.isInterrupted());
         state.put("consecutiveRepeats", guard != null ? guard.consecutiveRepeats() : 0);
         state.put("lastTool", guard != null ? guard.lastToolName() : null);

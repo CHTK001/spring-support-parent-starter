@@ -196,20 +196,13 @@ public class ThirdPartyPlatformCallbackController {
         // 直连 AuthClientExecute 必然换取不到令牌，必须回落到与密码登录同源的本地签发链路
         LoginAuthResult accessToken = thirdPartyLoginOrchestrator
                 .issueThirdPartyToken(userThirdParty.getSysUserId(), normalized, request);
-        if (null == accessToken || StringUtils.isBlank(accessToken.getToken())) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(accessToken)) {
             log.warn("{}三方登录换取令牌失败: userId={}", label, userThirdParty.getSysUserId());
             ThirdPartyCallbackSupport.markFailure(attributes, errorView, label + "登录失败，请重试");
             return errorView;
         }
 
-        LoginResult loginResult = LoginResult.builder()
-                .userInfo(accessToken.getUserResume() != null
-                        ? thirdPartyLoginOrchestrator.buildUserInfo(accessToken.getUserResume())
-                        : thirdPartyLoginOrchestrator.getUserLoginInfo(accessToken.getToken()))
-                .tokenType("Bearer")
-                .accessToken(accessToken.getToken())
-                .build();
-        CookieUtil.set(response, "x-oauth-cookie", accessToken.getToken(), true);
+        LoginResult loginResult = thirdPartyLoginOrchestrator.toLoginResult(accessToken, response);
 
         RedirectView view = new RedirectView();
         String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, '0');

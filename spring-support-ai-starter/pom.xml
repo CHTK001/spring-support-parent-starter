@@ -136,6 +136,7 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-deeplearning-safetensors-starter</artifactId>
     </dependency>
+    <!-- 本地向量索引：知识库文档向量的近邻检索 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-jvector-starter</artifactId>
@@ -161,6 +162,7 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-pdf-starter</artifactId>
     </dependency>
+    <!-- Word 文档解析：知识库 docx 入库 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-word-starter</artifactId>
@@ -175,6 +177,7 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-crawler-starter</artifactId>
     </dependency>
+    <!-- HTML 解析：按网址采集知识库时提取正文 -->
     <dependency>
       <groupId>org.jsoup</groupId>
       <artifactId>jsoup</artifactId>
@@ -211,14 +214,6 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-account-starter</artifactId>
     </dependency>
-    <!-- 站内消息中心（余额低量告警经 SysMessageService#broadcast 落 sys_message）。
-         optional：不向宿主传递依赖；运行期用 ObjectProvider 存在性判断，
-         宿主没接 common-system-starter 时告警静默跳过，不影响余额查询主链路。 -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-api-support-common-system-starter</artifactId>
-      <optional>true</optional>
-    </dependency>
     <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
     <dependency>
       <groupId>com.chua</groupId>
@@ -239,6 +234,7 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-datasearch-starter</artifactId>
     </dependency>
+    <!-- 自动配置内核：条件装配与属性绑定 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-autoconfigure</artifactId>
@@ -259,7 +255,7 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-swagger-starter</artifactId>
     </dependency>
-    <!-- Web support (for HttpServletRequest) -->
+    <!-- Web 容器与 MVC：本模块自带 AiStarterApplication（8787 部署宿主），容器由宿主自身声明 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -283,6 +279,7 @@
       <groupId>io.modelcontextprotocol.sdk</groupId>
       <artifactId>mcp</artifactId>
     </dependency>
+    <!-- 响应式数据流契约（Flux / Mono，流式对话） -->
     <dependency>
       <groupId>io.projectreactor</groupId>
       <artifactId>reactor-core</artifactId>
@@ -318,6 +315,7 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
+    <!-- okhttp 的 IO 缓冲层（MCP / HTTP 客户端运行时） -->
     <dependency>
       <groupId>com.squareup.okio</groupId>
       <artifactId>okio-jvm</artifactId>
@@ -329,6 +327,7 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- 单元测试用 H2 内存库（test 作用域，不进产物） -->
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>

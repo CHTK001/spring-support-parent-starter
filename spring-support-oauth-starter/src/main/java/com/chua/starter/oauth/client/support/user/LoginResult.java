@@ -14,6 +14,9 @@ import lombok.*;
 @AllArgsConstructor
 public class LoginResult {
 
+    /** 二次认证挑战，与正式令牌互斥。 */
+    private SecondFactorChallenge secondFactor;
+
     /**
      * 令牌信息
      */

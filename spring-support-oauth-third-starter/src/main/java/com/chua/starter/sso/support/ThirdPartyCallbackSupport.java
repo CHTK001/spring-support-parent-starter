@@ -61,6 +61,15 @@ public final class ThirdPartyCallbackSupport {
     }
 
     /**
+     * @param result 认证策略结果
+     * @return 认证成功且包含正式令牌或后续验证挑战
+     */
+    public static boolean hasLoginOutcome(com.chua.starter.oauth.client.support.user.LoginAuthResult result) {
+        return result != null && result.getCode() == 200
+                && (result.getSecondFactor() != null || StringUtils.isNotBlank(result.getToken()));
+    }
+
+    /**
      * 签发换票凭证：加密登录结果并登记一次性 nonce
      *
      * @param loginResult 回调签发的登录结果
@@ -99,8 +108,8 @@ public final class ThirdPartyCallbackSupport {
             String json = AesCipher.create("jdk").decryptToString(
                     props.getThirdPartyCallbackKey().getBytes(StandardCharsets.UTF_8), redirectParam);
             LoginResult loginResult = Json.fromJson(json, LoginResult.class);
-            if (null == loginResult || StringUtils.isBlank(loginResult.getAccessToken())) {
-                log.warn("三方换票凭证解密结果非法: 缺少 accessToken");
+            if (null == loginResult || loginResult.getSecondFactor() == null && StringUtils.isBlank(loginResult.getAccessToken())) {
+                log.warn("三方换票凭证解密结果非法: 缺少登录结果");
                 return null;
             }
             return loginResult;

@@ -243,7 +243,7 @@ public class WechatCallbackController {
         // 直连 AuthClientExecute 必然换取不到令牌，必须回落到与密码登录同源的本地签发链路
         LoginAuthResult accessToken = thirdPartyLoginOrchestrator
                 .issueThirdPartyToken(userThirdParty.getSysUserId(), THIRD_PARTY_TYPE, request);
-        if (null == accessToken || StringUtils.isBlank(accessToken.getToken())) {
+        if (!ThirdPartyCallbackSupport.hasLoginOutcome(accessToken)) {
             log.warn("微信三方登录换取令牌失败");
             ThirdPartyCallbackSupport.markFailure(attributes, errorView, "微信登录失败，请重试");
             return errorView;
@@ -252,15 +252,7 @@ public class WechatCallbackController {
         // 保存或更新微信用户信息
         saveOrUpdateWechatUser(userThirdParty.getSysUserId(), authUser);
 
-        LoginResult loginResult = LoginResult.builder()
-                .userInfo(accessToken.getUserResume() != null
-                        ? thirdPartyLoginOrchestrator.buildUserInfo(accessToken.getUserResume())
-                        : thirdPartyLoginOrchestrator.getUserLoginInfo(accessToken.getToken()))
-                .tokenType("Bearer")
-                .accessToken(accessToken.getToken())
-                .build();
-
-        CookieUtil.set(response, "x-oauth-cookie", accessToken.getToken(), true);
+        LoginResult loginResult = thirdPartyLoginOrchestrator.toLoginResult(accessToken, response);
 
         RedirectView view = new RedirectView();
         String nanoTime = StringUtils.padAfter(System.nanoTime() + "", 16, '0');

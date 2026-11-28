@@ -15,16 +15,16 @@
     <description>管理控制台：FTL 页面（鉴权）临时调整 @ApiFeature/@ApiGray/键值运行设置，SQLite 持久化，注解指纹比对启动重置</description>
 
     <dependencies>
-        <!-- oauth-client：@Permission 页面鉴权（传递引入 common-starter 的注解与拦截器体系） -->
+        <!-- 鉴权契约：@Permission 等平台注解来自 common-starter（通用模块不引入 OAuth 客户端实现栈） -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-starter</artifactId>
+            <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
-        <!-- Web MVC：控制台页面与接口 -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat）：控制台页面与接口 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
 
         <!-- FreeMarker：FTL 管理页面渲染 -->

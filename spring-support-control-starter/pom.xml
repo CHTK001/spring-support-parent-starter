@@ -19,10 +19,10 @@
             <artifactId>utils-support-webrtc-starter</artifactId>
         </dependency>
 
-        <!-- Spring Boot Web（REST 会话 / 屏幕管理接口） -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat）：REST 会话 / 屏幕管理接口 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
 
         <!-- 配置元数据 -->

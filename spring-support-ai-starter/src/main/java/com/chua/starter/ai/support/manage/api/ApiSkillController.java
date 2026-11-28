@@ -2736,26 +2736,14 @@ public class ApiSkillController {
     }
 
     /**
-     * 下载字节内容（HTTP 获取，跟随重定向）。
-     *
-     * @param urlStr URL
-     * @return 响应字节
-     * @throws IOException          网络/IO 异常、非法 URL、非 2xx 状态
-     * @throws InterruptedException 中断异常
-     */
-    /**
      * 信任操作系统（Windows）根证书库的 SSL 上下文。
      *
      * <p>本机可能经 SteamTools 等加速工具以本地根 CA 代理 GitHub，其根证书已装入
      * Windows 证书库（浏览器信任）但不在 JDK 默认 cacerts 中。此处显式信任
      * Windows-ROOT，仍执行完整证书链校验；非 Windows 或加载失败时回退 JDK 默认信任库。</p>
+     *
+     * @return 保留操作系统证书链校验的 SSL 上下文
      */
-    private static final SSLContext OS_TRUST_SSL_CONTEXT = buildOsTrustSslContext();
-
-    /**
-     * build Os Trust Ssl Context
-     * @return 返回值
-    */
     private static SSLContext buildOsTrustSslContext() {
         try {
             TrustManagerFactory tmf = TrustManagerFactory
@@ -2777,13 +2765,24 @@ public class ApiSkillController {
     }
 
     /**
-     * 进程级共享 HTTP 客户端（连接超时收紧，避免不可达域名长时间占住请求线程）。
+     * 技能下载首次使用时才初始化共享客户端与系统信任库。
+     *
+     * <p>Windows 根证书枚举可能较慢，不能在控制器类初始化期间阻塞整个宿主启动。
+     * 此处保留原有 TLS 校验、重定向与连接超时语义。</p>
      */
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .sslContext(OS_TRUST_SSL_CONTEXT)
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .build();
+    private static final class DownloadHttpClientHolder {
+
+        /** 进程级共享客户端，仅由下载路径触发初始化。 */
+        private static final HttpClient CLIENT = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .sslContext(buildOsTrustSslContext())
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+
+        /** 工具持有者不允许实例化。 */
+        private DownloadHttpClientHolder() {
+        }
+    }
 
     /**
      * 普通请求的整体超时。
@@ -2836,7 +2835,7 @@ public class ApiSkillController {
         if (accept != null && !accept.isBlank()) {
             builder.header("Accept", accept);
         }
-        HttpResponse<byte[]> response = HTTP_CLIENT.send(builder.GET().build(), HttpResponse.BodyHandlers.ofByteArray());
+        HttpResponse<byte[]> response = DownloadHttpClientHolder.CLIENT.send(builder.GET().build(), HttpResponse.BodyHandlers.ofByteArray());
         int status = response.statusCode();
         if (status < 200 || status >= 300) {
             throw new IOException("HTTP " + status + " for " + urlStr);

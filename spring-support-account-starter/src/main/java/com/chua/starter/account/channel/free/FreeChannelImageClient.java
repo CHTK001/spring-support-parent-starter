@@ -201,7 +201,23 @@ public class FreeChannelImageClient implements ImageClient {
         } else {
             result = channel.generate(prompt, null, 1, orZero(width), orZero(height), model);
         }
-        return download(firstUrl(result));
+        return validatedDownload(firstUrl(result));
+    }
+
+    /**
+     * 下载生成结果，并确认上游遵守用户请求的输出尺寸。
+     *
+     * @param url 成品地址
+     * @return 尺寸符合请求的原始图片
+     */
+    private BufferedImage validatedDownload(String url) {
+        BufferedImage generated = download(url);
+        if ((orZero(width) > 0 && generated.getWidth() != width)
+                || (orZero(height) > 0 && generated.getHeight() != height)) {
+            throw new IllegalStateException("上游图片尺寸不符合请求：请求 " + orZero(width) + "x" + orZero(height)
+                    + "，实际 " + generated.getWidth() + "x" + generated.getHeight());
+        }
+        return generated;
     }
 
     /**

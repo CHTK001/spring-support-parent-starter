@@ -22,6 +22,22 @@ public class AppKeySecret implements Serializable {
      * 示例: "用户_1234567890"
      */
     private String userCode;
+    /** 显式认证模式：appkey、aksk、sign；缺省 appkey。 */
+    private String mode;
+    /** AK，与 appKey 同义；不使用用户 ID。 */
+    private String ak;
+    /** SK，仅 aksk 模式发送，sign 模式只在本地计算 HMAC。 */
+    @lombok.ToString.Exclude
+    private String sk;
+    /** 原业务请求方法。 */
+    private String requestMethod;
+    /** 原业务请求路径。 */
+    private String requestPath;
+    /** 原始查询串，保留重复参数和编码。 */
+    private String requestQuery;
+    /** 原始业务请求体，独立于 OAuth 认证信封。 */
+    @lombok.ToString.Exclude
+    private String requestBody;
     /**
      * 时间戳
      * 示例: "1609459200000"

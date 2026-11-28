@@ -306,6 +306,36 @@ public abstract class AbstractProtocol implements Protocol {
            * @param appKeySecret.getBody( appKeysecret.getbody(
            */
         mergeAppKeyRequestBody(jsonObject, appKeySecret.getBody());
+        String mode = StringUtils.isBlank(appKeySecret.getMode()) ? "appkey"
+                : appKeySecret.getMode().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!java.util.Set.of("appkey", "aksk", "sign").contains(mode)) {
+            throw new IllegalArgumentException("不支持的应用认证模式");
+        }
+        String key = StringUtils.isNotBlank(appKeySecret.getAk())
+                ? appKeySecret.getAk() : appKeySecret.getUserCode();
+        jsonObject.put("x-oauth-type", mode);
+        jsonObject.put("appKey", key);
+        jsonObject.put("ak", key);
+        // 附加业务参数不能覆盖明确的认证模式与凭据。
+        jsonObject.remove("secret");
+        jsonObject.remove("sk");
+        if ("aksk".equals(mode)) {
+            jsonObject.put("sk", appKeySecret.getSk());
+        } else if ("sign".equals(mode)) {
+            String time = StringUtils.isBlank(appKeySecret.getXTime())
+                    ? Long.toString(System.currentTimeMillis()) : appKeySecret.getXTime();
+            String nonce = StringUtils.isBlank(appKeySecret.getXRandom())
+                    ? java.util.UUID.randomUUID().toString() : appKeySecret.getXRandom();
+            jsonObject.put("requestMethod", appKeySecret.getRequestMethod());
+            jsonObject.put("requestPath", appKeySecret.getRequestPath());
+            jsonObject.put("requestQuery", appKeySecret.getRequestQuery());
+            jsonObject.put("requestBody", appKeySecret.getRequestBody());
+            jsonObject.put("x-time", time);
+            jsonObject.put("x-random", nonce);
+            jsonObject.put("x-sign", com.chua.starter.oauth.client.support.entity.AppRequestSignature.sign(
+                    key, appKeySecret.getSk(), appKeySecret.getRequestMethod(), appKeySecret.getRequestPath(),
+                    appKeySecret.getRequestQuery(), appKeySecret.getRequestBody(), time, nonce));
+        }
         return jsonObject;
     }
 
@@ -488,8 +518,8 @@ public abstract class AbstractProtocol implements Protocol {
            * @param authenticationInformation.getToken( 认证信息.gettoken(
            * @return login结果的结果
            */
-        return new LoginResult(authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), null
-            , authenticationInformation.getReturnResult());
+         return new LoginResult(null, authenticationInformation.getToken(), authenticationInformation.getRefreshToken(), null
+             , authenticationInformation.getReturnResult());
     }
 
       /**

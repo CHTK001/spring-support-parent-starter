@@ -122,9 +122,6 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- H2/SQLite/DuckDB/ClickHouse 为文件库与可选驱动，统一走 JDBC 驱动 jar 上传端点按需安装，不随包携带 -->
-
-        <!-- ZooKeeper / MongoDB / SkyWalking 管理面实现按需安装（utils-support-*-starter 或 OSGi 能力包），本模块只依赖 SPI 契约。 -->
 
         <!-- 数据同步：复用 utils 层已有的 DataSyncEngine / JdbcSyncSource / SyncMapping -->
         <dependency>

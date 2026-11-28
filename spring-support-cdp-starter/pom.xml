@@ -33,10 +33,10 @@
             <artifactId>spring-support-swagger-starter</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- REST / SSE（Controller、SseEmitter、Servlet Filter） -->
+        <!-- Web MVC 契约（spring-boot-webmvc，不带 Tomcat）：REST / SSE（Controller、SseEmitter、Servlet Filter） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
         <!-- /ws/cdp WebSocket 透传端点 -->
         <dependency>

@@ -63,6 +63,12 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Logger infrastructure: ModuleLog and ServiceInfoContributor are used directly -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-logger-starter</artifactId>
+        </dependency>
+
         <!-- Flyway SPI 高优先级实现 - 脚本迁移自动执行（DataSource 版） -->
         <dependency>
             <groupId>com.chua</groupId>
@@ -75,11 +81,10 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
-        <!-- Spring Boot Web 支持 - 提供运行期数据源管理 REST 接口（optional，宿主按需引入） -->
+        <!-- Web MVC 契约 - 运行期数据源管理 REST 接口（容器由部署壳提供，本模块不携带 Tomcat） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <optional>true</optional>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
 
         <!-- AspectJ AOP支持 - 提供AOP注解和切面支持 -->
@@ -166,6 +171,7 @@
             <artifactId>utils-support-h2-starter</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- SQLite 引擎实现（文件库数据源适配，provided 按需） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-sqlite-starter</artifactId>

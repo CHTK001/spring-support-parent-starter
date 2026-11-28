@@ -127,7 +127,6 @@
         <module>spring-support-tunnel-tailscale-starter</module>
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-datapool-starter</module>
-        <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
         <module>spring-support-control-starter</module>          <!-- WebRTC 远程控制：信令/桌面采集/键鼠注入 -->
         <!-- CDP 调试模块：headless Chromium + /ms/cdp REST + /ws/cdp WebSocket + 实时页面反向代理，

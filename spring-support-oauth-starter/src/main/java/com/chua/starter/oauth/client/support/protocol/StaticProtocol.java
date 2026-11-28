@@ -398,7 +398,7 @@ public class StaticProtocol extends AbstractProtocol {
          * @param userResume.getFingerprint( 用户resume.getfingerprint(
          * @return login结果的结果
          */
-        return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
+        return new LoginResult(null, refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
     }
 
     /**

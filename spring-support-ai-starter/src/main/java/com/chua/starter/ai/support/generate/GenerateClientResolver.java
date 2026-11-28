@@ -118,17 +118,19 @@ public class GenerateClientResolver {
      * @return 解析结果
      */
     public Resolved<ImageClient> resolveImage(String model, int keyIndex) {
+        boolean qualified = model != null && model.indexOf(':') > 0;
         SysAccountChannel provider = resolveProviderByModel(model);
-        if (provider == null) {
+        if (provider == null && !qualified) {
             provider = resolveKeylessImageProvider(model);
         }
         if (provider == null) {
             return new Resolved<>(null, null, null);
         }
         SysAccountChannelModel modelCfg = resolveModelRow(model);
+        model = bareModel(model);
         String spi = GenerateSpiRouter.imageSpi(provider.getPlatform(), model);
         if ((spi.isEmpty() || !GenerateSpiRouter.supportsImage(provider.getPlatform(), model))
-                && KeylessGenerateCatalog.ownsImageModel(model)) {
+                && !qualified && KeylessGenerateCatalog.ownsImageModel(model)) {
             // 防御回退：免登录出图模型的行可能被渠道页保存路径挂在其它渠道名下
             //（该渠道并没有出图 SPI 实现），只要免费渠道聚合行可用就仍路由回去，
             // 避免生图被这类脏行劫持。
@@ -201,17 +203,19 @@ public class GenerateClientResolver {
      * @return 解析结果
      */
     public Resolved<VideoClient> resolveVideo(String model, int keyIndex) {
+        boolean qualified = model != null && model.indexOf(':') > 0;
         SysAccountChannel provider = resolveProviderByModel(model);
-        if (provider == null) {
+        if (provider == null && !qualified) {
             provider = resolveKeylessVideoProvider(model);
         }
         if (provider == null) {
             return new Resolved<>(null, null, null);
         }
         SysAccountChannelModel modelCfg = resolveModelRow(model);
+        model = bareModel(model);
         String spi = GenerateSpiRouter.videoSpi(provider.getPlatform());
         if ((spi.isEmpty() || !GenerateSpiRouter.supportsVideo(provider.getPlatform()))
-                && KeylessGenerateCatalog.ownsVideoModel(model)) {
+                && !qualified && KeylessGenerateCatalog.ownsVideoModel(model)) {
             // 防御回退：免登录视频模型的行可能被渠道页保存路径挂在其它渠道名下
             //（该渠道并没有视频 SPI 实现），只要免费渠道聚合行可用就仍路由回去，
             // 避免视频生成被这类脏行劫持。
@@ -491,10 +495,28 @@ public class GenerateClientResolver {
             return null;
         }
         try {
+            int separator = model.indexOf(':');
+            if (separator > 0) {
+                String providerId = model.substring(0, separator);
+                String name = model.substring(separator + 1);
+                channelService.requireAvailableModel(providerId, name);
+                return channelModelService.find(providerId, name);
+            }
             return channelModelService.findEnabledByModel(model);
         } catch (Exception e) {
             log.warn("[Generate] 解析模型行失败 model={}: {}", model, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 仅向上游客户端传递模型名，渠道限定前缀由本解析器消费。
+     * @param model 裸模型名或渠道限定名
+     * @return 上游模型名
+     */
+    private static String bareModel(String model) {
+        if (model == null) return null;
+        int separator = model.indexOf(':');
+        return separator > 0 ? model.substring(separator + 1) : model;
     }
 }

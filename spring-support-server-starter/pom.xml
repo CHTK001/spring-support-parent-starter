@@ -20,14 +20,17 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+        <!-- 自动配置内核：条件装配与属性绑定 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Web MVC 契约（REST 端点、Controller 类型）：容器由部署壳提供，本模块不携带 Tomcat -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-webmvc</artifactId>
         </dependency>
+        <!-- WebSocket 支持（远程终端与文件传输） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
@@ -44,6 +47,7 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
+        <!-- MyBatis-Plus 映射与分页（服务节点与操作日志表） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
@@ -102,6 +106,7 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-guacamole-starter</artifactId>
         </dependency>
+        <!-- SSH 客户端（JSch）：远程命令与文件分发 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
@@ -111,18 +116,22 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-winrm-starter</artifactId>
         </dependency>
+        <!-- 邮件客户端：邮箱台账与 IMAP 收件 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-email-starter</artifactId>
         </dependency>
+        <!-- SSE 传输实现：服务端事件流推送 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-sse-starter</artifactId>
         </dependency>
+        <!-- 实时推送契约：SocketSessionTemplate 会话推送 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-starter</artifactId>
         </dependency>
+        <!-- Socket.IO 传输实现（netty-socketio 服务端） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-socket-io-starter</artifactId>
@@ -137,10 +146,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-discovery-starter</artifactId>
         </dependency>
+        <!-- ACME 协议客户端：证书申请与续签 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-acme-starter</artifactId>
         </dependency>
+        <!-- 公共数据查询：天气 / 节假日 / 汇率 / IP / 位置 / 台风 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasearch-starter</artifactId>

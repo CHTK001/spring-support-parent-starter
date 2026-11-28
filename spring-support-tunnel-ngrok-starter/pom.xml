@@ -11,6 +11,7 @@
     <name>Spring Support Tunnel Ngrok Starter</name>
     <description>Spring Boot 3 集成 ngrok：自动将本机 Spring 服务（server.port）通过 ngrok 暴露为公网 URL。</description>
     <dependencies>
+        <!-- 配置元数据生成（仅构建期，optional） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
@@ -21,14 +22,17 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-tunnel-starter</artifactId>
         </dependency>
+        <!-- ngrok 隧道客户端实现 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
         </dependency>
+        <!-- ngrok Java SDK（隧道会话与转发） -->
         <dependency>
             <groupId>com.ngrok</groupId>
             <artifactId>ngrok-java</artifactId>
         </dependency>
+        <!-- ngrok 原生库（按平台 classifier） -->
         <dependency>
             <groupId>com.ngrok</groupId>
             <artifactId>ngrok-java-native</artifactId>

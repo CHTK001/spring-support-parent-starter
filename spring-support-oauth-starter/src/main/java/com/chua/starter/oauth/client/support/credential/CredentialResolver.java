@@ -5,6 +5,8 @@ import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 凭据校验扩展点的解析器：按「自定义优先、内置其次、都没有则不接管」的顺序取实现。
@@ -24,7 +26,28 @@ public final class CredentialResolver {
      */
     private static final String BUILTIN_PREFIX = "builtin-";
 
+    /** Spring 创建的凭据实例，不随 SPI 的软引用缓存回收而丢失。 */
+    private static final Map<String, CredentialProvider> BOUND = new ConcurrentHashMap<>();
+
     private CredentialResolver() {
+    }
+
+    /**
+     * 绑定凭据实例，传 null 时解绑。
+     *
+     * @param accountType 账号来源，大小写与首尾空白不敏感
+     * @param provider 凭据实现
+     */
+    public static void bind(String accountType, CredentialProvider provider) {
+        if (StringUtils.isBlank(accountType)) {
+            throw new IllegalArgumentException("accountType must not be blank");
+        }
+        String key = accountType.trim().toLowerCase(Locale.ROOT);
+        if (provider == null) {
+            BOUND.remove(key);
+        } else {
+            BOUND.put(key, provider);
+        }
     }
 
     /**
@@ -52,6 +75,10 @@ public final class CredentialResolver {
             return null;
         }
         var key = accountType.trim().toLowerCase(Locale.ROOT);
+        var bound = BOUND.get(key);
+        if (bound != null) {
+            return bound;
+        }
         try {
             var provider = ServiceProvider.of(CredentialProvider.class);
             var custom = provider.getExtension(key);

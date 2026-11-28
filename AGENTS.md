@@ -48,7 +48,9 @@
 
 - **只声明源码直接使用的依赖**：以 import、注解、SPI 索引、自动配置和构造签名为证据；`dependency:tree` 只能辅助判断传递重复，不能证明编译通过。
 - **删除依赖同步删除注释**：`<dependencies>` 内不得留下孤立说明，交付前 `ORPHAN=0`。
-- **版本单源**：内部 starter 与 utils 制品都在根 POM `dependencyManagement` 托管，子模块不写 inline 版本；带 classifier 的制品同步托管 classifier。
+- **版本单源**：内部 starter 与 utils 制品都在根 POM `dependencyManagement` 托管，子模块不写 inline 版本；带 classifier 的制品同步托管 classifier。**三方制品同样单源**：`redisson` / `okhttp` 等第三方版本一律进根 POM 属性 + `dependencyManagement`，子模块只写 GAV。
+- **web 容器只归宿主**：库模块需要 MVC 类型时用 `spring-boot-webmvc`（不带 Tomcat），`spring-boot-starter-web` 只允许出现在自带 `@SpringBootApplication` 的宿主；判据 `mvn dependency:tree -Dincludes=org.apache.tomcat.embed:tomcat-embed-core` 库模块为 0、宿主为 1。
+- **数据库驱动归部署壳**：`mysql-connector-j` 等驱动只在可部署壳以 `runtime` 声明，业务/公共模块用 `DataSource` 契约表达需求。
 - **通用模块只依赖 common 的鉴权契约**：`@Permission`、`PermissionRules`、`AuthService`、`CurrentUser`、`TokenForIgnore` 归 `spring-support-common-starter`。只有直接使用 OAuth 客户端实现时才声明 `spring-support-oauth-starter`。
 
 ## 交付闸门
